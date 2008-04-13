@@ -1,0 +1,10 @@
+Various tools that are useful in the sms context
+
+calcCorr:		compute the correlation of a sound
+printWindow:	print the windows used in smsAnal
+smsToLisp:      convert sms output to Lisp syntax
+smsToML:        convert sms output to MatLab format
+smsUnDb:        convert magnitudes in the sms file from dB to linear
+sndReverse:		reverse a sound
+smsSynthDet:	synthesize deterministic part of sms using table lookup 
+				oscilators
