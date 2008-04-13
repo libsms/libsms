@@ -1,0 +1,135 @@
+///////////////////////////////////////
+changes from February 16, 2008
+
+changes to the Make system
+- all binaries now install to sms/bin
+- added a make uninstall to remove files installed to $(PREFIX)/bin, etc
+
+changes to soundIO.c
+- now uses libsndfile for Linux/Mac/Windows compatibility
+
+* No longer supports NeXTStep..
+
+////////////////////////////////////////
+changes from August 4, 1995
+
+changes to smsSynth and smsMk
+- the deterministic synthesis is done with the IFFT
+
+- fixed small bug in the peakContinuation algorithm and reorganized the subdirectories.
+
+- added the program smsSynthDet to synthesis the deterministic component
+using table lookup oscillators (the old method)
+
+- added more documentation. 
+
+////////////////////////////////////////
+changes from July 1, 1994
+
+changes to smsAnal
+- when the frameRate parameter [-r] is given as a negative number this value will be the overlap factor, and the frame rate will be calculated from that.
+
+-fixed a small bug on the CleanTrajectories function that was causing problems
+in the case of inharmonic sounds.
+
+changes to smsEditor
+- Celso Mendonca de Aguiar has made changes to the program. Now the windows
+can be resized, the frequency trajectories are displayed from bottom to top
+and the magnitude trajectories are displayed in 3D.
+
+added the programs smsToClm and smsToML.
+
+changed the way to install the programs and the directories where these
+are placed.
+ 
+////////////////////////////////////////
+changes from January 25, 1994
+
+changes to smsPrint
+-added command line parameters to select the portion of the sms data to be printed.
+
+added the program hybridMk
+
+////////////////////////////////////
+changes from December 30, 1993
+
+changes to smsAnal
+-added a command line parameter to be able to change the analysis window used.
+	The command line parameter is -i.
+
+changes to smsSynth
+-added command line parameters to be able to synthesize either the 
+deterministic or stochastic components.
+
+added the program smsClean
+
+changes to smsMk
+-added the possibility to hybridize the frequency of the fundamental of the first sound with another. The hybridizing sound keeps its own frequency relations but tracks the fundamental of the first sound.
+
+-added the possibility to hybridize the magnitude of fundamental of the first sound with another. The hybridizing sound keeps its own magnitude relations but tracks the magnitude of the fundamental of the first sound.
+
+-added the possibility to hybridize the magnitude
+
+
+////////////////////////////////////
+changes from November 12, 1993
+
+changes to smsAnal
+-fixed a bug in the process of writing the residual sound to residual.snd. Now
+	this file is synchronized with the original and the synthesized sounds.
+
+-the residual file is written before it is filtered by a high pass filter. The
+	preemphasis that is done on the original sound it is also undone.
+
+-added a command line parameter to be able to analyze a sound backwards. The
+	command line parameter is -x.
+
+////////////////////////////////////
+changes from November 4, 1993
+
+changes to smsAnal
+-added command line parameter to analyze different types of sounds. There are
+	two types of sounds considered: single note and sound phrase. The command
+	line parameter is -q. Before everything was considered a sound phrase, 
+	which is now the default.
+
+////////////////////////////////////
+changes from July 28, 1993
+
+changes to smsAnal
+-when the default fundamental is lower than the lowest fundamental or 
+ higher than the highest fundamental, it is changed to one of these two
+ values.
+- the lowestFundamental is also the lowest peak found and it is used for     
+  inharmonic sounds.
+
+changes to smsMk
+-added freq0 and freq1
+-added ampPartialsEnv, freqPartialsEnv and ampStocCoeffEnv
+-added timeStretchHyb and timeStretchHybEnv
+-bug fix: memory leak when smsFileHyb was used
+
+
+////////////////////////////////
+changes from March 31, 1993
+
+-many bug fixes in all the programs.
+-reorganized several files and directories.
+
+changes to smsAnal
+-intermediate residual sound can be written out into a file (residual.snd) by   
+ the -d11 command line argument.
+-added a debug mode -d12 to write a text file (debug.txt) with the data of the  
+ original sound, the intermediate synthesized one and the residual. (useful for 
+ a ploting program such as nxyplot)
+-added stochastic analysis/synthesis based on line segment approximation of
+ magnitude spectrum, selected by the -e2 command line argument, which
+ is now the default.
+
+
+changes to smsMk
+-added a synthesis rate which is independent of the analysis rate used in
+  smsAnal. This is necessary when we want to hybridize sms files which
+	had been analyzed at different analysis rates. Also important when time
+	stretch is done.
+
