@@ -1,0 +1,32 @@
+.TH smsPrint 1 "2008 Feb 22" GNU
+.SH NAME
+smsPrint - Program to print the SMS analysis files.
+.SH SYNOPSIS
+.B smsResample
+[-\fIfactor\fP ...]
+.I inputSmsFile
+.I outputSmsFile
+.SH DESCRIPTION
+\fISMS\fP is a set of techniques and software implementations for the
+analysis, transformation and synthesis of musical sounds based on a
+sinusoidal plus residual model. These techniques can be used for
+synthesis, processing and coding applications, while some of the
+intermediate results might also be applied to other music related
+problems, such as sound source separation, musical acoustics, music
+perception, or performance analysis. The basic model and
+implementation was developed in the PhD thesis by X. Serra in 1989 and
+since then many extensions have been proposed at MTG-UPF and by other
+researchers.
+
+\fIsmsResample\fP will resample the SMS analysis files.
+
+Sometimes it is useful to have a high frame rate in the analysis for the purpose of getting a good stochastic representation. Once this is obtained there is no need to keep of the frames that resulted from the analysis since in the synthesis it will not be important.
+
+For background information on how to create and synthesize SMS the analysis files, or what to do with 
+it other than recreate the original, see the README included with the SMS package
+or visit the SMS homepage at:
+\fIhttp://www.iua.upf.es/~sms/\fP
+
+.SH SEE ALSO
+smsAnal(1), smsSynthDet(1), smsClean(1), smsMod(1), smsSynth(1),
+smsPrint(1)

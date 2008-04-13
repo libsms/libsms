@@ -1,0 +1,143 @@
+.TH smsAnal 1 "2008 Feb 22" GNU
+.SH NAME
+smsAnal - SMS Analysis command line application.
+.SH SYNOPSIS
+.B smsAnal
+[-\fIoption\fP ...]
+.I inputSoundFile outputSmsFile
+.SH DESCRIPTION
+\fISMS\fP is a set of techniques and software implementations for the
+analysis, transformation and synthesis of musical sounds based on a
+sinusoidal plus residual model. These techniques can be used for
+synthesis, processing and coding applications, while some of the
+intermediate results might also be applied to other music related
+problems, such as sound source separation, musical acoustics, music
+perception, or performance analysis. The basic model and
+implementation was developed in the PhD thesis by X. Serra in 1989 and
+since then many extensions have been proposed at MTG-UPF and by other
+researchers.
+
+\fIsmsAnal\fP will do SMS analysis from the command line on a variety
+of soundfile formats (using the libsndfile library, developed by Erik
+de Castro Lopo). The output is a .sms; to see how to modify and
+synthisize the analysis, see the README included with the SMS package
+or visit the SMS homepage at:
+\fIhttp://www.iua.upf.es/~sms/\fP
+.SH OPTIONS
+.B Description of parameters
+.TP 8
+.BI -d " debugMode"
+.B (default 0) [1,2,3,4,5,6,7,8,9,10,11,12]
+0 no debug, 1 debug initialitzation functions, 2 debug peak detection function, 3 debug harmonic detection function, 4 debug peak continuation function, 5 debug clean trajectories function, 6 debug sine synthesis function, 7 debug stochastic analysis function, 8 debug stochastic synthesis function, 9 debug top level analysis function, 10 debug everything, 11 write residual into a file (residual.snd), 12 write original, synthesis and residual to a text file (debug.txt).
+.TP 8
+.BI -f " format"  
+.B (default 1) [1,2,3,4] 
+format of the representation: 1 harmonic, 2 inharmonic, 3 harmonic with phase, 4 inharmonic with phase.
+.TP 8
+.BI -q " soundType"
+.B (default 0) [0,1]
+type of sound to be analyzed. 0: sound phrase, 1: single note. Useful for single stable notes. When this is set to 1 the default fundamental (-u) is used as the reference fundamental, there is practically no pitch detection.
+.TP 8
+.BI -x " analysisDirection"
+.B (default 0) [0,1]
+direction of the analysis. 0: direct, 1: reverse. Reverse is very useful for percussive sounds or sounds with a noisy attack.
+.TP 8
+.B STFT parameters
+.TP 8
+.BI -s " windowSize"
+.B (default 3.5) [3 <-> 7]
+number of periods of fundamental frequency to use in the analysis window. The actual window size in seconds will be this value divided by the fundamental frequency found at every given moment.
+.TP 8
+.BI -i " windowType"
+.B (default 1) [0,1,2,3,4]
+type of analysis window to use. 0: Hamming, 1: Blackman-Harris 62 dB, 2: Blackman-Harris 70 dB, 3: Blackman-Harris 74 dB, 4: Blackman-Harris 92 dB.
+.TP 8
+.BI -r " frameRate"
+.B (default 400) [50 <-> 600]
+number of analysis windows per second (Hz). This will determine the hop size of the analysis window. If given as a negative number this value will be the overlap factor, and the frame rate will be calculated from that.
+.TP 8
+.B Peak detection parameters
+.TP 8
+.BI -j " highestFreq"
+.B (default 12000) [20 <-> 22500]
+highest frequency in Hz of the peaks to be detected. Therefore no partials higher than this frequency will be detected. It will never be higher than half the sampling-rate.
+.TP 8
+.BI -k " minPeakMag"
+.B (default 0) [0 <-> 20]
+minimum magnitude in dB of a peak. Peak softer than this dB value will not have any chance to be considered part of the deterministic component, that is, of the partials. This value should not be smaller than 0 since 0 is the noise threshold used in the analysis.
+.TP 8
+.B Harmonic detection parameters
+.TP 8
+.BI -y " refHarmonic"
+.B (default 1) [0,1,2,3 ...]
+number of the harmonic used for reference, 1 is the fundamental. The are some sounds, like many piano sounds, that have a very soft fundamental. In these cases it is helpful to find the fundamental frequency by looking for a harmonic other than the actual fundamental.
+.TP 8
+.BI -m " minRefHarmMag"
+.B (default 30) [5 <-> 60]
+minimum magnitude in dB of the harmonic used for reference in the harmonic detection process. 
+.TP 8
+.BI -z " refHarmDiffFromMax"
+.B (default 30) [5 <-> 60]
+maximum dB difference between the harmonic used for reference and the maximum peak.
+.TP 8
+.BI -u " defaultFund"
+.B (default 100) [20 <-> 5000]
+default fundamental frequency in Hz. This is the frequency that is used to set the actual analysis window size when no fundamental has been found. In normal situations it is convenient to give the value of the fundamental frequency of the begining of the sound so that it can start with a good guess. In the case of inharmonic sounds this value will be used to set the window size for the whole sound. When defaultFund is higher than highestFund it is set to this value and when it is lower than lowestFund it is set to it.
+.TP 8
+.BI -l " lowestFund"
+.B (default 50) [20 <-> 5000]
+lowest fundamental frequency in Hz to be searched for. Only used in harmonic sounds. In the case of inharmonic sounds this value is used as the lowest frequency to track. No peak are found below this value.
+.TP 8
+.BI -h " highestFund"
+.B (default 1000) [20 <-> 5000]
+highest fundamental frequency in Hz to be searched for. Only used in harmonic sounds.
+.TP 8
+.B Peak continuation parameters
+.TP 8
+.BI -n " nGuides"
+.B (default 100) [1 <-> 500]
+number of guides to be used in analysis. These guides will be used to track the partials in the sound and are the ones that will be subtracted from the original sound. The number of output trajectories is defined by the parameter nTrajectories.
+.TP 8
+.BI -p " nTrajectories"
+.B (default 60) [1 <-> 500]
+maximum number of trajectories, or partials, to be found. This will be the output number of trajectories. 
+.TP 8
+.BI -v " freqDeviation"
+.B (default .45) [.1 <-> .5]
+maximum deviation that is permitted from the "guide frequency" to the continuation peak of the guide. In the case of harmonic sounds the deviation in Hz is the product of this value times the fundamental frequency. In the case of inharmonic sounds the deviation in Hz is this value times the guide frequency.
+.TP 8
+.BI -t " peakContToGuide"
+.B (default .4) [0 <-> 1]
+contribution of the frequency of the previous peak of a given trajectory to the current guide frequency value. If the value is 1, it means that the previous peak will completely define the guide value, the possible current fundamental will not be used to set the guide's frequency. If the value is 0, the previous guide will not be used at all.
+.TP 8
+.BI -o " fundContToGuide"
+.B (default .5) [0 <-> 1]
+contribution of the fundamental frequency of the current frame to the current guide frequency. This is only relevant in harmonic sounds.
+.TP 8
+.B Trajectory cleaning paramenters
+.TP 8
+.TP 8
+.BI -g " cleanTraj"
+.B (default 1) [0,1]
+whether or not to clean the deterministic data after analysis. 0 no cleaning, 1 cleaning. This cleaning process gets rid of short trajectories that may not be part of a stable partial of the sound and also fill gaps in stable partials.
+.TP 8
+.BI -a " minTrajLength"
+.B (default .1) [0 <-> 10]
+minimum length of the trajectories in seconds. Trajectories shorter than this value will be deleted if the cleanTraj flag (-g) has been set.
+.TP 8
+.BI -b " maxSleepingTime"
+.B (default .1) [0 <-> .5]
+maximum sleeping time in seconds for a given trajectory. Time shorter than this value will be considered gaps in the trajectory and if the cleanTraj flag (-g) has been set, this gaps will be filled by interpolating the boundaries.
+.TP 8
+.B Stochastic analysis parameters
+.TP 8
+.BI -e " stochasticType"
+.B (default 2) [0,1,2,3]
+type for the stochastic representation: (0) waveform, (1) STFT real/imaginary pairs, (2) line segments on magnitude spectrum, (3) no stochastic analysis. The first time the analysis is done it is useful to set this to 3, this will let you check if the analysis was well done and the computation time will be much shorter.
+.TP 8
+.BI -c " nStocCoeff"
+.B (default 16) [4 <-> 64 for stochasticType type 2, 4 <-> 20 for stochasticType type 1]
+number of filter coefficients for the stochastic representation. When the stochastic type is set to 2 (line segments on magnitude spectrum), this number corresponds to the number of inflexion points.
+.SH SEE ALSO
+smsSynth(1), smsSynthDet(1), smsClean(1), smsMod(1), smsPrint(1),
+smsResample(1), smsUnDb(1)

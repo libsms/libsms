@@ -1,0 +1,37 @@
+.TH smsSynth 1 "2008 Feb 22" GNU
+.SH NAME
+smsSynth - SMS Synthesis command line application.
+.SH SYNOPSIS
+.B smsSynth
+[-\fIoption\fP ...]
+.I inputSoundFile outputSmsFile
+.SH DESCRIPTION
+\fISMS\fP is a set of techniques and software implementations for the
+analysis, transformation and synthesis of musical sounds based on a
+sinusoidal plus residual model. These techniques can be used for
+synthesis, processing and coding applications, while some of the
+intermediate results might also be applied to other music related
+problems, such as sound source separation, musical acoustics, music
+perception, or performance analysis. The basic model and
+implementation was developed in the PhD thesis by X. Serra in 1989 and
+since then many extensions have been proposed at MTG-UPF and by other
+researchers.
+
+\fIsmsSynth\fP will synthesize a .sms file analyzed wish smsAnal.  By default,
+the synthesis will contain deterministic and stochastic components added 
+together, but you can optionally choose to just synthesize one or the other. 
+For background information on how to create the analysis file, or what to do with 
+it other than recreate the original, see the README included with the SMS package
+or visit the SMS homepage at:
+\fIhttp://www.iua.upf.es/~sms/\fP
+.SH OPTIONS
+.BI -s " samplerate"
+output sampling rate.
+.IP "-d" 
+synthesize only deterministic component.
+.IP "-n"
+synthesize only stochastic component.
+
+.SH SEE ALSO
+smsAnal(1), smsSynthDet(1), smsClean(1), smsMod(1), smsPrint(1),
+smsResample(1), smsUnDb(1)
