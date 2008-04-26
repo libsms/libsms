@@ -1,0 +1,12 @@
+
+
+sms_sources = Split(' sineSynth.c sinTab.c variousFunctions.c \
+		peakDetection.c harmDetection.c peakContinuation.c \
+		spectrum.c realft.c covLatticeHarm.c windows.c \
+		stocAnalysis.c smsIO.c filters.c fixTrajectories.c \
+		smsSynthesis.c smsAnalysis.c spectralApprox.c \
+		getResidual.c interpolateArrays.c filterArray.c \
+		sincTab.c soundIO.c hybridize.c ')
+
+
+Library( 'libsms', sms_sources )
