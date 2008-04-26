@@ -1,7 +1,7 @@
 
 sms_tools = Split(' smsAnal smsSynth smsClean \
         	smsMod smsPrint smsResample \
-        	smsSynthDet ' )
+        	smsSynthDet smsToYaml' )
 
 sms_cflags = '-g -Wall'
 
@@ -9,6 +9,7 @@ sms_libpath = '../src'
 
 sms_libs = 'sndfile', 'sms'
 
+#VariantDir('build', 'src')
 env = Environment( CCFLAGS = sms_cflags, LIBPATH = sms_libpath,
 	CPPPATH = '../src' )
 
