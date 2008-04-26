@@ -1,0 +1,22 @@
+
+sms_tools = Split(' smsAnal smsSynth smsClean \
+        	smsMod smsPrint smsResample \
+        	smsSynthDet ' )
+
+sms_cflags = '-g -Wall'
+
+sms_libpath = '../src'
+
+sms_libs = 'sndfile', 'sms'
+
+env = Environment( CCFLAGS = sms_cflags, LIBPATH = sms_libpath,
+	CPPPATH = '../src' )
+
+for tool in sms_tools:
+	tool_src = tool+'.c'
+	env.Program( target = tool,
+	 	source = tool_src, LIBS = sms_libs )
+
+
+  
+ 
