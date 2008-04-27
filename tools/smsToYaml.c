@@ -83,13 +83,14 @@ int main (int argc, char *argv[])
 	
 	fp = fopen(pChOutputYamlFile, "w");
 
+    //:::::::::: write Header ::::::::::::::::
     printf("writing %s.\n", pChOutputYamlFile);
 	fprintf(fp,"Header:\n");
-	fprintf(fp,"    nRecords: %d\n", pSmsHeader->nRecords);
-	fprintf(fp,"    iFrameRate: %d\n", pSmsHeader->iFrameRate);
-	fprintf(fp,"    nTrajectories: %d\n", pSmsHeader->nTrajectories);
-	fprintf(fp,"    nStochasticCoeff: %d\n", pSmsHeader->nStochasticCoeff);
-    fprintf(fp,"    iFormat: ");
+	fprintf(fp,"    nRecords         : %d\n", pSmsHeader->nRecords);
+	fprintf(fp,"    iFrameRate       : %d\n", pSmsHeader->iFrameRate);
+	fprintf(fp,"    nTrajectories    : %d\n", pSmsHeader->nTrajectories);
+	fprintf(fp,"    nStochasticCoeff : %d\n", pSmsHeader->nStochasticCoeff);
+    fprintf(fp,"    iFormat          : ");
     if(pSmsHeader->iFormat == FORMAT_HARMONIC) 
         fprintf(fp,"harmonic\n");
     else if(pSmsHeader->iFormat == FORMAT_INHARMONIC) 
@@ -98,7 +99,7 @@ int main (int argc, char *argv[])
         fprintf(fp,"harmonic_with_phase\n");
     else if(pSmsHeader->iFormat == FORMAT_INHARMONIC_WITH_PHASE) 
         fprintf(fp,"inharmonic_with_phase\n");
-	fprintf(fp,"    iStochasticType: ");
+	fprintf(fp,"    iStochasticType  : ");
     if(pSmsHeader->iStochasticType == STOC_WAVEFORM) 
         fprintf(fp,"waveform\n");
 	else if(pSmsHeader->iStochasticType == STOC_STFT) 
@@ -107,14 +108,27 @@ int main (int argc, char *argv[])
         fprintf(fp,"approx\n");
     else if(pSmsHeader->iStochasticType == STOC_NONE) 
         fprintf(fp,"none\n");
-	fprintf(fp,"    iOriginalSRate: %d\n", pSmsHeader->iOriginalSRate);  
-/*
+	fprintf(fp,"    iOriginalSRate   : %d\n", pSmsHeader->iOriginalSRate);  
+
+
+    //:::::::::::: Write Analysis Arguments :::::::::::::::
 	if (pSmsHeader->nTextCharacters > 0)
 	{
-		printf("\nANALISIS ARGUMENTS:\n");
-		printf("%s\n", pSmsHeader->pChTextCharacters);
+		char *arg=NULL, *value=NULL;
+        fprintf(fp,"\n\nanalysis_arguments:\n");
+		
+        printf("\nanalysis_arguments:\n");
+        for(i = 0; i < pSmsHeader->nTextCharacters; i++)
+        {
+            if(pSmsHeader->pChTextCharacters[i] == ',')
+            {
+                printf("    arg: %s, value: %s \n", arg, value);
+            }
+        }
+        //fprintf(fp,"    %s\n", pSmsHeader->pChTextCharacters);
 	} 
-*/
+    
+    return 1;
 	iFirstFrame = 
 		MIN (pSmsHeader->nRecords - 1, fInitialTime * pSmsHeader->iFrameRate);
 	if (fEndTime > 0) 
