@@ -85,7 +85,7 @@ int main (int argc, char *argv[])
 
     //:::::::::: write Header ::::::::::::::::
     printf("writing %s.\n", pChOutputYamlFile);
-	fprintf(fp,"Header:\n");
+	fprintf(fp,"header:\n");
 	fprintf(fp,"    nRecords         : %d\n", pSmsHeader->nRecords);
 	fprintf(fp,"    iFrameRate       : %d\n", pSmsHeader->iFrameRate);
 	fprintf(fp,"    nTrajectories    : %d\n", pSmsHeader->nTrajectories);
@@ -114,21 +114,30 @@ int main (int argc, char *argv[])
     //:::::::::::: Write Analysis Arguments :::::::::::::::
 	if (pSmsHeader->nTextCharacters > 0)
 	{
-		char *arg=NULL, *value=NULL;
-        fprintf(fp,"\n\nanalysis_arguments:\n");
-		
-        printf("\nanalysis_arguments:\n");
-        for(i = 0; i < pSmsHeader->nTextCharacters; i++)
+		char cOneLine[100];
+        int t, iStrStart, nBytes;
+        fprintf(fp,"\nanalysis_arguments: >\n");
+        iStrStart = 0;
+        for(t = 0; t < pSmsHeader->nTextCharacters; t++)
         {
-            if(pSmsHeader->pChTextCharacters[i] == ',')
+            if(pSmsHeader->pChTextCharacters[t] == ',' && (t - iStrStart) > 60)
+            {   
+                memset(cOneLine, 0, 100);
+                nBytes = t + 1 - iStrStart;
+                strncpy (cOneLine, pSmsHeader->pChTextCharacters+ iStrStart, nBytes);
+                fprintf(fp,"    %s\n", cOneLine);
+                iStrStart = t+2;
+            }
+            else if(pSmsHeader->nTextCharacters == t - 1)
             {
-                printf("    arg: %s, value: %s \n", arg, value);
+                 memset(cOneLine, 0, 100);
+                 nBytes = t + 1 - iStrStart;
+                 strncpy (cOneLine, pSmsHeader->pChTextCharacters+ iStrStart, nBytes);
+                 fprintf(fp,"    %s\n", cOneLine);
             }
         }
-        //fprintf(fp,"    %s\n", pSmsHeader->pChTextCharacters);
 	} 
-    
-    return 1;
+
 	iFirstFrame = 
 		MIN (pSmsHeader->nRecords - 1, fInitialTime * pSmsHeader->iFrameRate);
 	if (fEndTime > 0) 
@@ -145,42 +154,56 @@ int main (int argc, char *argv[])
 	else
 		iLastTraj = pSmsHeader->nTrajectories;
 
-
+    //:::::::::::: Write Data :::::::::::::::
+    fprintf(fp, "\nData:\n");
 	for(i = iFirstFrame; i < iLastFrame; i++)
 	{
 		GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
-		printf("\nFrame #%d {%1.3fs}:\n", i, (float) i / pSmsHeader->iFrameRate);
-		printf("Deterministic:\n");
-		if (iFormat != 3 && 
-		    (pSmsHeader->iFormat == FORMAT_HARMONIC ||
-		    pSmsHeader->iFormat == FORMAT_INHARMONIC))
-		{	
-			printf("Traj.:  Frequency  Magnitude\n");
-			for(j = iFirstTraj; j < iLastTraj; j++)
-			{
-			    if(smsData.pFMagTraj[j] > 0.00000001 )
-					printf("%d: %5.2f   %2.4f  \n", j, smsData.pFFreqTraj[j], smsData.pFMagTraj[j]);
-			}
-		}
-		else
-		{
-			printf("Traj.:  Frequency  Magnitude  Phase\n");		
-			for(j = iFirstTraj; j < iLastTraj; j++)
-			{
-				if(smsData.pFMagTraj[j] > 0.00000001 )
-					printf("%d: %.0f  %.0f   %.0f  \n", j, smsData.pFFreqTraj[j], 
-						smsData.pFMagTraj[j], smsData.pFPhaTraj[j]);	
-			}
-		}
+		fprintf(fp,"\n  - frame    : %d \n", i);
+        fprintf(fp,"    timetag  : %f \n", (float) i / pSmsHeader->iFrameRate);
+		if(iFormat != 3)
+        {
+            if(pSmsHeader->iFormat == FORMAT_HARMONIC ||
+                pSmsHeader->iFormat == FORMAT_HARMONIC_WITH_PHASE)
+                    fprintf(fp,"    harmonics:\n");
+            if(pSmsHeader->iFormat == FORMAT_INHARMONIC ||
+                pSmsHeader->iFormat == FORMAT_INHARMONIC_WITH_PHASE)
+                    fprintf(fp,"    tracks:\n");
+            if (pSmsHeader->iFormat == FORMAT_HARMONIC ||
+                pSmsHeader->iFormat == FORMAT_INHARMONIC)
+            {	
+                for(j = iFirstTraj; j < iLastTraj; j++)
+                {
+                    if(smsData.pFMagTraj[j] > 0.00000001 )
+                        fprintf(fp, "       %-4d: [%12f, %12f]  \n", j,
+                            smsData.pFFreqTraj[j], smsData.pFMagTraj[j]);
+                }
+            }
+            else
+            {
+                for(j = iFirstTraj; j < iLastTraj; j++)
+                {
+                    if(smsData.pFMagTraj[j] > 0.00000001 )
+                        fprintf(fp,"        %-4d: [%12f, %12f, %12f]  \n", j,
+                            smsData.pFFreqTraj[j], smsData.pFMagTraj[j], smsData.pFPhaTraj[j]);	
+                }
+            }
+        }
 		
 		if (iFormat != 2 && pSmsHeader->iStochasticType != STOC_NONE)
 		{	
-			printf("\n");
-			printf("stocg: %.0f\n", *(smsData.pFStocGain));
-      		printf("stocc: ");
+            fprintf(fp,"    stocGain: %f\n", *(smsData.pFStocGain));
+      		fprintf(fp,"    stocCoefficients: [");
       		for(j = 0; j < smsData.nCoeff; j++)
-        	printf("%1.3f  ", smsData.pFStocCoeff[j]);
-    	}   
+            {
+                if(j%4 == 0 && j !=0)
+                    fprintf(fp,",\n                       ");
+                else if(j !=0)
+                    fprintf(fp,", ");
+                fprintf(fp,"%9f", smsData.pFStocCoeff[j]);
+            }
+            fprintf(fp,"]\n");
+        }   
   	}
 
 		free (pSmsHeader);
