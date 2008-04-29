@@ -2,7 +2,7 @@ dt#!/usr/bin/env python
 from pylab import *
 import aifc, yaml, numpy
 
-soundFileName = 'audio/piano.aiff'
+soundFileName = 'audio/piano5.aiff'
 yamlFileName = 'piano5.yaml'
 
 print 'reading', soundFileName, '...'
@@ -14,7 +14,7 @@ srate = sf.getframerate()
 nframes = sf.getnframes()
 
 if sf.getnchannels() == 2:
-    print "stereo file not yet supported, TODO: mix-to-mono"
+    sys.exit("stereo file not yet supported, TODO: mix-to-mono")
 
 # get data and convert to unsigned int from hex string
 sfdata = numpy.fromstring(sf.readframes(nframes), 'H')
@@ -36,7 +36,9 @@ Pxx, freqs, bins, im = specgram(sfdata, NFFT=NFFT, Fs=srate, noverlap=900)
 # show()
 
 
-
+#import sms analysis data from yaml file
 print 'loading', yamlFileName, '...'
-#yamlFile = yaml.load(open(c_file).read())
+sms = yaml.load(open(yamlFileName).read())
+
+nRecords = sms['header']['nRecords']
 
