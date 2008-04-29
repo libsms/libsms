@@ -151,7 +151,7 @@ static int InitArguments (ARGUMENTS *pArguments)
 static int SaveArguments (ARGUMENTS arguments)
 {
   sprintf (pChTextString, 
-           "format %d, soundType %d,  analysisDirection %d, windowSize %.2f, windowType %d, frameRate %d, highestFreq %.2f, minPeakMag %.2f, refHarmonic %d, minRefHarmMag %.2f, refHarmMagDiffFromMax %.2f, defaultFund %.2f, lowestFund %.2f, highestFund %.2f, nGuides %d, nTrajectories %d, freqDeviation %.2f,   peakContToGuide %.2f, fundContToGuide %.2f, cleantTraj %d, minTrajLength %.2f, maxSleepingTime %.2f,  stochasticType %d, nStocCoeff %d \n", 	
+           "format %d, soundType %d, analysisDirection %d, windowSize %.2f, windowType %d, frameRate %d, highestFreq %.2f, minPeakMag %.2f, refHarmonic %d, minRefHarmMag %.2f, refHarmMagDiffFromMax %.2f, defaultFund %.2f, lowestFund %.2f, highestFund %.2f, nGuides %d, nTrajectories %d, freqDeviation %.2f, peakContToGuide %.2f, fundContToGuide %.2f, cleantTraj %d, minTrajLength %.2f, maxSleepingTime %.2f, stochasticType %d, nStocCoeff %d\n", 	
 	     arguments.iFormat, arguments.iSoundType,
          arguments.iAnalysisDirection, arguments.fWindowSize, 
 	     arguments.iWindowType, arguments.iFrameRate,

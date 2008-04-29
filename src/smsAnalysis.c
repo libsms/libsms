@@ -175,13 +175,13 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsData,
 			             analParams);
                          
                         //::::::::::::::::::::: RTE_DEBUG::::::::::::::::::
-                        int i;
-                        printf("\n:::::::::: pFData:  ::::::::::: sizeData: %d, sizeHop %d ::::::::::::\n",
-                               sizeData, analParams.sizeHop);
-                        for(i = 0; i < analParams.sizeHop; i++)
-                                //printf("%.3f  ", pFResidual[i]);
-                                printf("%d  ", (short) pFData[i]);
-                        printf("\n");
+/*                         int i; */
+/*                         printf("\n:::::::::: pFData:  ::::::::::: sizeData: %d, sizeHop %d ::::::::::::\n", */
+/*                                sizeData, analParams.sizeHop); */
+/*                         for(i = 0; i < analParams.sizeHop; i++) */
+/*                                 //printf("%.3f  ", pFResidual[i]); */
+/*                                 printf("%d  ", (short) pFData[i]); */
+/*                         printf("\n"); */
                         //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
                         /* approximate residual */
