@@ -35,16 +35,19 @@ int main (int argc, char *argv[])
 	SMS_DATA smsData;
 	int iError, i, j, iFormat = 1, iFirstFrame = 0, iLastFrame = -1, 
 		iFirstTraj = 0, iLastTraj = -1;
-    float fInitialTime = 0, fEndTime = 0;
-
+        float fInitialTime = 0, fEndTime = 0;
+        
+	if (argc <= 2) 
+		quit(USAGE);
+	pChOutputYamlFile = argv[argc-1];
+        pChInputSmsFile = argv[argc-2];
 	for (i=1; i<argc-1; i++) 
 	{
 		if (*(argv[i]++) == '-') 
 		{
 			switch (*(argv[i]++)) 
 			{
-				case 't': if (sscanf(argv[i],"%d", 
-				              &iFormat) < 1)
+				case 't': if (sscanf(argv[i],"%d", &iFormat) < 1)
 					quit("Invalid format");
 					break;
 				case 'i': if (sscanf(argv[i],"%f", 
@@ -59,13 +62,6 @@ int main (int argc, char *argv[])
 			}
 		}
 	}
-
-	if (argc <= 2) 
-		quit(USAGE);
-        
-    pChInputSmsFile = argv[argc-1];
-	pChOutputYamlFile = argv[argc-2];
-      
 	if((iError = GetSmsHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile)) < 0)
 	{
 		if(iError == SMS_NOPEN)
