@@ -1,0 +1,50 @@
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+SMS Library Work Log
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+* Issues to be delt with
+** changing the framerate in smsAnal makes deterministic component empty. huh?
+** what is the difference between smsClean and the cleaning within smsAnal?
+** can/is smsSynthDet be in smsSynth
+** what is calcCorr in tools?
+* Pre-modifications: making analysis/plotting scripts
+** DONE smsToYaml for importing into python
+** TODO [#C] SWIG libsms wrappers for more convenient use in python
+** TODO smsPlot.py for plotting smsData over a spectrogram of audio source.
+* Phase 1: Refactoring libsms for usage in real-time
+** TODO [#A] switch build scripts to scons 
+** TODO [#A] should have the option to store residual in audio samples or STFT frames
+*** TODO organize analParems to allow for options:
+   - [ ] sound samples
+   - [ ] STFT frames with imag/real pairs
+   - [ ] filter approximation
+   - [ ] no stachostic component
+*** TODO store audio data in SMS_DATA structure
+    - [X] need number of samples in AllocateSmsRecord:
+    - [ ] put sizeHop in AllocSmsHeader by using SMSHeader's
+    framerate and samplerate
+    - [X] make sure size hop shows up the same in synth and analysis,
+    - [X] Q. why is SIZE_SYNTH_HOP set to 128? changing it causes memory errors..
+    within AllocateSmsRecord            
+         - A.  smallest size for FFT with good frequency resolution 
+    - [ ] write audio data to file, check if it is the same when re-opened
+    - [ ] seg fault on last frame of Stoch Analysis
+         - [ ] check why there are stoch coefficients with STOC_AUDIO in sms.h         
+*** TODO add print function for smsPrint
+** TODO [#B] - switch to FFTW3f for fft's
+** - need to configure a fftw_plan outside of process loop, and allocate buffers there
+** [ ] - make sure all params are parsed correctly
+**DONE check argument parsing
+  - [X] stochostic type ("-e") is ignored.. NOTAPROBLEM
+** TODO [#C] reorganize soundIO.  Some functions right now aren't used.. or can be combined with others
+**       - what is GetResidual's WriteResidualToFile supposed to be doing?
+** TODO [#C] make samplerate independant of analysis/synthesis
+** DONE - reorganize tools and make with one makefile
+** TODO [#B] convert README's to manpages.
+** TODO [#B] make example bash scripts
+** TODO [#C] move smsMod's stochostic gain adjusting to 
+** TODO [#C] make options in smsAnal for output format
+
+* Phase 2: building real-time pd externals for analysis/synthesis
+** will have to normalize audio to floating point abs(1)
+* Phase 3: visualizing and editing SMS data
+
