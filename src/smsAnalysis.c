@@ -48,7 +48,7 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsData,
 	int iCurrentFrame = MaxDelayFrames - 1;  /* frame # of current frame */
 	int iExtraSamples;              /* samples used for next analysis frame */
 	float fRefFundamental = 0;   /* reference fundamental for current frame */
-
+//        printf("iCurrentFrame: %d\n",iCurrentFrame);
 	/* initialize structures */
 	if (ppFrames == NULL) 
 	{
@@ -165,7 +165,6 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsData,
 				MIN (soundBuffer.sizeBuffer - 
 				      (iSoundLoc - soundBuffer.iSoundSample),
 				     sizeResidual);
-    
 			if ((pFResidual = (float *) calloc (sizeResidual, sizeof(float))) 
 			    == NULL)
 				return -1;
@@ -175,12 +174,12 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsData,
 			             analParams);
                          
                         //::::::::::::::::::::: RTE_DEBUG::::::::::::::::::
-/*                         int i; */
-/*                         printf("\n:::::::::: pFData:  ::::::::::: sizeData: %d, sizeHop %d ::::::::::::\n", */
-/*                                sizeData, analParams.sizeHop); */
+                         int i;
+/*                         printf("\n:::::::::: pFData (before  StocAnalysis):  sizeHop: %d, sizeData: %d, frame# %d ::::::::::::\n", */
+/*                                analParams.sizeHop, sizeData, ppFrames[iCurrentFrame]->iFrameNum ); */
 /*                         for(i = 0; i < analParams.sizeHop; i++) */
-/*                                 //printf("%.3f  ", pFResidual[i]); */
-/*                                 printf("%d  ", (short) pFData[i]); */
+/*                                 printf("%f  ", pFResidual[i]); */
+/* //                                printf("%d  ", (short) pFData[i]); */
 /*                         printf("\n"); */
                         //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -188,9 +187,10 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsData,
 			StocAnalysis (pFResidual, sizeData, pSmsData, analParams);
                         
                         //::::::::::::::::::::: RTE_DEBUG::::::::::::::::::
-/*                         printf("\n:::::::::: smsAnalysis: AFTER StochAnalysis::::::::::::::::::::\n"); */
+
+/*                         printf("\n:::::0000000000000::::: smsAnalysis: AFTER StochAnalysis::::::::::::::::::::\n"); */
 /*                         for(i = 0; i < analParams.sizeHop; i++) */
-/*                                 printf("%.3f ", pSmsData->pFStocAudio[i]); */
+/*                                 printf("%.3f ", pSmsData->pFStocWave[i]); */
 /* 			printf("\n"); */
                         //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
                         

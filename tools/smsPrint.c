@@ -20,7 +20,14 @@
  */
 #include "sms.h"
 
+
+#define PRINT_ALL 1
+#define PRINT_DET 2
+#define PRINT_STOC 3
+#define PRINT_HDR 4  //TODO: print only header
 #define USAGE "Usage: smsPrint [-t type-format][-i initial-time][-e end-time][-f first-trajectory][-l last-trajectory] <smsFile>"
+
+
 
 short MaxDelayFrames;
 float FResidualPerc;
@@ -86,7 +93,7 @@ int main (int argc, char *argv[])
     
 	AllocSmsRecord (pSmsHeader, &smsData);
 
-	printf("HEADER INFORMATION:\n");
+	printf("\nHEADER INFORMATION:\n");
 	printf("Number of records = %d\n", pSmsHeader->nRecords);
 	printf("Frame rate (Hz) = %d\n", pSmsHeader->iFrameRate);
 	printf("Number of trajectories = %d\n", pSmsHeader->nTrajectories);
@@ -99,7 +106,7 @@ int main (int argc, char *argv[])
 	if(pSmsHeader->iStochasticType == 0) printf("Stochastic type = waveform\n");
 	else if(pSmsHeader->iStochasticType == 1) printf("Stochastic type = STFT\n");
 	else if(pSmsHeader->iStochasticType == 2)
-                printf("Stochastic type = line segments on magnitude spectrum\n");
+                printf("Stochastic type = line segment magnitude spectrum approximation \n");
 	else if(pSmsHeader->iStochasticType == 3) printf("Stochastic type = none\n");
 	printf("Original sampling rate = %d\n", pSmsHeader->iOriginalSRate);  
 
@@ -125,39 +132,54 @@ int main (int argc, char *argv[])
 	else
 		iLastTraj = pSmsHeader->nTrajectories;
 
-	if (iFormat == 2)
-	{
-		printf("\n Fr.   sec.     ");
-		for(j = iFirstTraj; j < iLastTraj; j++)
-				printf("Traj %2d    ", j);
-		printf("\n");
-	}
+        if(iFormat != PRINT_HDR)
+        {
+                for(i = iFirstFrame; i < iLastFrame; i++)
+                {
+                                GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
+                                printf("\nFrame #%d {%1.3fs}: ", i, (float) i / pSmsHeader->iFrameRate);
+                                if (iFormat != PRINT_STOC) 
+                                {
+                                        printf("\n    det:\n");
+                                        if((pSmsHeader->iFormat == FORMAT_HARMONIC ||
+                                            pSmsHeader->iFormat == FORMAT_INHARMONIC))
+                                        {
+                                                for(j = iFirstTraj; j < iLastTraj; j++)
+                                                        printf("%5.2f[%2.4f]  ", smsData.pFFreqTraj[j], smsData.pFMagTraj[j]);
+                                        }
+                                        else 
+                                        {
+                                                for(j = iFirstTraj; j < iLastTraj; j++)
+                                                        printf("%5.2f[%2.4f, %2.4f]  ", smsData.pFFreqTraj[j], 
+                                                               smsData.pFMagTraj[j], smsData.pFPhaTraj[j]);
+                                        }
+                                }
+                                if(iFormat != PRINT_DET && pSmsHeader->iStochasticType != STOC_NONE)
+                                        {	
+                                                if(pSmsHeader->iStochasticType == STOC_WAVEFORM)
+                                                {
+                                                        printf("\n    stoc_wave:\n");
+                                                        for( j = 0; j < ( pSmsHeader->iOriginalSRate / pSmsHeader->iFrameRate); j++)
+                                                                printf("%f, ", *(smsData.pFStocWave));
+                                                }
+                                                else if(pSmsHeader->iStochasticType == STOC_STFT)
+                                                 {
 
-	for(i = iFirstFrame; i < iLastFrame; i++)
-	{
-		GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
-		printf("\nFrame #%d {%1.3fs}:\n ", i, (float) i / pSmsHeader->iFrameRate);
-		if (iFormat != 2) printf("\ndet: ");
-		if (iFormat != 3 && 
-		    (pSmsHeader->iFormat == FORMAT_HARMONIC ||
-		    pSmsHeader->iFormat == FORMAT_INHARMONIC))
-			for(j = iFirstTraj; j < iLastTraj; j++)
-			    printf("%5.2f[%2.4f]  ", smsData.pFFreqTraj[j], smsData.pFMagTraj[j]);
-		else
-			for(j = iFirstTraj; j < iLastTraj; j++)
-				printf("%.0f[%.0f, %.0f]  ", smsData.pFFreqTraj[j], 
-				smsData.pFMagTraj[j], smsData.pFPhaTraj[j]);
+                                                 }
+                                                else if( pSmsHeader->iStochasticType == STOC_APPROX )
+                                                {
+                                                        printf("\n    stoc_gain: %f\n", *(smsData.pFStocGain));
+                                                        printf("stoc_coefficients: ");
+                                                        for(j = 0; j < smsData.nCoeff; j++)
+                                                                printf("%1.3f  ", smsData.pFStocCoeff[j]);
+                                                }   
+                                        }
+                                printf("\n");
+                }
 
-		if (iFormat != 2 && pSmsHeader->iStochasticType != STOC_NONE)
-		{	
-			printf("\n");
-			printf("stocg: %.0f\n", *(smsData.pFStocGain));
-      		printf("stocc: ");
-      		for(j = 0; j < smsData.nCoeff; j++)
-        	printf("%1.3f  ", smsData.pFStocCoeff[j]);
-    	}   
-  	}
-		free (pSmsHeader);
-		fclose (pSmsFile);
-		return(1);
+        }
+
+        free (pSmsHeader);
+        fclose (pSmsFile);
+        return(1);
 }

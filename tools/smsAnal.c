@@ -49,7 +49,6 @@ static int ComputeSms (SNDHeader *pSoundHeader, SMSHeader *pSmsHeader,
 	short iDoAnalysis = 1, iRecord = 0;
 
         /* allocate output SMS record */
-//        printf("doing Alloc in ComputeSms");
 	AllocSmsRecord (pSmsHeader, &smsData);
       
 	iNextSizeRead = (analParams.iDefaultSizeWindow + 1) / 2.0;
@@ -84,9 +83,9 @@ static int ComputeSms (SNDHeader *pSoundHeader, SMSHeader *pSmsHeader,
 			break;
 		}
 		/* perform analysis of one frame of sound */
-//                fprintf(stdout, "doing SmsAnalysis.... ");
 		iStatus = SmsAnalysis (pSoundData, sizeNewData, &smsData, 
 		                       analParams, &iNextSizeRead);
+
 
 		/* if there is an output SMS record, write it */
 		if (iStatus == 1)
@@ -174,19 +173,29 @@ static int SaveArguments (ARGUMENTS arguments)
  * ARGUMENTS *pArguments;	pointer to command arguments 
  *
  */
-static int ComputeRecordBSize (ARGUMENTS *pArguments)
+static int ComputeRecordBSize (ARGUMENTS *pArguments, int iHopSize)
 {
-	int iSize = 0, nGain = 1, nComp = 2;
+	int iSize, nDet;
   
-	if (pArguments->iStochasticType == STOC_NONE)
-		nGain = 0;
+	if (pArguments->iFormat == FORMAT_HARMONIC ||
+	    pArguments->iFormat == FORMAT_INHARMONIC)
+		nDet = 2;// freq, mag
+        else nDet = 3; // freq, mag, phase
 
-	if (pArguments->iFormat == FORMAT_HARMONIC_WITH_PHASE ||
-	    pArguments->iFormat == FORMAT_INHARMONIC_WITH_PHASE)
-		nComp = 3;
-     
-	iSize = sizeof (float) * (nComp * pArguments->nTrajectories + 
-	                          pArguments->nStochasticCoeff + nGain);  
+	iSize = sizeof (float) * (nDet * pArguments->nTrajectories);
+
+	if (pArguments->iStochasticType == STOC_WAVEFORM)
+        {       //numSamples
+                iSize += sizeof(float) * iHopSize;
+        }
+        else if(pArguments->iStochasticType == STOC_STFT)
+        {
+                //sizeFFT*2
+        }
+        else if(pArguments->iStochasticType == STOC_APPROX)
+        {       //stocCoeff + 1 (gain)
+                iSize += sizeof(float) * (pArguments->nStochasticCoeff + 1);
+        }
 	return (iSize);
 }	     
 
@@ -338,23 +347,23 @@ static int FillSmsHeader (SMSHeader *pSmsHeader, int iRecordBSize,
                           int nRecords, ARGUMENTS arguments,
                           int iSamplingRate, int iHopSize)
 {
-  InitSmsHeader (pSmsHeader);
-  pSmsHeader->iRecordBSize = iRecordBSize;
-  pSmsHeader->nRecords = nRecords;
-  pSmsHeader->iFormat = arguments.iFormat;
-  pSmsHeader->iFrameRate = arguments.iFrameRate;
-  pSmsHeader->iStochasticType = arguments.iStochasticType;
-  pSmsHeader->nTrajectories = arguments.nTrajectories;
-  pSmsHeader->nStochasticCoeff = arguments.nStochasticCoeff;
-  pSmsHeader->iOriginalSRate = iSamplingRate;
-  pSmsHeader->sizeHop = iHopSize;
+        InitSmsHeader (pSmsHeader);
+        pSmsHeader->iRecordBSize = iRecordBSize;
+        pSmsHeader->nRecords = nRecords;
+        pSmsHeader->iFormat = arguments.iFormat;
+        pSmsHeader->iFrameRate = arguments.iFrameRate;
+        pSmsHeader->iStochasticType = arguments.iStochasticType;
+        pSmsHeader->nTrajectories = arguments.nTrajectories;
+        pSmsHeader->nStochasticCoeff = arguments.nStochasticCoeff;
+        pSmsHeader->iOriginalSRate = iSamplingRate;
+        pSmsHeader->sizeHop = iHopSize;
 
-  SaveArguments (arguments);
+        SaveArguments (arguments);
        
-  pSmsHeader->nTextCharacters = strlen (pChTextString) + 1;
-  pSmsHeader->pChTextCharacters = (char *) pChTextString;
-
-  return (1);
+        pSmsHeader->nTextCharacters = strlen (pChTextString) + 1;
+        pSmsHeader->pChTextCharacters = (char *) pChTextString;
+        
+        return (1);
 }
    
 /* function to fill the analysis parameters from the user arguments
@@ -451,13 +460,14 @@ int main (int argc, char *argv[])
 		         arguments.fDefaultFund);
 	}
 
-	/* check if no stochastic component */
-	if(arguments.iStochasticType == STOC_NONE)
+	/* check if no stochastic component */ //don't think I need this anymore... set above
+	if(arguments.iStochasticType != STOC_APPROX)
 		arguments.nStochasticCoeff = 0;
 
-	iRecordBSize = ComputeRecordBSize (&arguments);
+
 	iHopSize = (int)(SoundHeader.iSamplingRate / 
 	                (float) arguments.iFrameRate);
+	iRecordBSize = ComputeRecordBSize (&arguments, iHopSize);
 	nRecords = 3 + SoundHeader.nSamples / (float) iHopSize;
 
 	FillAnalParams (arguments, &analParams, &SoundHeader, iHopSize);

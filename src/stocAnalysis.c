@@ -164,8 +164,20 @@ int StocAnalysis (float *pFResidual, int sizeWindow,
 	int iError = 1;
 	if (analParams.iStochasticType == STOC_WAVEFORM)
         {
-                memcpy( pSmsData->pFStocAudio, pFResidual, sizeof(float) * analParams.sizeHop);
+
+              memcpy( pSmsData->pFStocWave, pFResidual, sizeof(float) * analParams.sizeHop);
+                // ?? should I copy all the window, or 1/2 of it?
                 //TODO: compare input/output window sizes and add samples if necessary
+                //::::::::::::::::::::: RTE_DEBUG::::::::::::::::::
+/*                 int i;  */
+/*                  printf("\n::::::: sizeWindow: %d :::::::::::::::::::::::::::::::::\n", */
+/*                          analParams.sizeHop ); */
+/*                 for(i = 0; i < analParams.sizeHop; i++) */
+/*                         printf("%f  ", pSmsData->pFStocWave[i]); */
+
+//                printf("\n");
+                //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
         }
         else if (analParams.iStochasticType == STOC_STFT) 
         {

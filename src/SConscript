@@ -1,3 +1,5 @@
+
+Import('env')
  
 sms_sources = Split(' sineSynth.c sinTab.c variousFunctions.c \
 		peakDetection.c harmDetection.c peakContinuation.c \
@@ -7,6 +9,4 @@ sms_sources = Split(' sineSynth.c sinTab.c variousFunctions.c \
 		getResidual.c interpolateArrays.c filterArray.c \
 		sincTab.c soundIO.c hybridize.c ')
 
-#VariantDir('build', 'src')
-env = Environment( CCFLAGS = '-g -Wall')
 env.Library( 'libsms', sms_sources )

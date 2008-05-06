@@ -151,7 +151,7 @@ int main (int argc, char *argv[])
 		if (iSample % (synthParams.sizeHop * 40) == 0)
 			fprintf(stderr,"%.2f ", iSample / (float) synthParams.iSamplingRate);
 	}
-  
+        fprintf(stderr,"/n");
 	/* write and close output sound file */
 	WriteOutputFile ();
 	free (pSSynthesis);

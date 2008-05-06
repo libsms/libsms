@@ -2,6 +2,9 @@
 SMS Library Work Log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 * Issues to be delt with
+** [#A] ways to fix the stoc_wave data:
+*** write smsData to txt file for every frame
+*** think about best way to write file, more than one malloc?
 ** changing the framerate in smsAnal makes deterministic component empty. huh?
 ** what is the difference between smsClean and the cleaning within smsAnal?
 ** can/is smsSynthDet be in smsSynth
@@ -13,7 +16,7 @@ SMS Library Work Log
 * Phase 1: Refactoring libsms for usage in real-time
 ** TODO [#A] switch build scripts to scons 
 ** TODO [#A] should have the option to store residual in audio samples or STFT frames
-*** TODO organize analParems to allow for options:
+*** TODO organize analParams to allow for options:
    - [ ] sound samples
    - [ ] STFT frames with imag/real pairs
    - [ ] filter approximation

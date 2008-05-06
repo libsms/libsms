@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
-import aifc
+
+# now using libsndfile-python (http://arcsin.org/softwares/libsndfile-python.html)
+import sndile
+#import aifc,  wave, sndhdr
 from pylab import *
 from numpy import *
 # using the libyaml loader is much faster, if available
@@ -11,32 +14,32 @@ try:
 except ImportError:
     from yaml import Loader, Dumper
 
-soundFilename = 'audio/piano.aiff'
-yamlFilename = 'piano5.yaml'
+soundFilename ='/home/r/samples/instrumental/horn/Flugel/Flug-d5.aiff'
+#soundFilename = 'audio/piano.aiff'
+yamlFilename = 'flugalD5.yaml'
+#yamlFilename = 'piano.yaml'
 
+sf = sndfile.open(soundFilename, 'r')
+sfinfo = sf.get_info()
+if sfinfo.channels == 2:
+    print 'stero files not yet supported'
 
-sf = aifc.open(soundFilename, 'r')
+sndfile.set_numarray_mode(1)
 
-bits = sf.getsampwidth()*8
-srate = sf.getframerate()
-nframes = sf.getnframes()
+srate = sfinfo.samplerate
+nframes = sfinfo.frames
 
-# get data and convert to unsigned int from hex string
-sfdata = fromstring(sf.readframes(nframes), 'H')
-# byteswap and normalize to 0:+2^bits
-sfdata = sfdata.byteswap() - 2**bits / 2
-# convert to float and normalize to -1:1
-sfdata = array(sfdata, float) / (.5 * 2**bits) - 1
+sfdata = sf.readf_float(nframes)
+
 
 # plot a spectragram of sound
-ymax = 5000
-plotTitle = 'sample:', soundFilename
+plotTitle = 'sample: '+ soundFilename
 
-specgram(sfdata, NFFT=1024, Fs= srate, noverlap=900)
+Pxx, freq, bins, im = specgram(sfdata, NFFT=2048, Fs= srate, noverlap=512)
 title(plotTitle)
 xlabel('time (seconds)')
 ylabel('frequency (hertz)')
-axes().set_ylim(0,ymax)
+#axes().set_ylim(0,5000)
 show()
 
 
@@ -50,23 +53,23 @@ nTraj = smsFile['header']['nTrajectories']
 
 smsData = smsFile['Data'] #todo: change to 'data' for future files
 
-# make a track and plot [num,[timetags],[freqs]]
+# make a track list: tracks[[ [timetags], [freqs] ]]
+tracks = [0] *nTraj
 for i in range(nTraj): # loop for each harmonic
-    time = -1; # use -1 index to check if it has been set (which would be positive)
+    time = 0; # use int index to check if it has been set (which would be positive)
     freq = 0;
     for j in range(nRecords): # loop for all frames
-        if smsData[j]['harmonics']: # make sure frame has harmonic data
+        if smsData[j]['harmonics']: # make sure frame has harmonic data #TODO: check if necessary loop
             for num,traj in smsData[j]['harmonics'].iteritems(): #  build time and freq lists
                 if i == num:
-                    if time == -1:
-                        print 'setting first frame'
+                    if time == 0:
                         time = [smsData[j]['timetag']]
                         freq = [smsData[j]['harmonics'][num][0]]
                     else:
                         time.append(smsData[j]['timetag'])
                         freq.append(smsData[j]['harmonics'][num][0])
-    plot(time,freq)
-
-        
-
-
+        tracks[i] = [time,freq]
+   
+for i in range(nTraj): # if traj has data, plot it
+    if tracks[i][0] != 0:
+        plot(tracks[i][0],tracks[i][1])

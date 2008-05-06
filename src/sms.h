@@ -94,7 +94,7 @@ typedef struct
 	float *pFMagTraj;          /* magnitude of sinusoids */
 	float *pFPhaTraj;          /* phase of sinusoids */
 	int nTraj;                 /* number of sinusoids */
-        float *pFStocAudio;
+        float *pFStocWave;
 	float *pFStocGain;         /* gain of stochastic component */
 	float *pFStocCoeff;        /* filter coefficients for stochastic component */
 	int nCoeff;                /* number of filter coefficients */

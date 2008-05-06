@@ -193,6 +193,18 @@ int WriteSmsFile (FILE *pSmsFile, SMSHeader *pSmsHeader)
 int WriteSmsRecord (FILE *pSmsFile, SMSHeader *pSmsHeader, 
                     SMS_DATA *pSmsRecord)
 {  
+
+/*         //::::::::::::::::::::: RTE_DEBUG:::::::::::::::::: */
+/*         int i; */
+/*         int sizeHop = pSmsHeader->iOriginalSRate / pSmsHeader->iFrameRate; */
+
+/*         printf("\n:::::0000000000000::::: smsAnalysis: AFTER StochAnalysis::::::::::::::::::::\n"); */
+/*         for(i = 0; i < sizeHop; i++) */
+/*                 printf("%.3f ", pSmsRecord->pFStocWave[i]); */
+/*         printf("\n"); */
+/*         //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: */
+
+
 	if (fwrite ((void *)pSmsRecord->pSmsData, 1, pSmsHeader->iRecordBSize, 
 	            pSmsFile) < pSmsHeader->iRecordBSize)
 			quit ("Error: Cannot write SMS record");
@@ -205,6 +217,7 @@ int WriteSmsRecord (FILE *pSmsFile, SMSHeader *pSmsHeader,
  * SMSHeader *pSmsHeader;    pointer to SMS header
  *
  */
+/*
 int GetRecordBSize (SMSHeader *pSmsHeader)
 {
 	int iSize = 0, nGain = 1, nComp = 2;
@@ -220,7 +233,7 @@ int GetRecordBSize (SMSHeader *pSmsHeader)
 		pSmsHeader->nStochasticCoeff + nGain);
 	return(iSize);
 }	     
-     
+*/   
 
 /* function to read SMS header
  *
@@ -350,9 +363,10 @@ int AllocSmsRecord (SMSHeader *pSmsHeader, SMS_DATA *pSmsRecord)
 {
 	int iPhase = (pSmsHeader->iFormat == FORMAT_HARMONIC_WITH_PHASE ||
 	              pSmsHeader->iFormat == FORMAT_INHARMONIC_WITH_PHASE) ? 1 : 0;
+        int sizeHop = pSmsHeader->iOriginalSRate / pSmsHeader->iFrameRate;
 
 	return (AllocateSmsRecord (pSmsRecord, pSmsHeader->nTrajectories, 
-                                   pSmsHeader->nStochasticCoeff, iPhase, pSmsHeader->sizeHop,
+                                   pSmsHeader->nStochasticCoeff, iPhase, sizeHop,
                                    pSmsHeader->iStochasticType));
 }
 
@@ -370,66 +384,55 @@ int AllocateSmsRecord (SMS_DATA *pSmsRecord, int nTraj, int nCoeff, int iPhase,
                                        int sizeHop, int stochType)
 {
 //        printf("sizeHop: %d, stochType: %d \n", sizeHop, stochType);
-        int dataPos = nTraj;
+//        int dataPos = nTraj;
+        float *dataPos;  // a marker to locate specific data witin smsData
 	/* calculate size of record */
 	int sizeData = 2 * nTraj * sizeof(float);
 	if (iPhase > 0) sizeData += nTraj * sizeof(float);
 	if (nCoeff > 0) sizeData += (nCoeff + 1) * sizeof(float);
         if( stochType == STOC_WAVEFORM)
                 {
-//                        printf("allocating %d bytes for audio data \n", sizeHop * sizeof(float));
                         sizeData += sizeHop * sizeof(float);
+//                        printf("sizeData: %d \n", sizeData);                
                 }
 	/* allocate memory for data */
 	if ((pSmsRecord->pSmsData = (float *) malloc (sizeData)) == NULL)
 		return (SMS_MALLOC);
 
-	/* set the rest of the variables in the structure */
+	/* set the variables in the structure */
 	pSmsRecord->nTraj = nTraj;
 	pSmsRecord->nCoeff = nCoeff;
-	pSmsRecord->sizeData = sizeData;
+	pSmsRecord->sizeData = sizeData; // this should be removed, it is in the header
+        /* set pointers to data types within smsData array */
 	pSmsRecord->pFFreqTraj = pSmsRecord->pSmsData;
-	pSmsRecord->pFMagTraj = (float *) (pSmsRecord->pSmsData + dataPos);
-        dataPos += nTraj; // after Magnitude
+        dataPos =  (float *)(pSmsRecord->pFFreqTraj + nTraj);
+	pSmsRecord->pFMagTraj = dataPos;
+        dataPos = (float *)(pSmsRecord->pFMagTraj + nTraj);
 	if (iPhase > 0)
 	{
-		pSmsRecord->pFPhaTraj = (float *) (pSmsRecord->pSmsData + dataPos);
-                dataPos += nTraj; //after Phase
-		if (nCoeff > 0)
-		{
-			pSmsRecord->pFStocCoeff = (float *) (pSmsRecord->pSmsData + dataPos);
-                        dataPos += nCoeff; //after stochastic coefficients
-                        //todo: verify StocGain# is same as Coeff
-			pSmsRecord->pFStocGain = (float *) (pSmsRecord->pSmsData + dataPos);
-                        dataPos += nCoeff;
-		}
-		else
-		{
-			pSmsRecord->pFStocCoeff = NULL;
-			pSmsRecord->pFStocGain = NULL;
-		}
-	}
-	else
+		pSmsRecord->pFPhaTraj = dataPos;
+                dataPos = (float *) (pSmsRecord->pFPhaTraj + nTraj);
+        }	
+	else 	pSmsRecord->pFPhaTraj = NULL;
+	if (nCoeff > 0)
 	{
-		pSmsRecord->pFPhaTraj = NULL;
-		if (nCoeff > 0)
-		{
-			pSmsRecord->pFStocCoeff = (float *) (pSmsRecord->pSmsData + dataPos);
-                        dataPos += nCoeff;
-			pSmsRecord->pFStocGain = (float *) (pSmsRecord->pSmsData + dataPos);
-                        dataPos += nCoeff;
-		}
-		else
-		{
-			pSmsRecord->pFStocCoeff = NULL;
-			pSmsRecord->pFStocGain = NULL;
-		}
+                pSmsRecord->pFStocCoeff = dataPos;
+                dataPos = (float *) (pSmsRecord->pFStocCoeff + nCoeff);
+                pSmsRecord->pFStocGain = dataPos; 
+                dataPos = (float *) (pSmsRecord->pFStocGain + 1);
 	}
+        else
+	{
+                pSmsRecord->pFStocCoeff = NULL;
+                pSmsRecord->pFStocGain = NULL;
+        }
         if( stochType == STOC_WAVEFORM)
         {
-                        pSmsRecord->pFStocAudio = (float *)(pSmsRecord->pSmsData + dataPos);
-                        dataPos += sizeHop;
+                pSmsRecord->pFStocWave = dataPos;
+                dataPos = (float *)(pSmsRecord->pFStocWave + sizeHop);
         }
+        else         pSmsRecord->pFStocWave = NULL;
+
 	return (SMS_OK);			
 }
 

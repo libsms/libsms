@@ -162,17 +162,17 @@ int SmsSynthesis (SMS_DATA *pSmsData, short *pSSynthesis,
         
         
 	/* synthesize stochastic component */
-	if (pSynthParams->iSynthesisType != 1)
+	if (pSynthParams->iSynthesisType != STOC_NONE)
         {
                 if(pSynthParams->iStochasticType == STOC_WAVEFORM)
                 {
                         //cpy audio to pSSynthesis
                         //::::::::::::::::::::: RTE_DEBUG::::::::::::::::::
                         int ii; //debugging
-                        printf("\n:::::::::: pSmsData->pFStocAudio ----- sizeHop: %d, origSizeHop: %d \n", \
+                        printf("\n:::::::::: pSmsData->pFStocWave ----- sizeHop: %d, origSizeHop: %d \n", \
                                sizeHop, pSynthParams->origSizeHop);
                         for(ii = 0; ii < pSynthParams->origSizeHop; ii++)
-                                printf("%d  ", pSmsData->pFStocAudio[ii]);
+                                printf("%d  ", pSmsData->pFStocWave[ii]);
                         //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
                         
