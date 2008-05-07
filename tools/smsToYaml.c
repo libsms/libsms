@@ -20,6 +20,11 @@
  */
 #include "sms.h"
 
+#define PRINT_ALL 1
+#define PRINT_DET 2
+#define PRINT_STOC 3
+#define PRINT_HDR 4
+
 #define USAGE "Usage: smsToYaml [-t type-format][-i initial-time][-e end-time] <smsFile> <yamlFile>"
 
 short MaxDelayFrames;
@@ -33,7 +38,7 @@ int main (int argc, char *argv[])
 	SMSHeader *pSmsHeader;
 	FILE *pSmsFile, *fp;
 	SMS_DATA smsData;
-	int iError, i, j, iFormat = 1, iFirstFrame = 0, iLastFrame = -1, 
+	int iError, i, j, nSamples, iFormat = 1, iFirstFrame = 0, iLastFrame = -1, 
 		iFirstTraj = 0, iLastTraj = -1;
         float fInitialTime = 0, fEndTime = 0;
         
@@ -81,7 +86,7 @@ int main (int argc, char *argv[])
 
     //:::::::::: write Header ::::::::::::::::
     printf("writing %s.\n", pChOutputYamlFile);
-	fprintf(fp,"header:\n");
+	fprintf(fp,"smsHeader:\n");
 	fprintf(fp,"    nRecords         : %d\n", pSmsHeader->nRecords);
 	fprintf(fp,"    iFrameRate       : %d\n", pSmsHeader->iFrameRate);
 	fprintf(fp,"    nTrajectories    : %d\n", pSmsHeader->nTrajectories);
@@ -149,61 +154,82 @@ int main (int argc, char *argv[])
 		iLastTraj = MIN (pSmsHeader->nTrajectories, iLastTraj);
 	else
 		iLastTraj = pSmsHeader->nTrajectories;
-
-    //:::::::::::: Write Data :::::::::::::::
-    fprintf(fp, "\nData:\n");
-	for(i = iFirstFrame; i < iLastFrame; i++)
-	{
-		GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
-		fprintf(fp,"\n  - frame    : %d \n", i);
-        fprintf(fp,"    timetag  : %f \n", (float) i / pSmsHeader->iFrameRate);
-		if(iFormat != 3)
+        if(iFormat != PRINT_HDR)
         {
-            if(pSmsHeader->iFormat == FORMAT_HARMONIC ||
-                pSmsHeader->iFormat == FORMAT_HARMONIC_WITH_PHASE)
-                    fprintf(fp,"    harmonics:\n");
-            if(pSmsHeader->iFormat == FORMAT_INHARMONIC ||
-                pSmsHeader->iFormat == FORMAT_INHARMONIC_WITH_PHASE)
-                    fprintf(fp,"    tracks:\n");
-            if (pSmsHeader->iFormat == FORMAT_HARMONIC ||
-                pSmsHeader->iFormat == FORMAT_INHARMONIC)
-            {	
-                for(j = iFirstTraj; j < iLastTraj; j++)
-                {
-                    if(smsData.pFMagTraj[j] > 0.00000001 )
-                        fprintf(fp, "       %-4d: [%12f, %12f]  \n", j,
-                            smsData.pFFreqTraj[j], smsData.pFMagTraj[j]);
-                }
-            }
-            else
-            {
-                for(j = iFirstTraj; j < iLastTraj; j++)
-                {
-                    if(smsData.pFMagTraj[j] > 0.00000001 )
-                        fprintf(fp,"        %-4d: [%12f, %12f, %12f]  \n", j,
-                            smsData.pFFreqTraj[j], smsData.pFMagTraj[j], smsData.pFPhaTraj[j]);	
-                }
-            }
-        }
+                //:::::::::::: Write Data :::::::::::::::
+                fprintf(fp, "\nsmsData:\n");
+                for(i = iFirstFrame; i < iLastFrame; i++)
+	        {
+                        GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
+                        fprintf(fp,"\n  - frame    : %d \n", i);
+                        fprintf(fp,"    timetag  : %f \n", (float) i / pSmsHeader->iFrameRate);
+                        if(iFormat != 3)
+                        {
+                                if(pSmsHeader->iFormat == FORMAT_HARMONIC ||
+                                   pSmsHeader->iFormat == FORMAT_HARMONIC_WITH_PHASE)
+                                        fprintf(fp,"    harmonics:\n");
+                                if(pSmsHeader->iFormat == FORMAT_INHARMONIC ||
+                                   pSmsHeader->iFormat == FORMAT_INHARMONIC_WITH_PHASE)
+                                        fprintf(fp,"    tracks:\n");
+                                if (pSmsHeader->iFormat == FORMAT_HARMONIC ||
+                                    pSmsHeader->iFormat == FORMAT_INHARMONIC)
+                                 {	
+                                         for(j = iFirstTraj; j < iLastTraj; j++)
+                                         {
+                                                 if(smsData.pFMagTraj[j] > 0.00000001 )
+                                                         fprintf(fp, "       %-4d: [%12f, %12f]  \n", j,
+                                                                 smsData.pFFreqTraj[j], smsData.pFMagTraj[j]);
+                                         }
+                                 }
+                                else
+                                {
+                                        for(j = iFirstTraj; j < iLastTraj; j++)
+                                        {
+                                                if(smsData.pFMagTraj[j] > 0.00000001 )
+                                                        fprintf(fp,"        %-4d: [%12f, %12f, %12f]  \n", j,
+                                                                smsData.pFFreqTraj[j], smsData.pFMagTraj[j], smsData.pFPhaTraj[j]);	
+                                        }
+                                }
+                        }
 		
-		if (iFormat != 2 && pSmsHeader->iStochasticType != STOC_NONE)
-		{	
-            fprintf(fp,"    stocGain: %f\n", *(smsData.pFStocGain));
-      		fprintf(fp,"    stocCoefficients: [");
-      		for(j = 0; j < smsData.nCoeff; j++)
-            {
-                if(j%4 == 0 && j !=0)
-                    fprintf(fp,",\n                       ");
-                else if(j !=0)
-                    fprintf(fp,", ");
-                fprintf(fp,"%9f", smsData.pFStocCoeff[j]);
-            }
-            fprintf(fp,"]\n");
-        }   
-  	}
+                        if (iFormat != PRINT_DET && pSmsHeader->iStochasticType != STOC_NONE)
+		        {	
+                                if(pSmsHeader->iStochasticType == STOC_WAVEFORM)
+                                {
+                                        nSamples = pSmsHeader->iOriginalSRate / pSmsHeader->iFrameRate;
+                                        fprintf(fp,"    stocWave: [ ");
+                                        for( j = 0; j < nSamples; j++)
+                                        {
+                                                //print 4 values a line
+                                                if( j !=0 && j%4 == 0) fprintf(fp, ",\n                        ");
+                                                else if( j != 0) fprintf(fp, ", ");
+                                                fprintf(fp,"%12f", smsData.pFStocWave[j]);
+                                        }
+                                        fprintf(fp," ]\n");
+                                }
+                                else if(pSmsHeader->iStochasticType == STOC_STFT)
+                                {
 
-		free (pSmsHeader);
+                                }
+                                else if( pSmsHeader->iStochasticType == STOC_APPROX )
+                                {
+                                        fprintf(fp,"    stocGain: %f\n", *(smsData.pFStocGain));
+                                        fprintf(fp,"    stocCoefficients: [");
+                                        for(j = 0; j < smsData.nCoeff; j++)
+                                        {
+                                                if(j%4 == 0 && j !=0)
+                                                        fprintf(fp,",\n                       ");
+                                                else if( j !=0)
+                                                        fprintf(fp,", ");
+                                                fprintf(fp,"%9f", smsData.pFStocCoeff[j]);
+                                        }
+                                        fprintf(fp," ]\n");
+                                }   
+                        }
+                }
+        }
+        free (pSmsHeader);
         fclose (fp);
-		fclose (pSmsFile);
-		return(1);
+        fclose (pSmsFile);
+        return(1);
 }

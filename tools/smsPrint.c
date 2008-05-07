@@ -24,7 +24,7 @@
 #define PRINT_ALL 1
 #define PRINT_DET 2
 #define PRINT_STOC 3
-#define PRINT_HDR 4  //TODO: print only header
+#define PRINT_HDR 4
 #define USAGE "Usage: smsPrint [-t type-format][-i initial-time][-e end-time][-f first-trajectory][-l last-trajectory] <smsFile>"
 
 
@@ -41,8 +41,8 @@ int main (int argc, char *argv[])
 	SMS_DATA smsData;
 	int iError, i, j, iFormat = 1, iFirstFrame = 0, iLastFrame = -1, 
 		iFirstTraj = 0, iLastTraj = -1;
-    float fInitialTime = 0, fEndTime = 0;
-
+        float fInitialTime = 0, fEndTime = 0;
+        int nSamples;
 	for (i=1; i<argc-1; i++) 
 	{
 		if (*(argv[i]++) == '-') 
@@ -158,9 +158,10 @@ int main (int argc, char *argv[])
                                         {	
                                                 if(pSmsHeader->iStochasticType == STOC_WAVEFORM)
                                                 {
-                                                        printf("\n    stoc_wave:\n");
-                                                        for( j = 0; j < ( pSmsHeader->iOriginalSRate / pSmsHeader->iFrameRate); j++)
-                                                                printf("%f, ", *(smsData.pFStocWave));
+                                                        nSamples = pSmsHeader->iOriginalSRate / pSmsHeader->iFrameRate;
+                                                        printf("\n    stoc_wave (%d samples):\n", nSamples);
+                                                        for( j = 0; j < nSamples; j++)
+                                                                printf("%f, ", smsData.pFStocWave[j]);
                                                 }
                                                 else if(pSmsHeader->iStochasticType == STOC_STFT)
                                                  {
