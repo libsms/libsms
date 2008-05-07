@@ -95,6 +95,7 @@ typedef struct
 	float *pFPhaTraj;          /* phase of sinusoids */
 	int nTraj;                 /* number of sinusoids */
         float *pFStocWave;
+        int nSamples;        /* number of samples in StocWave */
 	float *pFStocGain;         /* gain of stochastic component */
 	float *pFStocCoeff;        /* filter coefficients for stochastic component */
 	int nCoeff;                /* number of filter coefficients */
