@@ -89,26 +89,32 @@ int main (int argc, char *argv[])
 
 	synthParams.iOriginalSRate = pSmsHeader->iOriginalSRate;
 	synthParams.iStochasticType = pSmsHeader->iStochasticType;
-        printf("StochasticType: %d", synthParams.iStochasticType);
-//	synthParams.sizeHop = SIZE_SYNTH_FRAME;
+        printf("StochasticType: %d\n", synthParams.iStochasticType);
 	synthParams.sizeHop = SIZE_SYNTH_FRAME;
   
 	if ((pSSynthesis = (short *) calloc(synthParams.sizeHop, sizeof(short)))
 	    == NULL)
 		quit ("Could not allocate memory for pSSynthesis");
 
-	if (iSamplingRate == 44100 && 
-	    synthParams.iOriginalSRate == 44100)
-		synthParams.iSamplingRate = 44100;
-	else
-	{
-		synthParams.iSamplingRate = 22050;
-		fprintf(stderr, "Sampling Rate set to 22050 Hz\n");
-	}
+/* 	if (iSamplingRate == 44100 &&  */
+/* 	    synthParams.iOriginalSRate == 44100) */
+/* 		synthParams.iSamplingRate = 44100; */
+/* 	else */
+/* 	{ */
+/* 		synthParams.iSamplingRate = 22050; */
+/* 		fprintf(stderr, "Sampling Rate set to 22050 Hz\n"); */
+/* 	} */
+        if(synthParams.iStochasticType == STOC_WAVEFORM)
+        {
+                printf("original samplerate forced for resynthesis of stocastic waveform: %d\n", synthParams.iOriginalSRate);
+                synthParams.iSamplingRate = synthParams.iOriginalSRate;
+        }
+        else synthParams.iSamplingRate = iSamplingRate;
+
 	CreateOutputSoundFile (synthParams, pChOutputSoundFile);
         
 	synthParams.origSizeHop = synthParams.iSamplingRate / pSmsHeader->iFrameRate;
-
+        printf("sizeHop: %d, origSizeHop, %d\n", synthParams.sizeHop, synthParams.origSizeHop);
         synthParams.pFStocWindow = 
 		(float *) calloc(synthParams.sizeHop * 2, sizeof(float));
 	Hanning (synthParams.sizeHop * 2, synthParams.pFStocWindow);
@@ -143,6 +149,16 @@ int main (int argc, char *argv[])
 		GetSmsRecord (pSmsFile, pSmsHeader, iRightRecord,&smsRecord2);
 		InterpolateSmsRecords (&smsRecord1, &smsRecord2, &newSmsRecord, 
 				                   fRecordLoc - iLeftRecord);
+
+                //:::::::::::::: RTE DEBUG::::::::::::::::::::::::;;;::::::::::::::
+/*                 static int frameDebug = 0; */
+/*                 int ii; */
+/*                 printf("\n newSmsRecord: samples: %d, frame: %d\n", newSmsRecord.nSamples, frameDebug); */
+/*                 for(ii = 0; ii < newSmsRecord.nSamples; ii++) */
+/*                         printf(" #%d: %f", ii, newSmsRecord.pFStocWave[ii] ); */
+/*                 printf("\n"); */
+/*                 frameDebug++; */
+                //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 		SmsSynthesis (&newSmsRecord, pSSynthesis, &synthParams);	
 
 		WriteToOutputFile (pSSynthesis, synthParams.sizeHop);
@@ -151,7 +167,7 @@ int main (int argc, char *argv[])
 		if (iSample % (synthParams.sizeHop * 40) == 0)
 			fprintf(stderr,"%.2f ", iSample / (float) synthParams.iSamplingRate);
 	}
-        fprintf(stderr,"/n");
+        printf("\n");
 	/* write and close output sound file */
 	WriteOutputFile ();
 	free (pSSynthesis);
