@@ -2,7 +2,7 @@
 
 
 # now using libsndfile-python (http://arcsin.org/softwares/libsndfile-python.html)
-import sndile
+import sndfile
 #import aifc,  wave, sndhdr
 from pylab import *
 from numpy import *
@@ -16,7 +16,7 @@ except ImportError:
 
 soundFilename ='/home/r/samples/instrumental/horn/Flugel/Flug-d5.aiff'
 #soundFilename = 'audio/piano.aiff'
-yamlFilename = 'flugalD5.yaml'
+yamlFilename = '../tools/flugel.yaml'
 #yamlFilename = 'piano.yaml'
 
 sf = sndfile.open(soundFilename, 'r')
@@ -48,10 +48,10 @@ show()
 #print 'loading', yamlFileName, '...'
 smsFile = load(open(yamlFilename).read(), Loader=Loader)
 
-nRecords = smsFile['header']['nRecords']
-nTraj = smsFile['header']['nTrajectories']
+nRecords = smsFile['smsHeader']['nRecords']
+nTraj = smsFile['smsHeader']['nTrajectories']
 
-smsData = smsFile['Data'] #todo: change to 'data' for future files
+smsData = smsFile['smsData'] 
 
 # make a track list: tracks[[ [timetags], [freqs] ]]
 tracks = [0] *nTraj
@@ -73,3 +73,11 @@ for i in range(nTraj): # loop for each harmonic
 for i in range(nTraj): # if traj has data, plot it
     if tracks[i][0] != 0:
         plot(tracks[i][0],tracks[i][1])
+
+
+# make an array of stocWave frames for one continuous waveform
+resWave = []
+for i in range(nRecords):
+    resWave += smsData[i]['stocWave']
+
+Pxx, freq, bins, im = specgram(resWave, NFFT=2048, Fs= srate, noverlap=512)

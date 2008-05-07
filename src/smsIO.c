@@ -20,6 +20,10 @@
  */
 #include "sms.h"
 
+/* //########## RTE DEBUG ############### */
+/* FILE *debugFile; */
+/* int fc = 0; */
+/* // ################################### */
 
 /* initialize the header structure of an SMS file
  *
@@ -135,6 +139,8 @@ int WriteSmsHeader (char *pChFileName, SMSHeader *pSmsHeader,
  */
 int WriteSmsFile (FILE *pSmsFile, SMSHeader *pSmsHeader)
 {
+/*         fclose(debugFile); */
+
 	int iVariableSize;
 	rewind(pSmsFile);
 
@@ -195,15 +201,14 @@ int WriteSmsRecord (FILE *pSmsFile, SMSHeader *pSmsHeader,
 {  
 
 /*         //::::::::::::::::::::: RTE_DEBUG:::::::::::::::::: */
+/*         if(!debugFile)  debugFile = fopen("smsData.txt", "w+"); */
 /*         int i; */
-/*         int sizeHop = pSmsHeader->iOriginalSRate / pSmsHeader->iFrameRate; */
-
-/*         printf("\n:::::0000000000000::::: smsAnalysis: AFTER StochAnalysis::::::::::::::::::::\n"); */
-/*         for(i = 0; i < sizeHop; i++) */
-/*                 printf("%.3f ", pSmsRecord->pFStocWave[i]); */
-/*         printf("\n"); */
+        
+/*         fprintf(debugFile, "\n frame %d :::::::::::::::::::::::::::\n", fc++); */
+        
+/*         for(i = 0; i < pSmsHeader->iRecordBSize / sizeof(float) ; i++) */
+/*                 fprintf(debugFile, "#%d: %f, ", i, pSmsRecord->pSmsData[i * sizeof(float)]); */
 /*         //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: */
-
 
 	if (fwrite ((void *)pSmsRecord->pSmsData, 1, pSmsHeader->iRecordBSize, 
 	            pSmsFile) < pSmsHeader->iRecordBSize)
@@ -388,13 +393,15 @@ int AllocateSmsRecord (SMS_DATA *pSmsRecord, int nTraj, int nCoeff, int iPhase,
         float *dataPos;  // a marker to locate specific data witin smsData
 	/* calculate size of record */
 	int sizeData = 2 * nTraj * sizeof(float);
+        sizeData += 1 * sizeof(float); //adding one for nSamples
 	if (iPhase > 0) sizeData += nTraj * sizeof(float);
 	if (nCoeff > 0) sizeData += (nCoeff + 1) * sizeof(float);
         if( stochType == STOC_WAVEFORM)
-                {
-                        sizeData += sizeHop * sizeof(float);
-//                        printf("sizeData: %d \n", sizeData);                
-                }
+        {
+                sizeData += sizeHop * sizeof(float);
+                pSmsRecord->nSamples = sizeHop;
+        }
+        else  pSmsRecord->nSamples = 0;
 	/* allocate memory for data */
 	if ((pSmsRecord->pSmsData = (float *) malloc (sizeData)) == NULL)
 		return (SMS_MALLOC);
@@ -553,6 +560,11 @@ int InterpolateSmsRecords (SMS_DATA *pSmsRecord1, SMS_DATA *pSmsRecord2,
 			pSmsRecordOut->pFStocCoeff[i] = 
 				pSmsRecord1->pFStocCoeff[i] + fInterpFactor * 
 				(pSmsRecord2->pFStocCoeff[i] - pSmsRecord1->pFStocCoeff[i]);
-
-	return 1;
+        
+        if(pSmsRecordOut->pFStocWave)
+        {
+                memcpy(pSmsRecordOut->pFStocWave, pSmsRecord1->pFStocWave,
+                       pSmsRecordOut->nSamples * sizeof(float));
+        }
+        return 1;
 }

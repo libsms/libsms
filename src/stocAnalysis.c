@@ -166,8 +166,7 @@ int StocAnalysis (float *pFResidual, int sizeWindow,
         {
 
               memcpy( pSmsData->pFStocWave, pFResidual, sizeof(float) * analParams.sizeHop);
-                // ?? should I copy all the window, or 1/2 of it?
-                //TODO: compare input/output window sizes and add samples if necessary
+
                 //::::::::::::::::::::: RTE_DEBUG::::::::::::::::::
 /*                 int i;  */
 /*                  printf("\n::::::: sizeWindow: %d :::::::::::::::::::::::::::::::::\n", */

@@ -19,7 +19,6 @@
  * 
  */
 #include "sms.h"
-
 /* synthesis of one frame of the deterministic component using the IFFT */
 
 static int SineSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer, 
@@ -148,7 +147,7 @@ int SmsSynthesis (SMS_DATA *pSmsData, short *pSSynthesis,
                   SYNTH_PARAMS *pSynthParams)
 {
 	static float *pFBuffer = NULL;
-	int i, sizeHop = pSynthParams->sizeHop;
+	int i, j, sizeHop = pSynthParams->sizeHop;
   
 	if (pFBuffer == NULL)
 	{
@@ -160,40 +159,37 @@ int SmsSynthesis (SMS_DATA *pSmsData, short *pSSynthesis,
 	        sizeof(float) * sizeHop);
 	memset ((char *)(pFBuffer+sizeHop), 0, sizeof(float) * sizeHop);
         
-        
 	/* synthesize stochastic component */
-	if (pSynthParams->iSynthesisType != STOC_NONE)
+	if (pSynthParams->iSynthesisType != 1)
         {
                 if(pSynthParams->iStochasticType == STOC_WAVEFORM)
                 {
-                        //cpy audio to pSSynthesis
-                        //::::::::::::::::::::: RTE_DEBUG::::::::::::::::::
-                        int ii; //debugging
-                        printf("\n:::::::::: pSmsData->pFStocWave ----- sizeHop: %d, origSizeHop: %d \n", \
-                               sizeHop, pSynthParams->origSizeHop);
-                        for(ii = 0; ii < pSynthParams->origSizeHop; ii++)
-                                printf("%d  ", pSmsData->pFStocWave[ii]);
-                        //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-                        
+                        //copy stocWave to pSSynthesis
+                        for(i = 0, j = 0; i < sizeHop; i++, j++)
+                        {
+                                if(j >= pSmsData->nSamples) j = 0;
+                                pFBuffer[i] += pSmsData->pFStocWave[j];
+                        }
                 }
-                if(pSynthParams->iStochasticType == STOC_STFT)
+                else if(pSynthParams->iStochasticType == STOC_STFT)
                 {
                         //do ifft 
                 }
-                if(pSynthParams->iStochasticType == STOC_APPROX)
+                else if(pSynthParams->iStochasticType == STOC_APPROX)
                 {
                         StocSynthIFFT (pSmsData, pFBuffer, pSynthParams);
                 }
         }
 	/* synthesize deterministic component */
 	if (pSynthParams->iSynthesisType != 2)
+        {
 		SineSynthIFFT (pSmsData, pFBuffer, pSynthParams);
+        }
      
 	/* de-emphasize the sound */
 	for(i = 0; i < sizeHop; i++)
 		pSSynthesis[i] = (short) DeEmphasis(pFBuffer[i]);
-    
+
 	return (1);
 }
 
