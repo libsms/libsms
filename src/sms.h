@@ -31,6 +31,7 @@
 #include <memory.h>
 #include <strings.h>
 #include <sndfile.h>
+#include <fftw3.h>
 
 /* structure for header of SMS file */
 typedef struct 
@@ -302,7 +303,10 @@ typedef struct
 	int sizeHop;
         int origSizeHop;
 	float *pFDetWindow;
-	float *pFStocWindow;
+        float *pFStocWindow;
+        fftwf_plan  fftPlan;
+        float *pFfftIn;
+        fftwf_complex *pCfftOut;
 } SYNTH_PARAMS;
 
 #define SIZE_SYNTH_FRAME  128   /* size of synthesis frame */
@@ -434,6 +438,7 @@ double SincTab (double fTheta);
 
 int SmsSynthesis (SMS_DATA *pSmsRecord, short *pSSynthesis, 
                   SYNTH_PARAMS *pSynthParams);
+                
 
 int FrameSineSynth (SMS_DATA *pSmsRecord, float *pFBuffer, 
                     int sizeBuffer, SMS_DATA *pLastFrame,
