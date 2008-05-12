@@ -35,6 +35,9 @@ if not conf.CheckLibWithHeader('m','math.h','c'):
 if not conf.CheckLibWithHeader('sndfile','sndfile.h','c'):
         print 'cannot find libsndfile'
         Exit(1)
+if not conf.CheckLibWithHeader('fftw3f','fftw3.h','c'):
+        print 'cannot find fft3w'
+        Exit(1)
 if not conf.CheckCHeader('sms.h'):
         print 'cannot find sms.h'
         Exit(1)

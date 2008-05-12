@@ -305,8 +305,8 @@ typedef struct
 	float *pFDetWindow;
         float *pFStocWindow;
         fftwf_plan  fftPlan;
-        float *pFfftIn;
-        fftwf_complex *pCfftOut;
+        fftwf_complex *pCfftIn;
+        float *pFfftOut;
 } SYNTH_PARAMS;
 
 #define SIZE_SYNTH_FRAME  128   /* size of synthesis frame */

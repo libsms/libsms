@@ -13,9 +13,11 @@ SMS Library Work Log
 * Pre-modifications: making analysis/plotting scripts
 ** DONE smsToYaml for importing into python
 ** TODO [#C] SWIG libsms wrappers for more convenient use in python
-** TODO smsPlot.py for plotting smsData over a spectrogram of audio source.
-* Phase 1: Refactoring libsms for usage in real-time
+** DONE smsPlot.py for plotting smsData over a spectrogram of audio source.
+* Phase 1: Refactoring libsms for usage in real-time and release
 ** TODO [#A] switch build scripts to scons 
+   - [ ] get env. exporting/importing fixed
+   - [ ] add install functionality
 ** TODO [#A] should have the option to store residual in audio samples or STFT frames
 *** TODO organize analParams to allow for options:
    - [X] sound samples
@@ -37,18 +39,23 @@ SMS Library Work Log
 *** TODO modify smsResample to concatenate stocWave data
     - [ ] will take adding iWaveSamples to SMS_DATA
 ** TODO [#B] - switch to FFTW3f for fft's
-** - need to configure a fftw_plan outside of process loop, and allocate buffers there
+***  TODO start with SineSynthIFFT until it sounds right
+***  DONE need to configure a fftw_plan outside of process loop, and allocate buffers there
+     - now in SYNTH_PARAMS
+***  make sure input size and output sizes are correct
+     - for realft: 
+       - sizeMag = size of fft; 128
+       - buffer in = 256, 2nd half is zeros
+       - [X] what is pFFftBuffer-1 ?: unit offset instead of zero-offset
 ** TODO [#C] reorganize soundIO.  Some functions right now aren't used.. or can be combined with others
 **       - what is GetResidual's WriteResidualToFile supposed to be doing?
 ** DONE [#C] make samplerate independant of analysis/synthesis
-** DONE - reorganize tools and make with one makefile
 ** TODO [#B] convert README's to manpages.
    - [ ] update to fit new parameters
    - [ ] proofread
-** TODO [#B] make example bash scripts
+** TODO [#B] make example python scripts
 ** TODO [#C] move smsMod's stochostic gain adjusting to 
    - should stocGain be available for all stoc types?
-** TODO [#C] make options in smsAnal for output format
 
 * Phase 2: building real-time pd externals for analysis/synthesis
 ** will have to normalize audio to floating point abs(1)

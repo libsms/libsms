@@ -49,15 +49,16 @@ int main (int argc, char *argv[])
 	for (i=1; i<argc-1; i++) 
 	{
 		if (*(argv[i]++) == '-') 
-		{
-			switch (*(argv[i]++)) 
+                {
+                        switch (*(argv[i]++)) 
 			{
-				case 't': if (sscanf(argv[i],"%d", &iFormat) < 1)
+                                case 't': if (sscanf(argv[i],"%d", &iFormat) < 1)
 					quit("Invalid format");
 					break;
 				case 'i': if (sscanf(argv[i],"%f", 
 				              &fInitialTime) < 0)
 					quit("Invalid initialTime");
+                                        else printf("initialTime: %f\n", fInitialTime);
 					break;
 				case 'e': if (sscanf(argv[i],"%f", 
 				              &fEndTime) < 0)

@@ -6,16 +6,28 @@
 import os
 
 #infile ='/home/r/samples/instrumental/horn/Flugel/Flug-d5.aiff'
-infile = 'audio/piano.aiff '
+
 #smsfile = 'flugalD5.sms '
+
+infile = 'audio/piano.aiff '
 smsfile = 'piano.sms '
+
+
+
+
+
+
+
+
+
+
+arg = '-r400 ' # framerate of analysis in hertz
+arg += '-u65 '  # defaukt fundamental  in hertz
+arg += '-e0 ' # stochastic representation type (default: 2, line segments)
+
+
 makeYaml = True
-
-framerate = 400 #analysis windows / sec (hz). default: 400
-arg = '-r100 '
-#arg = '-r'+framerate+' ' doesn't work like this in python.. 
-arg += '-e3 ' # stochastic representation type (default: 2, line segments)
-
+makeSynth = True
 smsAnal = '../tools/smsAnal '
 analysis = smsAnal + arg + infile + smsfile
 print analysis
@@ -30,3 +42,28 @@ if makeYaml:
     os.system(toyaml)
 
 
+if makeSynth:
+    # make combined synth
+    synthfile  = os.path.splitext(os.path.basename(smsfile))[0]+'Synth.wav ' 
+    arg = ' '
+    smsSynth = '../tools/smsSynth'
+    toSynth = smsSynth + arg + smsfile + synthfile
+    print toSynth
+    os.system(toSynth)
+
+    # make deterministic synth
+    synthfile  = os.path.splitext(os.path.basename(smsfile))[0]+'Det.wav ' 
+    arg = ' -d '
+    toSynth = smsSynth + arg + smsfile + synthfile
+    print toSynth
+    os.system(toSynth)
+
+    # make stochastic synth
+    synthfile  = os.path.splitext(os.path.basename(smsfile))[0]+'Stoc.wav ' 
+    arg = ' -n '
+    toSynth = smsSynth + arg + smsfile + synthfile
+    print toSynth
+    os.system(toSynth)
+
+
+print 'analyze.py is finished.'

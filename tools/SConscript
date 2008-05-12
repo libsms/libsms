@@ -9,7 +9,7 @@ sms_tools = Split(' smsAnal smsSynth smsClean \
 #sms_cflags = '-g -Wall'
 #sms_libpath = '../src'
 
-sms_libs =  'm', 'sndfile', 'sms'
+sms_libs =  'm', 'sndfile', 'sms', 'fftw3f'
 
 for t in sms_tools:
 	t_src = t+'.c'

@@ -138,6 +138,16 @@ int main (int argc, char *argv[])
 	iSample = 0;
 	iLastSample = pSmsHeader->nRecords * synthParams.origSizeHop;
         
+        /* make fftw plan and buffer TODO: make a synth initializer function*/
+        int sizeFFT = synthParams.sizeHop ; //? 
+        // for in-place c2r transform, 2 extra values are needed: fftw manual sec.4.3.4
+        synthParams.pCfftIn =  fftwf_malloc(sizeof(fftwf_complex) * (sizeFFT / 2 + 1));
+        synthParams.pFfftOut = fftwf_malloc(sizeof(float) * sizeFFT);
+        synthParams.fftPlan =  fftwf_plan_dft_c2r_1d( sizeFFT, synthParams.pCfftIn,
+                                                      synthParams.pFfftOut, FFTW_ESTIMATE);
+
+
+        //and plan here
 	while (iSample < iLastSample)
 	{
 		fRecordLoc = (float) iSample / synthParams.origSizeHop;
@@ -150,17 +160,7 @@ int main (int argc, char *argv[])
 		InterpolateSmsRecords (&smsRecord1, &smsRecord2, &newSmsRecord, 
 				                   fRecordLoc - iLeftRecord);
 
-                //:::::::::::::: RTE DEBUG::::::::::::::::::::::::;;;::::::::::::::
-/*                 static int frameDebug = 0; */
-/*                 int ii; */
-/*                 printf("\n newSmsRecord: samples: %d, frame: %d\n", newSmsRecord.nSamples, frameDebug); */
-/*                 for(ii = 0; ii < newSmsRecord.nSamples; ii++) */
-/*                         printf(" #%d: %f", ii, newSmsRecord.pFStocWave[ii] ); */
-/*                 printf("\n"); */
-/*                 frameDebug++; */
-                //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-		SmsSynthesis (&newSmsRecord, pSSynthesis, &synthParams);	
-
+                SmsSynthesis (&newSmsRecord, pSSynthesis, &synthParams);
 		WriteToOutputFile (pSSynthesis, synthParams.sizeHop);
     
 		iSample += synthParams.sizeHop;
@@ -172,6 +172,8 @@ int main (int argc, char *argv[])
 	WriteOutputFile ();
 	free (pSSynthesis);
 	free (pSmsHeader);
-	//exit (0);
+        fftwf_free(synthParams.pCfftIn);
+        fftwf_free(synthParams.pFfftOut);
+	fftwf_destroy_plan(synthParams.fftPlan);
 	return(1);
 }

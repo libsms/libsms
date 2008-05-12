@@ -23,6 +23,7 @@
 
 static int SineSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer, 
                           SYNTH_PARAMS *pSynthParams)
+
 {
 	long sizeFft = pSynthParams->sizeHop << 1, 
 	  iHalfSamplingRate = pSynthParams->iSamplingRate >> 1,
@@ -31,7 +32,7 @@ static int SineSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer,
 	float fMag=0, fFreq=0, fPhase=0, fLoc, fSin, fCos, fBinRemainder, 
 		fTmp, fNewMag, *pFFftBuffer, fIndex;
 
-	pFFftBuffer = (float *) calloc(sizeFft+1, sizeof(float));
+  	pFFftBuffer = (float *) calloc(sizeFft+1, sizeof(float));
 
 	for (i = 0; i < nTraj; i++)
 	{
@@ -41,6 +42,7 @@ static int SineSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer,
 			if (pSynthParams->previousFrame.pFMagTraj[i] <= 0)
 				pSynthParams->previousFrame.pFPhaTraj[i] = 
 					TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
+                         // can fMag here be stored as magnitude instead of DB within smsData?
 			fMag = TO_MAG (fMag);
 			fTmp = pSynthParams->previousFrame.pFPhaTraj[i] +
 				(TWO_PI * fFreq / pSynthParams->iSamplingRate) * sizeMag;
@@ -87,11 +89,51 @@ static int SineSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer,
 		pSynthParams->previousFrame.pFFreqTraj[i] = fFreq;
 	}
 
+
+        if(1)//not right yet...
+        {
+        // fill complex fftw buffer:
+        // pFFftBuffer[i*2] is complex (sin), while fftw_complex[i][0] is real.
+        // so they have to be switched
+         for(i = 0; i < (sizeMag/2 +1); i++)
+         {
+                 pSynthParams->pCfftIn[i][0] = pFFftBuffer[i*2+1];
+                 pSynthParams->pCfftIn[i][1] = pFFftBuffer[i*2];
+         }
+        fftwf_execute(pSynthParams->fftPlan);
+        printf("fftw (size %d):\n", sizeMag);
+/*         int ii; */
+/*         for(ii = 0; ii < sizeMag; ii++) */
+/*         { */
+/*                 printf("#%d: %f, ", ii, pSynthParams->pFfftOut[ii]); */
+/*         } */
+/*         printf("\n"); */
+
+	for(i = 0, k = sizeMag; i < sizeMag; i++, k++) 
+		pFBuffer[i] += pSynthParams->pFfftOut[k] * pSynthParams->pFDetWindow[i];
+	for(i= sizeMag, k = 0; i < sizeFft; i++, k++) 
+		pFBuffer[i] +=  pSynthParams->pFfftOut[k] * pSynthParams->pFDetWindow[i];
+        }
+
+        else 
+        {
 	realft (pFFftBuffer-1, sizeMag, -1);
+
+/*         printf("realft  (size %d):\n", sizeMag); */
+
+/*         for(i = 0; i < sizeMag; i++) */
+/*         { */
+/*                 printf("#%d: %f, ", i, pFFftBuffer[i]); */
+/*         } */
+/*         printf("\n"); */
+
+
 	for(i = 0, k = sizeMag; i < sizeMag; i++, k++) 
 		pFBuffer[i] += pFFftBuffer[k] * pSynthParams->pFDetWindow[i];
 	for(i= sizeMag, k = 0; i < sizeFft; i++, k++) 
 		pFBuffer[i] +=  pFFftBuffer[k] * pSynthParams->pFDetWindow[i];
+
+        }
 	free (pFFftBuffer);
 
 	return (1); 
