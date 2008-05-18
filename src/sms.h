@@ -307,6 +307,7 @@ typedef struct
         fftwf_plan  fftPlan;
         fftwf_complex *pCfftIn;
         float *pFfftOut;
+        float *realftOut; // RTE_DEBUG : comparing realft and fftw
 } SYNTH_PARAMS;
 
 #define SIZE_SYNTH_FRAME  128   /* size of synthesis frame */

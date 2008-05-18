@@ -2,7 +2,19 @@
 SMS Library Work Log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 * Issues to be delt with
-** [#A] ways to fix the stoc_ big crunch in the beginning:
+** [#A] ways to get fftw working the same as realft:
+   - [ ] write both IFFT's (waveform) to txt file
+   - [ ] compare in python and relate data to FFT parameters
+   - [ ] where oh where is the fft getting normalized?
+        - check pFDetWindow, realft, four1
+        - follow samples to output
+*** python code to compare  waveforms:
+from pylab import *
+values = [ float(x) for x in open('/tmp/test.txt').read().split() ]
+figure(1) # optional
+subplot(211)
+plot, subplot(212), etc
+** [#B] ways to fix the stoc_ big crunch in the beginning:
 *** first check if area is consistent throughout different samples.
 ** changing the framerate in smsAnal makes deterministic component empty. huh?
 *** Xavier suggests fund estimate is bad, so specify manually
@@ -15,6 +27,15 @@ SMS Library Work Log
 ** TODO [#C] SWIG libsms wrappers for more convenient use in python
 ** DONE smsPlot.py for plotting smsData over a spectrogram of audio source.
 * Phase 1: Refactoring libsms for usage in real-time and release
+** TODO [#A] - switch to FFTW3f for fft's
+***  TODO start with SineSynthIFFT until it sounds right
+***  DONE need to configure a fftw_plan outside of process loop, and allocate buffers there
+     - now in SYNTH_PARAMS
+***  make sure input size and output sizes are correct
+     - for realft: 
+       - sizeMag = size of fft; 128
+       - buffer in = 256, 2nd half is zeros
+       - [X] what is pFFftBuffer-1 ?: unit offset instead of zero-offset
 ** TODO [#A] switch build scripts to scons 
    - [ ] get env. exporting/importing fixed
    - [ ] add install functionality
@@ -38,15 +59,9 @@ SMS Library Work Log
 *** DONE add print function for smsPrint
 *** TODO modify smsResample to concatenate stocWave data
     - [ ] will take adding iWaveSamples to SMS_DATA
-** TODO [#B] - switch to FFTW3f for fft's
-***  TODO start with SineSynthIFFT until it sounds right
-***  DONE need to configure a fftw_plan outside of process loop, and allocate buffers there
-     - now in SYNTH_PARAMS
-***  make sure input size and output sizes are correct
-     - for realft: 
-       - sizeMag = size of fft; 128
-       - buffer in = 256, 2nd half is zeros
-       - [X] what is pFFftBuffer-1 ?: unit offset instead of zero-offset
+** TODO [#B] convert from short to floating point data
+   - will need this for pd anyway
+   - everything is computed in float point, so why range from 0-16000 then?
 ** TODO [#C] reorganize soundIO.  Some functions right now aren't used.. or can be combined with others
 **       - what is GetResidual's WriteResidualToFile supposed to be doing?
 ** DONE [#C] make samplerate independant of analysis/synthesis

@@ -24,6 +24,7 @@
 
 void IFFTwindow (int sizeWindow, float *pFWindow)
 {
+
 	int     i;
 	float a0 = .35875, a1 = .48829, a2 = .14128, a3 = .01168;
 	double fConst = TWO_PI / sizeWindow, fIncr = 2.0 /sizeWindow, fVal = 0;
@@ -46,6 +47,7 @@ void IFFTwindow (int sizeWindow, float *pFWindow)
 		pFWindow[i] = fVal * pFWindow[i]  / 2.787457;
 		fVal -= fIncr;
 	}
+        
 }
 
 /* function to create a backmanHarris window

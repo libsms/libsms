@@ -21,122 +21,141 @@
 #include "sms.h"
 /* synthesis of one frame of the deterministic component using the IFFT */
 
+/* //########## RTE DEBUG ############### */
+/* FILE *debugFile; */
+int fc = 0;
+float max, min;
+/* // ################################### */
+
+
 static int SineSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer, 
                           SYNTH_PARAMS *pSynthParams)
-
 {
-	long sizeFft = pSynthParams->sizeHop << 1, 
-	  iHalfSamplingRate = pSynthParams->iSamplingRate >> 1,
-		sizeMag = pSynthParams->sizeHop, nBins = 8,
-		iFirstBin, k, i, l, b, nTraj = pSmsData->nTraj;
-	float fMag=0, fFreq=0, fPhase=0, fLoc, fSin, fCos, fBinRemainder, 
-		fTmp, fNewMag, *pFFftBuffer, fIndex;
+        long sizeFft = pSynthParams->sizeHop << 1; 
+        long iHalfSamplingRate = pSynthParams->iSamplingRate >> 1;
+        long sizeMag = pSynthParams->sizeHop;
+        long nBins = 8;
+        long  nTraj = pSmsData->nTraj;
+        long iFirstBin, k, i, l, b;
+        float fMag=0, fFreq=0, fPhase=0, fLoc, fSin, fCos, fBinRemainder, 
+                fTmp, fNewMag, *pFFftBuffer, fIndex;
 
-  	pFFftBuffer = (float *) calloc(sizeFft+1, sizeof(float));
-
-	for (i = 0; i < nTraj; i++)
-	{
-		if (((fMag = pSmsData->pFMagTraj[i]) > 0) &&
-		    ((fFreq = pSmsData->pFFreqTraj[i]) < iHalfSamplingRate))
-		{
-			if (pSynthParams->previousFrame.pFMagTraj[i] <= 0)
-				pSynthParams->previousFrame.pFPhaTraj[i] = 
-					TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
-                         // can fMag here be stored as magnitude instead of DB within smsData?
-			fMag = TO_MAG (fMag);
-			fTmp = pSynthParams->previousFrame.pFPhaTraj[i] +
-				(TWO_PI * fFreq / pSynthParams->iSamplingRate) * sizeMag;
-			fPhase = fTmp - floor(fTmp / TWO_PI) * TWO_PI;
-			fLoc = sizeFft * fFreq  / pSynthParams->iSamplingRate;
-			iFirstBin = (int) fLoc - 3;
-			fBinRemainder = fLoc - floor (fLoc);
-			fSin = SinTab (fPhase);
-			fCos = SinTab (fPhase + PI_2);
-			for (k = 1, l = iFirstBin; k <= nBins; k++, l++)
-			{
-				fIndex = (k - fBinRemainder);
-				if (fIndex > 7.999) fIndex = 0;
-				fNewMag = fMag * SincTab (fIndex);
-				if (l > 0 && l < sizeMag)
-				{
-					pFFftBuffer[l*2+1] += fNewMag * fCos;
-					pFFftBuffer[l*2] += fNewMag * fSin;
-     		  	}
-				else if (l == 0)		
-				{
-					pFFftBuffer[0] += 2 * fNewMag * fSin;
- 				}
-				else if (l < 0)
-				{
-					b = abs(l);
-					pFFftBuffer[b*2+1] -= fNewMag * fCos;
-					pFFftBuffer[b*2] += fNewMag * fSin;
-  				}
-				else if (l > sizeMag)
-				{
-					b = sizeMag - (l - sizeMag);
-					pFFftBuffer[b*2+1] -= fNewMag * fCos;
-					pFFftBuffer[b*2] += fNewMag * fSin;
-  				}
-				else if (l == sizeMag)		
-				{
-					pFFftBuffer[1] += 2 * fNewMag * fSin;
- 				}
-			}
-  		}
-		pSynthParams->previousFrame.pFMagTraj[i] = fMag;
-		pSynthParams->previousFrame.pFPhaTraj[i] = fPhase;
-		pSynthParams->previousFrame.pFFreqTraj[i] = fFreq;
-	}
-
-
-        if(1)//not right yet...
+//        pFFftBuffer = (float *) calloc(sizeFft+1, sizeof(float));
+        memset (pSynthParams->realftOut, 0, (sizeFft +1) * sizeof(float));
+        for (i = 0; i < nTraj; i++)
         {
-        // fill complex fftw buffer:
-        // pFFftBuffer[i*2] is complex (sin), while fftw_complex[i][0] is real.
-        // so they have to be switched
-         for(i = 0; i < (sizeMag/2 +1); i++)
-         {
-                 pSynthParams->pCfftIn[i][0] = pFFftBuffer[i*2+1];
-                 pSynthParams->pCfftIn[i][1] = pFFftBuffer[i*2];
-         }
-        fftwf_execute(pSynthParams->fftPlan);
-        printf("fftw (size %d):\n", sizeMag);
-/*         int ii; */
-/*         for(ii = 0; ii < sizeMag; ii++) */
-/*         { */
-/*                 printf("#%d: %f, ", ii, pSynthParams->pFfftOut[ii]); */
-/*         } */
-/*         printf("\n"); */
-
-	for(i = 0, k = sizeMag; i < sizeMag; i++, k++) 
-		pFBuffer[i] += pSynthParams->pFfftOut[k] * pSynthParams->pFDetWindow[i];
-	for(i= sizeMag, k = 0; i < sizeFft; i++, k++) 
-		pFBuffer[i] +=  pSynthParams->pFfftOut[k] * pSynthParams->pFDetWindow[i];
+                if (((fMag = pSmsData->pFMagTraj[i]) > 0) &&
+                    ((fFreq = pSmsData->pFFreqTraj[i]) < iHalfSamplingRate))
+                {
+                        if (pSynthParams->previousFrame.pFMagTraj[i] <= 0)
+                                pSynthParams->previousFrame.pFPhaTraj[i] = 
+                                        TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
+                        // can fMag here be stored as magnitude instead of DB within smsData?
+                        fMag = TO_MAG (fMag);
+                        fTmp = pSynthParams->previousFrame.pFPhaTraj[i] +
+                                (TWO_PI * fFreq / pSynthParams->iSamplingRate) * sizeMag;
+                        fPhase = fTmp - floor(fTmp / TWO_PI) * TWO_PI;
+                        fLoc = sizeFft * fFreq  / pSynthParams->iSamplingRate;
+                        iFirstBin = (int) fLoc - 3;
+                        fBinRemainder = fLoc - floor (fLoc);
+                        fSin = SinTab (fPhase);
+                        fCos = SinTab (fPhase + PI_2);
+                        for (k = 1, l = iFirstBin; k <= nBins; k++, l++)
+                        {
+                                fIndex = (k - fBinRemainder);
+                                if (fIndex > 7.999) fIndex = 0;
+                                fNewMag = fMag * SincTab (fIndex);
+                                if (l > 0 && l < sizeMag)
+                                {
+                                        pSynthParams->realftOut[l*2+1] += fNewMag * fCos;
+                                        pSynthParams->realftOut[l*2] += fNewMag * fSin;
+                                }
+                                else if (l == 0)		
+                                {
+                                        pSynthParams->realftOut[0] += 2 * fNewMag * fSin;
+                                }
+                                else if (l < 0)
+                                {
+                                        b = abs(l);
+                                        pSynthParams->realftOut[b*2+1] -= fNewMag * fCos;
+                                        pSynthParams->realftOut[b*2] += fNewMag * fSin;
+                                }
+                                else if (l > sizeMag)
+                                {
+                                        b = sizeMag - (l - sizeMag);
+                                        pSynthParams->realftOut[b*2+1] -= fNewMag * fCos;
+                                        pSynthParams->realftOut[b*2] += fNewMag * fSin;
+                                }
+                                else if (l == sizeMag)		
+                                {
+                                        pSynthParams->realftOut[1] += 2 * fNewMag * fSin;
+                                }
+                        }
+                }
+                pSynthParams->previousFrame.pFMagTraj[i] = fMag;
+                pSynthParams->previousFrame.pFPhaTraj[i] = fPhase;
+                pSynthParams->previousFrame.pFFreqTraj[i] = fFreq;
         }
 
+        // fill complex fftw buffer:
+        // pSynthParams->realftOut[i*2] is complex (sin), while fftw_complex[i][0] is real.
+        // so they have to be switched -- I think this is backwards, actually... ARG
+        for(i = 0; i < (sizeMag/2 +1); i++)
+        {
+                pSynthParams->pCfftIn[i][0] = pSynthParams->realftOut[i*2];
+                pSynthParams->pCfftIn[i][1] = pSynthParams->realftOut[i*2+1];
+        }
+        fftwf_execute(pSynthParams->fftPlan);
+
+        realft (pSynthParams->realftOut-1, sizeMag, -1);
+
+        if(0)//not right yet... 
+        {
+                //realft needs to be multiplied by 2/n, which is apparently done elsewhere.
+                //... so does this need to be mulitplied by 0.5 because fftw has gain of 1/n ?
+                for(i = 0, k = sizeMag; i < sizeMag; i++, k++) 
+                        pFBuffer[i] += pSynthParams->pFfftOut[k] * pSynthParams->pFDetWindow[i];
+                for(i= sizeMag, k = 0; i < sizeFft; i++, k++) 
+                        pFBuffer[i] +=  pSynthParams->pFfftOut[k] * pSynthParams->pFDetWindow[i];
+        }
         else 
         {
-	realft (pFFftBuffer-1, sizeMag, -1);
-
-/*         printf("realft  (size %d):\n", sizeMag); */
-
-/*         for(i = 0; i < sizeMag; i++) */
-/*         { */
-/*                 printf("#%d: %f, ", i, pFFftBuffer[i]); */
-/*         } */
-/*         printf("\n"); */
-
-
-	for(i = 0, k = sizeMag; i < sizeMag; i++, k++) 
-		pFBuffer[i] += pFFftBuffer[k] * pSynthParams->pFDetWindow[i];
-	for(i= sizeMag, k = 0; i < sizeFft; i++, k++) 
-		pFBuffer[i] +=  pFFftBuffer[k] * pSynthParams->pFDetWindow[i];
+            
+                
+                for(i = 0, k = sizeMag; i < sizeMag; i++, k++) 
+                        pFBuffer[i] += pSynthParams->realftOut[k] * pSynthParams->pFDetWindow[i];
+                for(i= sizeMag, k = 0; i < sizeFft; i++, k++) 
+                        pFBuffer[i] +=  pSynthParams->realftOut[k] * pSynthParams->pFDetWindow[i];
 
         }
-	free (pFFftBuffer);
+        //////// RTE DEBUG ////////////////////////////////////////////////////////
+/*         if( pSynthParams->realftOut[0] != 0  && fc++ < 10 ) */
+/*         { */
+/*                 printf("############## Frame: %d ##################\n", fc); */
 
-	return (1); 
+/*                 printf("fftw (size %d):\n", (int) sizeMag); */
+/*                 int ii; */
+/*                 for(ii = 0; ii < sizeMag; ii++) */
+/*                 { */
+/*                         printf("#%d: %f, ", ii, pSynthParams->pFfftOut[ii]); */
+/*                 } */
+/*                 printf("\n"); */
+
+/*                 printf("realft  (size %d):\n", (int) sizeMag); */
+
+/*                 for(i = 0; i < sizeMag; i++) */
+/*                 { */
+/*                         printf("#%d: %f, ", (int) i, pSynthParams->realftOut[i]); */
+/*                 } */
+/*                 printf("\n"); */
+
+/*         } */
+        /////////////////////////////////////////////////////////////////////////////////
+
+
+//        free (pSynthParams->realftOut);
+
+        return (1); 
 }
 
 
@@ -144,39 +163,39 @@ static int SineSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer,
 static int StocSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer, 
                           SYNTH_PARAMS *pSynthParams)
 {
-	float *pFMagSpectrum, *pFPhaseSpectrum;
-	int i, nSegments = pSmsData->nCoeff, nSegmentsUsed;
-	int sizeFft = pSynthParams->sizeHop << 1, sizeMag = pSynthParams->sizeHop;
+        float *pFMagSpectrum, *pFPhaseSpectrum;
+        int i, nSegments = pSmsData->nCoeff, nSegmentsUsed;
+        int sizeFft = pSynthParams->sizeHop << 1, sizeMag = pSynthParams->sizeHop;
 
-	/* if no gain or no coefficients return */
-	if (*(pSmsData->pFStocGain) <= 0)
-		return 0;
+        /* if no gain or no coefficients return */
+        if (*(pSmsData->pFStocGain) <= 0)
+                return 0;
 
-	if ((pFMagSpectrum = (float *) calloc(sizeMag, sizeof(float))) == NULL)
-		return -1;
-	if ((pFPhaseSpectrum = (float *) calloc(sizeMag, sizeof(float))) == NULL)
-		return -1;
-	*(pSmsData->pFStocGain) = TO_MAG(*(pSmsData->pFStocGain));
+        if ((pFMagSpectrum = (float *) calloc(sizeMag, sizeof(float))) == NULL)
+                return -1;
+        if ((pFPhaseSpectrum = (float *) calloc(sizeMag, sizeof(float))) == NULL)
+                return -1;
+        *(pSmsData->pFStocGain) = TO_MAG(*(pSmsData->pFStocGain));
 
-	/* scale the coefficients to normal amplitude */
-	for (i = 0; i < nSegments; i++)
-		pSmsData->pFStocCoeff[i] *= 2 * *(pSmsData->pFStocGain);
+        /* scale the coefficients to normal amplitude */
+        for (i = 0; i < nSegments; i++)
+                pSmsData->pFStocCoeff[i] *= 2 * *(pSmsData->pFStocGain);
 
-	nSegmentsUsed = nSegments * pSynthParams->iSamplingRate / 
-	       		      pSynthParams->iOriginalSRate;
-	SpectralApprox (pSmsData->pFStocCoeff, nSegments, nSegmentsUsed,
-	                pFMagSpectrum, sizeMag, nSegmentsUsed);
+        nSegmentsUsed = nSegments * pSynthParams->iSamplingRate / 
+                pSynthParams->iOriginalSRate;
+        SpectralApprox (pSmsData->pFStocCoeff, nSegments, nSegmentsUsed,
+                        pFMagSpectrum, sizeMag, nSegmentsUsed);
 
-	/* generate random phases */
-	for (i = 0; i < sizeMag; i++)
-		pFPhaseSpectrum[i] =  TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
+        /* generate random phases */
+        for (i = 0; i < sizeMag; i++)
+                pFPhaseSpectrum[i] =  TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
 
-	InverseQuickSpectrumW (pFMagSpectrum, pFPhaseSpectrum, 
-	                       	sizeFft, pFBuffer, sizeFft, 
-							pSynthParams->pFStocWindow);
-	free (pFMagSpectrum);
-	free (pFPhaseSpectrum);
-	return 1;
+        InverseQuickSpectrumW (pFMagSpectrum, pFPhaseSpectrum, 
+                               sizeFft, pFBuffer, sizeFft, 
+                               pSynthParams->pFStocWindow);
+        free (pFMagSpectrum);
+        free (pFPhaseSpectrum);
+        return 1;
 }
 
 /* synthesizes one frame of SMS data
@@ -188,21 +207,21 @@ static int StocSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer,
 int SmsSynthesis (SMS_DATA *pSmsData, short *pSSynthesis, 
                   SYNTH_PARAMS *pSynthParams)
 {
-	static float *pFBuffer = NULL;
-	int i, j, sizeHop = pSynthParams->sizeHop;
+        static float *pFBuffer = NULL;
+        int i, j, sizeHop = pSynthParams->sizeHop;
   
-	if (pFBuffer == NULL)
-	{
-		if((pFBuffer = (float *) calloc(sizeHop*2, sizeof(float))) == NULL)
-			return -1;
- 	}
+        if (pFBuffer == NULL)
+        {
+                if((pFBuffer = (float *) calloc(sizeHop*2, sizeof(float))) == NULL)
+                        return -1;
+        }
   
-	memcpy ((char *) pFBuffer, (char *)(pFBuffer+sizeHop), 
-	        sizeof(float) * sizeHop);
-	memset ((char *)(pFBuffer+sizeHop), 0, sizeof(float) * sizeHop);
+        memcpy ((char *) pFBuffer, (char *)(pFBuffer+sizeHop), 
+                sizeof(float) * sizeHop);
+        memset ((char *)(pFBuffer+sizeHop), 0, sizeof(float) * sizeHop);
         
-	/* synthesize stochastic component */
-	if (pSynthParams->iSynthesisType != 1)
+        /* synthesize stochastic component */
+        if (pSynthParams->iSynthesisType != 1)
         {
                 if(pSynthParams->iStochasticType == STOC_WAVEFORM)
                 {
@@ -222,16 +241,16 @@ int SmsSynthesis (SMS_DATA *pSmsData, short *pSSynthesis,
                         StocSynthIFFT (pSmsData, pFBuffer, pSynthParams);
                 }
         }
-	/* synthesize deterministic component */
-	if (pSynthParams->iSynthesisType != 2)
+        /* synthesize deterministic component */
+        if (pSynthParams->iSynthesisType != 2)
         {
-		SineSynthIFFT (pSmsData, pFBuffer, pSynthParams);
+                SineSynthIFFT (pSmsData, pFBuffer, pSynthParams);
         }
      
-	/* de-emphasize the sound */
-	for(i = 0; i < sizeHop; i++)
-		pSSynthesis[i] = (short) DeEmphasis(pFBuffer[i]);
+        /* de-emphasize the sound */
+        for(i = 0; i < sizeHop; i++)
+                pSSynthesis[i] = (short) DeEmphasis(pFBuffer[i]);
 
-	return (1);
+        return (1);
 }
 

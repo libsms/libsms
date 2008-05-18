@@ -145,9 +145,18 @@ int main (int argc, char *argv[])
         synthParams.pFfftOut = fftwf_malloc(sizeof(float) * sizeFFT);
         synthParams.fftPlan =  fftwf_plan_dft_c2r_1d( sizeFFT, synthParams.pCfftIn,
                                                       synthParams.pFfftOut, FFTW_ESTIMATE);
+        
+        /* //########## RTE DEBUG ############### */
+        FILE *df;
+        df = fopen("wave.txt", "w");
+        int ii;
+        int fc = 0; 
+        synthParams.realftOut = (float *) calloc((sizeFFT<<1)+1, sizeof(float));
+        //      printf("(sizeFFT<<1) +1: %d", (sizeFFT <<1) + 1);
+        /* // ################################### */
 
 
-        //and plan here
+
 	while (iSample < iLastSample)
 	{
 		fRecordLoc = (float) iSample / synthParams.origSizeHop;
@@ -166,8 +175,24 @@ int main (int argc, char *argv[])
 		iSample += synthParams.sizeHop;
 		if (iSample % (synthParams.sizeHop * 40) == 0)
 			fprintf(stderr,"%.2f ", iSample / (float) synthParams.iSamplingRate);
+                
+                //RTE DEBUG ################
+                for(ii = 0; ii < synthParams.sizeHop ; ii++)
+                        fprintf(df, "%d ", pSSynthesis[ii]);
+
+                //##########################
+                
+
 	}
         printf("\n");
+
+        //RTE DEBUG ################
+
+
+        free (synthParams.realftOut);
+        fclose(df);
+        //##########################
+
 	/* write and close output sound file */
 	WriteOutputFile ();
 	free (pSSynthesis);
@@ -175,5 +200,7 @@ int main (int argc, char *argv[])
         fftwf_free(synthParams.pCfftIn);
         fftwf_free(synthParams.pFfftOut);
 	fftwf_destroy_plan(synthParams.fftPlan);
+
+
 	return(1);
 }
