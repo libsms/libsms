@@ -72,6 +72,8 @@ typedef struct {
     long sizeHeader;	     /* size of sound header in bytes */
 } SNDHeader;
 
+
+
 #define SMS_MAGIC 767
 
 /* for iFormat */
@@ -146,6 +148,8 @@ typedef struct
 
 #define TO_DB(x)    	((x > MAG_THRESHOLD) ? 20 * log10(x/MAG_THRESHOLD) : 0)
 #define TO_MAG(x)     ((x <= 0) ? 0 : MAG_THRESHOLD * pow(10.0, x/20.0))
+
+#define SHORT_TO_FLOAT ( 2.0f / pow(2.0,16)) 
 
 /* for hybrid program */
 #define MAX_BUFF 1000000
@@ -437,7 +441,7 @@ int PrepSinc ();
 
 double SincTab (double fTheta);
 
-int SmsSynthesis (SMS_DATA *pSmsRecord, short *pSSynthesis, 
+int SmsSynthesis (SMS_DATA *pSmsRecord, float*pFSynthesis, 
                   SYNTH_PARAMS *pSynthParams);
                 
 
@@ -518,7 +522,7 @@ int OpenSound (char *pChInputSoundFile, SNDHeader *pSoundHeader);
 
 int CreateOutputSoundFile (SYNTH_PARAMS synthParams, char *pChOutputSoundFile);
 
-int WriteToOutputFile (short *pSBuffer, int sizeBuffer);
+int WriteToOutputFile (float *pFBuffer, int sizeBuffer);
 
 int WriteOutputFile ();
 

@@ -37,7 +37,7 @@ int main (int argc, char *argv[])
 	SMSHeader *pSmsHeader;
 	FILE *pSmsFile;
 	SMS_DATA smsRecord1, smsRecord2, newSmsRecord;
-	short *pSSynthesis;
+	float *pFSynthesis;
 	long iError, iSample, i, iLastSample, iLeftRecord, iRightRecord;
 
 	int iSamplingRate = 44100, fRecordLoc;
@@ -92,9 +92,9 @@ int main (int argc, char *argv[])
         printf("StochasticType: %d\n", synthParams.iStochasticType);
 	synthParams.sizeHop = SIZE_SYNTH_FRAME;
   
-	if ((pSSynthesis = (short *) calloc(synthParams.sizeHop, sizeof(short)))
+	if ((pFSynthesis = (float *) calloc(synthParams.sizeHop, sizeof(float)))
 	    == NULL)
-		quit ("Could not allocate memory for pSSynthesis");
+		quit ("Could not allocate memory for pFSynthesis");
 
 /* 	if (iSamplingRate == 44100 &&  */
 /* 	    synthParams.iOriginalSRate == 44100) */
@@ -138,21 +138,26 @@ int main (int argc, char *argv[])
 	iSample = 0;
 	iLastSample = pSmsHeader->nRecords * synthParams.origSizeHop;
         
-        /* make fftw plan and buffer TODO: make a synth initializer function*/
-        int sizeFFT = synthParams.sizeHop ; //? 
-        // for in-place c2r transform, 2 extra values are needed: fftw manual sec.4.3.4
+        /* make fftw plan and buffer */
+        int sizeFFT = synthParams.sizeHop ;  
         synthParams.pCfftIn =  fftwf_malloc(sizeof(fftwf_complex) * (sizeFFT / 2 + 1));
         synthParams.pFfftOut = fftwf_malloc(sizeof(float) * sizeFFT);
-        synthParams.fftPlan =  fftwf_plan_dft_c2r_1d( sizeFFT, synthParams.pCfftIn,
+        synthParams.fftPlan =  fftwf_plan_dft_c2r_1d( sizeFFT, synthParams.pCfftIn-1,
                                                       synthParams.pFfftOut, FFTW_ESTIMATE);
         
         /* //########## RTE DEBUG ############### */
         FILE *df;
         df = fopen("wave.txt", "w");
         int ii;
-        int fc = 0; 
+//        int fc = 0; 
         synthParams.realftOut = (float *) calloc((sizeFFT<<1)+1, sizeof(float));
         //      printf("(sizeFFT<<1) +1: %d", (sizeFFT <<1) + 1);
+
+
+#ifdef FFTW
+        printf("## using fftw3 ##  \n");
+#endif
+
         /* // ################################### */
 
 
@@ -169,8 +174,8 @@ int main (int argc, char *argv[])
 		InterpolateSmsRecords (&smsRecord1, &smsRecord2, &newSmsRecord, 
 				                   fRecordLoc - iLeftRecord);
 
-                SmsSynthesis (&newSmsRecord, pSSynthesis, &synthParams);
-		WriteToOutputFile (pSSynthesis, synthParams.sizeHop);
+                SmsSynthesis (&newSmsRecord, pFSynthesis, &synthParams);
+		WriteToOutputFile (pFSynthesis, synthParams.sizeHop);
     
 		iSample += synthParams.sizeHop;
 		if (iSample % (synthParams.sizeHop * 40) == 0)
@@ -178,7 +183,7 @@ int main (int argc, char *argv[])
                 
                 //RTE DEBUG ################
                 for(ii = 0; ii < synthParams.sizeHop ; ii++)
-                        fprintf(df, "%d ", pSSynthesis[ii]);
+                        fprintf(df, "%f ", pFSynthesis[ii]);
 
                 //##########################
                 
@@ -187,15 +192,13 @@ int main (int argc, char *argv[])
         printf("\n");
 
         //RTE DEBUG ################
-
-
         free (synthParams.realftOut);
         fclose(df);
         //##########################
 
 	/* write and close output sound file */
 	WriteOutputFile ();
-	free (pSSynthesis);
+	free (pFSynthesis);
 	free (pSmsHeader);
         fftwf_free(synthParams.pCfftIn);
         fftwf_free(synthParams.pFfftOut);

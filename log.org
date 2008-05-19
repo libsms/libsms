@@ -8,12 +8,14 @@ SMS Library Work Log
    - [ ] where oh where is the fft getting normalized?
         - check pFDetWindow, realft, four1
         - follow samples to output
-*** python code to compare  waveforms:
-from pylab import *
-values = [ float(x) for x in open('/tmp/test.txt').read().split() ]
-figure(1) # optional
-subplot(211)
-plot, subplot(212), etc
+*** python code comparisons:
+**** realft
+     - max: 0.63640058040618896
+     - min: -0.91893720626831055
+**** fftw
+     - max: 192.07719421386719 (real * 301.8)
+     - min: -284.82913208007812 (real * 310)
+
 ** [#B] ways to fix the stoc_ big crunch in the beginning:
 *** first check if area is consistent throughout different samples.
 ** changing the framerate in smsAnal makes deterministic component empty. huh?
@@ -61,9 +63,13 @@ plot, subplot(212), etc
     - [ ] will take adding iWaveSamples to SMS_DATA
 ** TODO [#B] convert from short to floating point data
    - will need this for pd anyway
-   - everything is computed in float point, so why range from 0-16000 then?
+   - everything is computed in float point, so why range from 0-16000   then?
+   - [X] temp fix by making a const multiplier SHORT_TO_FLOAT
+   - [ ] smsSynthDet is probably broken now...
 ** TODO [#C] reorganize soundIO.  Some functions right now aren't used.. or can be combined with others
-**       - what is GetResidual's WriteResidualToFile supposed to be doing?
+***       - what is GetResidual's WriteResidualToFile supposed to be doing?
+          -actually, may have to have 2 seperate files at a time, since debugging
+          and regular sound file writing is occuring at the same time
 ** DONE [#C] make samplerate independant of analysis/synthesis
 ** TODO [#B] convert README's to manpages.
    - [ ] update to fit new parameters

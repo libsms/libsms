@@ -28,12 +28,16 @@ void IFFTwindow (int sizeWindow, float *pFWindow)
 	int     i;
 	float a0 = .35875, a1 = .48829, a2 = .14128, a3 = .01168;
 	double fConst = TWO_PI / sizeWindow, fIncr = 2.0 /sizeWindow, fVal = 0;
+// RTE DEBUG ///////////////////////////////////////
+/*         FILE *dd; */
+/*         dd = fopen("debug.txt", "w"); */
   
 	/* compute inverse of window */
 	for(i = 0; i < sizeWindow; i++) 
 	{
 		pFWindow[i] = 1 / (a0 - a1 * cos(fConst * i) +
 			a2 * cos(fConst * 2 * i) - a3 * cos(fConst * 3 * i));
+/*                 fprintf(dd, "%f ", pFWindow[i]); */
 	}
   
 	/* scale function by a triangular */
@@ -47,6 +51,7 @@ void IFFTwindow (int sizeWindow, float *pFWindow)
 		pFWindow[i] = fVal * pFWindow[i]  / 2.787457;
 		fVal -= fIncr;
 	}
+/*         fclose(dd); */
         
 }
 

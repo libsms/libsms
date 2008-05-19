@@ -14,19 +14,27 @@ opts.AddOptions(
 )
 
 
-sms_flags = '-Wall'
 
 
-
-if ARGUMENTS.get(' debug', 1):
-    sms_flags += ' -g'
+    
 
 sms_srcpath = 'src'
 
-env = Environment( ENV = os.environ, CCFLAGS=sms_flags, CPPPATH = './src', LIBPATH = './src')
+env = Environment( ENV = os.environ, CCFLAGS='-Wall ', CPPPATH = './src', LIBPATH = './src')
 #env.Append(CPPPATH =['./src'] )
 # env.Append(LIBPATH =['./src'] )
 # print 'ENV: ', env.Dump()
+
+use_fftw = ARGUMENTS.get('fftw', 0)
+debug_mode = ARGUMENTS.get('debug',0 )
+if int(use_fftw):
+    env.Append(CCFLAGS = '-DFFTW ')
+
+if int(debug_mode):
+    env.Append(CCFLAGS = '-g ')
+
+
+
 
 conf = Configure(env)
 if not conf.CheckLibWithHeader('m','math.h','c'):

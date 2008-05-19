@@ -97,7 +97,7 @@ int CreateOutputSoundFile (SYNTH_PARAMS synthParams, char *pChOutputSoundFile)
 {
     memset (&sfOutputSoundHeader, 0, sizeof (sfOutputSoundHeader)) ;
    
-    sfOutputSoundHeader.format = SF_FORMAT_AIFF | SF_FORMAT_PCM_16;
+    sfOutputSoundHeader.format = SF_FORMAT_AIFF | SF_FORMAT_FLOAT;
     sfOutputSoundHeader.samplerate = synthParams.iSamplingRate;
     sfOutputSoundHeader.channels = 1;
     
@@ -115,9 +115,9 @@ int CreateOutputSoundFile (SYNTH_PARAMS synthParams, char *pChOutputSoundFile)
  * int sizeBuffer;     size of data buffer
  *
  */
-int WriteToOutputFile (short *pSBuffer, int sizeBuffer)
+int WriteToOutputFile (float *pFBuffer, int sizeBuffer)
 {
-    sf_writef_short( pOutputSNDStream, pSBuffer, sizeBuffer);
+    sf_writef_float( pOutputSNDStream, pFBuffer, sizeBuffer);
     return 1;
 }
 
