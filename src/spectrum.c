@@ -20,8 +20,6 @@
  */
 #include "sms.h"
 
-#define USE_FFTW 0
-
 extern float *pFWindowSpec;
 
 /* 
@@ -63,15 +61,8 @@ int Spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 	for (i=0; i<iMiddleWindow; i++)
 		pFBuffer[1+i] = pFWindowSpec[iOffset + i] * pFWaveform[iOffset + i];
   
-	/* compute real FFT */
-        #if USE_FFTW
-        //printf("using FFTW.. ");
+
 	realft (pFBuffer, sizeMag, 1);
-        #else
-        //printf("NOT using FFTW.. ");
-	realft (pFBuffer, sizeMag, 1);
-        #endif
-        
   
 	/* convert from rectangular to polar coordinates */
 	for (i = 0; i < sizeMag; i++)

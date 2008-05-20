@@ -2,6 +2,7 @@
 SMS Library Work Log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 * Issues to be delt with
+** [#A] StocSynthIFFT goes haywire when synth samplerate is larger than orig
 ** [#A] ways to get fftw working the same as realft:
    - [ ] write both IFFT's (waveform) to txt file
    - [ ] compare in python and relate data to FFT parameters
@@ -47,18 +48,29 @@ SMS Library Work Log
    - [ ] STFT frames with imag/real pairs
    - [X] filter approximation
    - [X] no stachostic component
-*** DONE store audio data in SMS_DATA structure
-    - [X] need number of samples in AllocateSmsRecord:
-    - [X] put sizeHop in AllocSmsHeader by using SMSHeader's
-    framerate and samplerate
-    - [X] make sure size hop shows up the same in synth and analysis,
-    - [X] Q. why is SIZE_SYNTH_HOP set to 128? changing it causes memory errors..
-    within AllocateSmsRecord            
-         - A.  smallest size for FFT with good frequency resolution 
-    - [X] write audio data to file, check if it is the same when re-opened
-    - [X] seg fault on last frame of Stoch Analysis
-         - [X] check why there are stoch coefficients with STOC_AUDIO in sms.h         
-*** DONE add print function for smsPrint
+*** TODO reorganization of SmsSynthesis
+**** possible types
+***** Deterministic only, OSC
+***** Deterministic only, IFFT
+***** Stoc only, IFFT
+***** Stoc only, waveform
+***** Stoc only, Approx
+***** Deterministic + Stoc, IFFT
+***** Deterministic + Stoc, IFFT + Approx
+***** Deterministic + Stoc, IFFT + Waveform
+***** Deterministic + Stoc, OSC + IFFT
+***** Deterministic + Stoc, OSC + Approx
+***** Deterministic + Stoc, OSC + Waveform
+
+*** TODO Store Residual as STFT 
+    - does imag need to be stored?
+      I faintly remember Tom mentioning this is only useful for phase info,
+      which doesn't matter in a completely stochastic signal
+    -  is this just what StocSynthIFFT does, but with only < 64 bins?
+    - [ ] allocate memory
+    - [ ] need sizeFft in SMS_HEADER (i think)
+    - [ ] store in stochAnalysis (probably should be somewhere else..)
+    - [ ] make sure it is correctly stored in smsToYaml/smsPrint
 *** TODO modify smsResample to concatenate stocWave data
     - [ ] will take adding iWaveSamples to SMS_DATA
 ** TODO [#B] convert from short to floating point data

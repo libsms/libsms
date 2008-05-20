@@ -82,11 +82,21 @@ typedef struct {
 #define FORMAT_HARMONIC_WITH_PHASE 3
 #define FORMAT_INHARMONIC_WITH_PHASE 4
 
+/* Synthesis method for Deterministic */
+#define DET_IFFT 1
+#define DET_OSC 2
+
+
 /* for iStochasticType */
 #define STOC_WAVEFORM 0
 #define STOC_STFT 1
 #define STOC_APPROX 2
 #define STOC_NONE 3
+
+/* Synthesis Types */
+#define STYPE_ALL 1
+#define STYPE_DET 2
+#define STYPE_STOC 3
 
 /* structure with SMS data */
 typedef struct 
@@ -300,7 +310,8 @@ typedef struct
 typedef struct
 {
 	int iStochasticType; 
-	int iSynthesisType;        /* 0: both det & stoc, 1, 1: det, 2: stoc */
+	int iSynthesisType;        /* globally defined above */
+        int iDetSynthType;         /* globally defined above */
 	int iOriginalSRate;
 	int iSamplingRate;
 	SMS_DATA previousFrame;

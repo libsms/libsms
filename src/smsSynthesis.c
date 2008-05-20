@@ -135,18 +135,16 @@ static int SineSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer,
 
         realft (pSynthParams->realftOut-1, sizeMag, -1);
 
-        if( ff )
-        {
-                printf("realft  (after):\n");
+/*         if( ff ) */
+/*         { */
+/*                 printf("realft  (after):\n"); */
 
-                for(i = 0; i < sizeMag; i++)
-                {
-                        printf("#%d: %f, ", (int) i, pSynthParams->realftOut[i]);
-                }
-                printf("\n");
-
-
-        }
+/*                 for(i = 0; i < sizeMag; i++) */
+/*                 { */
+/*                         printf("#%d: %f, ", (int) i, pSynthParams->realftOut[i]); */
+/*                 } */
+/*                 printf("\n"); */
+/*         } */
 
 #ifdef FFTW//not right yet... 
         {
@@ -204,7 +202,7 @@ static int StocSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer,
         /* generate random phases */
         for (i = 0; i < sizeMag; i++)
                 pFPhaseSpectrum[i] =  TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
-
+        
         InverseQuickSpectrumW (pFMagSpectrum, pFPhaseSpectrum, 
                                sizeFft, pFBuffer, sizeFft, 
                                pSynthParams->pFStocWindow);
@@ -219,7 +217,7 @@ static int StocSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer,
  * short *pSSynthesis;      output sound buffer  RTE: switching to float
  * SYNTH_PARAMS *pSynthParams;   synthesis parameters
  */
-int SmsSynthesis (SMS_DATA *pSmsData, float *pFSynthesis, 
+int SmsSynthesis (SMS_DATA *pSmsData, float *pFSynthesis,  
                   SYNTH_PARAMS *pSynthParams)
 {
         static float *pFBuffer = NULL;
@@ -235,8 +233,66 @@ int SmsSynthesis (SMS_DATA *pSmsData, float *pFSynthesis,
                 sizeof(float) * sizeHop);
         memset ((char *)(pFBuffer+sizeHop), 0, sizeof(float) * sizeHop);
         
-        /* synthesize stochastic component */
-        if (pSynthParams->iSynthesisType != 1)
+        /* decide which combo of synthesis methods to use */
+        if(pSynthParams->iSynthesisType == STYPE_ALL)
+        {
+                if(pSynthParams->iDetSynthType == DET_IFFT &&
+                        pSynthParams->iStochasticType == STOC_STFT)
+                        quit("SmsSynthesis: COMBO_SYNTH not implemented yet.");
+                else /* can't use combo STFT, synthesize seperately and sum */
+                {
+                        if(pSynthParams->iDetSynthType == DET_IFFT)
+                        {
+                                SineSynthIFFT (pSmsData, pFBuffer, pSynthParams);
+//                                printf("1\n");
+                        }
+                        else /*pSynthParams->iDetSynthType == DET_OSC*/
+                        {
+                                FrameSineSynth (pSmsData, pFBuffer, pSynthParams->sizeHop,
+                                                &(pSynthParams->previousFrame), pSynthParams->iSamplingRate);
+                                {
+//                                   printf("2\n");
+                                }
+                        }
+                        if(pSynthParams->iStochasticType == STOC_WAVEFORM)
+                        {
+                                //copy stocWave to pFSynthesis
+                                for(i = 0, j = 0; i < sizeHop; i++, j++)
+                                {
+                                        if(j >= pSmsData->nSamples) j = 0;
+                                        pFBuffer[i] += pSmsData->pFStocWave[j];
+                                }
+//                                printf("3\n");
+
+                        }
+                        else if(pSynthParams->iStochasticType == STOC_STFT)
+                        {
+                                quit("SmsSynthesis: STOC_STFT not implemented yet.");
+                        }
+                        else /*(pSynthParams->iStochasticType == STOC_APPROX*/
+                        {
+                                StocSynthIFFT (pSmsData, pFBuffer, pSynthParams);
+//                              printf("4\n");
+                        }
+                }
+
+                
+        }
+        else if(pSynthParams->iSynthesisType == STYPE_DET)
+        {
+                if(pSynthParams->iDetSynthType == DET_IFFT)
+                {
+                        SineSynthIFFT (pSmsData, pFBuffer, pSynthParams);
+//                        printf("5\n");
+                }
+                else /*pSynthParams->iDetSynthType == DET_OSC*/
+                {
+                        FrameSineSynth (pSmsData, pFBuffer, pSynthParams->sizeHop,
+                                        &(pSynthParams->previousFrame), pSynthParams->iSamplingRate);
+//                        printf("6\n");
+                }
+        }
+        else /* pSynthParams->iSynthesisType == STYPE_STOC */
         {
                 if(pSynthParams->iStochasticType == STOC_WAVEFORM)
                 {
@@ -246,23 +302,21 @@ int SmsSynthesis (SMS_DATA *pSmsData, float *pFSynthesis,
                                 if(j >= pSmsData->nSamples) j = 0;
                                 pFBuffer[i] += pSmsData->pFStocWave[j];
                         }
+//                        printf("7\n");
                 }
                 else if(pSynthParams->iStochasticType == STOC_STFT)
                 {
-                        //do ifft 
+                        quit("SmsSynthesis: STOC_STFT not implemented yet.");
                 }
-                else if(pSynthParams->iStochasticType == STOC_APPROX)
+                else /*pSynthParams->iStochasticType == STOC_APPROX*/
                 {
                         StocSynthIFFT (pSmsData, pFBuffer, pSynthParams);
+//                        printf("8\n");
+                        
                 }
         }
-        /* synthesize deterministic component */
-        if (pSynthParams->iSynthesisType != 2)
-        {
-                SineSynthIFFT (pSmsData, pFBuffer, pSynthParams);
-        }
      
-        /* de-emphasize the sound */
+        /* de-emphasize the sound and normalize*/
         for(i = 0; i < sizeHop; i++)
                 pFSynthesis[i] = SHORT_TO_FLOAT * DeEmphasis(pFBuffer[i]);
 

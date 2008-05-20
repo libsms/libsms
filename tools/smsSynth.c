@@ -24,7 +24,7 @@
  *
  */
 #include "sms.h"
-#define USAGE "Usage: smsSynth [-s samplingRate] [-d] [-n] <inputSmsFile> <outputSoundFile>"
+#define USAGE "Usage: smsSynth [-r samplingRate] [-s SynthType] [-d detSynthType] <inputSmsFile> <outputSoundFile>"
 
 double *pFSTab = NULL, *pFSincTab = NULL;
 SOUND_BUFFER soundBuffer, synthBuffer;
@@ -40,25 +40,32 @@ int main (int argc, char *argv[])
 	float *pFSynthesis;
 	long iError, iSample, i, iLastSample, iLeftRecord, iRightRecord;
 
-	int iSamplingRate = 44100, fRecordLoc;
+	int iSamplingRate = 44100, fRecordLoc, detSynthType, synthType;
 	SYNTH_PARAMS synthParams;
   
-	synthParams.iSynthesisType = 0;
-
+	synthParams.iSynthesisType = STYPE_ALL;
+        synthParams.iDetSynthType = DET_IFFT;
 	if (argc > 3) 
 	{
 		for (i=1; i<argc-2; i++) 
 			if (*(argv[i]++) == '-') 
 				switch (*(argv[i]++)) 
 				{
-					case 's':  if (sscanf(argv[i],"%d",&iSamplingRate) < 1)
-						quit("Invalid sampling rate");
-						break;
-					case 'd': synthParams.iSynthesisType = 1;
-						break;
-					case 'n': synthParams.iSynthesisType = 2;
-						break;
-					default:   quit(USAGE);
+                                case 'r':  if (sscanf(argv[i],"%d",&iSamplingRate) < 1)
+						quit("error: sampling rate must be > 0");
+                                        break;
+                                case 's': sscanf(argv[i], "%d", &synthType);
+                                        printf("this is case s, synthType: %d\n", synthType);
+                                        if(synthType < 1 || synthType > 3)
+                                                quit("error: detSynthType must be 1, 2, or  3");
+                                                synthParams.iSynthesisType = synthType;
+                                                break;
+                                case 'd': sscanf(argv[i], "%d", &detSynthType);
+                                        if(detSynthType < 1 || detSynthType > 2)
+                                                quit("error: detSynthType must be 1 or 2");
+                                        synthParams.iDetSynthType = detSynthType;
+                                        break;
+                                default:   quit(USAGE);
 				}
 	}
 	else if (argc < 2)
@@ -96,14 +103,6 @@ int main (int argc, char *argv[])
 	    == NULL)
 		quit ("Could not allocate memory for pFSynthesis");
 
-/* 	if (iSamplingRate == 44100 &&  */
-/* 	    synthParams.iOriginalSRate == 44100) */
-/* 		synthParams.iSamplingRate = 44100; */
-/* 	else */
-/* 	{ */
-/* 		synthParams.iSamplingRate = 22050; */
-/* 		fprintf(stderr, "Sampling Rate set to 22050 Hz\n"); */
-/* 	} */
         if(synthParams.iStochasticType == STOC_WAVEFORM)
         {
                 printf("original samplerate forced for resynthesis of stocastic waveform: %d\n", synthParams.iOriginalSRate);
@@ -133,7 +132,7 @@ int main (int argc, char *argv[])
 	if (pFSincTab == NULL)
 		PrepSinc ();
 	if (pFSTab == NULL)
-		PrepSine (2046);
+		PrepSine (2046); //try 4096
  
 	iSample = 0;
 	iLastSample = pSmsHeader->nRecords * synthParams.origSizeHop;
@@ -159,8 +158,6 @@ int main (int argc, char *argv[])
 #endif
 
         /* // ################################### */
-
-
 
 	while (iSample < iLastSample)
 	{
@@ -194,6 +191,7 @@ int main (int argc, char *argv[])
         //RTE DEBUG ################
         free (synthParams.realftOut);
         fclose(df);
+        printf("synthType: %d, detType: %d\n",synthParams.iSynthesisType, synthParams.iDetSynthType);
         //##########################
 
 	/* write and close output sound file */

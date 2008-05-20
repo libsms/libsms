@@ -150,6 +150,7 @@ int FrameSineSynth (SMS_DATA *pSmsData, float *pFBuffer,
                     int sizeBuffer, SMS_DATA *pLastFrame, 
                     int iSamplingRate)
 {
+
   float fMag, fFreq;
   int i, nTraj = pSmsData->nTraj, iHalfSamplingRate = iSamplingRate >> 1;
             
@@ -160,7 +161,9 @@ int FrameSineSynth (SMS_DATA *pSmsData, float *pFBuffer,
     fMag = pSmsData->pFMagTraj[i];
       
     fFreq = pSmsData->pFFreqTraj[i];
-    if (fFreq > iHalfSamplingRate)
+
+    /* gaurd so transposed frequencies don't alias */
+    if (fFreq > iHalfSamplingRate || fFreq < 0) 
       fMag = 0;
       
     /* generate sines if there are magnitude values */

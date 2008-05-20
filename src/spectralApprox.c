@@ -46,7 +46,6 @@ int SpectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 			pFSpec2[i] = 1;
 		return 1;
 	}
-        // RTE_DEBUG printf (" nCoefficients: %d\n", nCoefficients);
 
 	if ((pFEnvelope = (float *) calloc(nCoefficients, sizeof(float))) == NULL)
 		return -1;
