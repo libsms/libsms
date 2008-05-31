@@ -25,14 +25,34 @@
 #define PRINT_DET 2
 #define PRINT_STOC 3
 #define PRINT_HDR 4
-#define USAGE "Usage: smsPrint [-t type-format][-i initial-time][-e end-time][-f first-trajectory][-l last-trajectory] <smsFile>"
-
 
 
 short MaxDelayFrames;
 float FResidualPerc;
 SOUND_BUFFER soundBuffer, synthBuffer;
 ANAL_FRAME **ppFrames, *pFrames;
+
+
+void usage (void)
+{
+        fprintf (stderr, "\n"
+                 "Usage: smsPrint [options]  <smsFile> \n"
+                 "\n"
+                 "Options:\n"
+                 " -t      type-format (default 1) \n"
+                 "                    1: print all the information \n"
+                 "                    2: print only the deterministic component \n"
+                 "                    3: print only the stochastic component. \n"
+                 "                    4: print only the header. \n"
+                 "-i       initial time (default: 0) \n"
+                 "-e       end time (default: end of file) \n"
+                 "\n"
+                 "Dump analysis (.sms) file made with smsAnal to stderr."
+                 "\n\n");
+        
+        exit(1);
+}
+
 
 int main (int argc, char *argv[])
 {
@@ -70,13 +90,12 @@ int main (int argc, char *argv[])
 					quit("Invalid LastTraj");
 					break;
 
-				default:   quit(USAGE);
+                        default:   usage();
 			}
 		}
 	}
 
-	if (argc <= 1) 
-		quit(USAGE);
+	if (argc <= 1) usage();
 
 	if((iError = GetSmsHeader (argv[argc-1], &pSmsHeader, &pSmsFile)) < 0)
 	{
@@ -163,7 +182,7 @@ int main (int argc, char *argv[])
                                                         for( j = 0; j < nSamples; j++)
                                                                 printf("%f, ", smsData.pFStocWave[j]);
                                                 }
-                                                else if(pSmsHeader->iStochasticType == STOC_STFT)
+                                                else if(pSmsHeader->iStochasticType == STOC_IFFT)
                                                  {
 
                                                  }

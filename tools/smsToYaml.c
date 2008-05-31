@@ -27,6 +27,27 @@
 
 #define USAGE "Usage: smsToYaml [-t type-format][-i initial-time][-e end-time] <smsFile> <yamlFile>"
 
+void usage (void)
+{
+        fprintf (stderr, "\n"
+                 "Usage: smsToYaml [options]  <inputSmsFile> <outputYamlFile>\n"
+                 "\n"
+                 "Options:\n"
+                 " -t      type-format (default 1) \n"
+                 "                    1: print all the information \n"
+                 "                    2: print only the deterministic component \n"
+                 "                    3: print only the stochastic component. \n"
+                 "                    4: print only the header. \n"
+                 "-i       initial time (default: 0) \n"
+                 "-e       end time (default: end of file) \n"
+                 "\n"
+                 "Converts an SMS analysis file (.sms) made with smsAnal to a YAML formatted text file."
+                 "\n\n");
+        
+        exit(1);
+}
+
+
 short MaxDelayFrames;
 float FResidualPerc;
 SOUND_BUFFER soundBuffer, synthBuffer;
@@ -42,8 +63,7 @@ int main (int argc, char *argv[])
           iFirstTraj = 0, iLastTraj = -1;
      float fInitialTime = 0, fEndTime = 0;
         
-     if (argc <= 2) 
-          quit(USAGE);
+     if (argc <= 2) usage();
      pChOutputYamlFile = argv[argc-1];
      pChInputSmsFile = argv[argc-2];
      for (i=1; i<argc-1; i++) 
@@ -64,7 +84,7 @@ int main (int argc, char *argv[])
                                     &fEndTime) < 0)
                          quit("Invalid EndTime");
                     break;				
-               default:   quit(USAGE);
+               default:   usage();
                }
           }
      }
@@ -104,7 +124,7 @@ int main (int argc, char *argv[])
      fprintf(fp,"    iStochasticType  : ");
      if(pSmsHeader->iStochasticType == STOC_WAVEFORM) 
           fprintf(fp,"waveform\n");
-     else if(pSmsHeader->iStochasticType == STOC_STFT) 
+     else if(pSmsHeader->iStochasticType == STOC_IFFT) 
           fprintf(fp,"stft\n");
      else if(pSmsHeader->iStochasticType == STOC_APPROX) 
           fprintf(fp,"approx\n");
@@ -208,7 +228,7 @@ int main (int argc, char *argv[])
                          }
                          fprintf(fp," ]\n");
                     }
-                    else if(pSmsHeader->iStochasticType == STOC_STFT)
+                    else if(pSmsHeader->iStochasticType == STOC_IFFT)
                     {
 
                     }

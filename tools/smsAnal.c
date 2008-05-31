@@ -50,6 +50,10 @@ static int ComputeSms (SNDHeader *pSoundHeader, SMSHeader *pSmsHeader,
 
         /* allocate output SMS record */
 	AllocSmsRecord (pSmsHeader, &smsData);
+
+        /* Initiliase FFTW */
+        if(analParams.iStochasticType == STOC_IFFT)
+                initFFTW( &analParams);
       
 	iNextSizeRead = (analParams.iDefaultSizeWindow + 1) / 2.0;
   
@@ -188,7 +192,7 @@ static int ComputeRecordBSize (ARGUMENTS *pArguments, int iHopSize)
         {       //numSamples
                 iSize += sizeof(float) * iHopSize;
         }
-        else if(pArguments->iStochasticType == STOC_STFT)
+        else if(pArguments->iStochasticType == STOC_IFFT)
         {
                 //sizeFFT*2
         }
@@ -356,7 +360,7 @@ static int FillSmsHeader (SMSHeader *pSmsHeader, int iRecordBSize,
         pSmsHeader->nTrajectories = arguments.nTrajectories;
         pSmsHeader->nStochasticCoeff = arguments.nStochasticCoeff;
         pSmsHeader->iOriginalSRate = iSamplingRate;
-        pSmsHeader->sizeHop = iHopSize;
+//        pSmsHeader->sizeHop = iHopSize;
 
         SaveArguments (arguments);
        
