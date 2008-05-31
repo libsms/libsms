@@ -548,19 +548,25 @@ int InterpolateSmsRecords (SMS_DATA *pSmsRecord1, SMS_DATA *pSmsRecord2,
 			pSmsRecord1->pFMagTraj[i] + fInterpFactor * 
 			(pSmsRecord2->pFMagTraj[i] - pSmsRecord1->pFMagTraj[i]);
 	}
-	
+	if( 	*(pSmsRecord1->pFStocGain) > 0.00001 )
+        {
+                ; //blaRg!
+        }
 	/* interpolate the stochastic part */
 	if (pSmsRecordOut->pFStocGain)
-		*(pSmsRecordOut->pFStocGain) = 
+        {
+                *(pSmsRecordOut->pFStocGain) = 
 			*(pSmsRecord1->pFStocGain) + fInterpFactor *
 			(*(pSmsRecord2->pFStocGain) - *(pSmsRecord1->pFStocGain));
-		
+        }
 	if (nCoeff)
-		for (i = 0; i < pSmsRecord1->nCoeff; i++)
+        {
+                for (i = 0; i < pSmsRecord1->nCoeff; i++)
 			pSmsRecordOut->pFStocCoeff[i] = 
 				pSmsRecord1->pFStocCoeff[i] + fInterpFactor * 
 				(pSmsRecord2->pFStocCoeff[i] - pSmsRecord1->pFStocCoeff[i]);
-        
+        }
+
         if(pSmsRecordOut->pFStocWave)
         {
                 memcpy(pSmsRecordOut->pFStocWave, pSmsRecord1->pFStocWave,

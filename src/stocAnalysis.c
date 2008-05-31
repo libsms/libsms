@@ -22,81 +22,6 @@
 
 #define ENV_THRESHOLD     .01
 
-/* get the stochastic representation from the residual waveform
- * by approximating its spectrum with an IIR filter
- * return -1 if no representation, 1 if got a representation
- *
- * float *pFResidual;        residual signal
- * int sizeWindow;           size of buffer
- * SMS_DATA *pSmsData;       pointer to output SMS data
- * ANAL_PARAMS analParams;   analysis parameters
- */
-static int StocAnalysisIIR (float *pFResidual, int sizeWindow, 
-                            SMS_DATA *pSmsData, ANAL_PARAMS analParams)
-{
-	int nStage = pSmsData->nCoeff, nMax = pSmsData->nCoeff+1, i, j;
-	float *pFCovMatrix, *pFOldCoeff, *pFOtherCoeff, *pFScratch,
-		fError = 0;
-	static float fOldError = 0;
-    
-	/* allocate temporary arrays */
-	if ((pFCovMatrix = 
-		(float *) calloc ((pSmsData->nCoeff+1) * (pSmsData->nCoeff+1), 
-		                  sizeof(float))) == NULL)
-		return -1;			
-	if ((pFOldCoeff = (float *) calloc(pSmsData->nCoeff, sizeof(float))) 
-		== NULL)
-		return -1;
-	if ((pFOtherCoeff = (float *) calloc(pSmsData->nCoeff, sizeof(float)))
-		== NULL)
-		return -1;
-	if ((pFScratch = (float *) calloc(pSmsData->nCoeff+1, sizeof(float)))
-		== NULL)
-		return -1;
-    
-	/* compute the covariance matrix */
-	Covariance (pFResidual-1, sizeWindow, nStage, pFCovMatrix, nMax);
-  
-	/* get the lattice coefficients */
-	for (i = 1; i <= pSmsData->nCoeff; i++)
-	{
-		CovLatticeHarm (pFCovMatrix, nMax, i, pFOtherCoeff, 
-		                &pSmsData->pFStocCoeff[i-1], &fError, pFScratch);
-		/* check for unstable filter */
-		if (fabs (pSmsData->pFStocCoeff[i-1]) >= 1)
-		{
-			fprintf (stderr, 
-			         "stocAnalysis: unstable filter, using previous one\n");
-			for (j = 0; j < pSmsData->nCoeff; j++)
-				pSmsData->pFStocCoeff[j] = pFOldCoeff[j];
-			fError = fOldError;
-			break;
-		}
-	}
-	/* check for wrong error */
-	if (fError > 0 && fError < 3.40282346638528860e+38) 
-		/* get the gain from the error */
-		*(pSmsData->pFStocGain) = TO_DB(sqrt(fError / sizeWindow));
-	else
-	{
-		fprintf (stderr, "stocAnalysis: unstable filter, setting to 0\n");
-		for (j = 0; j < pSmsData->nCoeff; j++)
-			pSmsData->pFStocCoeff[j] = 0;
-		*(pSmsData->pFStocGain) = 0;
-		fError = 0;
-	}
-  
-	/* save result in case next filter is unstable */
-	for (i = 0; i < pSmsData->nCoeff; i++)
-		pFOldCoeff[i] = pSmsData->pFStocCoeff[i];
-	fOldError = fError;
-  
-	free ((char *) pFCovMatrix);
-	free ((char *) pFOldCoeff);
-	free ((char *) pFOtherCoeff);
-	free ((char *) pFScratch);
-	return (1);
-}
 
 
 /* get the stochastic representation from the residual waveform
@@ -104,16 +29,18 @@ static int StocAnalysisIIR (float *pFResidual, int sizeWindow,
  * return -1 if no representation, 1 if got a representation
  *
  * float *pFResidual;        residual signal
- * int sizeWindow;           size of buffer
+ * int sizeBuffer;           size of buffer
  * SMS_DATA *pSmsData;       pointer to output SMS data
  * ANAL_PARAMS analParams;   analysis parameters
  */
-static int StocAnalysisFFT (float *pFResidual, int sizeWindow, 
+static int StocApproxFFT (float *pFResidual, int sizeBuffer, 
                             SMS_DATA *pSmsData, ANAL_PARAMS analParams)
 {
-	int i, sizeFft = (int) pow(2.0, (float)(1+(floor(log((float) sizeWindow)
-		/ LOG2)))), sizeMag = sizeFft >> 1;
-	float  *pFMagSpectrum, fMag = 0;
+	int i;
+        int sizeFft = (int) pow(2.0, (float)(1+(floor(log((float) sizeBuffer) / LOG2))));
+        int sizeMag = sizeFft >> 1;
+	float  *pFMagSpectrum;
+        float fMag = 0.0;
 	static float *pFWindow = NULL;
 
 	/* allocate buffers */    
@@ -122,12 +49,12 @@ static int StocAnalysisFFT (float *pFResidual, int sizeWindow,
 
 	if (pFWindow == NULL)
 	{
-		if ((pFWindow = (float *) calloc(sizeWindow, sizeof(float))) == NULL)
+		if ((pFWindow = (float *) calloc(sizeBuffer, sizeof(float))) == NULL)
 			return -1;
-		Hamming (sizeWindow, pFWindow);
+		Hamming (sizeBuffer, pFWindow);
 	}
-
-	QuickSpectrumF (pFResidual, pFWindow, sizeWindow, pFMagSpectrum, 
+        printf("sizeFft: %d, sizeBuffer: %d \n", sizeFft, sizeBuffer);
+	QuickSpectrumF (pFResidual, pFWindow, sizeBuffer, pFMagSpectrum, 
 	                (float *) NULL, sizeFft);
 
  
@@ -145,7 +72,6 @@ static int StocAnalysisFFT (float *pFResidual, int sizeWindow,
 		pSmsData->pFStocCoeff[i] /= *pSmsData->pFStocGain;
     
 	*pSmsData->pFStocGain = TO_DB (*pSmsData->pFStocGain);
- 
 	free ((char *) pFMagSpectrum);
 	return (1);
 }
@@ -154,37 +80,26 @@ static int StocAnalysisFFT (float *pFResidual, int sizeWindow,
 /* main function for the stochastic analysis
  * return -1 if no representation, 1 if got a representation
  * float *pFResidual;        residual signal
- * int sizeWindow;           size of buffer
+ * int sizeBuffer;           size of buffer
  * SMS_DATA *pSmsData;       pointer to output SMS data
  * ANAL_PARAMS analParams;   analysis parameters
  */
-int StocAnalysis (float *pFResidual, int sizeWindow, 
+int StocAnalysis (float *pFResidual, int sizeBuffer, 
                   SMS_DATA *pSmsData, ANAL_PARAMS analParams)
 {
 	int iError = 1;
 	if (analParams.iStochasticType == STOC_WAVEFORM)
         {
-
               memcpy( pSmsData->pFStocWave, pFResidual, sizeof(float) * analParams.sizeHop);
-
-                //::::::::::::::::::::: RTE_DEBUG::::::::::::::::::
-/*                 int i;  */
-/*                  printf("\n::::::: sizeWindow: %d :::::::::::::::::::::::::::::::::\n", */
-/*                          analParams.sizeHop ); */
-/*                 for(i = 0; i < analParams.sizeHop; i++) */
-/*                         printf("%f  ", pSmsData->pFStocWave[i]); */
-
-//                printf("\n");
-                //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
         }
-        else if (analParams.iStochasticType == STOC_STFT) 
+        else if (analParams.iStochasticType == STOC_IFFT) 
         {
-                //TODO: realft and store real/imag pairs in sms file
+                //TODO: computer spectrum and store in pSmsData
+                // how large is FFT?
         }
 	else if (analParams.iStochasticType == STOC_APPROX)
 		iError = 
-			StocAnalysisFFT (pFResidual, sizeWindow, pSmsData, analParams);
+			StocApproxFFT (pFResidual, sizeBuffer, pSmsData, analParams);
 	else
 		return -1;
 

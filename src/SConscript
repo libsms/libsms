@@ -7,6 +7,6 @@ sms_sources = Split(' sineSynth.c sinTab.c variousFunctions.c \
 		stocAnalysis.c smsIO.c filters.c fixTrajectories.c \
 		smsSynthesis.c smsAnalysis.c spectralApprox.c \
 		getResidual.c interpolateArrays.c filterArray.c \
-		sincTab.c soundIO.c hybridize.c ')
+		sincTab.c soundIO.c hybridize.c fftw.c')
 
 env.Library( 'libsms', sms_sources )

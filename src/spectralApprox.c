@@ -53,7 +53,7 @@ int SpectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 	/* calculate the hop size */
 	if (sizeSpec1 != sizeSpec1Used)
 		fHopSize = (float) sizeSpec1Used / nCoefficients;
-	else
+	else //why is this here, would be the same as sizeSpec1Used / nCoefficients
 		fHopSize = (float) sizeSpec1 / nCoefficients;
 	
 	/* approximate by linear interpolation */
@@ -89,8 +89,8 @@ int SpectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 	{
 		free (pFEnvelope);
 
+		printf ("SpectralApprox: sizeSpec1 has too many nCoefficients\n");
 
-		printf ("Spec1: too many nCoefficients: %d\n", nCoefficients);
 		return -1;
 	}
 
@@ -138,7 +138,7 @@ int SpectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 	else
 	{
 		free (pFEnvelope);
-		printf ("Spec2: too many nCoefficients\n");
+		printf ("SpectralApprox: sizeSpec2 has too many nCoefficients\n");
 		return -1;
 	}
 	free (pFEnvelope);

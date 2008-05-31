@@ -40,7 +40,6 @@ static int SineSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer,
         float fMag=0, fFreq=0, fPhase=0, fLoc, fSin, fCos, fBinRemainder, 
                 fTmp, fNewMag,  fIndex;
 
-//        pFFftBuffer = (float *) calloc(sizeFft+1, sizeof(float));
         memset (pSynthParams->realftOut, 0, (sizeFft +1) * sizeof(float));
         for (i = 0; i < nTraj; i++)
         {
@@ -48,8 +47,10 @@ static int SineSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer,
                     ((fFreq = pSmsData->pFFreqTraj[i]) < iHalfSamplingRate))
                 {
                         if (pSynthParams->previousFrame.pFMagTraj[i] <= 0)
+                        {
                                 pSynthParams->previousFrame.pFPhaTraj[i] = 
                                         TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
+                        }
                         // can fMag here be stored as magnitude instead of DB within smsData?
                         fMag = TO_MAG (fMag);
                         fTmp = pSynthParams->previousFrame.pFPhaTraj[i] +
@@ -171,8 +172,11 @@ static int SineSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer,
         return (1); 
 }
 
-
-/* synthesis of one frame of the stochastic component using spectral envelopes */
+/* synthesis of one frame of the stochastic component using spectral envelopes 
+ * and random phases. This function presumes sizeHop = nCoeff (or sizeFft?) 
+ * if it is not, nCoeff must be 'stretched' to fit sizeHop, so it transforms into the right
+ * amount of audio samples after IFFT.
+ */
 static int StocSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer, 
                           SYNTH_PARAMS *pSynthParams)
 {
@@ -180,12 +184,12 @@ static int StocSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer,
         int i, nSegments = pSmsData->nCoeff, nSegmentsUsed;
         int sizeFft = pSynthParams->sizeHop << 1, sizeMag = pSynthParams->sizeHop;
 
-        /* if no gain or no coefficients return */
+        /* if no gain or no coefficients return  */
         if (*(pSmsData->pFStocGain) <= 0)
                 return 0;
 
-        if ((pFMagSpectrum = (float *) calloc(sizeMag, sizeof(float))) == NULL)
-                return -1;
+/*         if ((pFMagSpectrum = (float *) calloc(sizeMag, sizeof(float))) == NULL) */
+/*                 return -1; */
         if ((pFPhaseSpectrum = (float *) calloc(sizeMag, sizeof(float))) == NULL)
                 return -1;
         *(pSmsData->pFStocGain) = TO_MAG(*(pSmsData->pFStocGain));
@@ -194,13 +198,57 @@ static int StocSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer,
         for (i = 0; i < nSegments; i++)
                 pSmsData->pFStocCoeff[i] *= 2 * *(pSmsData->pFStocGain);
 
-        nSegmentsUsed = nSegments * pSynthParams->iSamplingRate / 
-                pSynthParams->iOriginalSRate;
-        SpectralApprox (pSmsData->pFStocCoeff, nSegments, nSegmentsUsed,
-                        pFMagSpectrum, sizeMag, nSegmentsUsed);
+/*         nSegmentsUsed = nSegments * pSynthParams->iSamplingRate /  */
+/*                 pSynthParams->iOriginalSRate; */
+/*         SpectralApprox (pSmsData->pFStocCoeff, nSegments, nSegmentsUsed, */
+/*                         pFMagSpectrum, sizeMag, nSegmentsUsed); */
 
         /* generate random phases */
         for (i = 0; i < sizeMag; i++)
+                pFPhaseSpectrum[i] =  TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
+        
+        InverseQuickSpectrumW (pSmsData->pFStocCoeff, pFPhaseSpectrum, 
+                               sizeFft, pFBuffer, sizeFft, 
+                               pSynthParams->pFStocWindow);
+        free (pFMagSpectrum);
+        free (pFPhaseSpectrum);
+        return 1;
+}
+
+/* synthesis of one frame of the stochastic component using approximated 
+ * spectral envelopes and random phases*/
+static int StocSynthApprox (SMS_DATA *pSmsData, float *pFBuffer, 
+                          SYNTH_PARAMS *pSynthParams)
+{
+        float *pFMagSpectrum, *pFPhaseSpectrum;
+        int i, sizeSpec1Used;
+        int sizeSpec1 = pSmsData->nCoeff;
+        int sizeSpec2 = pSynthParams->sizeHop;
+        int sizeFft = pSynthParams->sizeHop << 1; // 50% overlap, so fft is 2x hop
+
+        /* if no gain or no coefficients return  */
+        if (*(pSmsData->pFStocGain) <= 0)
+                return 0;
+
+        if ((pFMagSpectrum = (float *) calloc(sizeSpec2, sizeof(float))) == NULL)
+                return -1;
+        if ((pFPhaseSpectrum = (float *) calloc(sizeSpec2, sizeof(float))) == NULL)
+                return -1;
+        *(pSmsData->pFStocGain) = TO_MAG(*(pSmsData->pFStocGain));
+
+        /* scale the coefficients to normal amplitude */
+        for (i = 0; i < sizeSpec1; i++)
+                pSmsData->pFStocCoeff[i] *= 2 * *(pSmsData->pFStocGain);
+
+        /* RTE FIXME: this has a nasty problem that the new sampling rate
+           cannot be larger than the old one */
+        sizeSpec1Used = sizeSpec1 * pSynthParams->iSamplingRate / 
+                pSynthParams->iOriginalSRate;
+        SpectralApprox (pSmsData->pFStocCoeff, sizeSpec1, sizeSpec1Used,
+                        pFMagSpectrum, sizeSpec2, sizeSpec1Used);//should the last argument be sizeSpec1Used or sizeSpec1?
+
+        /* generate random phases */
+        for (i = 0; i < sizeSpec2; i++)
                 pFPhaseSpectrum[i] =  TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
         
         InverseQuickSpectrumW (pFMagSpectrum, pFPhaseSpectrum, 
@@ -237,7 +285,7 @@ int SmsSynthesis (SMS_DATA *pSmsData, float *pFSynthesis,
         if(pSynthParams->iSynthesisType == STYPE_ALL)
         {
                 if(pSynthParams->iDetSynthType == DET_IFFT &&
-                        pSynthParams->iStochasticType == STOC_STFT)
+                   pSynthParams->iStochasticType == STOC_IFFT)
                         quit("SmsSynthesis: COMBO_SYNTH not implemented yet.");
                 else /* can't use combo STFT, synthesize seperately and sum */
                 {
@@ -265,13 +313,13 @@ int SmsSynthesis (SMS_DATA *pSmsData, float *pFSynthesis,
 //                                printf("3\n");
 
                         }
-                        else if(pSynthParams->iStochasticType == STOC_STFT)
+                        else if(pSynthParams->iStochasticType == STOC_IFFT)
                         {
-                                quit("SmsSynthesis: STOC_STFT not implemented yet.");
+                                quit("SmsSynthesis: STOC_IFFT not implemented yet.");
                         }
-                        else /*(pSynthParams->iStochasticType == STOC_APPROX*/
+                        else if(pSynthParams->iStochasticType == STOC_APPROX)
                         {
-                                StocSynthIFFT (pSmsData, pFBuffer, pSynthParams);
+                                StocSynthApprox (pSmsData, pFBuffer, pSynthParams);
 //                              printf("4\n");
                         }
                 }
@@ -304,13 +352,13 @@ int SmsSynthesis (SMS_DATA *pSmsData, float *pFSynthesis,
                         }
 //                        printf("7\n");
                 }
-                else if(pSynthParams->iStochasticType == STOC_STFT)
+                else if(pSynthParams->iStochasticType == STOC_IFFT)
                 {
-                        quit("SmsSynthesis: STOC_STFT not implemented yet.");
+                        quit("SmsSynthesis: STOC_IFFT not implemented yet.");
                 }
                 else /*pSynthParams->iStochasticType == STOC_APPROX*/
                 {
-                        StocSynthIFFT (pSmsData, pFBuffer, pSynthParams);
+                        StocSynthApprox(pSmsData, pFBuffer, pSynthParams);
 //                        printf("8\n");
                         
                 }

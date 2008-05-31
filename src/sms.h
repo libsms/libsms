@@ -47,7 +47,7 @@ typedef struct
 	int nTrajectories;     /* number of trajectoires in each record */
 	int nStochasticCoeff;  /* number of stochastic coefficients in each	
  	                          record */
-        int sizeHop;            /* size of hop used in sinusoidal resynthesis */
+//        int sizeHop;            /* size of hop used in sinusoidal resynthesis */
 	float fAmplitude;      /* average amplitude of represented sound */
 	float fFrequency;      /* average fundamental frequency */
 	int iOriginalSRate;    /* sampling rate of original sound */
@@ -89,7 +89,7 @@ typedef struct {
 
 /* for iStochasticType */
 #define STOC_WAVEFORM 0
-#define STOC_STFT 1
+#define STOC_IFFT 1
 #define STOC_APPROX 2
 #define STOC_NONE 3
 
@@ -151,7 +151,7 @@ typedef struct
 #define TWO_PI 6.28318530717958647692
 #define PI 3.141592653589793238462643
 #define PI_2 1.57079632679489661923
-#define HALF_MAX 1073741823.5
+#define HALF_MAX 1073741823.5  /* half the max of a 32-bit word */
 #define LOG2 0.69314718
 
 #define EMPHASIS_COEFF    .9      /* coefficient for pre_emphasis filter */
@@ -304,6 +304,9 @@ typedef struct
 	int iAnalysisDirection;    /* analysis direction, direct or reverse */	
 	int iSizeSound;             /* total size of input sound */	 	
 	int iWindowType;            /* type of analysis window */			  	 			 
+        fftwf_plan  fftPlan;
+        float *pCfftIn;
+        fftwf_complex *pFfftOut;
 } ANAL_PARAMS;
 
 /* structure with useful information for synthesis */
@@ -391,6 +394,10 @@ void Hamming (int sizeWindow, float *pFWindow);
 void Hanning (int sizeWindow, float *pFWindow);
 
 void realft (float *data, int n, int isign);
+
+int initFFTW( ANAL_PARAMS *pAnalParams);
+
+int initInverseFFTW( SYNTH_PARAMS *pSynthParams);
 
 int Spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum, 
              float *pFPhaseSpectrum, ANAL_PARAMS analParams);

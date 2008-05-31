@@ -3,6 +3,7 @@ SMS Library Work Log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 * Issues to be delt with
 ** [#A] StocSynthIFFT goes haywire when synth samplerate is larger than orig
+   - makes SpectralApprox use more than the available spectrum
 ** [#A] ways to get fftw working the same as realft:
    - [ ] write both IFFT's (waveform) to txt file
    - [ ] compare in python and relate data to FFT parameters
@@ -19,17 +20,30 @@ SMS Library Work Log
 
 ** [#B] ways to fix the stoc_ big crunch in the beginning:
 *** first check if area is consistent throughout different samples.
+** [#A] sort out various sizeHop's everywhere in smsSynth
 ** changing the framerate in smsAnal makes deterministic component empty. huh?
 *** Xavier suggests fund estimate is bad, so specify manually
 *** resample after analysis (delete 3 out of 4 frames, concatenate stoc_wave)
 ** what is the difference between smsClean and the cleaning within smsAnal?
 ** can/is smsSynthDet be in smsSynth
 ** what is calcCorr in tools?
+** why is fRecordLoc an int in smsSynth?
+   - this makes the resample coeff InterpolateSmsRecords always = 0
+   - changed to float for now..
 * Pre-modifications: making analysis/plotting scripts
 ** DONE smsToYaml for importing into python
 ** TODO [#C] SWIG libsms wrappers for more convenient use in python
 ** DONE smsPlot.py for plotting smsData over a spectrogram of audio source.
 * Phase 1: Refactoring libsms for usage in real-time and release
+** TODO [#A] make samplerate independant of analysis/synthesis
+*** Investigating samplerate/framerate dependencies:
+**** How is resample making the current SMS_DATA frame?
+
+*** In order for real-time synthesis:
+**** iLastSample in smsSynth must be replaced with 
+        - iNumSamples will be a predefined buffer of samples to synthesis at one time,
+          indepenent of synthesis blocksize
+
 ** TODO [#A] - switch to FFTW3f for fft's
 ***  TODO start with SineSynthIFFT until it sounds right
 ***  DONE need to configure a fftw_plan outside of process loop, and allocate buffers there
@@ -42,6 +56,7 @@ SMS Library Work Log
 ** TODO [#A] switch build scripts to scons 
    - [ ] get env. exporting/importing fixed
    - [ ] add install functionality
+** TODO [#B] update USAGE arguments to tell what different values do
 ** TODO [#A] should have the option to store residual in audio samples or STFT frames
 *** TODO organize analParams to allow for options:
    - [X] sound samples
@@ -64,11 +79,10 @@ SMS Library Work Log
 
 *** TODO Store Residual as STFT 
     - does imag need to be stored?
-      I faintly remember Tom mentioning this is only useful for phase info,
-      which doesn't matter in a completely stochastic signal
-    -  is this just what StocSynthIFFT does, but with only < 64 bins?
+       - yes, it is cheaper to store/recall than to make a random one
     - [ ] allocate memory
-    - [ ] need sizeFft in SMS_HEADER (i think)
+    - [X] need sizeDFT in SMS_HEADER (i think)
+    - should this be 2x hopsize because there is overlap of 50%?
     - [ ] store in stochAnalysis (probably should be somewhere else..)
     - [ ] make sure it is correctly stored in smsToYaml/smsPrint
 *** TODO modify smsResample to concatenate stocWave data
@@ -82,10 +96,11 @@ SMS Library Work Log
 ***       - what is GetResidual's WriteResidualToFile supposed to be doing?
           -actually, may have to have 2 seperate files at a time, since debugging
           and regular sound file writing is occuring at the same time
-** DONE [#C] make samplerate independant of analysis/synthesis
 ** TODO [#B] convert README's to manpages.
    - [ ] update to fit new parameters
    - [ ] proofread
+** TODO [#B] make sure pFStocGain is always set
+     - zero if no stoc component, 1 if wave, or val if StocSpectrum
 ** TODO [#B] make example python scripts
 ** TODO [#C] move smsMod's stochostic gain adjusting to 
    - should stocGain be available for all stoc types?
@@ -93,5 +108,19 @@ SMS Library Work Log
 * Phase 2: building real-time pd externals for analysis/synthesis
 ** will have to normalize audio to floating point abs(1)
    - should everything in libsms be converted to this sample format?
+      - yes, but for now it is using a scalar at the end of synthesis
 
 
+** TODO [#A] draw schematics for getting audio samples from SMS_DATA in pd
+*** will need samplerate, numSamples requested, ... frame?
+*** what is input for controlling which frame to synth?
+      - frame number
+*** include in schematic all movement possibilities
+       - [ ] faster than normal
+       - [ ] slower than normal
+       - [ ] normal
+       - [ ] reverse normal
+       - [ ] start in middle
+       - [ ] end in middle
+*** include units of audio block size, requested block size, SMS_DATA rate size
+    

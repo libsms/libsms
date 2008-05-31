@@ -4,7 +4,7 @@ Import('env')
 
 sms_tools = Split(' smsAnal smsSynth smsClean \
         	smsMod smsPrint smsResample \
-        	smsSynthDet smsToYaml' )
+        	smsToYaml' )
 
 #sms_cflags = '-g -Wall'
 #sms_libpath = '../src'
