@@ -50,10 +50,6 @@ static int ComputeSms (SNDHeader *pSoundHeader, SMSHeader *pSmsHeader,
 
         /* allocate output SMS record */
 	AllocSmsRecord (pSmsHeader, &smsData);
-
-        /* Initiliase FFTW */
-        if(analParams.iStochasticType == STOC_IFFT)
-                initFFTW( &analParams);
       
 	iNextSizeRead = (analParams.iDefaultSizeWindow + 1) / 2.0;
   
