@@ -21,13 +21,25 @@
 #include "sms.h"
 
 float *pFWindowSpec;
+double *pFSTab = NULL, *pFSincTab = NULL;
 
-/* initialize data structures
+int SmsInit( void )
+{
+	/* prepare sinc and sine tables only the first time */
+	if (pFSincTab == NULL)
+		PrepSinc ();
+	if (pFSTab == NULL)
+		PrepSine (2046); //try 4096
+        return (1);
+}
+
+
+/* initialize analysis data structures
  *
  * ANAL_PARAMS analParams;    analysis paramaters
  *
  */
-int Initialize (ANAL_PARAMS analParams)
+int SmsInitAnalysis (ANAL_PARAMS analParams)
 {
 	extern short MaxDelayFrames;
 	extern SOUND_BUFFER soundBuffer, synthBuffer;
@@ -80,8 +92,64 @@ int Initialize (ANAL_PARAMS analParams)
 	/* initialitze window buffer for spectrum */
 	pFWindowSpec = (float *) calloc (MAX_SIZE_WINDOW, sizeof(float));
 
+        /* allocate memory for FFT */
+/*         int sizeFFT = pAnalParams->sizeHop ;   */
+/*         pAnalParams->pCfftIn = fftwf_malloc(sizeof(float) * sizeFFT); */
+/*         pAnalParams->pFfftOut = fftwf_malloc(sizeof(fftwf_complex) * (sizeFFT / 2 + 1)); */
+/*         pAnalParams->fftPlan =  fftwf_plan_dft_r2c_1d( sizeFFT, pAnalParams->pCfftIn, */
+/*                                                       pAnalParams->pFfftOut, FFTW_ESTIMATE); */
+
 	return (1);
 }
+
+int SmsInitSynth( SMSHeader *pSmsHeader, SYNTH_PARAMS *pSynthParams )
+{
+        /* set synthesis parameters from arguments and header */
+	pSynthParams->iOriginalSRate = pSmsHeader->iOriginalSRate;
+	pSynthParams->origSizeHop = pSynthParams->iOriginalSRate / pSmsHeader->iFrameRate;
+	pSynthParams->iStochasticType = pSmsHeader->iStochasticType;
+        if(pSynthParams->iSamplingRate <= 0)  pSynthParams->iSamplingRate = pSynthParams->iOriginalSRate;
+
+        //RTE TODO: round hopsize to power of 2
+
+        pSynthParams->pFStocWindow = 
+		(float *) calloc(pSynthParams->sizeHop * 2, sizeof(float));
+	Hanning (pSynthParams->sizeHop * 2, pSynthParams->pFStocWindow);
+	pSynthParams->pFDetWindow =
+		(float *) calloc(pSynthParams->sizeHop * 2, sizeof(float));
+	IFFTwindow (pSynthParams->sizeHop * 2, pSynthParams->pFDetWindow);
+
+
+
+	AllocateSmsRecord (&pSynthParams->previousFrame, pSmsHeader->nTrajectories, 
+	                   1 + pSmsHeader->nStochasticCoeff, 1,
+                           pSynthParams->origSizeHop, pSmsHeader->iStochasticType);
+
+        /* allocate memory for FFT */
+        int sizeFFT = pSynthParams->sizeHop ;  
+        pSynthParams->pCfftIn =  fftwf_malloc(sizeof(fftwf_complex) * (sizeFFT / 2 + 1));
+        pSynthParams->pFfftOut = fftwf_malloc(sizeof(float) * sizeFFT);
+        pSynthParams->fftPlan =  fftwf_plan_dft_c2r_1d( sizeFFT, pSynthParams->pCfftIn,
+                                                      pSynthParams->pFfftOut, FFTW_ESTIMATE);
+        
+        /*debugging realft */
+        pSynthParams->realftOut = (float *) calloc((sizeFFT<<1)+1, sizeof(float));
+
+
+        return 1;
+}
+
+int SmsFreeSynth( SYNTH_PARAMS *pSynthParams )
+{
+
+        free (pSynthParams->realftOut);
+        fftwf_free(pSynthParams->pCfftIn);
+        fftwf_free(pSynthParams->pFfftOut);
+	fftwf_destroy_plan(pSynthParams->fftPlan);
+
+        return 1;
+}
+
 
 /* fill the sound buffer
  *
