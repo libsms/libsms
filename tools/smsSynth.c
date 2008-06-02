@@ -33,19 +33,20 @@ short MaxDelayFrames;
 void usage (void)
 {
     fprintf (stderr, "\n"
-"Usage: smsSynth [options]  <inputSmsFile> <outputSoundFile>\n"
-"\n"
-"Options:\n"
-"      -v     print out verbose information"
-"	-r      sampling rate of output sound (if = 0, original rate)\n"
-"	-s	synthesis type (1: all, 2: deterministic only , 3: stochastic only)\n"
-"	-d	method of deterministic synthesis type (1: IFFT, 2: oscillator bank)\n"
-"       -h    sizeHop ( >= 128 )"
-"\n"
-"synthesize an analysis (.sms) file made with smsAnal."
-"output file format is 32bit floating-point AIFF."
-"\n\n");
-
+             "Usage: smsSynth [options]  <inputSmsFile> <outputSoundFile>\n"
+             "\n"
+             "Options:\n"
+             "      -v     print out verbose information"
+             "	    -r      sampling rate of output sound (if = 0, original rate)\n"
+             "	    -s     synthesis type (1: all, 2: deterministic only , 3: stochastic only)\n"
+             "	    -d     method of deterministic synthesis type (1: IFFT, 2: oscillator bank)\n"
+             "      -h     sizeHop (default 128) 128 <= sizeHop <= 8092, rounded to a power of 2"
+             "      -t      time factor (default 1): positive value to multiply by overall time "
+             "\n"
+             "synthesize an analysis (.sms) file made with smsAnal."
+             "output file format is 32bit floating-point AIFF."
+             "\n\n");
+    
     exit(1);
 }
 
@@ -56,16 +57,17 @@ int main (int argc, char *argv[])
 	FILE *pSmsFile; /* pointer to sms file to be synthesized */
 	SMS_DATA smsRecord1, smsRecord2, newSmsRecord; /* left, right, and interpolated records */
 	float *pFSynthesis; /* waveform synthesis buffer */
-	long iError, iSample, i, iLastSample, iLeftRecord, iRightRecord;
+	long iError, iSample, i, nSamples, iLeftRecord, iRightRecord;
         int verboseMode = 0;
+        int iSamplingRate = 44100;
         float fRecordLoc; /* exact sms frame location, used to interpolate newSmsRecord */
-        int  iSamplingRate, detSynthType, synthType, sizeHop; /*  argument holders */
+        int  detSynthType, synthType, sizeHop; /*  argument holders */
+        float timeFactor;
         int origSizeHop; /* RTE TODO: this should probably be in SMSHEADER instead of iOrigSampleRate */
 	SYNTH_PARAMS synthParams;
 	synthParams.iSynthesisType = STYPE_ALL;
         synthParams.iDetSynthType = DET_IFFT;
 	synthParams.sizeHop = SIZE_SYNTH_FRAME;
-	synthParams.iSamplingRate = 44100;        
 
 	if (argc > 3) 
 	{
@@ -87,9 +89,13 @@ int main (int argc, char *argv[])
                                         synthParams.iDetSynthType = detSynthType;
                                         break;
                                 case 'h': sscanf(argv[i], "%d", &sizeHop);
-                                        if(sizeHop < SIZE_SYNTH_FRAME || sizeHop > 8096) // TODO : make this defined by sms.h
+                                        if(sizeHop < SIZE_SYNTH_FRAME || sizeHop > MAX_SIZE_WINDOW) 
                                                 quit("error: invalid sizeHop");
                                         synthParams.sizeHop = sizeHop;
+                                        //RTE TODO: round to power of 2 (is it necessary?)
+                                        break;
+                                case 't':  if (sscanf(argv[i],"%f",&timeFactor) < 0 )
+						quit("error: invalid time factor");
                                         break;
                                 case 'v': verboseMode = 1;
                                         break;
@@ -97,6 +103,7 @@ int main (int argc, char *argv[])
 				}
 	}
 	else if (argc < 2) usage();
+
 	pChInputSmsFile = argv[argc-2];
 	pChOutputSoundFile = argv[argc-1];
         
@@ -113,19 +120,7 @@ int main (int argc, char *argv[])
 		quit ("error reading input file");
 	}	    
   
-	/* allocate two SMS records */
-	AllocSmsRecord (pSmsHeader, &smsRecord1);
-	AllocSmsRecord (pSmsHeader, &smsRecord2);
-
-
-
-  
-	if ((pFSynthesis = (float *) calloc(synthParams.sizeHop, sizeof(float)))
-	    == NULL)
-		quit ("Could not allocate memory for pFSynthesis");
-
-
-
+        /* set synthesis parameters from arguments and header */
 	synthParams.iOriginalSRate = pSmsHeader->iOriginalSRate;
 	synthParams.origSizeHop = synthParams.iOriginalSRate / pSmsHeader->iFrameRate;
 	synthParams.iStochasticType = pSmsHeader->iStochasticType;
@@ -134,7 +129,9 @@ int main (int argc, char *argv[])
         if( !iSamplingRate || synthParams.iStochasticType == STOC_WAVEFORM)
         {
                 synthParams.iSamplingRate = synthParams.iOriginalSRate;
+                if(verboseMode) printf("original sampling rate forced \n");
         }
+        else synthParams.iSamplingRate = iSamplingRate;
 
 
         if(verboseMode)
@@ -148,23 +145,32 @@ int main (int argc, char *argv[])
                 if(synthParams.iDetSynthType == DET_IFFT) printf("ifft ");
                 else if(synthParams.iDetSynthType == DET_OSC) printf("oscillator bank ");
                 printf("\nsizeHop: %d \n", synthParams.sizeHop);
+                printf("time factor: %f \n", timeFactor);
                 printf("__header info__\n");
                 printf("fOriginalSRate: %d, iFrameRate: %d, origSizeHop: %d\n", 
                        pSmsHeader->iOriginalSRate, pSmsHeader->iFrameRate, synthParams.origSizeHop);
-        }
-
+                printf("original file length: %f seconds \n", (float)  pSmsHeader->nRecords * 
+                       synthParams.origSizeHop / pSmsHeader->iOriginalSRate );
+             }
 
 	CreateOutputSoundFile (synthParams, pChOutputSoundFile);
-        
 
+	/* memory allocation */
+	AllocSmsRecord (pSmsHeader, &smsRecord1);
+	AllocSmsRecord (pSmsHeader, &smsRecord2);
 
+	if ((pFSynthesis = (float *) calloc(synthParams.sizeHop, sizeof(float)))
+	    == NULL)
+		quit ("Could not allocate memory for pFSynthesis");
 
         synthParams.pFStocWindow = 
 		(float *) calloc(synthParams.sizeHop * 2, sizeof(float));
 	Hanning (synthParams.sizeHop * 2, synthParams.pFStocWindow);
-	synthParams.pFDetWindow = 
+	synthParams.pFDetWindow =
 		(float *) calloc(synthParams.sizeHop * 2, sizeof(float));
 	IFFTwindow (synthParams.sizeHop * 2, synthParams.pFDetWindow);
+
+        initInverseFFTW( &synthParams );
       
 	AllocateSmsRecord (&synthParams.previousFrame, pSmsHeader->nTrajectories, 
 	                   1 + pSmsHeader->nStochasticCoeff, 1,
@@ -179,10 +185,6 @@ int main (int argc, char *argv[])
 	if (pFSTab == NULL)
 		PrepSine (2046); //try 4096
  
-	iSample = 0;
-	iLastSample = pSmsHeader->nRecords * synthParams.origSizeHop;
-        
-        initInverseFFTW( &synthParams );
 
         /* //########## RTE DEBUG ############### */
 //        FILE *df;
@@ -197,37 +199,67 @@ int main (int argc, char *argv[])
         printf("## using fftw3 ##  \n");
 #endif
 
-        /* // ################################### */
-        // RTE todo: clean up comments.
-	while (iSample < iLastSample)
+	iSample = 0;
+        /* number of samples is a factor of the ratio of samplerates */
+        /* multiply by timeFactor to increase samples to desired file length */
+	nSamples = pSmsHeader->nRecords * synthParams.origSizeHop * timeFactor *
+                synthParams.iSamplingRate / pSmsHeader->iOriginalSRate;
+ 
+	while (iSample < nSamples)
 	{
-		fRecordLoc = (float) iSample / synthParams.origSizeHop; // floating-point location of current frame
-		iLeftRecord = MIN (pSmsHeader->nRecords - 1, floor (fRecordLoc)); //returns the last record if fRecordLoc > nRecords
-		iRightRecord = // if there is one more record left, return it on the right, otherwise use the left=right
-			(iLeftRecord < pSmsHeader->nRecords - 2) 
+                /* divide timeFactor out to get the correct record */
+		fRecordLoc = (float) iSample * pSmsHeader->iOriginalSRate / 
+                        ( synthParams.origSizeHop * synthParams.iSamplingRate * timeFactor); 
+                // left and right records around location, gaurding for end of file
+		iLeftRecord = MIN (pSmsHeader->nRecords - 1, floor (fRecordLoc)); 
+		iRightRecord = (iLeftRecord < pSmsHeader->nRecords - 2)
 			? (1+ iLeftRecord) : iLeftRecord;
 		GetSmsRecord (pSmsFile, pSmsHeader, iLeftRecord, &smsRecord1);
 		GetSmsRecord (pSmsFile, pSmsHeader, iRightRecord,&smsRecord2);
-		InterpolateSmsRecords (&smsRecord1, &smsRecord2, &newSmsRecord, 
-                                       fRecordLoc - iLeftRecord); //when is fRecordLoc - iLeftRecord != 0?
-//
+		InterpolateSmsRecords (&smsRecord1, &smsRecord2, &newSmsRecord,
+                                       fRecordLoc - iLeftRecord);
+
                 SmsSynthesis (&newSmsRecord, pFSynthesis, &synthParams);
 		WriteToOutputFile (pFSynthesis, synthParams.sizeHop);
     
 		iSample += synthParams.sizeHop;
 
-/*             todo: make this print time in verbose mode only */
-/* 		if (iSample % (synthParams.sizeHop * 400) == 0) */
-/* 			fprintf(stderr,"%.2f ", iSample / (float) synthParams.iSamplingRate); */
-                
-                //RTE DEBUG ################
-/*                 for(ii = 0; ii < synthParams.sizeHop ; ii++) */
-/*                         fprintf(df, "%f ", pFSynthesis[ii]); */
-
-                //##########################
-                
+                if(verboseMode)
+                {
+                        if (iSample % (synthParams.sizeHop * 20) == 0)
+                                fprintf(stderr,"%.2f ", iSample / (float) synthParams.iSamplingRate);
+                }
 
 	}
+/*         int iRecord = 0; */
+/*         // RTE FIXME: this disregards the current samplerate */
+/* 	while (iRecord++ < pSmsHeader->nRecords) */
+/* 	{ */
+/* 		GetSmsRecord (pSmsFile, pSmsHeader, iRecord, &smsRecord1); */
+/* // */
+/*                 SmsSynthesis (&smsRecord1, pFSynthesis, &synthParams); */
+/* 		WriteToOutputFile (pFSynthesis, synthParams.sizeHop); */
+    
+/* 		iSample += synthParams.sizeHop; */
+
+/*                 if(verboseMode) */
+/*                 { */
+/*                         if (iSample % (synthParams.sizeHop * 20) == 0) */
+/*                                 fprintf(stderr,"%.2f ", iSample / (float) synthParams.iSamplingRate); */
+/*                 } */
+/*                 //RTE DEBUG ################ */
+/* /\*                 for(ii = 0; ii < synthParams.sizeHop ; ii++) *\/ */
+/* /\*                         fprintf(df, "%f ", pFSynthesis[ii]); *\/ */
+
+/*                 //########################## */
+                
+
+/* 	} */
+
+        if(verboseMode)
+        {
+                printf("\nfile length: %f seconds\n", (float) iSample / synthParams.iSamplingRate);
+        }
         printf("wrote %ld samples in %s\n",  iSample, pChOutputSoundFile);
 
         //RTE DEBUG ################
