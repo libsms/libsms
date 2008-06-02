@@ -372,8 +372,14 @@ typedef struct
 
 int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsRecord,
                  ANAL_PARAMS analParams, long *pINextSizeRead);
-  
-int Initialize (ANAL_PARAMS analParams);
+
+int SmsInit( void );  
+
+int SmsInitAnalysis (ANAL_PARAMS analParams);
+
+int SmsInitSynth( SMSHeader *pSmsHeader, SYNTH_PARAMS *pSynthParams );
+
+int SmsFreeSynth( SYNTH_PARAMS *pSynthParams );
 
 void FillBuffer (short *pSWaveform, long sizeNewData, ANAL_PARAMS analParams);
 
@@ -395,9 +401,9 @@ void Hanning (int sizeWindow, float *pFWindow);
 
 void realft (float *data, int n, int isign);
 
-int initFFTW( ANAL_PARAMS *pAnalParams);
+//int initFFTW( ANAL_PARAMS *pAnalParams);
 
-int initInverseFFTW( SYNTH_PARAMS *pSynthParams);
+//int initInverseFFTW( SYNTH_PARAMS *pSynthParams);
 
 int Spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum, 
              float *pFPhaseSpectrum, ANAL_PARAMS analParams);

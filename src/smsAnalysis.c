@@ -52,7 +52,7 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsData,
 	/* initialize structures */
 	if (ppFrames == NULL) 
 	{
-                Initialize (analParams);
+                SmsInitAnalysis (analParams);
                 AllocateSmsRecord (&lastFrame, analParams.nGuides, pSmsData->nCoeff, 1,
                                    analParams.sizeHop, analParams.iStochasticType);
         }

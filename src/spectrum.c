@@ -84,53 +84,6 @@ int Spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 
 /* 
  * function to compute a complex spectrum from a waveform 
- * returns the size of the complex   spectrum
- *              
- * float *pFWaveform;	   pointer to input waveform 
- * int sizeWindow;	   size of analysis window
- * float *pFMagSpectrum;   pointer to output magnitude spectrum 
- * float *pFPhaseSpectrum; pointer to output phase spectrum 
- */
-int SpectrumCartesian (float *pFWaveform, int sizeWindow, ANAL_PARAMS analParams)
-{
-	int sizeFft = 
-		(int) pow (2.0, 
-		          (float)(1 + (floor (log ((float)(WINDOWS_IN_FFT * 
-		                                           sizeWindow))
-		                              / LOG2))));
-	int i, it2, sizeMag = sizeFft >> 1, iMiddleWindow = (sizeWindow+1) >> 1, 
-		iOffset;
-	float *pFBuffer, fReal, fImag;
-	static int iOldSizeWindow = 0;
-  
-	/* allocate buffer */    
-	if ((pFBuffer = (float *) calloc(sizeFft+1, sizeof(float))) == NULL)
-		return -1;
-  
-	/* compute window when necessary */
-	if (iOldSizeWindow != sizeWindow)
-		GetWindow (sizeWindow, pFWindowSpec, analParams.iWindowType);
-	iOldSizeWindow = sizeWindow;
-  
-	/* apply window to waveform and center window around 0 */
-	iOffset = sizeFft - (iMiddleWindow - 1);
-	for (i=0; i<iMiddleWindow-1; i++)
-		pFBuffer[1+(iOffset + i)] =  pFWindowSpec[i] * pFWaveform[i];
-	iOffset = iMiddleWindow - 1;
-	for (i=0; i<iMiddleWindow; i++)
-		pFBuffer[1+i] = pFWindowSpec[iOffset + i] * pFWaveform[iOffset + i];
-  
-
-	realft (pFBuffer, sizeMag, 1);
-  
-	free (pFBuffer);
-  
-	return (sizeMag);
-}
-
-
-/* 
- * function to compute a complex spectrum from a waveform 
  * returns the size of the complex spectrum
  *              
  * short *pIWaveform;	   pointer to input waveform
