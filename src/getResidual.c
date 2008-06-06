@@ -21,7 +21,6 @@
 #include "sms.h"
 
 extern ANAL_FRAME **ppFrames;
-extern float FResidualPerc;
 /* debug text file */
 char *pChDebugFile = "debug.txt";
 FILE *pDebug;
@@ -199,6 +198,7 @@ int GetResidual (float *pFSynthesis, float *pFOriginal,
 			fScale = fOriginalMag / fResidualMag;
 			for (i=0; i<sizeWindow; i++)
 				pFResidual[i] *= fScale;
+
       
 			if (analParams.iDebugMode == DEBUG_ALL ||
 				analParams.iDebugMode == DEBUG_STOC_ANAL)
@@ -208,7 +208,7 @@ int GetResidual (float *pFSynthesis, float *pFOriginal,
 		}
    
 		/* store residual percentage in global variable */
-		FResidualPerc += fCurrentResidualMag / fCurrentOriginalMag;
+		analParams.fResidualPercentage += fCurrentResidualMag / fCurrentOriginalMag;
 		if (analParams.iDebugMode == DEBUG_ALL ||
 		    analParams.iDebugMode == DEBUG_STOC_ANAL)
 			fprintf (stdout, "getResidual: frame %d, residual perc %f \n",

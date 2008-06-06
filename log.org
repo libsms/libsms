@@ -2,8 +2,7 @@
 SMS Library Work Log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 * Issues to be delt with
-** [#A] StocSynthIFFT goes haywire when synth samplerate is larger than orig
-   - makes SpectralApprox use more than the available spectrum
+** [#B] plot stochastic coefficients at different rates to see if they are the same for diff sr
 ** [#A] ways to get fftw working the same as realft:
    - [ ] write both IFFT's (waveform) to txt file
    - [ ] compare in python and relate data to FFT parameters
@@ -20,7 +19,8 @@ SMS Library Work Log
 
 ** [#B] ways to fix the stoc_ big crunch in the beginning:
 *** first check if area is consistent throughout different samples.
-** [#A] sort out various sizeHop's everywhere in smsSynth
+** StocSynthIFFT goes haywire when synth samplerate is larger than orig
+   - I think this is fixed just by limiting sizeSpecUsed back to 1
 ** changing the framerate in smsAnal makes deterministic component empty. huh?
 *** Xavier suggests fund estimate is bad, so specify manually
 *** resample after analysis (delete 3 out of 4 frames, concatenate stoc_wave)
@@ -34,6 +34,15 @@ SMS Library Work Log
 ** DONE smsToYaml for importing into python
 ** TODO [#C] SWIG libsms wrappers for more convenient use in python
 ** DONE smsPlot.py for plotting smsData over a spectrogram of audio source.
+* to clean:
+** TODO make a function for returning a string to the error
+   - right now it is necessary to cop/paste a large block of code to do this
+   - should replace the 'quit' function, and shouldn't exit by default
+** Globals:
+*** TODO FResidualPerc
+        - defined in variousFuntions for now, as SmsInit() is always called.
+** TODO SmsInit() should be a global init before anything..
+   - should it pass a pointer to an global sms struct? or just set global things..
 * Phase 1: Refactoring libsms for usage in real-time and release
 ** TODO [#A] make samplerate independant of analysis/synthesis
 *** Investigating samplerate/framerate dependencies:

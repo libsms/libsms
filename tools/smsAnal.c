@@ -26,7 +26,6 @@
 #include "smsAnal.h"
 
 short MaxDelayFrames;
-float FResidualPerc;
 char pChTextString[1024];
 
 #define USAGE "Usage: smsAnal [-d debugMode][-f format][-q soundType][-x analysisDirection][-s windowSize][-i windowType][-r frameRate][-j highestFreq][-k minPeakMag][-y refHarmonic][-u defaultFund][-l lowestFund][-h highestFund][-m minRefHarmMag][-z refHarmMagDiffFromMax][-n nGuides][-p nTrajectories][-v freqDeviation][-t peakContToGuide][-o fundContToGuide][-g cleanTraj][-a minTrajLength][-b maxSleepingTime][-e stochasticType][-c nStocCoeff] <inputSoundFile> <outputSmsFile>\n"
@@ -103,7 +102,7 @@ static int ComputeSms (SNDHeader *pSoundHeader, SMSHeader *pSmsHeader,
 		}
 	}
         fprintf(stderr, "\n");
-	pSmsHeader->fResidualPerc = FResidualPerc / iRecord;
+	pSmsHeader->fResidualPerc = analParams.fResidualPercentage / iRecord;
 	return (1);
 }
 
@@ -411,7 +410,7 @@ static int FillAnalParams (ARGUMENTS arguments, ANAL_PARAMS *pAnalParams,
 	MaxDelayFrames = 
 		MAX(pAnalParams->iMinTrajLength, pAnalParams->iMaxSleepingTime) + 2 +
 			DELAY_FRAMES;
-	FResidualPerc = 0;
+	pAnalParams->fResidualPercentage = 0;
 	return (1);
 }
 
@@ -460,7 +459,7 @@ int main (int argc, char *argv[])
 		         arguments.fDefaultFund);
 	}
 
-	/* check if no stochastic component */ //don't think I need this anymore... set above
+	/* check if no stochastic component */ 
 	if(arguments.iStochasticType != STOC_APPROX)
 		arguments.nStochasticCoeff = 0;
 

@@ -53,7 +53,7 @@ static int StocApproxFFT (float *pFResidual, int sizeBuffer,
 			return -1;
 		Hamming (sizeBuffer, pFWindow);
 	}
-        printf("sizeFft: %d, sizeBuffer: %d \n", sizeFft, sizeBuffer);
+//        printf("sizeFft: %d, sizeBuffer: %d \n", sizeFft, sizeBuffer);
 	QuickSpectrumF (pFResidual, pFWindow, sizeBuffer, pFMagSpectrum, 
 	                (float *) NULL, sizeFft);
 

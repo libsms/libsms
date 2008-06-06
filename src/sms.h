@@ -305,6 +305,7 @@ typedef struct
 	int iSizeSound;             /* total size of input sound */	 	
 	int iWindowType;            /* type of analysis window */			  	 			 
         fftwf_plan  fftPlan;
+        float fResidualPercentage; /* accumalitive residual percentage */
         float *pCfftIn;
         fftwf_complex *pFfftOut;
 } ANAL_PARAMS;
@@ -497,6 +498,8 @@ int GetSmsHeader (char *pChFileName, SMSHeader **ppSmsHeader,
                   	FILE **ppInputFile);
 
 int GetRecordBSize (SMSHeader *pSmsHeader);
+
+const char* SmsReadErrorStr( int iError);
 
 int quit (char *pChText);
 

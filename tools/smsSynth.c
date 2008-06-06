@@ -61,6 +61,7 @@ int main (int argc, char *argv[])
 	long iError, iSample, i, nSamples, iLeftRecord, iRightRecord;
         int verboseMode = 0;
         float fRecordLoc; /* exact sms frame location, used to interpolate newSmsRecord */
+        float fFsRatio,  fLocIncr; 
         int  detSynthType, synthType, sizeHop, iSamplingRate; /*  argument holders */
         float timeFactor = 1.0;
 	SYNTH_PARAMS synthParams;
@@ -163,14 +164,19 @@ int main (int argc, char *argv[])
 	iSample = 0;
         /* number of samples is a factor of the ratio of samplerates */
         /* multiply by timeFactor to increase samples to desired file length */
-	nSamples = pSmsHeader->nRecords * synthParams.origSizeHop * timeFactor *
-                synthParams.iSamplingRate / pSmsHeader->iOriginalSRate;
- 
+        fFsRatio = synthParams.iSamplingRate / pSmsHeader->iOriginalSRate;
+	nSamples = pSmsHeader->nRecords * synthParams.origSizeHop * timeFactor * fFsRatio;
+
+
+        fLocIncr = pSmsHeader->iOriginalSRate / 
+                ( synthParams.origSizeHop * synthParams.iSamplingRate * timeFactor); 
+
 	while (iSample < nSamples)
 	{
                 /* divide timeFactor out to get the correct record */
-		fRecordLoc = (float) iSample * pSmsHeader->iOriginalSRate / 
-                        ( synthParams.origSizeHop * synthParams.iSamplingRate * timeFactor); 
+/* 		fRecordLoc = (float) iSample * pSmsHeader->iOriginalSRate /  */
+/*                         ( synthParams.origSizeHop * synthParams.iSamplingRate * timeFactor);  */
+		fRecordLoc =  iSample *  fLocIncr;
                 // left and right records around location, gaurding for end of file
 		iLeftRecord = MIN (pSmsHeader->nRecords - 1, floor (fRecordLoc)); 
 		iRightRecord = (iLeftRecord < pSmsHeader->nRecords - 2)
@@ -200,6 +206,7 @@ int main (int argc, char *argv[])
         printf("wrote %ld samples in %s\n",  iSample, pChOutputSoundFile);
 
 	/* close output sound file, free memory and exit */
+        //why aren't we freeing the records?
 	WriteOutputFile ();
 	free (pFSynthesis);
         free (pSmsHeader);

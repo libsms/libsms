@@ -76,8 +76,12 @@ for i in range(nTraj): # if traj has data, plot it
 
 
 # make an array of stocWave frames for one continuous waveform
-resWave = []
-for i in range(nRecords):
-    resWave += smsData[i]['stocWave']
+if smsFile['smsHeader']['iStochasticType'] == 'waveform' :
+    resWave = []
+    for i in range(nRecords):
+        resWave += smsData[i]['stocWave']
 
-Pxx, freq, bins, im = specgram(resWave, NFFT=2048, Fs= srate, noverlap=512)
+    Pxx, freq, bins, im = specgram(resWave, NFFT=2048, Fs= srate, noverlap=512)
+
+if smsFile['smsHeader']['iStochasticType'] == 'approx' :
+    print 'approx YEAAHH'

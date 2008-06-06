@@ -48,7 +48,6 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsData,
 	int iCurrentFrame = MaxDelayFrames - 1;  /* frame # of current frame */
 	int iExtraSamples;              /* samples used for next analysis frame */
 	float fRefFundamental = 0;   /* reference fundamental for current frame */
-//        printf("iCurrentFrame: %d\n",iCurrentFrame);
 	/* initialize structures */
 	if (ppFrames == NULL) 
 	{
@@ -174,7 +173,7 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsData,
 			             analParams);
                          
                         //::::::::::::::::::::: RTE_DEBUG::::::::::::::::::
-                         int i;
+/*                          int i; */
 /*                         printf("\n:::::::::: pFData (before  StocAnalysis):  sizeHop: %d, sizeData: %d, frame# %d ::::::::::::\n", */
 /*                                analParams.sizeHop, sizeData, ppFrames[iCurrentFrame]->iFrameNum ); */
 /*                         for(i = 0; i < analParams.sizeHop; i++) */

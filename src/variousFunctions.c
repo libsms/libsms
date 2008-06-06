@@ -23,9 +23,6 @@
 float *pFWindowSpec;
 double *pFSTab = NULL, *pFSincTab = NULL;
 short MaxDelayFrames;
-float FResidualPerc;
-
-
 
 int SmsInit( void )
 {
