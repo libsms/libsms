@@ -324,8 +324,8 @@ typedef struct
 	float *pFDetWindow;
         float *pFStocWindow;
         fftwf_plan  fftPlan;
-        fftwf_complex *pCfftIn;
-        float *pFfftOut;
+        fftwf_complex *pComplexSpec;
+        float *pRealWave;
         float *realftOut; // RTE_DEBUG : comparing realft and fftw
 } SYNTH_PARAMS;
 
