@@ -111,30 +111,37 @@ int SmsInitSynth( SMSHeader *pSmsHeader, SYNTH_PARAMS *pSynthParams )
 	pSynthParams->iStochasticType = pSmsHeader->iStochasticType;
         if(pSynthParams->iSamplingRate <= 0)  pSynthParams->iSamplingRate = pSynthParams->iOriginalSRate;
 
-        //RTE TODO: round hopsize to power of 2
+        //RTE TODO: round sizeHop to power of 2, in synthParams too
+        int sizeHop = pSynthParams->sizeHop;
 
         pSynthParams->pFStocWindow = 
-		(float *) calloc(pSynthParams->sizeHop * 2, sizeof(float));
-	Hanning (pSynthParams->sizeHop * 2, pSynthParams->pFStocWindow);
+		(float *) calloc(sizeHop * 2, sizeof(float));
+	Hanning (sizeHop * 2, pSynthParams->pFStocWindow);
 	pSynthParams->pFDetWindow =
-		(float *) calloc(pSynthParams->sizeHop * 2, sizeof(float));
-	IFFTwindow (pSynthParams->sizeHop * 2, pSynthParams->pFDetWindow);
+		(float *) calloc(sizeHop * 2, sizeof(float));
+	IFFTwindow (sizeHop * 2, pSynthParams->pFDetWindow);
 
 
-
+        /* allocate memory for analysis data - size of original hopsize */
 	AllocateSmsRecord (&pSynthParams->previousFrame, pSmsHeader->nTrajectories, 
 	                   1 + pSmsHeader->nStochasticCoeff, 1,
                            pSynthParams->origSizeHop, pSmsHeader->iStochasticType);
 
-        /* allocate memory for FFT */
-        int sizeFFT = pSynthParams->sizeHop ;  
-        pSynthParams->pCfftIn =  fftwf_malloc(sizeof(fftwf_complex) * (sizeFFT / 2 + 1));
-        pSynthParams->pFfftOut = fftwf_malloc(sizeof(float) * sizeFFT);
-        pSynthParams->fftPlan =  fftwf_plan_dft_c2r_1d( sizeFFT, pSynthParams->pCfftIn,
-                                                      pSynthParams->pFfftOut, FFTW_ESTIMATE);
+        /* allocate memory for FFT - big enough for output buffer (new hopsize)*/
+        int sizeFft = sizeHop << 1;
+        printf("sizeof pComplexSpec: %d, sizeof pRealWave: %d \n\n", (sizeFft / 2 + 1), sizeFft);
+        pSynthParams->pComplexSpec =  fftwf_malloc(sizeof(fftwf_complex) * (sizeFft / 2 + 1));
+        pSynthParams->pRealWave = fftwf_malloc(sizeof(float) * sizeFft);
+        if((pSynthParams->fftPlan =  
+            fftwf_plan_dft_c2r_1d( sizeFft, pSynthParams->pComplexSpec,
+                                   pSynthParams->pRealWave, FFTW_ESTIMATE)) == NULL)
+        {
+                printf("SmsInitSynth: could not make fftw plan \n");
+                return -1;
+        }
         
         /*debugging realft */
-        pSynthParams->realftOut = (float *) calloc((sizeFFT<<1)+1, sizeof(float));
+        pSynthParams->realftOut = (float *) calloc(sizeFft+1, sizeof(float));
 
 
         return 1;
@@ -144,8 +151,8 @@ int SmsFreeSynth( SYNTH_PARAMS *pSynthParams )
 {
 
         free (pSynthParams->realftOut);
-        fftwf_free(pSynthParams->pCfftIn);
-        fftwf_free(pSynthParams->pFfftOut);
+        fftwf_free(pSynthParams->pComplexSpec);
+        fftwf_free(pSynthParams->pRealWave);
 	fftwf_destroy_plan(pSynthParams->fftPlan);
 
         return 1;
@@ -436,7 +443,9 @@ int ReAnalyze (int iCurrentFrame, ANAL_PARAMS analParams)
 		}
 	return (1);
 }
-
+/* this should only be used in the case of a horrible problem.
+   otherwise, keep sailing and let the parent app decide what 
+   to do with an error code. */
 int quit (char *pChText)
 {
 	fprintf (stderr, pChText);
@@ -444,3 +453,4 @@ int quit (char *pChText)
 	exit (1);
 	return (1);
 }
+
