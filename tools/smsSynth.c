@@ -68,6 +68,7 @@ int main (int argc, char *argv[])
 	synthParams.iSynthesisType = STYPE_ALL;
         synthParams.iDetSynthType = DET_IFFT;
 	synthParams.sizeHop = SIZE_SYNTH_FRAME;
+	synthParams.iSamplingRate = 44100;
 
 	if (argc > 3) 
 	{
@@ -164,18 +165,16 @@ int main (int argc, char *argv[])
 	iSample = 0;
         /* number of samples is a factor of the ratio of samplerates */
         /* multiply by timeFactor to increase samples to desired file length */
-        fFsRatio = synthParams.iSamplingRate / pSmsHeader->iOriginalSRate;
+        fFsRatio = (float) synthParams.iSamplingRate / pSmsHeader->iOriginalSRate;
 	nSamples = pSmsHeader->nRecords * synthParams.origSizeHop * timeFactor * fFsRatio;
 
-
+        /* divide timeFactor out to get the correct record */
         fLocIncr = pSmsHeader->iOriginalSRate / 
                 ( synthParams.origSizeHop * synthParams.iSamplingRate * timeFactor); 
 
+
 	while (iSample < nSamples)
 	{
-                /* divide timeFactor out to get the correct record */
-/* 		fRecordLoc = (float) iSample * pSmsHeader->iOriginalSRate /  */
-/*                         ( synthParams.origSizeHop * synthParams.iSamplingRate * timeFactor);  */
 		fRecordLoc =  iSample *  fLocIncr;
                 // left and right records around location, gaurding for end of file
 		iLeftRecord = MIN (pSmsHeader->nRecords - 1, floor (fRecordLoc)); 
