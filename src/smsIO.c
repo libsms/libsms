@@ -579,12 +579,13 @@ const char* SmsReadErrorStr(int iError)
 {
         
         if (iError == SMS_NOPEN)
-                return "read error: cannot open input file";
+                return ("read error: cannot open input file");
         if (iError == SMS_RDERR)
-                return "read error: read error in input file";
+                return ("read error: read error in input file");
         if (iError == SMS_NSMS)
-                return "read error: input file not an SMS file";
+                return ("read error: input file not an SMS file");
         if (iError == SMS_MALLOC)
-                return "read error: cannot allocate memory for input file";
-
+                return ("read error: cannot allocate memory for input file");
+        else 
+                return ("read error: error not defined"); 
 }
