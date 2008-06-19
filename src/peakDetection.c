@@ -52,7 +52,7 @@ static float PeakInterpolation (float fMaxVal, float fLeftBinVal,
  */
 static int FindNextMax (float *pFMagSpectrum, int iHighBinBound, 
                         int *pICurrentLoc, float *pFMaxVal, 
-                        ANAL_PARAMS analParams)
+                        ANAL_PARAMS *pAnalParams)
 {
 	int iCurrentBin = *pICurrentLoc;
 	float fPrevVal = pFMagSpectrum[iCurrentBin - 1],
@@ -63,7 +63,7 @@ static int FindNextMax (float *pFMagSpectrum, int iHighBinBound,
 	/* try to find a local maximum */
 	while (iCurrentBin <= iHighBinBound)
 	{
-		if (fCurrentVal > analParams.fMinPeakMag &&
+		if (fCurrentVal > pAnalParams->fMinPeakMag &&
 		   fCurrentVal >= fPrevVal &&
 		   fCurrentVal >= fNextVal)
 			break;
@@ -89,14 +89,14 @@ static int FindNextMax (float *pFMagSpectrum, int iHighBinBound,
  */
 static int FindNextPeak (float *pFMagSpectrum, int iHighBinBound, 
                          int *pICurrentLoc, float *pFPeakMag, float *pFPeakLoc,
-                         ANAL_PARAMS analParams)
+                         ANAL_PARAMS *pAnalParams)
 {
 	int iMaxBin = 0;		/* location of the local maximum */
 	float fMaxVal = 0;
   
 	/* keep trying to find a good peak while inside the freq range */
 	while ((iMaxBin = FindNextMax(pFMagSpectrum, iHighBinBound, 
-	       pICurrentLoc, &fMaxVal, analParams)) 
+	       pICurrentLoc, &fMaxVal, pAnalParams)) 
 	       <= iHighBinBound)
 	{
 		/* get the neighboring samples */
@@ -151,15 +151,15 @@ static float GetPhaseVal (float *pAPhaSpectrum, float fPeakLoc)
  */
 int PeakDetection (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag, 
                    int sizeWindow, PEAK *pSpectralPeaks, 
-                   ANAL_PARAMS analParams)
+                   ANAL_PARAMS *pAnalParams)
 {
 	int iPeak = 0;		/* index for spectral search */
 	int sizeFft = sizeMag * 2;
-	int iCurrentLoc = MAX (2, sizeFft * analParams.fLowestFundamental / 
-	                          analParams.iSamplingRate); 
+	int iCurrentLoc = MAX (2, sizeFft * pAnalParams->fLowestFundamental / 
+	                          pAnalParams->iSamplingRate); 
 	int iHighestBin  = MIN (sizeMag-1, 
-	                        sizeFft * analParams.fHighestFreq / 
-	                        analParams.iSamplingRate);
+	                        sizeFft * pAnalParams->fHighestFreq / 
+	                        pAnalParams->iSamplingRate);
   	float fPeakMag = 0;		/* magnitude of peak */
 	float fPeakLoc = 0;		/* location of peak */
 
@@ -170,11 +170,11 @@ int PeakDetection (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag,
 	iPeak = 0;
 	while ((iPeak < MAX_NUM_PEAKS) &&
 	       (FindNextPeak(pFMagSpectrum, iHighestBin,
-	                     &iCurrentLoc, &fPeakMag, &fPeakLoc, analParams)
+	                     &iCurrentLoc, &fPeakMag, &fPeakLoc, pAnalParams)
 	        == 1))
 	{
 		/* store peak values */
-		pSpectralPeaks[iPeak].fFreq = analParams.iSamplingRate * fPeakLoc / 
+		pSpectralPeaks[iPeak].fFreq = pAnalParams->iSamplingRate * fPeakLoc / 
 			sizeFft;
 		pSpectralPeaks[iPeak].fMag = fPeakMag;
 		pSpectralPeaks[iPeak].fPhase = GetPhaseVal(pAPhaSpectrum, fPeakLoc);

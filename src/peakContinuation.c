@@ -20,21 +20,21 @@
  */
 #include "sms.h"
 
-extern ANAL_FRAME **ppFrames;
+//extern ANAL_FRAME **ppFrames;
 
 /* function to get the next closest peak from a guide
  * float fGuideFreq;		guide's frequency
  * float *pFFreqDistance;	distance of last best peak from guide
  * PEAK *pSpectralPeaks;	array of peaks
- * ANAL_PARAMS analParams;	analysis parameters
+ * ANAL_PARAMS *pAnalParams;	analysis parameters
  * float fFreqDev;		maximum deviation from guide
  */
 static int GetNextClosestPeak (float fGuideFreq, float *pFFreqDistance, 
-                               PEAK *pSpectralPeaks, ANAL_PARAMS analParams,
+                               PEAK *pSpectralPeaks, ANAL_PARAMS *pAnalParams,
                                float fFreqDev)
 {
 	int iInitialPeak = 
-		MAX_NUM_PEAKS * fGuideFreq / (analParams.iSamplingRate * .5),
+		MAX_NUM_PEAKS * fGuideFreq / (pAnalParams->iSamplingRate * .5),
 		iLowPeak, iHighPeak, iChosenPeak = -1;
 	float fLowDistance, fHighDistance, fFreq;
 
@@ -195,11 +195,11 @@ static int BestGuide (int iConflictingGuide, int iGuide, GUIDE *pGuides,
  *	returns the peak number
  * GUIDE *pGuideVal;		guide attributes
  * PEAK *pSpectralPeaks;	peak values at the current frame
- * ANAL_PARAMS analParams;	analysis parameters
+ * ANAL_PARAMS *pAnalParams;	analysis parameters
  * float fFreqDev;              frequency deviation allowed
  */
 static int GetBestPeak (GUIDE *pGuides, int iGuide, PEAK *pSpectralPeaks, 
-                        ANAL_PARAMS analParams, float fFreqDev)
+                        ANAL_PARAMS *pAnalParams, float fFreqDev)
 {
 	int iCand = 0, iPeak, iBestPeak, iConflictingGuide, iWinnerGuide;
 	float fGuideFreq = pGuides[iGuide].fFreq,
@@ -212,7 +212,7 @@ static int GetBestPeak (GUIDE *pGuides, int iGuide, PEAK *pSpectralPeaks,
 	{
 		/* find the next best peak */
 		if ((iPeak = GetNextClosestPeak (fGuideFreq, &fFreqDistance,
-		                                 pSpectralPeaks, analParams, 
+		                                 pSpectralPeaks, pAnalParams, 
 		                                 fFreqDev)) < 0)
 			break;
 	
@@ -224,8 +224,8 @@ static int GetBestPeak (GUIDE *pGuides, int iGuide, PEAK *pSpectralPeaks,
 			pCandidate[iCand].fMagDev = fMagDistance;
 			pCandidate[iCand].iPeak = iPeak;
       	      
-			if(analParams.iDebugMode == DEBUG_PEAK_CONT ||
-			   analParams.iDebugMode == DEBUG_ALL)
+			if(pAnalParams->iDebugMode == DEBUG_PEAK_CONT ||
+			   pAnalParams->iDebugMode == DEBUG_ALL)
 				fprintf (stdout, "candidate %d: freq %f mag %f\n", 
 				         iCand, pSpectralPeaks[iPeak].fFreq, 	
 				         pSpectralPeaks[iPeak].fMag);
@@ -239,21 +239,21 @@ static int GetBestPeak (GUIDE *pGuides, int iGuide, PEAK *pSpectralPeaks,
 		iBestPeak = pCandidate[0].iPeak;
 	else
 		iBestPeak = ChooseBestCand (pCandidate, iCand, 
-		                            analParams.fFreqDeviation);
+		                            pAnalParams->fFreqDeviation);
       
-	if(analParams.iDebugMode == DEBUG_PEAK_CONT ||
-	   analParams.iDebugMode == DEBUG_ALL)
+	if(pAnalParams->iDebugMode == DEBUG_PEAK_CONT ||
+	   pAnalParams->iDebugMode == DEBUG_ALL)
 		fprintf (stdout, "BestCandidate: freq %f\n",
 		         pSpectralPeaks[iBestPeak].fFreq);
 
 	/* if peak taken by another guide resolve conflict */
 	if ((iConflictingGuide = CheckForConflict (iBestPeak, pGuides, 
-	                                           analParams.nGuides)) >= 0)
+	                                           pAnalParams->nGuides)) >= 0)
 	{
 		iWinnerGuide = BestGuide (iConflictingGuide, iGuide, pGuides, 
 		                          pSpectralPeaks);
-		if(analParams.iDebugMode == DEBUG_PEAK_CONT ||
-		   analParams.iDebugMode == DEBUG_ALL)
+		if(pAnalParams->iDebugMode == DEBUG_PEAK_CONT ||
+		   pAnalParams->iDebugMode == DEBUG_ALL)
 			fprintf (stdout, 
 			         "Conflict: guide: %d (%f), and guide: %d (%f). best: %d\n", 
 			         iGuide, pGuides[iGuide].fFreq, 
@@ -331,61 +331,61 @@ static int GetStartingPeak (int iGuide, GUIDE *pGuides, int nGuides,
  * the output is the freq., mag., and phase trajectories
  *
  * int iFrame;	 current frame number
- * ANAL_PARAMS analParams; analysis parameters
+ * ANAL_PARAMS *pAnalParams; analysis parameters
  */
-int PeakContinuation (int iFrame, ANAL_PARAMS analParams)
+int PeakContinuation (int iFrame, ANAL_PARAMS *pAnalParams)
 {
 	int iGuide, iCurrentPeak = -1, iGoodPeak = -1;
-	float fFund = ppFrames[iFrame]->fFundamental,
-		fFreqDev = fFund * analParams.fFreqDeviation, fCurrentMax = 1000;
+	float fFund = pAnalParams->ppFrames[iFrame]->fFundamental,
+		fFreqDev = fFund * pAnalParams->fFreqDeviation, fCurrentMax = 1000;
   	static GUIDE *pGuides = NULL;
 
 	if (pGuides == NULL)
 	{
-		if ((pGuides = (GUIDE *) calloc(analParams.nGuides, sizeof(GUIDE))) 
+		if ((pGuides = (GUIDE *) calloc(pAnalParams->nGuides, sizeof(GUIDE))) 
 		   == NULL)
 			return -1;
-		if (analParams.iFormat == FORMAT_HARMONIC ||
-		    analParams.iFormat == FORMAT_HARMONIC_WITH_PHASE)
-		for (iGuide = 0; iGuide < analParams.nGuides; iGuide++)
-			pGuides[iGuide].fFreq = analParams.fDefaultFundamental 
+		if (pAnalParams->iFormat == FORMAT_HARMONIC ||
+		    pAnalParams->iFormat == FORMAT_HARMONIC_WITH_PHASE)
+		for (iGuide = 0; iGuide < pAnalParams->nGuides; iGuide++)
+			pGuides[iGuide].fFreq = pAnalParams->fDefaultFundamental 
 			                        * (iGuide + 1);
 	}        
 
 	/* update guides with fundamental contribution */
 	if (fFund > 0 &&
-	    (analParams.iFormat == FORMAT_HARMONIC ||
-	     analParams.iFormat == FORMAT_HARMONIC_WITH_PHASE))
-		for(iGuide = 0; iGuide < analParams.nGuides; iGuide++)
+	    (pAnalParams->iFormat == FORMAT_HARMONIC ||
+	     pAnalParams->iFormat == FORMAT_HARMONIC_WITH_PHASE))
+		for(iGuide = 0; iGuide < pAnalParams->nGuides; iGuide++)
 			pGuides[iGuide].fFreq = 
-				(1 - analParams.fFundContToGuide) * pGuides[iGuide].fFreq +        
-				analParams.fFundContToGuide * fFund * (iGuide + 1);
+				(1 - pAnalParams->fFundContToGuide) * pGuides[iGuide].fFreq +        
+				pAnalParams->fFundContToGuide * fFund * (iGuide + 1);
   
-	if (analParams.iDebugMode == DEBUG_PEAK_CONT ||
-	    analParams.iDebugMode == DEBUG_ALL)
+	if (pAnalParams->iDebugMode == DEBUG_PEAK_CONT ||
+	    pAnalParams->iDebugMode == DEBUG_ALL)
 		fprintf (stdout, 
 		         "Frame %d Peak Continuation: \n", 
-		         ppFrames[iFrame]->iFrameNum);
+		         pAnalParams->ppFrames[iFrame]->iFrameNum);
 
 	/* continue all guides */
-	for (iGuide = 0; iGuide < analParams.nGuides; iGuide++)
+	for (iGuide = 0; iGuide < pAnalParams->nGuides; iGuide++)
 	{
 		float fPreviousFreq = 
-			ppFrames[iFrame-1]->deterministic.pFFreqTraj[iGuide];
+			pAnalParams->ppFrames[iFrame-1]->deterministic.pFFreqTraj[iGuide];
    
 		/* get the guide value by upgrading the previous guide */
 		if (fPreviousFreq > 0)
 			pGuides[iGuide].fFreq =
-				(1 - analParams.fPeakContToGuide) * pGuides[iGuide].fFreq +
-				analParams.fPeakContToGuide * fPreviousFreq;
+				(1 - pAnalParams->fPeakContToGuide) * pGuides[iGuide].fFreq +
+				pAnalParams->fPeakContToGuide * fPreviousFreq;
    
-		if (analParams.iDebugMode == DEBUG_PEAK_CONT ||
-		    analParams.iDebugMode == DEBUG_ALL)
+		if (pAnalParams->iDebugMode == DEBUG_PEAK_CONT ||
+		    pAnalParams->iDebugMode == DEBUG_ALL)
 			fprintf (stdout, "Guide %d:  freq %f, mag %f\n", 
 			         iGuide, pGuides[iGuide].fFreq, pGuides[iGuide].fMag);
       
 		if (pGuides[iGuide].fFreq <= 0.0 ||
-		    pGuides[iGuide].fFreq > analParams.fHighestFreq)
+		    pGuides[iGuide].fFreq > pAnalParams->fHighestFreq)
 		{
 			pGuides[iGuide].iStatus = DEAD;
 			pGuides[iGuide].fFreq = 0;
@@ -394,44 +394,44 @@ int PeakContinuation (int iFrame, ANAL_PARAMS analParams)
       
 		pGuides[iGuide].iPeakChosen = -1;
     
-		if (analParams.iFormat == FORMAT_INHARMONIC ||
-		    analParams.iFormat == FORMAT_INHARMONIC_WITH_PHASE)
-			fFreqDev = pGuides[iGuide].fFreq * analParams.fFreqDeviation;
+		if (pAnalParams->iFormat == FORMAT_INHARMONIC ||
+		    pAnalParams->iFormat == FORMAT_INHARMONIC_WITH_PHASE)
+			fFreqDev = pGuides[iGuide].fFreq * pAnalParams->fFreqDeviation;
       
 		/* get the best peak for the guide */
 		iGoodPeak = 
-			GetBestPeak(pGuides, iGuide, ppFrames[iFrame]->pSpectralPeaks, 
-			            analParams, fFreqDev);
+			GetBestPeak(pGuides, iGuide, pAnalParams->ppFrames[iFrame]->pSpectralPeaks, 
+			            pAnalParams, fFreqDev);
 	}
   
 	/* try to find good peaks for the DEAD guides */
-	if (analParams.iFormat == FORMAT_INHARMONIC ||
-	    analParams.iFormat == FORMAT_INHARMONIC_WITH_PHASE)
-		for(iGuide = 0; iGuide < analParams.nGuides; iGuide++)
+	if (pAnalParams->iFormat == FORMAT_INHARMONIC ||
+	    pAnalParams->iFormat == FORMAT_INHARMONIC_WITH_PHASE)
+		for(iGuide = 0; iGuide < pAnalParams->nGuides; iGuide++)
 		{
 			if (pGuides[iGuide].iStatus != DEAD)
 				continue; 
 	
-			if (GetStartingPeak (iGuide, pGuides, analParams.nGuides, 
-			                     ppFrames[iFrame]->pSpectralPeaks,
+			if (GetStartingPeak (iGuide, pGuides, pAnalParams->nGuides, 
+			                     pAnalParams->ppFrames[iFrame]->pSpectralPeaks,
 			                     &fCurrentMax) == -1)
 				break;
 		}
 
 	/* save all the continuation values,
 	 * assume output trajectories are already clear */
-	for (iGuide = 0; iGuide < analParams.nGuides; iGuide++)
+	for (iGuide = 0; iGuide < pAnalParams->nGuides; iGuide++)
 	{
 		if (pGuides[iGuide].iStatus == DEAD)
 			continue; 
 
-		if (analParams.iFormat == FORMAT_INHARMONIC ||
-		    analParams.iFormat == FORMAT_INHARMONIC_WITH_PHASE)
+		if (pAnalParams->iFormat == FORMAT_INHARMONIC ||
+		    pAnalParams->iFormat == FORMAT_INHARMONIC_WITH_PHASE)
 		{
 			if (pGuides[iGuide].iStatus > 0 &&
 			    pGuides[iGuide].iPeakChosen == -1)
 			{ 
-				if(pGuides[iGuide].iStatus++ > analParams.iMaxSleepingTime)
+				if(pGuides[iGuide].iStatus++ > pAnalParams->iMaxSleepingTime)
 				{
 					pGuides[iGuide].iStatus = DEAD;
 					pGuides[iGuide].fFreq = 0;
@@ -454,12 +454,12 @@ int PeakContinuation (int iFrame, ANAL_PARAMS analParams)
 		/* if good continuation peak found, save it */
 		if ((iCurrentPeak = pGuides[iGuide].iPeakChosen) >= 0)
 		{
-			ppFrames[iFrame]->deterministic.pFFreqTraj[iGuide] = 
-				ppFrames[iFrame]->pSpectralPeaks[iCurrentPeak].fFreq;
-			ppFrames[iFrame]->deterministic.pFMagTraj[iGuide] = 
-				ppFrames[iFrame]->pSpectralPeaks[iCurrentPeak].fMag;
-			ppFrames[iFrame]->deterministic.pFPhaTraj[iGuide] = 
-				ppFrames[iFrame]->pSpectralPeaks[iCurrentPeak].fPhase;
+			pAnalParams->ppFrames[iFrame]->deterministic.pFFreqTraj[iGuide] = 
+				pAnalParams->ppFrames[iFrame]->pSpectralPeaks[iCurrentPeak].fFreq;
+			pAnalParams->ppFrames[iFrame]->deterministic.pFMagTraj[iGuide] = 
+				pAnalParams->ppFrames[iFrame]->pSpectralPeaks[iCurrentPeak].fMag;
+			pAnalParams->ppFrames[iFrame]->deterministic.pFPhaTraj[iGuide] = 
+				pAnalParams->ppFrames[iFrame]->pSpectralPeaks[iCurrentPeak].fPhase;
      
 			pGuides[iGuide].iStatus = ACTIVE;
 			pGuides[iGuide].iPeakChosen = -1;

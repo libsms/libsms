@@ -21,15 +21,14 @@
 #include "sms.h"
 
 static double fSineScale;
-static int nSineTabSize;
-extern double *pFSTab;
+float *sms_tab_sine;
 
 /* clear sine table */
 void ClearSine()
 {
-  if(pFSTab)
-    free(pFSTab);
-  pFSTab = 0;
+  if(sms_tab_sine)
+    free(sms_tab_sine);
+  sms_tab_sine = 0;
 }
 
 /* prepares the sine table, returns 1 if allocations made, 0 on failure
@@ -40,15 +39,15 @@ int PrepSine (int nTableSize)
   register int i;
   double fTheta;
   
-  if((pFSTab = (double *)malloc(nTableSize*sizeof(double))) == 0)
+  if((sms_tab_sine = (float *)malloc(SIN_TABLE_SIZE*sizeof(float))) == 0)
     return (0);
-  nSineTabSize = nTableSize;
-  fSineScale =  (double)(TWO_PI) / (double)(nSineTabSize - 1);
+  //nSineTabSize = SIN_TABLE_SIZE;
+  fSineScale =  (double)(TWO_PI) / (double)(SIN_TABLE_SIZE - 1);
   fTheta = 0.0;
-  for(i = 0; i < nSineTabSize; i++) 
+  for(i = 0; i < SIN_TABLE_SIZE; i++) 
   {
     fTheta = fSineScale * (double)i;
-    pFSTab[i] = sin(fTheta);
+    sms_tab_sine[i] = sin(fTheta);
   }
   return (1);
 }
@@ -70,7 +69,7 @@ double SinTab (double fTheta)
   }
   
   i = fTheta / fSineScale + .5;
-  fT = pFSTab[i];
+  fT = sms_tab_sine[i];
   
   if (fSign == 1)
     return(fT);

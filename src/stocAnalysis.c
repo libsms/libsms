@@ -31,10 +31,10 @@
  * float *pFResidual;        residual signal
  * int sizeBuffer;           size of buffer
  * SMS_DATA *pSmsData;       pointer to output SMS data
- * ANAL_PARAMS analParams;   analysis parameters
+ * ANAL_PARAMS *pAnalParams;   analysis parameters
  */
 static int StocApproxFFT (float *pFResidual, int sizeBuffer, 
-                            SMS_DATA *pSmsData, ANAL_PARAMS analParams)
+                            SMS_DATA *pSmsData, ANAL_PARAMS *pAnalParams)
 {
 	int i;
         int sizeFft = (int) pow(2.0, (float)(1+(floor(log((float) sizeBuffer) / LOG2))));
@@ -82,24 +82,24 @@ static int StocApproxFFT (float *pFResidual, int sizeBuffer,
  * float *pFResidual;        residual signal
  * int sizeBuffer;           size of buffer
  * SMS_DATA *pSmsData;       pointer to output SMS data
- * ANAL_PARAMS analParams;   analysis parameters
+ * ANAL_PARAMS *pAnalParams;   analysis parameters
  */
 int StocAnalysis (float *pFResidual, int sizeBuffer, 
-                  SMS_DATA *pSmsData, ANAL_PARAMS analParams)
+                  SMS_DATA *pSmsData, ANAL_PARAMS *pAnalParams)
 {
 	int iError = 1;
-	if (analParams.iStochasticType == STOC_WAVEFORM)
+	if (pAnalParams->iStochasticType == STOC_WAVEFORM)
         {
-              memcpy( pSmsData->pFStocWave, pFResidual, sizeof(float) * analParams.sizeHop);
+              memcpy( pSmsData->pFStocWave, pFResidual, sizeof(float) * pAnalParams->sizeHop);
         }
-        else if (analParams.iStochasticType == STOC_IFFT) 
+        else if (pAnalParams->iStochasticType == STOC_IFFT) 
         {
                 //TODO: computer spectrum and store in pSmsData
                 // how large is FFT?
         }
-	else if (analParams.iStochasticType == STOC_APPROX)
+	else if (pAnalParams->iStochasticType == STOC_APPROX)
 		iError = 
-			StocApproxFFT (pFResidual, sizeBuffer, pSmsData, analParams);
+			StocApproxFFT (pFResidual, sizeBuffer, pSmsData, pAnalParams);
 	else
 		return -1;
 

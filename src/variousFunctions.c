@@ -20,85 +20,102 @@
  */
 #include "sms.h"
 
-float *pFWindowSpec;
-double *pFSTab = NULL, *pFSincTab = NULL;
-short MaxDelayFrames;
+float *sms_window_spec;
+float  *sms_tab_sine, *sms_tab_sinc;
 
 int SmsInit( void )
 {
 	/* prepare sinc and sine tables only the first time */
-	if (pFSincTab == NULL)
-		PrepSinc ();
-	if (pFSTab == NULL)
-		PrepSine (2046); //try 4096
+	if (sms_tab_sine == NULL) PrepSine (2046); //try 4096
+	if (sms_tab_sinc == NULL) PrepSinc ();
+
         return (1);
 }
 
 
-/* initialize analysis data structures
+/* initialize analysis data structure
+ * - there can be multple ANAL_PARAMS at the same time
  *
  * ANAL_PARAMS analParams;    analysis paramaters
  *
  */
-int SmsInitAnalysis (ANAL_PARAMS analParams)
+int SmsInitAnalysis ( SMSHeader *pSmsHeader, ANAL_PARAMS *pAnalParams)
 {
-	extern short MaxDelayFrames;
-	extern SOUND_BUFFER soundBuffer, synthBuffer;
-	extern ANAL_FRAME **ppFrames, *pFrames;
-	int sizeBuffer = (MaxDelayFrames * analParams.sizeHop) + MAX_SIZE_WINDOW;
-	int i;
+
+        SOUND_BUFFER *pSynthBuf = &pAnalParams->synthBuffer;
+        //todo: add a pSoundBuf to simplify things
+
+	int sizeBuffer = (pAnalParams->iMaxDelayFrames * pAnalParams->sizeHop) + MAX_SIZE_WINDOW;
+	int i, sizeFFT;
+
+        AllocateSmsRecord (&pAnalParams->prevFrame, pAnalParams->nGuides, 
+                           pSmsHeader->nStochasticCoeff, 1, pAnalParams->sizeHop, pAnalParams->iStochasticType);
   
 	/* sound buffer */
-	if ((soundBuffer.pFBuffer = (float *) calloc(sizeBuffer, sizeof(float)))
+	if ((pAnalParams->soundBuffer.pFBuffer = (float *) calloc(sizeBuffer, sizeof(float)))
 	    == NULL)
 		return -1;
-	soundBuffer.iSoundSample = -sizeBuffer;
-	soundBuffer.iFirstSample = sizeBuffer;
-	soundBuffer.sizeBuffer = sizeBuffer;
+	pAnalParams->soundBuffer.iSoundSample = -sizeBuffer;
+	pAnalParams->soundBuffer.iFirstSample = sizeBuffer;
+	pAnalParams->soundBuffer.sizeBuffer = sizeBuffer;
   
 	/* deterministic synthesis buffer */
-	if ((synthBuffer.pFBuffer = 
-	      (float *) calloc(2 * analParams.sizeHop, sizeof(float))) == NULL)
+
+	pSynthBuf->sizeBuffer = pAnalParams->sizeHop << 1;
+	if ((pSynthBuf->pFBuffer = 
+	      (float *) calloc(pSynthBuf->sizeBuffer, sizeof(float))) == NULL)
 		return -1;
-	synthBuffer.iSoundSample = -sizeBuffer;
-	synthBuffer.sizeBuffer = analParams.sizeHop << 1;
-	synthBuffer.iSoundSample = analParams.sizeHop << 1;
+	pSynthBuf->iSoundSample = -sizeBuffer;
+	pSynthBuf->iSoundSample = pSynthBuf->sizeBuffer;
   
 	/* buffer of analysis frames */
-	if ((pFrames = (ANAL_FRAME *) calloc(MaxDelayFrames, sizeof(ANAL_FRAME))) 
+	if ((pAnalParams->pFrames = (ANAL_FRAME *) calloc(pAnalParams->iMaxDelayFrames, sizeof(ANAL_FRAME))) 
 	    == NULL)
 		return -1;
-	if ((ppFrames = 
-	     (ANAL_FRAME **) calloc(MaxDelayFrames, sizeof(ANAL_FRAME *)))
+	if ((pAnalParams->ppFrames = 
+	     (ANAL_FRAME **) calloc(pAnalParams->iMaxDelayFrames, sizeof(ANAL_FRAME *)))
 	     == NULL)
 		return -1;
   
 	/* initialize the frame pointers and allocate memory */
-	for (i = 0; i < MaxDelayFrames; i++)
+	for (i = 0; i < pAnalParams->iMaxDelayFrames; i++)
 	{
-		pFrames[i].iStatus = EMPTY;
-		(pFrames[i].deterministic).nTraj = analParams.nGuides;
-		if (((pFrames[i].deterministic).pFFreqTraj =
-		    (float *)calloc (analParams.nGuides, sizeof(float))) == NULL)
+		pAnalParams->pFrames[i].iStatus = EMPTY;
+		(pAnalParams->pFrames[i].deterministic).nTraj = pAnalParams->nGuides;
+		if (((pAnalParams->pFrames[i].deterministic).pFFreqTraj =
+		    (float *)calloc (pAnalParams->nGuides, sizeof(float))) == NULL)
 			return -1;
-		if (((pFrames[i].deterministic).pFMagTraj =
-		    (float *)calloc (analParams.nGuides, sizeof(float))) == NULL)
+		if (((pAnalParams->pFrames[i].deterministic).pFMagTraj =
+		    (float *)calloc (pAnalParams->nGuides, sizeof(float))) == NULL)
 			return -1;
-		if (((pFrames[i].deterministic).pFPhaTraj =
-		    (float *) calloc (analParams.nGuides, sizeof(float))) == NULL)
+		if (((pAnalParams->pFrames[i].deterministic).pFPhaTraj =
+		    (float *) calloc (pAnalParams->nGuides, sizeof(float))) == NULL)
 			return -1;
-		ppFrames[i] = &pFrames[i];
+		pAnalParams->ppFrames[i] = &pAnalParams->pFrames[i];
 	}
 
 	/* initialitze window buffer for spectrum */
-	pFWindowSpec = (float *) calloc (MAX_SIZE_WINDOW, sizeof(float));
+	if(!sms_window_spec)
+                sms_window_spec = (float *) calloc (MAX_SIZE_WINDOW, sizeof(float));
 
         /* allocate memory for FFT */
-/*         int sizeFFT = pAnalParams->sizeHop ;   */
-/*         pAnalParams->pCfftIn = fftwf_malloc(sizeof(float) * sizeFFT); */
-/*         pAnalParams->pFfftOut = fftwf_malloc(sizeof(fftwf_complex) * (sizeFFT / 2 + 1)); */
-/*         pAnalParams->fftPlan =  fftwf_plan_dft_r2c_1d( sizeFFT, pAnalParams->pCfftIn, */
-/*                                                       pAnalParams->pFfftOut, FFTW_ESTIMATE); */
+//        sizeFFT = MAX_SIZE_WINDOW;
+
+#ifdef FFTW
+        pAnalParams->pWaveform = fftwf_malloc(sizeof(float) * MAX_SIZE_WINDOW);
+        pAnalParams->pSpectrum = fftwf_malloc(sizeof(fftwf_complex) * (MAX_SIZE_WINDOW / 2 + 1));
+#endif
+
+/*         if((pAnalParams->fftPlan =  fftwf_plan_dft_r2c_1d( sizeFFT, pAnalParams->pWaveform, */
+/*                                                            pAnalParams->pSpectrum, FFTW_ESTIMATE)) == NULL) */
+
+/*         { */
+/*                 printf("SmsInitAnalysis: could not make fftw plan \n"); */
+/*                 return -1; */
+/*         } */
+
+//        fftwf_print_plan(pAnalParams->fftPlan);
+
 
 	return (1);
 }
@@ -129,32 +146,46 @@ int SmsInitSynth( SMSHeader *pSmsHeader, SYNTH_PARAMS *pSynthParams )
 
         /* allocate memory for FFT - big enough for output buffer (new hopsize)*/
         int sizeFft = sizeHop << 1;
-        printf("sizeof pComplexSpec: %d, sizeof pRealWave: %d \n\n", (sizeFft / 2 + 1), sizeFft);
-        pSynthParams->pComplexSpec =  fftwf_malloc(sizeof(fftwf_complex) * (sizeFft / 2 + 1));
-        pSynthParams->pRealWave = fftwf_malloc(sizeof(float) * sizeFft);
-        if((pSynthParams->fftPlan =  
-            fftwf_plan_dft_c2r_1d( sizeFft, pSynthParams->pComplexSpec,
-                                   pSynthParams->pRealWave, FFTW_ESTIMATE)) == NULL)
+#ifdef FFTW
+        pSynthParams->pSpectrum =  fftwf_malloc(sizeof(fftwf_complex) * (sizeFft / 2 + 1));
+        pSynthParams->pWaveform = fftwf_malloc(sizeof(float) * sizeFft);
+        if((pSynthParams->fftPlan =
+            fftwf_plan_dft_c2r_1d( sizeFft, pSynthParams->pSpectrum,
+                                   pSynthParams->pWaveform, FFTW_ESTIMATE)) == NULL)
         {
                 printf("SmsInitSynth: could not make fftw plan \n");
                 return -1;
         }
-        
+#else        
         /*debugging realft */
         pSynthParams->realftOut = (float *) calloc(sizeFft+1, sizeof(float));
-
+#endif
 
         return 1;
 }
 
+int SmsFreeAnalysis( ANAL_PARAMS *pAnalParams )
+{
+#ifdef FFTW
+        fftwf_free(pAnalParams->pWaveform);
+        fftwf_free(pAnalParams->pSpectrum);
+
+        fftwf_destroy_plan(pAnalParams->fftPlan);
+#endif
+        return 1;
+}
+
+
 int SmsFreeSynth( SYNTH_PARAMS *pSynthParams )
 {
 
-        free (pSynthParams->realftOut);
-        fftwf_free(pSynthParams->pComplexSpec);
-        fftwf_free(pSynthParams->pRealWave);
+#ifdef FFTW
+        fftwf_free(pSynthParams->pSpectrum);
+        fftwf_free(pSynthParams->pWaveform);
 	fftwf_destroy_plan(pSynthParams->fftPlan);
-
+#else
+        free (pSynthParams->realftOut);
+#endif
         return 1;
 }
 
@@ -165,45 +196,44 @@ int SmsFreeSynth( SYNTH_PARAMS *pSynthParams )
  * int sizeNewData             size of input data
  * int sizeHop                 analysis hop size
  */
-void FillBuffer (short *pSWaveform, long sizeNewData, ANAL_PARAMS analParams)
+void FillBuffer (short *pSWaveform, long sizeNewData, ANAL_PARAMS *pAnalParams)
 {
-	extern SOUND_BUFFER soundBuffer;
+//	extern SOUND_BUFFER soundBuffer;
 	int i;
   
 	/* leave space for new data */
-	memcpy ((char *) soundBuffer.pFBuffer, 
-	       (char *) (soundBuffer.pFBuffer+sizeNewData), 
-	       sizeof(float) * (soundBuffer.sizeBuffer - sizeNewData));
+	memcpy ( pAnalParams->soundBuffer.pFBuffer,  pAnalParams->soundBuffer.pFBuffer+sizeNewData, 
+                 sizeof(float) * (pAnalParams->soundBuffer.sizeBuffer - sizeNewData));
   
-	soundBuffer.iFirstSample = 
-		MAX (0, soundBuffer.iFirstSample - sizeNewData);
-	soundBuffer.iSoundSample += sizeNewData;   
+	pAnalParams->soundBuffer.iFirstSample = 
+		MAX (0, pAnalParams->soundBuffer.iFirstSample - sizeNewData);
+	pAnalParams->soundBuffer.iSoundSample += sizeNewData;   
   
 	/* put the new data in, and do some pre-emphasis */
-	if (analParams.iAnalysisDirection == REVERSE)
+	if (pAnalParams->iAnalysisDirection == REVERSE)
 		for (i=0; i<sizeNewData; i++)
-			soundBuffer.pFBuffer[soundBuffer.sizeBuffer - sizeNewData + i] = 
+			pAnalParams->soundBuffer.pFBuffer[pAnalParams->soundBuffer.sizeBuffer - sizeNewData + i] = 
 				PreEmphasis((float) pSWaveform[sizeNewData - (1+ i)]);
 	else
 		for (i=0; i<sizeNewData; i++)
-			soundBuffer.pFBuffer[soundBuffer.sizeBuffer - sizeNewData + i] = 
+			pAnalParams->soundBuffer.pFBuffer[pAnalParams->soundBuffer.sizeBuffer - sizeNewData + i] = 
 				PreEmphasis((float) pSWaveform[i]);
 }
 
 /* shift the buffer of analysis frames to the left */
-void MoveFrames ()
+void MoveFrames (ANAL_PARAMS *pAnalParams)
 {
-	extern short MaxDelayFrames;
-	extern ANAL_FRAME **ppFrames;
+//	extern short MaxDelayFrames;
+//	extern ANAL_FRAME **ppFrames;
 	int i;
 	ANAL_FRAME *tmp;
   
 	/* shift the frame pointers */
-	tmp = ppFrames[0];
-	for(i = 1; i < MaxDelayFrames; i++)
-		ppFrames[i-1] = ppFrames[i];
+	tmp = pAnalParams->ppFrames[0];
+	for(i = 1; i < pAnalParams->iMaxDelayFrames; i++)
+		pAnalParams->ppFrames[i-1] = pAnalParams->ppFrames[i];
   
-	ppFrames[MaxDelayFrames-1] = tmp;
+	pAnalParams->ppFrames[pAnalParams->iMaxDelayFrames-1] = tmp;
 }
 
 /* initialize the current frame
@@ -212,135 +242,79 @@ void MoveFrames ()
  * ANAL_PARAMS analParams;       analysis parameters
  * int sizeWindow;                  size of analysis window 
  */
-void InitializeFrame (int iCurrentFrame, ANAL_PARAMS analParams, 
+void InitializeFrame (int iCurrentFrame, ANAL_PARAMS *pAnalParams, 
                       int sizeWindow)
 {
-	extern SOUND_BUFFER soundBuffer;
-	extern ANAL_FRAME **ppFrames;
+//	extern SOUND_BUFFER soundBuffer;
+//	extern ANAL_FRAME **ppFrames;
 
 	/* clear deterministic data */
-	memset ((float *) ppFrames[iCurrentFrame]->deterministic.pFFreqTraj, 0, 
-	        sizeof(float) * analParams.nGuides);
-	memset ((float *) ppFrames[iCurrentFrame]->deterministic.pFMagTraj, 0, 
-	        sizeof(float) * analParams.nGuides);
-	memset ((float *) ppFrames[iCurrentFrame]->deterministic.pFPhaTraj, 0, 
-	        sizeof(float) * analParams.nGuides);
+	memset ((float *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFFreqTraj, 0, 
+	        sizeof(float) * pAnalParams->nGuides);
+	memset ((float *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFMagTraj, 0, 
+	        sizeof(float) * pAnalParams->nGuides);
+	memset ((float *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFPhaTraj, 0, 
+	        sizeof(float) * pAnalParams->nGuides);
 	/* clear peaks */
-	memset ((void *) ppFrames[iCurrentFrame]->pSpectralPeaks, 0,
+	memset ((void *) pAnalParams->ppFrames[iCurrentFrame]->pSpectralPeaks, 0,
 	        sizeof (PEAK) * MAX_NUM_PEAKS);
 
-	ppFrames[iCurrentFrame]->nPeaks = 0;
-	ppFrames[iCurrentFrame]->fFundamental = 0;
+	pAnalParams->ppFrames[iCurrentFrame]->nPeaks = 0;
+	pAnalParams->ppFrames[iCurrentFrame]->fFundamental = 0;
   
-	ppFrames[iCurrentFrame]->iFrameNum =  
-		ppFrames[iCurrentFrame - 1]->iFrameNum + 1;
-	ppFrames[iCurrentFrame]->iFrameSize =  sizeWindow;
+	pAnalParams->ppFrames[iCurrentFrame]->iFrameNum =  
+		pAnalParams->ppFrames[iCurrentFrame - 1]->iFrameNum + 1;
+	pAnalParams->ppFrames[iCurrentFrame]->iFrameSize =  sizeWindow;
   
 	/* if first frame set center of data around 0 */
-	if(ppFrames[iCurrentFrame]->iFrameNum == 1)
-		ppFrames[iCurrentFrame]->iFrameSample = 0;
+	if(pAnalParams->ppFrames[iCurrentFrame]->iFrameNum == 1)
+		pAnalParams->ppFrames[iCurrentFrame]->iFrameSample = 0;
 	/* increment center of data by sizeHop */
 	else
-		ppFrames[iCurrentFrame]->iFrameSample = 
-			ppFrames[iCurrentFrame-1]->iFrameSample + analParams.sizeHop;
+		pAnalParams->ppFrames[iCurrentFrame]->iFrameSample = 
+			pAnalParams->ppFrames[iCurrentFrame-1]->iFrameSample + pAnalParams->sizeHop;
   	 
 	/* check for error */
-	if (soundBuffer.iSoundSample >
-	         ppFrames[iCurrentFrame]->iFrameSample - (sizeWindow+1)/2)
+	if (pAnalParams->soundBuffer.iSoundSample >
+	         pAnalParams->ppFrames[iCurrentFrame]->iFrameSample - (sizeWindow+1)/2)
 	{
 		fprintf(stderr, "error: runoff on the sound buffer\n");
 		exit(1);
 	} 
 	/* check for end of sound */
-	if ((ppFrames[iCurrentFrame]->iFrameSample + (sizeWindow+1)/2) >=
-	    analParams.iSizeSound)
+	if ((pAnalParams->ppFrames[iCurrentFrame]->iFrameSample + (sizeWindow+1)/2) >=
+	    pAnalParams->iSizeSound)
 	{
-		ppFrames[iCurrentFrame]->iFrameNum =  -1;
-		ppFrames[iCurrentFrame]->iFrameSize =  0;
-		ppFrames[iCurrentFrame]->iStatus =  END;
+		pAnalParams->ppFrames[iCurrentFrame]->iFrameNum =  -1;
+		pAnalParams->ppFrames[iCurrentFrame]->iFrameSize =  0;
+		pAnalParams->ppFrames[iCurrentFrame]->iStatus =  END;
 	}
 	else
 		/* good status, ready to start computing */
-		ppFrames[iCurrentFrame]->iStatus = READY;
+		pAnalParams->ppFrames[iCurrentFrame]->iStatus = READY;
 }
 
-/* compute spectrum, find peaks, and fundamental of given frame
- *
- * int iCurrentFrame          frame number to be computed
- * ANAL_PARAMS analParams     analysis parameters
- * float fRefFundamental      reference fundamental 
- */
-void ComputeFrame (int iCurrentFrame, ANAL_PARAMS analParams, 
-                   float fRefFundamental)
-{
-	extern SOUND_BUFFER soundBuffer;
-	extern ANAL_FRAME **ppFrames;
-
-	static float pFMagSpectrum[MAX_SIZE_MAG];
-	static float pFPhaSpectrum[MAX_SIZE_MAG];
-	int sizeMag, i;
-	int iSoundLoc = ppFrames[iCurrentFrame]->iFrameSample - 
-		((ppFrames[iCurrentFrame]->iFrameSize + 1) >> 1) + 1;
-	float *pFData = 
-		&(soundBuffer.pFBuffer[iSoundLoc - soundBuffer.iSoundSample]);
-  
-	/* compute the magnitude and phase spectra */
-	sizeMag = Spectrum(pFData, ppFrames[iCurrentFrame]->iFrameSize,
-	                   pFMagSpectrum, pFPhaSpectrum, analParams);
-  
-	/* find the prominent peaks */
-	ppFrames[iCurrentFrame]->nPeaks = 
-		PeakDetection (pFMagSpectrum, pFPhaSpectrum, sizeMag, 
-		               ppFrames[iCurrentFrame]->iFrameSize,
-		               ppFrames[iCurrentFrame]->pSpectralPeaks,
-		               analParams);
-  
-	if (analParams.iDebugMode == DEBUG_PEAK_DET || 
-	    analParams.iDebugMode == DEBUG_ALL)
-	{
-		fprintf(stdout, "Frame %d peaks: ", 
-		        ppFrames[iCurrentFrame]->iFrameNum);
-		/* print only the first 10 peaks */
-		for(i=0; i<10; i++)
-			fprintf(stdout, " %.0f[%.1f], ", 
-			        ppFrames[iCurrentFrame]->pSpectralPeaks[i].fFreq,
-			        ppFrames[iCurrentFrame]->pSpectralPeaks[i].fMag);
-		fprintf(stdout, "\n");
-	}
-  
-	/* find a reference harmonic */
-	if (ppFrames[iCurrentFrame]->nPeaks > 0 && 
-	    (analParams.iFormat == FORMAT_HARMONIC ||
-	    analParams.iFormat == FORMAT_HARMONIC_WITH_PHASE))
-		HarmDetection (ppFrames[iCurrentFrame], fRefFundamental, analParams);
-  
-	if (analParams.iDebugMode == DEBUG_HARM_DET || 
-	    analParams.iDebugMode == DEBUG_ALL)
-		fprintf(stdout, "Frame %d: fundamental %f\n", 
-		        ppFrames[iCurrentFrame]->iFrameNum,
-		        ppFrames[iCurrentFrame]->fFundamental);
-}
 
 /* set window size for next frame 
  *
  * int iCurrentFrame;         number of current frame
  * ANAL_PARAMS analParams;    analysis parameters
  */
-int SetSizeWindow (int iCurrentFrame, ANAL_PARAMS analParams)
+int SetSizeWindow (int iCurrentFrame, ANAL_PARAMS *pAnalParams)
 {
-	extern ANAL_FRAME **ppFrames;
-	float fFund = ppFrames[iCurrentFrame]->fFundamental,
-        fPrevFund = ppFrames[iCurrentFrame-1]->fFundamental;
+//	extern ANAL_FRAME **ppFrames;
+	float fFund = pAnalParams->ppFrames[iCurrentFrame]->fFundamental,
+        fPrevFund = pAnalParams->ppFrames[iCurrentFrame-1]->fFundamental;
 	int sizeWindow;
   
 	/* if the previous fundamental was stable use it to set the window size */
 	if (fPrevFund > 0 &&
 	    fabs(fPrevFund - fFund) / fFund <= .2)
-		sizeWindow = (int) ((analParams.iSamplingRate / fFund) *
-			analParams.fSizeWindow * .5) * 2 + 1;
+		sizeWindow = (int) ((pAnalParams->iSamplingRate / fFund) *
+			pAnalParams->fSizeWindow * .5) * 2 + 1;
 	/* otherwise use the default size window */
 	else
-		sizeWindow = analParams.iDefaultSizeWindow;
+		sizeWindow = pAnalParams->iDefaultSizeWindow;
   
 	if (sizeWindow > MAX_SIZE_WINDOW)
 	{
@@ -357,16 +331,16 @@ int SetSizeWindow (int iCurrentFrame, ANAL_PARAMS analParams)
  * return -1 if really off
  * int iCurrentFrame;        number of current frame 
  */
-float GetDeviation (int iCurrentFrame)
+float GetDeviation ( ANAL_PARAMS *pAnalParams, int iCurrentFrame)
 {
-	extern ANAL_FRAME **ppFrames;
+//	extern ANAL_FRAME **ppFrames;
 	float fFund, fSum = 0, fAverage, fDeviation = 0;
   int i;
 
 	/* get the sum of the past few fundamentals */
 	for (i = 0; i < MIN_GOOD_FRAMES; i++)
 	{
-		fFund = ppFrames[iCurrentFrame-i]->fFundamental;
+		fFund = pAnalParams->ppFrames[iCurrentFrame-i]->fFundamental;
 		if(fFund <= 0)
 			return(-1);
 		else
@@ -378,7 +352,7 @@ float GetDeviation (int iCurrentFrame)
   
 	/* get the deviation from the average */
 	for (i = 0; i < MIN_GOOD_FRAMES; i++)
-		fDeviation += fabs(ppFrames[iCurrentFrame-i]->fFundamental - fAverage);
+		fDeviation += fabs(pAnalParams->ppFrames[iCurrentFrame-i]->fFundamental - fAverage);
   
 	/* return the deviation from the average */
 	return (fDeviation / (MIN_GOOD_FRAMES * fAverage));
@@ -389,18 +363,18 @@ float GetDeviation (int iCurrentFrame)
  * int iCurrentFrame;             current frame number
  * ANAL_PARAMS analParams;           analysis parameters
  */
-int ReAnalyze (int iCurrentFrame, ANAL_PARAMS analParams)
+int ReAnalyze (int iCurrentFrame, ANAL_PARAMS *pAnalParams)
 {
-	extern ANAL_FRAME **ppFrames;
-	float fAvgDeviation = GetDeviation(iCurrentFrame),
+//	extern ANAL_FRAME **ppFrames;
+	float fAvgDeviation = GetDeviation(pAnalParams, iCurrentFrame),
 		fFund, fLastFund, fDev;
 	int iNewFrameSize, i,
 		iFirstFrame = iCurrentFrame - MIN_GOOD_FRAMES;
 
-	if (analParams.iDebugMode == DEBUG_SMS_ANAL || 
-	    analParams.iDebugMode == DEBUG_ALL)
+	if (pAnalParams->iDebugMode == DEBUG_SMS_ANAL || 
+	    pAnalParams->iDebugMode == DEBUG_ALL)
 		fprintf(stdout, "Frame %d reAnalyze: Freq. deviation %f\n", 
-		       ppFrames[iCurrentFrame]->iFrameNum, fAvgDeviation);
+		       pAnalParams->ppFrames[iCurrentFrame]->iFrameNum, fAvgDeviation);
   
 	if (fAvgDeviation == -1)
 		return (-1);
@@ -410,33 +384,33 @@ int ReAnalyze (int iCurrentFrame, ANAL_PARAMS analParams)
 	if (fAvgDeviation <= MAX_DEVIATION)
 		for (i = 0; i < ANAL_DELAY; i++)
 		{
-			if (ppFrames[iFirstFrame - i]->iFrameNum <= 0 ||
-			    ppFrames[iFirstFrame - i]->iStatus == RECOMPUTED)
+			if (pAnalParams->ppFrames[iFirstFrame - i]->iFrameNum <= 0 ||
+			    pAnalParams->ppFrames[iFirstFrame - i]->iStatus == RECOMPUTED)
 				return(-1);
-			fFund = ppFrames[iFirstFrame - i]->fFundamental;
-			fLastFund = ppFrames[iFirstFrame - i + 1]->fFundamental;
+			fFund = pAnalParams->ppFrames[iFirstFrame - i]->fFundamental;
+			fLastFund = pAnalParams->ppFrames[iFirstFrame - i + 1]->fFundamental;
 			fDev = fabs (fFund - fLastFund) / fLastFund;
-			iNewFrameSize = ((analParams.iSamplingRate / fLastFund) *
-				analParams.fSizeWindow/2) * 2 + 1;
+			iNewFrameSize = ((pAnalParams->iSamplingRate / fLastFund) *
+				pAnalParams->fSizeWindow/2) * 2 + 1;
 	
 			if (fFund <= 0 || fDev > .2 ||
-			    fabs ((double)(ppFrames[iFirstFrame - i]->iFrameSize - 
+			    fabs ((double)(pAnalParams->ppFrames[iFirstFrame - i]->iFrameSize - 
 			          iNewFrameSize)) / 
 			    iNewFrameSize >= .2)
 			{
-				ppFrames[iFirstFrame - i]->iFrameSize = iNewFrameSize;
-				ppFrames[iFirstFrame - i]->iStatus = READY;
+				pAnalParams->ppFrames[iFirstFrame - i]->iFrameSize = iNewFrameSize;
+				pAnalParams->ppFrames[iFirstFrame - i]->iStatus = READY;
 	    
-				if (analParams.iDebugMode == DEBUG_SMS_ANAL || 
-				    analParams.iDebugMode == DEBUG_ALL)
+				if (pAnalParams->iDebugMode == DEBUG_SMS_ANAL || 
+				    pAnalParams->iDebugMode == DEBUG_ALL)
 					fprintf(stdout, "re-analyzing frame %d\n", 
-					        ppFrames[iFirstFrame - i]->iFrameNum);
+					        pAnalParams->ppFrames[iFirstFrame - i]->iFrameNum);
 	    
 				/* recompute frame */
-				ComputeFrame (iFirstFrame - i, analParams, fLastFund);
-				ppFrames[iFirstFrame - i]->iStatus = RECOMPUTED;
+				ComputeFrame (iFirstFrame - i, pAnalParams, fLastFund);
+				pAnalParams->ppFrames[iFirstFrame - i]->iStatus = RECOMPUTED;
 	    
-				if (fabs(ppFrames[iFirstFrame - i]->fFundamental - fLastFund) / 
+				if (fabs(pAnalParams->ppFrames[iFirstFrame - i]->fFundamental - fLastFund) / 
 				    fLastFund >= .2)
 				return(-1);
 			}

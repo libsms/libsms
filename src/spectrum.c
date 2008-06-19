@@ -20,7 +20,7 @@
  */
 #include "sms.h"
 
-extern float *pFWindowSpec;
+float *sms_window_spec;
 
 /* 
  * function to compute a complex spectrum from a waveform 
@@ -32,34 +32,92 @@ extern float *pFWindowSpec;
  * float *pFPhaseSpectrum; pointer to output phase spectrum 
  */
 int Spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum, 
-              float *pFPhaseSpectrum, ANAL_PARAMS analParams)
+              float *pFPhaseSpectrum, ANAL_PARAMS *pAnalParams)
 {
-	int sizeFft = 
-		(int) pow (2.0, 
+        /* sizeFft is a power of 2 that is greater than 2x sizeWindow */
+        int sizeFft = (int) pow (2.0, 
 		          (float)(1 + (floor (log ((float)(WINDOWS_IN_FFT * 
-		                                           sizeWindow))
-		                              / LOG2))));
-	int i, it2, sizeMag = sizeFft >> 1, iMiddleWindow = (sizeWindow+1) >> 1, 
-		iOffset;
-	float *pFBuffer, fReal, fImag;
+		                                           sizeWindow)) / LOG2))));
+	int sizeMag = sizeFft >> 1;
+        int iMiddleWindow = (sizeWindow+1) >> 1; 
+        int i, iOffset;
+        float fReal, fImag;
 	static int iOldSizeWindow = 0;
+
   
+#ifdef FFTW
+
+
+	/* compute window when necessary */
+	if (iOldSizeWindow != sizeWindow) 
+        {
+                GetWindow (sizeWindow, sms_window_spec, pAnalParams->iWindowType);
+                
+/*                 fftwf_free(pSynthParams->pSpectrum); */
+/*                 fftwf_free(pSynthParams->pWaveform); */
+/*                 pAnalParams->pWaveform = fftwf_malloc(sizeof(float) * MAX_SIZE_WINDOW); */
+/*                 pAnalParams->pSpectrum = fftwf_malloc(sizeof(fftwf_complex) * (MAX_SIZE_WINDOW / 2 + 1)); */
+
+                if((pAnalParams->fftPlan =  fftwf_plan_dft_r2c_1d( sizeFft, pAnalParams->pWaveform,
+                                                                   pAnalParams->pSpectrum, FFTW_ESTIMATE)) == NULL)
+
+                {
+                        printf("sms_Spectrum: could not make fftw plan of size: %d \n", sizeFft);
+                        exit(1);
+                }
+        }
+	iOldSizeWindow = sizeWindow;
+
+//        printf("sizeWindow: %d, windows: %d, sizeFft: %d \n", sizeWindow, WINDOWS_IN_FFT, sizeFft);
+
+        memset(pAnalParams->pWaveform, 0, sizeFft * sizeof(float));
+        memset(pAnalParams->pWaveform, 0, (sizeFft/2 + 1) * sizeof(float));
+
+
+	/* apply window to waveform and center window around 0 */
+	iOffset = sizeFft - (iMiddleWindow - 1);
+	for (i=0; i<iMiddleWindow-1; i++)
+		pAnalParams->pWaveform[1+(iOffset + i)] =  sms_window_spec[i] * pFWaveform[i];
+	iOffset = iMiddleWindow - 1;
+	for (i=0; i<iMiddleWindow; i++)
+		pAnalParams->pWaveform[1+i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i];
+  
+        fftwf_execute(pAnalParams->fftPlan);
+
+	/* convert from rectangular to polar coordinates */
+	for (i = 0; i < sizeMag; i++) /* this doesn't account for Nyquit component yet */
+	{
+		fReal = pAnalParams->pSpectrum[i][0];
+		fImag = pAnalParams->pSpectrum[i][1];
+      
+		if (fReal != 0 || fImag != 0)
+		{
+			pFMagSpectrum[i] = TO_DB (sqrt (fReal * fReal + fImag * fImag));
+			pFPhaseSpectrum[i] = atan2 (-fImag, fReal);
+		}
+	}
+
+#else        
+	if (iOldSizeWindow != sizeWindow) 
+        {
+                GetWindow (sizeWindow, sms_window_spec, pAnalParams->iWindowType);
+        }
+	iOldSizeWindow = sizeWindow;
+
+        int it2;
+        float *pFBuffer;
 	/* allocate buffer */    
 	if ((pFBuffer = (float *) calloc(sizeFft+1, sizeof(float))) == NULL)
 		return -1;
   
-	/* compute window when necessary */
-	if (iOldSizeWindow != sizeWindow)
-		GetWindow (sizeWindow, pFWindowSpec, analParams.iWindowType);
-	iOldSizeWindow = sizeWindow;
   
 	/* apply window to waveform and center window around 0 */
 	iOffset = sizeFft - (iMiddleWindow - 1);
 	for (i=0; i<iMiddleWindow-1; i++)
-		pFBuffer[1+(iOffset + i)] =  pFWindowSpec[i] * pFWaveform[i];
+		pFBuffer[1+(iOffset + i)] =  sms_window_spec[i] * pFWaveform[i];
 	iOffset = iMiddleWindow - 1;
 	for (i=0; i<iMiddleWindow; i++)
-		pFBuffer[1+i] = pFWindowSpec[iOffset + i] * pFWaveform[iOffset + i];
+		pFBuffer[1+i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i];
   
 
 	realft (pFBuffer, sizeMag, 1);
@@ -78,7 +136,8 @@ int Spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 		}
 	}
 	free (pFBuffer);
-  
+#endif/*FFTW*/
+        
 	return (sizeMag);
 }
 
@@ -152,7 +211,7 @@ int QuickSpectrumF (float *pFWaveform, float *pFWindow, int sizeWindow,
     
 	/* apply window to waveform */
 	for (i = 0; i < sizeWindow; i++)
-    pFBuffer[i] =  pFWindow[i] * pFWaveform[i];
+                pFBuffer[i] =  pFWindow[i] * pFWaveform[i];
   
 	/* compute real FFT */
 	realft (pFBuffer-1, sizeMag, 1);

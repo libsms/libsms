@@ -131,14 +131,14 @@ int WriteOutputFile ()
 
 /* function to create the residual sound file 
  *
- *  ANAL_PARAMS analParams;   analysis paramenters
+ *  ANAL_PARAMS *pAnalParams;   analysis paramenters
  *
  */
-int CreateResidualFile (ANAL_PARAMS analParams)
+int CreateResidualFile (ANAL_PARAMS *pAnalParams)
 {
     memset (&sfResidualHeader, 0, sizeof (sfResidualHeader)) ;
     sfResidualHeader.format = SF_FORMAT_AIFF | SF_FORMAT_PCM_16;
-    sfResidualHeader.samplerate = analParams.iSamplingRate;
+    sfResidualHeader.samplerate = pAnalParams->iSamplingRate;
     sfResidualHeader.channels = 1;
 
     int err = sf_format_check (&sfResidualHeader);

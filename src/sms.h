@@ -126,6 +126,7 @@ typedef struct
 
 
 /* debug modes */
+#define DEBUG_NONE 0
 #define DEBUG_INIT        1     /* debug initialitzation functions */
 #define DEBUG_PEAK_DET    2	    /* debug peak detection function */
 #define DEBUG_HARM_DET    3	    /* debug harmonic detection function */
@@ -257,79 +258,6 @@ typedef struct
 /* total number of delay frames */
 #define DELAY_FRAMES (MIN_GOOD_FRAMES + ANAL_DELAY)
 
-/* structure with useful information for the analysis program */
-typedef struct 
-{
-	int iDebugMode;     /* 0 no debug
-                           1 debug initialitzation functions,
-                           2 debug peak detection function,
-                           3 debug harmonic detection function,
-                           4 debug peak continuation function,
-                           5 debug clean trajectories function,
-                           6 debug sine synthesis function,
-                           7 debug stochastic analysis function,
-                           8 debug stochastic synthesis function,
-                           9 debug top level analysis function,
-                           10 debug everything */
-	int iFormat;          /* 1 the sound is analized as harmonic,
-                           2 is inharmonic 
-                           3 is harmonic and phases are kept
-                           4 is inharmonic and phases are kept */
-	int iStochasticType;      /*  TODO: update 1: filter, 2: lines, 3: none */
-	float fLowestFundamental; /* lowest fundamental frequency in Hz */
-	float fHighestFundamental;/* highest fundamental frequency in Hz */
-	float fDefaultFundamental;/* default fundamental in Hz */
-	float fPeakContToGuide;   /* contribution of previous peak to current
-                                guide (between 0 and 1) */
-	float fFundContToGuide;   /* contribution of current fundamental to
-                                current guide (between 0 and 1) */
-	float fFreqDeviation;     /* maximum deviation from peak to peak */				     
-	int iSamplingRate;        /* sampling rate of input sound */
-	int iDefaultSizeWindow;   /* default size of analysis window in samples */
-	int sizeHop;              /* hop size of analysis window in samples */
-	float fSizeWindow;       /* size of analysis window in number of periods */
-	int nGuides;              /* number of guides used */
-	int iCleanTraj;           /* whether or not to clean trajectories */
-	float fMinRefHarmMag;     /* minimum magnitude in dB for reference peak */
-	float fRefHarmMagDiffFromMax; /* maximum magnitude difference from 
-	                                 reference peak to highest peak */
-	int iRefHarmonic;	       /* reference harmonic to use in the fundamental 
-	                              detection */
-	int iMinTrajLength;	       /* minimum length in samples of a given
-	                            trajectory */
-	int iMaxSleepingTime;	   /* maximum sleeping time for a trajectory */
-	float fHighestFreq;        /* highest frequency to be searched */
-	float fMinPeakMag;         /* minimum magnitude in dB for a good peak */	
-	int iSoundType;            /* type of sound to be analyzed */	
-	int iAnalysisDirection;    /* analysis direction, direct or reverse */	
-	int iSizeSound;             /* total size of input sound */	 	
-	int iWindowType;            /* type of analysis window */			  	 			 
-        fftwf_plan  fftPlan;
-        float fResidualPercentage; /* accumalitive residual percentage */
-        float *pCfftIn;
-        fftwf_complex *pFfftOut;
-} ANAL_PARAMS;
-
-/* structure with useful information for synthesis */
-typedef struct
-{
-	int iStochasticType; 
-	int iSynthesisType;        /* globally defined above */
-        int iDetSynthType;         /* globally defined above */
-	int iOriginalSRate;
-	int iSamplingRate;
-	SMS_DATA previousFrame;
-	int sizeHop;
-        int origSizeHop;
-	float *pFDetWindow;
-        float *pFStocWindow;
-        fftwf_plan  fftPlan;
-        fftwf_complex *pComplexSpec;
-        float *pRealWave;
-        float *realftOut; // RTE_DEBUG : comparing realft and fftw
-} SYNTH_PARAMS;
-
-#define SIZE_SYNTH_FRAME  128   /* size of synthesis frame */
 
 /* buffer for sound data */
 typedef struct
@@ -358,6 +286,75 @@ typedef struct
 	enum frameStatus iStatus; /* status of frame */
 } ANAL_FRAME;
 
+/* structure with useful information for the analysis program */
+typedef struct 
+{
+	int iDebugMode; /* debug codes defined below */
+	int iFormat;          /* format code defined below */
+	int iStochasticType;      /*  type of stochastic synthesis */
+	float fLowestFundamental; /* lowest fundamental frequency in Hz */
+	float fHighestFundamental;/* highest fundamental frequency in Hz */
+	float fDefaultFundamental;/* default fundamental in Hz */
+	float fPeakContToGuide;   /* contribution of previous peak to current guide (between 0 and 1) */
+	float fFundContToGuide;   /* contribution of current fundamental to current guide (between 0 and 1) */
+	float fFreqDeviation;     /* maximum deviation from peak to peak */				     
+	int iSamplingRate;        /* sampling rate of input sound */
+	int iDefaultSizeWindow;   /* default size of analysis window in samples */
+	int sizeHop;              /* hop size of analysis window in samples */
+	float fSizeWindow;       /* size of analysis window in number of periods */
+	int nGuides;              /* number of guides used */
+	int iCleanTraj;           /* whether or not to clean trajectories */
+	float fMinRefHarmMag;     /* minimum magnitude in dB for reference peak */
+	float fRefHarmMagDiffFromMax; /* maximum magnitude difference from reference peak to highest peak */
+	int iRefHarmonic;	       /* reference harmonic to use in the fundamental detection */
+	int iMinTrajLength;	       /* minimum length in samples of a given  trajectory */
+	int iMaxSleepingTime;	   /* maximum sleeping time for a trajectory */
+	float fHighestFreq;        /* highest frequency to be searched */
+	float fMinPeakMag;         /* minimum magnitude in dB for a good peak */	
+	int iSoundType;            /* type of sound to be analyzed */	
+	int iAnalysisDirection;    /* analysis direction, direct or reverse */	
+	int iSizeSound;             /* total size of input sound */	 	
+	int iWindowType;            /* type of analysis window */			  	 			 
+        int iMaxDelayFrames;
+        SMS_DATA prevFrame;
+        SOUND_BUFFER soundBuffer;
+        SOUND_BUFFER synthBuffer;
+        ANAL_FRAME *pFrames;
+        ANAL_FRAME **ppFrames;
+        float fResidualPercentage; /* accumalitive residual percentage */
+#ifdef FFTW
+        fftwf_plan  fftPlan;
+        float *pWaveform;
+        fftwf_complex *pSpectrum;
+#endif
+} ANAL_PARAMS;
+
+/* structure with useful information for synthesis */
+typedef struct
+{
+	int iStochasticType; 
+	int iSynthesisType;        /* globally defined above */
+        int iDetSynthType;         /* globally defined above */
+	int iOriginalSRate;
+	int iSamplingRate;
+	SMS_DATA previousFrame;
+	int sizeHop;
+        int origSizeHop;
+	float *pFDetWindow;
+        float *pFStocWindow;
+#ifdef FFTW
+        fftwf_plan  fftPlan;
+        fftwf_complex *pSpectrum;
+        float *pWaveform;
+#else
+        float *realftOut; // RTE_DEBUG : comparing realft and fftw
+#endif
+} SYNTH_PARAMS;
+
+#define SIZE_SYNTH_FRAME  128   /* size of synthesis frame */
+
+
+
 /* structure for hybrid program */
 typedef struct
 {
@@ -369,27 +366,37 @@ typedef struct
   int sizeCompressionEnv;
 } HYB_PARAMS;
 
+/* todo: define sin table size here too */
+#define SIN_TABLE_SIZE 4096//was 2046
+#define SINC_TABLE_SIZE 4096
+extern float *sms_tab_sine;
+extern float *sms_tab_sinc;
+
+extern float *sms_window_spec;
+
 /* function declarations */ 
 
 int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsRecord,
-                 ANAL_PARAMS analParams, long *pINextSizeRead);
+                 ANAL_PARAMS *pAnalParams, long *pINextSizeRead);
 
 int SmsInit( void );  
 
-int SmsInitAnalysis (ANAL_PARAMS analParams);
+int SmsInitAnalysis ( SMSHeader *pSmsHeader, ANAL_PARAMS *pAnalParams);
 
 int SmsInitSynth( SMSHeader *pSmsHeader, SYNTH_PARAMS *pSynthParams );
 
+int SmsFreeAnalysis (ANAL_PARAMS *pAnalParams);
+
 int SmsFreeSynth( SYNTH_PARAMS *pSynthParams );
 
-void FillBuffer (short *pSWaveform, long sizeNewData, ANAL_PARAMS analParams);
+void FillBuffer (short *pSWaveform, long sizeNewData, ANAL_PARAMS *pAnalParams);
 
 void moveFrames();
 
-void InitializeFrame (int iCurrentFrame, ANAL_PARAMS analParams, 
+void InitializeFrame (int iCurrentFrame, ANAL_PARAMS *pAnalParams, 
                       int sizeWindow);
 		     
-void ComputeFrame (int iCurrentFrame, ANAL_PARAMS analParams, 
+void ComputeFrame (int iCurrentFrame, ANAL_PARAMS *pAnalParams, 
                    float fRefFundamental);
 
 void GetWindow (int sizeWindow, float *pFWindow, int iWindowType);
@@ -407,7 +414,7 @@ void realft (float *data, int n, int isign);
 //int initInverseFFTW( SYNTH_PARAMS *pSynthParams);
 
 int Spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum, 
-             float *pFPhaseSpectrum, ANAL_PARAMS analParams);
+             float *pFPhaseSpectrum, ANAL_PARAMS *pAnalParams);
 
 int QuickSpectrum (short *pIWaveform, float *pFWindow, int sizeWindow, 
                    float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft);
@@ -425,24 +432,24 @@ int InverseQuickSpectrumW (float *pFMagSpectrum, float *pFPhaseSpectrum,
 int SpectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
                     float *pFSpec2, int sizeSpec2, int nCoefficients);
 		  
-int SetSizeWindow (int iCurrentFrame, ANAL_PARAMS analParams);
+int SetSizeWindow (int iCurrentFrame, ANAL_PARAMS *pAnalParams);
 
-float GetDeviation (int iCurrentFrame);
+float GetDeviation (ANAL_PARAMS *pAnalParams, int iCurrentFrame);
 
-int ReAnalyze (int iCurrentFrame, ANAL_PARAMS analParams);
+int ReAnalyze (int iCurrentFrame, ANAL_PARAMS *pAnalParams);
 
 int PeakDetection (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag, 
                    int sizeWindow, PEAK *pSpectralPeaks, 
-                   ANAL_PARAMS analParams);
+                   ANAL_PARAMS *pAnalParams);
 
 void HarmDetection (ANAL_FRAME *pFrame, float fRefFundamental,
-                    ANAL_PARAMS analParams);
+                    ANAL_PARAMS *pAnalParams);
 
-void GenPeakContinuation (int iFrame, ANAL_PARAMS analParams);
+void GenPeakContinuation (int iFrame, ANAL_PARAMS *pAnalParams);
 
 int DeleteCandidate (CONT_CANDIDATE *pCandidate, int nCand, int iBestPeak);
 
-int PeakContinuation (int iFrame, ANAL_PARAMS analParams);
+int PeakContinuation (int iFrame, ANAL_PARAMS *pAnalParams);
 
 float PreEmphasis (float fInput);
 
@@ -453,10 +460,10 @@ void Covariance (float *pFSig, int nSig, int nStage, float *pFPhi, int nMax);
 void CovLatticeHarm (float *pFPhi, int nMax, int m, float *pFPredCoeff, 
                      float *pFReflexCoeff, float *pFError, float *pFScr);
 
-int CleanTrajectories (int iCurrentFrame, ANAL_PARAMS analParams);
+int CleanTrajectories (int iCurrentFrame, ANAL_PARAMS *pAnalParams);
 
 void ScaleDeterministic (float *pFSynthBuffer, float *pFOriginalBuffer,
-                         float *pFMagTraj, ANAL_PARAMS analParams, int nTraj);
+                         float *pFMagTraj, ANAL_PARAMS *pAnalParams, int nTraj);
 			
 int PrepSine (int nTableSize);
 
@@ -511,21 +518,21 @@ void ClearSmsRecord (SMS_DATA *pSmsRecord);
 
 int CopySmsRecord (SMS_DATA *pCopySmsRecord, SMS_DATA *pOriginalSmsRecord);
 
-void MoveFrames ();
+void MoveFrames (ANAL_PARAMS *pAnalParams);
 
 int GetResidual (float *pFSynthesis, float *pFOriginal,  
-                 float *pFResidual, int sizeWindow, ANAL_PARAMS analParams);
+                 float *pFResidual, int sizeWindow, ANAL_PARAMS *pAnalParams);
 
 int StocAnalysis (float *pFResidual, int sizeWindow, 
-                  SMS_DATA *pSmsRecord, ANAL_PARAMS analParams);
+                  SMS_DATA *pSmsRecord, ANAL_PARAMS *pAnalParams);
 
-int CreateResidualFile (ANAL_PARAMS analParams);
+int CreateResidualFile (ANAL_PARAMS *pAnalParams);
 
 int WriteToResidualFile (float *pFBuffer, int sizeBuffer);
 
 int WriteResidualFile ();
 
-int CreateDebugFile (ANAL_PARAMS analParams);
+int CreateDebugFile (ANAL_PARAMS *pAnalParams);
 
 int WriteDebugFile ();
 

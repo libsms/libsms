@@ -20,13 +20,13 @@
  */
 #include "sms.h"
 
-extern ANAL_FRAME **ppFrames;
+//extern ANAL_FRAME **ppFrames;
 /* debug text file */
 char *pChDebugFile = "debug.txt";
 FILE *pDebug;
 
 /* function to create the debug file */
-int CreateDebugFile (ANAL_PARAMS analParams)
+int CreateDebugFile (ANAL_PARAMS *pAnalParams)
 {
 	if ((pDebug = fopen(pChDebugFile, "w+")) == NULL) 
 	{
@@ -151,10 +151,10 @@ static void FilterResidual (float *pFResidual, int sizeResidual,
  * float *pFResidual;        output residual waveform
  * int sizeWindow;           size of buffer
  * SMS_DATA *pSmsData;       pointer to output SMS data
- * ANAL_PARAMS analParams;   analysis parameters
+ * ANAL_PARAMS *pAnalParams;   analysis parameters
  */
 int GetResidual (float *pFSynthesis, float *pFOriginal,  
-                 float *pFResidual, int sizeWindow, ANAL_PARAMS analParams)
+                 float *pFResidual, int sizeWindow, ANAL_PARAMS *pAnalParams)
 {
 	static float fResidualMag = 0, fOriginalMag = 0, *pD = NULL, 
 		*pFWindow = NULL;
@@ -200,47 +200,47 @@ int GetResidual (float *pFSynthesis, float *pFOriginal,
 				pFResidual[i] *= fScale;
 
       
-			if (analParams.iDebugMode == DEBUG_ALL ||
-				analParams.iDebugMode == DEBUG_STOC_ANAL)
+			if (pAnalParams->iDebugMode == DEBUG_ALL ||
+				pAnalParams->iDebugMode == DEBUG_STOC_ANAL)
 				fprintf(stdout, 
 				        "getResidual: frame %d: scaled residual by %f\n", 
-				        ppFrames[0]->iFrameNum, fScale);
+				        pAnalParams->ppFrames[0]->iFrameNum, fScale);
 		}
    
 		/* store residual percentage in global variable */
-		analParams.fResidualPercentage += fCurrentResidualMag / fCurrentOriginalMag;
-		if (analParams.iDebugMode == DEBUG_ALL ||
-		    analParams.iDebugMode == DEBUG_STOC_ANAL)
+		pAnalParams->fResidualPercentage += fCurrentResidualMag / fCurrentOriginalMag;
+		if (pAnalParams->iDebugMode == DEBUG_ALL ||
+		    pAnalParams->iDebugMode == DEBUG_STOC_ANAL)
 			fprintf (stdout, "getResidual: frame %d, residual perc %f \n",
-			         ppFrames[0]->iFrameNum, 
+			         pAnalParams->ppFrames[0]->iFrameNum, 
 			         fCurrentResidualMag / fCurrentOriginalMag);
-		if (analParams.iDebugMode == 13)
+		if (pAnalParams->iDebugMode == 13)
 			fprintf (stdout, "%f\n",
 			         fCurrentResidualMag / fCurrentOriginalMag);
 
-		if (analParams.iDebugMode == DEBUG_SYNC)
+		if (pAnalParams->iDebugMode == DEBUG_SYNC)
 			WriteToDebugFile (pFOriginal+sizeWindow/2, 
 			                  pFSynthesis+sizeWindow/2,
 		                    pFResidual+sizeWindow/2, sizeWindow/2);
 
-		if (analParams.iDebugMode == DEBUG_RESIDUAL)
+		if (pAnalParams->iDebugMode == DEBUG_RESIDUAL)
 		{
-			CreateResidualFile( analParams );
+			CreateResidualFile( pAnalParams );
 			WriteToResidualFile (pFResidual+sizeWindow/2, sizeWindow/2);
 		}
 		/* filter residual with a high pass filter (it solves some problems) */
-		FilterResidual (pFResidual, sizeWindow, analParams.iSamplingRate, pD);
+		FilterResidual (pFResidual, sizeWindow, pAnalParams->iSamplingRate, pD);
 
 		return (1);
 	}
-	if (analParams.iDebugMode == DEBUG_SYNC)
+	if (pAnalParams->iDebugMode == DEBUG_SYNC)
 		WriteToDebugFile (pFOriginal+sizeWindow/2, 
 			                pFSynthesis+sizeWindow/2,
 		                  pFResidual+sizeWindow/2, sizeWindow/2);
 
-	if (analParams.iDebugMode == DEBUG_RESIDUAL)
+	if (pAnalParams->iDebugMode == DEBUG_RESIDUAL)
 	{
-		CreateResidualFile( analParams );
+		CreateResidualFile( pAnalParams );
 		WriteToResidualFile (pFResidual+sizeWindow/2, sizeWindow/2);
 	}
 	return (0);

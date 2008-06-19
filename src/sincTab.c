@@ -20,8 +20,8 @@
  */
 #include "sms.h"
 
-#define SINC_TABLE_SIZE 4096
-extern double *pFSincTab;
+
+float *sms_tab_sinc;
 
 static double Sinc (double x, short N)	
 {
@@ -40,20 +40,20 @@ int PrepSinc ()
 	double fTheta = -4.0 * TWO_PI / N, 
 	       fThetaIncr = (8.0 * TWO_PI / N) / (SINC_TABLE_SIZE);
 
-	if((pFSincTab = (double *) calloc (SINC_TABLE_SIZE, sizeof(double))) == 0)
+	if((sms_tab_sinc = (float *) calloc (SINC_TABLE_SIZE, sizeof(float))) == 0)
 		return (0);
 
 	for(i = 0; i < SINC_TABLE_SIZE; i++) 
 	{
 		for (m = 0; m < 4; m++)
-			pFSincTab[i] +=  -1 * (fA[m]/2) * 
+			sms_tab_sinc[i] +=  -1 * (fA[m]/2) * 
 				(Sinc (fTheta - m * TWO_PI/N, N) + 
 			     Sinc (fTheta + m * TWO_PI/N, N));
 		fTheta += fThetaIncr;
 	}
-	fMax = pFSincTab[(int) SINC_TABLE_SIZE / 2];
+	fMax = sms_tab_sinc[(int) SINC_TABLE_SIZE / 2];
 	for (i = 0; i < SINC_TABLE_SIZE; i++) 
-		pFSincTab[i] = pFSincTab[i] / fMax;
+		sms_tab_sinc[i] = sms_tab_sinc[i] / fMax;
 
 	return (1);
 }
@@ -65,5 +65,5 @@ double SincTab (double fTheta)
 {
 	long index = (long) (.5 + SINC_TABLE_SIZE * fTheta / 8.0);
 
-	return (pFSincTab[index]);
+	return (sms_tab_sinc[index]);
 }

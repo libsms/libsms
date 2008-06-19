@@ -77,7 +77,10 @@ static void SinePhaSynth (float fFreq, float fMag, float fPhase,
     fInstPhase = pLastFrame->pFPhaTraj[iTraj] + 
 			pLastFrame->pFFreqTraj[iTraj] * i + 
 			fAlpha * i * i + fBeta * i * i * i;
+
+//why is SinTab causing a seg fault here?
     pFWaveform[i] += TO_MAG(fInstMag) * SinTab(fInstPhase + PI_2);
+//    pFWaveform[i] += TO_MAG(fInstMag) * sin(fInstPhase + PI_2);
   }
   /* save current values into buffer */
   pLastFrame->pFFreqTraj[iTraj] = fFreq;

@@ -20,21 +20,21 @@
  */
 #include "sms.h"
 
-extern ANAL_FRAME **ppFrames;
+//extern ANAL_FRAME **ppFrames;
 
 /* function to fill a gap in a given trajectory 
  *
  * int iCurrentFrame;      currrent frame number 
  * int iTraj;              trajectory to be filled
  * int *pIState;           state of trajectories
- * ANAL_PARAMS analParams; analysis parameters
+ * ANAL_PARAMS *pAnalParams; analysis parameters
  *
  */
 static void FillGap (int iCurrentFrame, int iTraj, int *pIState, 
-                     ANAL_PARAMS analParams)
+                     ANAL_PARAMS *pAnalParams)
 {
 	int iFrame, iLastFrame = - (pIState[iTraj] - 1);
-	float fConstant = TWO_PI / analParams.iSamplingRate;
+	float fConstant = TWO_PI / pAnalParams->iSamplingRate;
 	float fFirstMag, fFirstFreq, fLastMag, fLastFreq, fIncrMag, fIncrFreq,
 		fMag, fTmpPha, fFreq;
   
@@ -43,7 +43,7 @@ static void FillGap (int iCurrentFrame, int iTraj, int *pIState,
   
 	/* if firstMag is 0 it means that there is no Gap, just the begining */
 	/*   of a trajectory                                                 */
-	if (ppFrames[iCurrentFrame - 
+	if (pAnalParams->ppFrames[iCurrentFrame - 
 	    iLastFrame]->deterministic.pFMagTraj[iTraj] == 0)
 	{
 		pIState[iTraj] = 1;
@@ -51,19 +51,19 @@ static void FillGap (int iCurrentFrame, int iTraj, int *pIState,
 	}
   
 	fFirstMag = 
-		ppFrames[iCurrentFrame - iLastFrame]->deterministic.pFMagTraj[iTraj];
+		pAnalParams->ppFrames[iCurrentFrame - iLastFrame]->deterministic.pFMagTraj[iTraj];
 	fFirstFreq = 
-		ppFrames[iCurrentFrame - iLastFrame]->deterministic.pFFreqTraj[iTraj];
-	fLastMag = ppFrames[iCurrentFrame]->deterministic.pFMagTraj[iTraj];
-	fLastFreq = ppFrames[iCurrentFrame]->deterministic.pFFreqTraj[iTraj];
+		pAnalParams->ppFrames[iCurrentFrame - iLastFrame]->deterministic.pFFreqTraj[iTraj];
+	fLastMag = pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFMagTraj[iTraj];
+	fLastFreq = pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFFreqTraj[iTraj];
 	fIncrMag =  (fLastMag - fFirstMag) / iLastFrame;
 	fIncrFreq =  (fLastFreq - fFirstFreq) / iLastFrame;
   
 	/* if inharmonic format and the two extremes are very different  */
 	/* do not interpolate, it means that they are different trajectories */
-	if ((analParams.iFormat == FORMAT_INHARMONIC ||
-	     analParams.iFormat == FORMAT_INHARMONIC_WITH_PHASE) &&
-		(MIN (fFirstFreq, fLastFreq) * .5 * analParams.fFreqDeviation <
+	if ((pAnalParams->iFormat == FORMAT_INHARMONIC ||
+	     pAnalParams->iFormat == FORMAT_INHARMONIC_WITH_PHASE) &&
+		(MIN (fFirstFreq, fLastFreq) * .5 * pAnalParams->fFreqDeviation <
 	     fabs ((double) fLastFreq - fFirstFreq)))
 	{
 		pIState[iTraj] = 1;
@@ -79,32 +79,32 @@ static void FillGap (int iCurrentFrame, int iTraj, int *pIState,
 	{
 		/* interpolate magnitude */
 		fMag += fIncrMag;
-		ppFrames[iFrame]->deterministic.pFMagTraj[iTraj] = fMag;
+		pAnalParams->ppFrames[iFrame]->deterministic.pFMagTraj[iTraj] = fMag;
 		/* interpolate frequency */
 		fFreq += fIncrFreq;
-		ppFrames[iFrame]->deterministic.pFFreqTraj[iTraj] = fFreq;
+		pAnalParams->ppFrames[iFrame]->deterministic.pFFreqTraj[iTraj] = fFreq;
 		/*interpolate phase (this may not be the right way) */
 		fTmpPha = 
-			ppFrames[iFrame-1]->deterministic.pFPhaTraj[iTraj] -
-				(ppFrames[iFrame-1]->deterministic.pFFreqTraj[iTraj] * 
-				fConstant) * analParams.sizeHop;
-		ppFrames[iFrame]->deterministic.pFPhaTraj[iTraj] = 
+			pAnalParams->ppFrames[iFrame-1]->deterministic.pFPhaTraj[iTraj] -
+				(pAnalParams->ppFrames[iFrame-1]->deterministic.pFFreqTraj[iTraj] * 
+				fConstant) * pAnalParams->sizeHop;
+		pAnalParams->ppFrames[iFrame]->deterministic.pFPhaTraj[iTraj] = 
 			fTmpPha - floor(fTmpPha/ TWO_PI) * TWO_PI;
 	}
   
-	if(analParams.iDebugMode == DEBUG_CLEAN_TRAJ || 
-	   analParams.iDebugMode == DEBUG_ALL)
+	if(pAnalParams->iDebugMode == DEBUG_CLEAN_TRAJ || 
+	   pAnalParams->iDebugMode == DEBUG_ALL)
 	{
 		fprintf (stdout, "fillGap: traj %d, frames %d to %d filled\n",
-		        iTraj, ppFrames[iCurrentFrame-iLastFrame + 1]->iFrameNum, 
-		        ppFrames[iCurrentFrame-1]->iFrameNum);
+		        iTraj, pAnalParams->ppFrames[iCurrentFrame-iLastFrame + 1]->iFrameNum, 
+		        pAnalParams->ppFrames[iCurrentFrame-1]->iFrameNum);
 		fprintf (stdout, "firstFreq %f lastFreq %f, firstMag %f lastMag %f\n",
 		        fFirstFreq, fLastFreq, fFirstMag, fLastMag);
 
   	}
 
 	/* reset status */
-	pIState[iTraj] = analParams.iMinTrajLength;
+	pIState[iTraj] = pAnalParams->iMinTrajLength;
 }
 
 
@@ -113,11 +113,11 @@ static void FillGap (int iCurrentFrame, int iTraj, int *pIState,
  * int iCurrentFrame;    current frame
  * int iTraj;            trajectory to be deleted
  * int *pIState;         state of trajectories
- * ANAL_PARAMS analParams; analysis parameters
+ * ANAL_PARAMS *pAnalParams; analysis parameters
  *
  */
 static void DeleteShortTraj (int iCurrentFrame, int iTraj, int *pIState,
-                             ANAL_PARAMS analParams)
+                             ANAL_PARAMS *pAnalParams)
 {
 	int iFrame, frame;
   
@@ -128,76 +128,76 @@ static void DeleteShortTraj (int iCurrentFrame, int iTraj, int *pIState,
 		if (frame <= 0)
 			return;
       
-		ppFrames[frame]->deterministic.pFMagTraj[iTraj] = 0;
-		ppFrames[frame]->deterministic.pFFreqTraj[iTraj] = 0;
-		ppFrames[frame]->deterministic.pFPhaTraj[iTraj] = 0;
+		pAnalParams->ppFrames[frame]->deterministic.pFMagTraj[iTraj] = 0;
+		pAnalParams->ppFrames[frame]->deterministic.pFFreqTraj[iTraj] = 0;
+		pAnalParams->ppFrames[frame]->deterministic.pFPhaTraj[iTraj] = 0;
 	}
   
-	if (analParams.iDebugMode == DEBUG_CLEAN_TRAJ ||
-	    analParams.iDebugMode == DEBUG_ALL)
+	if (pAnalParams->iDebugMode == DEBUG_CLEAN_TRAJ ||
+	    pAnalParams->iDebugMode == DEBUG_ALL)
 		fprintf (stdout, "deleteShortTraj: traj %d, frames %d to %d deleted\n",
-		         iTraj, ppFrames[iCurrentFrame - pIState[iTraj]]->iFrameNum, 
-		         ppFrames[iCurrentFrame-1]->iFrameNum);
+		         iTraj, pAnalParams->ppFrames[iCurrentFrame - pIState[iTraj]]->iFrameNum, 
+		         pAnalParams->ppFrames[iCurrentFrame-1]->iFrameNum);
   
 	/* reset state */
-	pIState[iTraj] = -analParams.iMaxSleepingTime;
+	pIState[iTraj] = -pAnalParams->iMaxSleepingTime;
 }
 
 /* function to fill gaps and delete short trajectories 
  *
  * int iCurrentFrame;     current frame number
- * ANAL_PARAMS analParams analysis parameters
+ * ANAL_PARAMS *pAnalParams analysis parameters
  *
  */
-int CleanTrajectories (int iCurrentFrame, ANAL_PARAMS analParams)
+int CleanTrajectories (int iCurrentFrame, ANAL_PARAMS *pAnalParams)
 {
 	int iTraj, iLength, iFrame;
 	static int *pIState = NULL;
   
 	if (pIState == NULL)
-		pIState = (int *) calloc (analParams.nGuides, sizeof(int));
+		pIState = (int *) calloc (pAnalParams->nGuides, sizeof(int));
   
 	/* if fundamental and first partial are short, delete everything */
-	if ((analParams.iFormat == FORMAT_HARMONIC ||
-	     analParams.iFormat == FORMAT_HARMONIC_WITH_PHASE) &&
-	     ppFrames[iCurrentFrame]->deterministic.pFMagTraj[0] == 0 &&
+	if ((pAnalParams->iFormat == FORMAT_HARMONIC ||
+	     pAnalParams->iFormat == FORMAT_HARMONIC_WITH_PHASE) &&
+	     pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFMagTraj[0] == 0 &&
 	     pIState[0] > 0 &&
-	     pIState[0] < analParams.iMinTrajLength &&
-	     ppFrames[iCurrentFrame]->deterministic.pFMagTraj[1] == 0 &&
+	     pIState[0] < pAnalParams->iMinTrajLength &&
+	     pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFMagTraj[1] == 0 &&
 	     pIState[1] > 0 &&
-	     pIState[1] < analParams.iMinTrajLength)
+	     pIState[1] < pAnalParams->iMinTrajLength)
 	{
 		iLength = pIState[0];
-		for (iTraj = 0; iTraj < analParams.nGuides; iTraj++)
+		for (iTraj = 0; iTraj < pAnalParams->nGuides; iTraj++)
 		{
 			for (iFrame = 1; iFrame <= iLength; iFrame++)
 			{
-				ppFrames[iCurrentFrame - 
+				pAnalParams->ppFrames[iCurrentFrame - 
 					iFrame]->deterministic.pFMagTraj[iTraj] = 0;
-				ppFrames[iCurrentFrame - 
+				pAnalParams->ppFrames[iCurrentFrame - 
 					iFrame]->deterministic.pFFreqTraj[iTraj] = 0;
-				ppFrames[iCurrentFrame - 
+				pAnalParams->ppFrames[iCurrentFrame - 
 					iFrame]->deterministic.pFPhaTraj[iTraj] = 0;
 			}
-			pIState[iTraj] = -analParams.iMaxSleepingTime;
+			pIState[iTraj] = -pAnalParams->iMaxSleepingTime;
 		}
-		if (analParams.iDebugMode == DEBUG_CLEAN_TRAJ || 
-		    analParams.iDebugMode == DEBUG_ALL)
+		if (pAnalParams->iDebugMode == DEBUG_CLEAN_TRAJ || 
+		    pAnalParams->iDebugMode == DEBUG_ALL)
 			fprintf(stdout, "cleanTraj: frame %d to frame %d deleted\n",
-			        ppFrames[iCurrentFrame-iLength]->iFrameNum, 
-			        ppFrames[iCurrentFrame-1]->iFrameNum);
+			        pAnalParams->ppFrames[iCurrentFrame-iLength]->iFrameNum, 
+			        pAnalParams->ppFrames[iCurrentFrame-1]->iFrameNum);
 		return (1);
 	}
   
 	/* check every partial individually */
-	for (iTraj = 0; iTraj < analParams.nGuides; iTraj++)
+	for (iTraj = 0; iTraj < pAnalParams->nGuides; iTraj++)
 	{
 		/* trajectory after gap */
-		if(ppFrames[iCurrentFrame]->deterministic.pFMagTraj[iTraj] != 0)
+		if(pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFMagTraj[iTraj] != 0)
 		{ 
 			if(pIState[iTraj] < 0 && 
-			   pIState[iTraj] > -analParams.iMaxSleepingTime)
-				FillGap (iCurrentFrame, iTraj, pIState, analParams);
+			   pIState[iTraj] > -pAnalParams->iMaxSleepingTime)
+				FillGap (iCurrentFrame, iTraj, pIState, pAnalParams);
 			else
 				pIState[iTraj] = (pIState[iTraj]<0) ? 1 : pIState[iTraj]+1;
 		}
@@ -205,8 +205,8 @@ int CleanTrajectories (int iCurrentFrame, ANAL_PARAMS analParams)
 		else
 		{	   
 			if(pIState[iTraj] > 0 &&  
-			   pIState[iTraj] < analParams.iMinTrajLength)
-				DeleteShortTraj (iCurrentFrame, iTraj, pIState, analParams);
+			   pIState[iTraj] < pAnalParams->iMinTrajLength)
+				DeleteShortTraj (iCurrentFrame, iTraj, pIState, pAnalParams);
 			else 
 				pIState[iTraj] = (pIState[iTraj]>0) ? -1 : pIState[iTraj]-1;
 		}
@@ -224,14 +224,14 @@ int CleanTrajectories (int iCurrentFrame, ANAL_PARAMS analParams)
  *
  */
 void  ScaleDeterministic (float *pFSynthBuffer, float *pFOriginalBuffer, 
-                          float *pFMagTraj, ANAL_PARAMS analParams, int nTraj)
+                          float *pFMagTraj, ANAL_PARAMS *pAnalParams, int nTraj)
 {
 	float fOriginalMag = 0, fSynthesisMag = 0;
 	float fCosScaleFactor;
 	int iTraj, i;
   
 	/* get sound energy */
-	for (i = 0; i < analParams.sizeHop; i++)
+	for (i = 0; i < pAnalParams->sizeHop; i++)
 	{
 		fOriginalMag += fabs((double) pFOriginalBuffer[i]);
 		fSynthesisMag += fabs((double) pFSynthBuffer[i]);
@@ -243,10 +243,10 @@ void  ScaleDeterministic (float *pFSynthBuffer, float *pFOriginalBuffer,
 	{
 		fCosScaleFactor = fOriginalMag / fSynthesisMag;
       
-		if(analParams.iDebugMode == DEBUG_CLEAN_TRAJ || 
-		   analParams.iDebugMode == DEBUG_ALL)
+		if(pAnalParams->iDebugMode == DEBUG_CLEAN_TRAJ || 
+		   pAnalParams->iDebugMode == DEBUG_ALL)
 			fprintf (stdout, "Frame %d: magnitude scaled by %f\n",
-			         ppFrames[0]->iFrameNum, fCosScaleFactor);
+			         pAnalParams->ppFrames[0]->iFrameNum, fCosScaleFactor);
       
 		for (iTraj = 0; iTraj < nTraj; iTraj++)
 			if (pFMagTraj[iTraj] > 0)
