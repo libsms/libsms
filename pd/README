@@ -4,3 +4,11 @@ This is the start of a set of externals for SMS analysis/synthesis
 in Pd.  It is far from complete... 
 
 - Richie Eakin Feb 11, 2008 reakinator@gmail.com
+
+::: Updates :::
+
+June 2, 2008:
+- smsSynthFile~ is here.  It is a proof-of-concept external; it reads a file created
+  by smsAnal and synthesizes an interpolated frame in real-time.  The frmae is
+  chosen by a float at its inlet.  See the help pd file for details.
+
