@@ -1,75 +1,76 @@
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SMS Library Work Log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-* Issues to be delt with
+* Present Issues (todonow)
 ** [#B] plot stochastic coefficients at different rates to see if they are the same for diff sr
-** [#A] ways to get fftw working the same as realft:
-   - [ ] write both IFFT's (waveform) to txt file
-   - [ ] compare in python and relate data to FFT parameters
-   - [ ] where oh where is the fft getting normalized?
-        - check pFDetWindow, realft, four1
-        - follow samples to output
-*** python code comparisons:
-**** realft
-     - max: 0.63640058040618896
-     - min: -0.91893720626831055
-**** fftw
-     - max: 192.07719421386719 (real * 301.8)
-     - min: -284.82913208007812 (real * 310)
-
 ** [#B] ways to fix the stoc_ big crunch in the beginning:
+*** something to do with sin/sinc tables or SinePhasSynth?
 *** first check if area is consistent throughout different samples.
-** StocSynthIFFT goes haywire when synth samplerate is larger than orig
-   - I think this is fixed just by limiting sizeSpecUsed back to 1
 ** changing the framerate in smsAnal makes deterministic component empty. huh?
 *** Xavier suggests fund estimate is bad, so specify manually
 *** resample after analysis (delete 3 out of 4 frames, concatenate stoc_wave)
 ** what is the difference between smsClean and the cleaning within smsAnal?
-** can/is smsSynthDet be in smsSynth
 ** what is calcCorr in tools?
-** why is fRecordLoc an int in smsSynth?
-   - this makes the resample coeff InterpolateSmsRecords always = 0
-   - changed to float for now..
 * Pre-modifications: making analysis/plotting scripts
 ** DONE smsToYaml for importing into python
 ** TODO [#C] SWIG libsms wrappers for more convenient use in python
 ** DONE smsPlot.py for plotting smsData over a spectrogram of audio source.
 * to clean:
-** TODO make a function for returning a string to the error
+** TODO check for memory leaks
+   - [ ] sine/sinc tables
+   - [ ] stuff in SmsInitAnalysis
+*** TODO run memory leak detector
+** TODO static variables in smsAnalysis
+   - ComputeFrame
+   - Spectrum
+   - GetResidual
+** TODO append sms_ to functions declared in sms.h
+** DONE make a function for returning a string to the error
    - right now it is necessary to cop/paste a large block of code to do this
    - should replace the 'quit' function, and shouldn't exit by default
-** Globals:
-*** TODO FResidualPerc
+** DONE Globals:
+*** DONE Tables
+    - declare them in sms.h
+    - allocate in SmsInit()
+*** DONE pFrames/ppFrames
+*** DONE FResidualPerc
         - defined in variousFuntions for now, as SmsInit() is always called.
-** TODO SmsInit() should be a global init before anything..
-   - should it pass a pointer to an global sms struct? or just set global things..
+** DONE SmsInit() should be a global init before anything
 * Phase 1: Refactoring libsms for usage in real-time and release
-** TODO [#A] make samplerate independant of analysis/synthesis
-*** Investigating samplerate/framerate dependencies:
-**** How is resample making the current SMS_DATA frame?
-
-*** In order for real-time synthesis:
-**** iLastSample in smsSynth must be replaced with 
-        - iNumSamples will be a predefined buffer of samples to synthesis at one time,
-          indepenent of synthesis blocksize
-
 ** TODO [#A] - switch to FFTW3f for fft's
-***  TODO start with SineSynthIFFT until it sounds right
-***  DONE need to configure a fftw_plan outside of process loop, and allocate buffers there
-     - now in SYNTH_PARAMS
-***  make sure input size and output sizes are correct
-     - for realft: 
-       - sizeMag = size of fft; 128
-       - buffer in = 256, 2nd half is zeros
-       - [X] what is pFFftBuffer-1 ?: unit offset instead of zero-offset
+*** TODO Spectrum
+    - determinate seems to be handled correctly
+    - not stochastic; GetResidual is failing?
+       - the crap in the residual is periodic
+*** DONE start with SineSynthIFFT until it sounds right
+**** questions about SineSynthIFFT()
+     - [ ] why is nBins set to 8?
+            - SincTab is also hardcoded for index = 0:8
+     - [ ] why is the real component obtained by Mag * sin(theta)?
+            - shouldn't it be cos(theta)?
+**** periodic mess-ups in waveform:
+      - 9 samples of zero
+      - good samples: 44 ?
+      - then, discontinuities (+infinite?) :
 ** TODO [#A] switch build scripts to scons 
    - [ ] get env. exporting/importing fixed
-   - [ ] add install functionality
-** TODO [#B] update USAGE arguments to tell what different values do
-** TODO [#A] should have the option to store residual in audio samples or STFT frames
+   - [ ] add install/uninstall functionality
+** TODO [#B] convert from short to floating point data
+   - will need this for pd anyway
+   - everything is computed in float point, so why range from 0-16000   then?
+   - [X] temp fix by making a const multiplier SHORT_TO_FLOAT
+** TODO [#B] make sure pFStocGain is always set
+     - zero if no stoc component, 1 if wave, or val if StocSpectrum
+** TODO [#C] make example python scripts
+** TODO [#C] move smsMod's stochostic gain adjusting to 
+   - should stocGain be available for all stoc types?
+
+** DONE [#B] convert README's to manpages.
+   - [ ] update to fit new parameters
+   - [ ] proofread** DONE [#B] update USAGE arguments to tell what different values do
+** DONE [#A] should have the option to store residual in audio samples or STFT frames
 *** TODO organize analParams to allow for options:
    - [X] sound samples
-   - [ ] STFT frames with imag/real pairs
    - [X] filter approximation
    - [X] no stachostic component
 *** TODO reorganization of SmsSynthesis
@@ -96,40 +97,12 @@ SMS Library Work Log
     - [ ] make sure it is correctly stored in smsToYaml/smsPrint
 *** TODO modify smsResample to concatenate stocWave data
     - [ ] will take adding iWaveSamples to SMS_DATA
-** TODO [#B] convert from short to floating point data
-   - will need this for pd anyway
-   - everything is computed in float point, so why range from 0-16000   then?
-   - [X] temp fix by making a const multiplier SHORT_TO_FLOAT
-   - [ ] smsSynthDet is probably broken now...
-** TODO [#C] reorganize soundIO.  Some functions right now aren't used.. or can be combined with others
-***       - what is GetResidual's WriteResidualToFile supposed to be doing?
-          -actually, may have to have 2 seperate files at a time, since debugging
-          and regular sound file writing is occuring at the same time
-** TODO [#B] convert README's to manpages.
-   - [ ] update to fit new parameters
-   - [ ] proofread
-** TODO [#B] make sure pFStocGain is always set
-     - zero if no stoc component, 1 if wave, or val if StocSpectrum
-** TODO [#B] make example python scripts
-** TODO [#C] move smsMod's stochostic gain adjusting to 
-   - should stocGain be available for all stoc types?
+** DONE [#A] make samplerate independant of analysis/synthesis
+*** Investigating samplerate/framerate dependencies:
+**** How is resample making the current SMS_DATA frame?
 
+*** In order for real-time synthesis:
+**** iLastSample in smsSynth must be replaced with 
+        - iNumSamples will be a predefined buffer of samples to synthesis at one time,
+          indepenent of synthesis blocksize
 * Phase 2: building real-time pd externals for analysis/synthesis
-** will have to normalize audio to floating point abs(1)
-   - should everything in libsms be converted to this sample format?
-      - yes, but for now it is using a scalar at the end of synthesis
-
-
-** TODO [#A] draw schematics for getting audio samples from SMS_DATA in pd
-*** will need samplerate, numSamples requested, ... frame?
-*** what is input for controlling which frame to synth?
-      - frame number
-*** include in schematic all movement possibilities
-       - [ ] faster than normal
-       - [ ] slower than normal
-       - [ ] normal
-       - [ ] reverse normal
-       - [ ] start in middle
-       - [ ] end in middle
-*** include units of audio block size, requested block size, SMS_DATA rate size
-    
