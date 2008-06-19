@@ -48,10 +48,10 @@ void usage (void)
 }
 
 
-short MaxDelayFrames;
-float FResidualPerc;
-SOUND_BUFFER soundBuffer, synthBuffer;
-ANAL_FRAME **ppFrames, *pFrames;
+//short MaxDelayFrames;
+//float FResidualPerc;
+//SOUND_BUFFER soundBuffer, synthBuffer;
+//ANAL_FRAME **ppFrames, *pFrames;
 
 int main (int argc, char *argv[])
 {

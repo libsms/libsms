@@ -32,7 +32,7 @@
 
 #define USAGE "Usage: calcCorr [-t time] [-l length] [-n number] [-o type] <inputSnd2File>"
 
-short MaxDelayFrames;
+//short MaxDelayFrames;
 float FResidualPerc;
 SOUND_BUFFER soundBuffer, synthBuffer;
 ANAL_FRAME **ppFrames, *pFrames;

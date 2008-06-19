@@ -25,7 +25,7 @@
 #include "sms.h"
 #include "smsAnal.h"
 
-short MaxDelayFrames;
+//short MaxDelayFrames;
 char pChTextString[1024];
 
 #define USAGE "Usage: smsAnal [-d debugMode][-f format][-q soundType][-x analysisDirection][-s windowSize][-i windowType][-r frameRate][-j highestFreq][-k minPeakMag][-y refHarmonic][-u defaultFund][-l lowestFund][-h highestFund][-m minRefHarmMag][-z refHarmMagDiffFromMax][-n nGuides][-p nTrajectories][-v freqDeviation][-t peakContToGuide][-o fundContToGuide][-g cleanTraj][-a minTrajLength][-b maxSleepingTime][-e stochasticType][-c nStocCoeff] <inputSoundFile> <outputSmsFile>\n"
@@ -36,29 +36,30 @@ char pChTextString[1024];
  * SNDHeader *pSoundHeader; 	header input soundfile
  * SMSHeader *pSmsHeader;		  pointer to SMS header
  * FILE *pSmsFile;            pointer to output SMS file
- * ANAL_PARAMS analParams;		analysis parameters
+ * ANAL_PARAMS *pAnalParams;		analysis parameters
  *
  */
 static int ComputeSms (SNDHeader *pSoundHeader, SMSHeader *pSmsHeader,
-                       FILE *pSmsFile, ANAL_PARAMS analParams)
+                       FILE *pSmsFile, ANAL_PARAMS *pAnalParams)
 {
 	short pSoundData[MAX_SIZE_WINDOW];
 	SMS_DATA smsData;
 	long iStatus = 0, iSample = 0, iNextSizeRead = 0, sizeNewData = 0;
 	short iDoAnalysis = 1, iRecord = 0;
-
         /* allocate output SMS record */
 	AllocSmsRecord (pSmsHeader, &smsData);
-      
-	iNextSizeRead = (analParams.iDefaultSizeWindow + 1) / 2.0;
+
+	iNextSizeRead = (pAnalParams->iDefaultSizeWindow + 1) / 2.0;
+
   
-	if (analParams.iAnalysisDirection == REVERSE)
+	if (pAnalParams->iAnalysisDirection == REVERSE)
 		iSample = pSoundHeader->nSamples;
 
 	/* loop for analysis */
 	while(iDoAnalysis > 0)
 	{
-		if (analParams.iAnalysisDirection == REVERSE)
+
+		if (pAnalParams->iAnalysisDirection == REVERSE)
 		{
 			if ((iSample - iNextSizeRead) >= 0)
 				sizeNewData = iNextSizeRead;
@@ -74,7 +75,6 @@ static int ComputeSms (SNDHeader *pSoundHeader, SMSHeader *pSmsHeader,
 			else
 				sizeNewData = pSoundHeader->nSamples - iSample;
 		}
-
 		/* get one frame of sound */
 		if (GetSoundData (pSoundHeader, pSoundData, sizeNewData, iSample) < 0)
 		{
@@ -83,26 +83,29 @@ static int ComputeSms (SNDHeader *pSoundHeader, SMSHeader *pSmsHeader,
 		}
 		/* perform analysis of one frame of sound */
 		iStatus = SmsAnalysis (pSoundData, sizeNewData, &smsData, 
-		                       analParams, &iNextSizeRead);
-
+		                       pAnalParams, &iNextSizeRead);
 
 		/* if there is an output SMS record, write it */
 		if (iStatus == 1)
 		{
 			WriteSmsRecord (pSmsFile, pSmsHeader, &smsData);
-			if (iRecord % 10 == 0)
-				fprintf (stderr,"%.2f ", 
-				         iRecord / (float) pSmsHeader->iFrameRate);
+			if(1)//todo: add verbose flag
+                        {
+                                if (iRecord % 10 == 0)
+                                        fprintf (stderr, "%.2f ",
+                                                 iRecord / (float) pSmsHeader->iFrameRate);
+                        }
 			iRecord++;
 		}
-		else if (iStatus == -1)
+		else if (iStatus == -1) /* done */
 		{
 			iDoAnalysis = 0;
 			pSmsHeader->nRecords = iRecord;
 		}
+
 	}
-        fprintf(stderr, "\n");
-	pSmsHeader->fResidualPerc = analParams.fResidualPercentage / iRecord;
+        printf("\n");
+	pSmsHeader->fResidualPerc = pAnalParams->fResidualPercentage / iRecord;
 	return (1);
 }
 
@@ -407,11 +410,13 @@ static int FillAnalParams (ARGUMENTS arguments, ANAL_PARAMS *pAnalParams,
 		arguments.fMinTrajLength * arguments.iFrameRate;
 	pAnalParams->iMaxSleepingTime = 
 		arguments.fMaxSleepingTime * arguments.iFrameRate;
-	MaxDelayFrames = 
+	pAnalParams->iMaxDelayFrames = 
 		MAX(pAnalParams->iMinTrajLength, pAnalParams->iMaxSleepingTime) + 2 +
 			DELAY_FRAMES;
 	pAnalParams->fResidualPercentage = 0;
+
 	return (1);
+
 }
 
 /* main of the program
@@ -474,12 +479,15 @@ int main (int argc, char *argv[])
 	               SoundHeader.iSamplingRate, iHopSize);
 	WriteSmsHeader (pChOutputSmsFile, &smsHeader, &pOutputSmsFile);
 	if (analParams.iDebugMode == DEBUG_SYNC)
-		CreateDebugFile (analParams);
+		CreateDebugFile (&analParams);
 	if (analParams.iDebugMode == DEBUG_RESIDUAL)
-		CreateResidualFile (analParams);
-		
+		CreateResidualFile (&analParams);
+
+        SmsInit();
+        //init segfaults if here... why?
+        SmsInitAnalysis (&smsHeader, &analParams);
 	/* perform analysis */
-	ComputeSms (&SoundHeader, &smsHeader, pOutputSmsFile, analParams);
+	ComputeSms (&SoundHeader, &smsHeader, pOutputSmsFile, &analParams);
     
 	/* write an close output files */
 	WriteSmsFile (pOutputSmsFile, &smsHeader);
@@ -488,6 +496,7 @@ int main (int argc, char *argv[])
 	if (analParams.iDebugMode == DEBUG_SYNC)
 		WriteDebugFile ();
 
+        SmsFreeAnalysis(&analParams);
 	return 0;	
 }
 

@@ -1,3 +1,5 @@
+# -*- python -*-
+# scons script for building tools
 
 Import('env')
 
@@ -6,16 +8,9 @@ sms_tools = Split(' smsAnal smsSynth smsClean \
         	smsMod smsPrint smsResample \
         	smsToYaml' )
 
-#sms_cflags = '-g -Wall'
-#sms_libpath = '../src'
-
-sms_libs =  'm', 'sndfile', 'sms', 'fftw3f'
+env.Append(LIBS = 'sms',  CPPPATH = '../src', LIBPATH = '../src')
 
 for t in sms_tools:
 	t_src = t+'.c'
-	tool =env.Program( target = t, source = t_src, LIBS = sms_libs, CPPPATH = '../src', LIBPATH = '../src')
-        #I shouldn't have to append CPPPATH here because it is set in SConstruct.. but...
+	tool =env.Program( target = t, source = t_src)
         Depends(tool, '../src/libsms.a')
-
-  
- 

@@ -26,9 +26,9 @@
 #include "sms.h"
 
 
-SOUND_BUFFER soundBuffer, synthBuffer;
-ANAL_FRAME **ppFrames, *pFrames;
-short MaxDelayFrames;
+//SOUND_BUFFER soundBuffer, synthBuffer;
+//ANAL_FRAME **ppFrames, *pFrames;
+//short MaxDelayFrames;
 
 void usage (void)
 {
