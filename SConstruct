@@ -5,36 +5,19 @@ import os, sys
 
 EnsureSConsVersion(0, 96)
 
-sms_version = '0.1'
 
 # ::::::::::::::: Command-line options :::::::::::::::::::
 opts = Options()
 opts.AddOptions(
-    BoolOption('debug', 'set to build with debugging information', False)
+    BoolOption('debug', 'set to build with debugging information', False),
+    BoolOption('fftw', 'use FFTW3 library', False)
 )
 
 
+env = Environment( ENV = os.environ, CCFLAGS='-Wall ')
 
 
-    
-
-sms_srcpath = 'src'
-
-env = Environment( ENV = os.environ, CCFLAGS='-Wall ', CPPPATH = './src', LIBPATH = './src')
-#env.Append(CPPPATH =['./src'] )
-# env.Append(LIBPATH =['./src'] )
-# print 'ENV: ', env.Dump()
-
-use_fftw = ARGUMENTS.get('fftw', 0)
-debug_mode = ARGUMENTS.get('debug',0 )
-if int(use_fftw):
-    env.Append(CCFLAGS = '-DFFTW ')
-
-if int(debug_mode):
-    env.Append(CCFLAGS = '-g ')
-
-
-
+#print 'ENV: ', env.Dump()
 
 conf = Configure(env)
 if not conf.CheckLibWithHeader('m','math.h','c'):
@@ -43,14 +26,28 @@ if not conf.CheckLibWithHeader('m','math.h','c'):
 if not conf.CheckLibWithHeader('sndfile','sndfile.h','c'):
         print 'cannot find libsndfile'
         Exit(1)
-if not conf.CheckLibWithHeader('fftw3f','fftw3.h','c'):
-        print 'cannot find fft3w'
-        Exit(1)
-if not conf.CheckCHeader('sms.h'):
-        print 'cannot find sms.h'
-        Exit(1)
+
+
+use_fftw = ARGUMENTS.get('fftw', 0)
+if int(use_fftw):
+
+    if not conf.CheckLibWithHeader('fftw3f','fftw3.h','c'):
+        print 'cannot find fft3w, using realft()'
+    else:
+        env.Append(CCFLAGS = '-DFFTW ')
 
 env = conf.Finish()
+
+debug_mode = ARGUMENTS.get('debug',0 )
+if int(debug_mode):
+    env.Append(CCFLAGS = '-g ')
+
+
+
+
+
+
+
 
 #Export('env')
 
