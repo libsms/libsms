@@ -39,7 +39,7 @@ Pxx, freq, bins, im = specgram(sfdata, NFFT=2048, Fs= srate, noverlap=512)
 title(plotTitle)
 xlabel('time (seconds)')
 ylabel('frequency (hertz)')
-#axes().set_ylim(0,5000)
+axes().set_ylim(0,5000)
 show()
 
 
