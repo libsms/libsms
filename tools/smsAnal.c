@@ -28,7 +28,49 @@
 //short MaxDelayFrames;
 char pChTextString[1024];
 
-#define USAGE "Usage: smsAnal [-d debugMode][-f format][-q soundType][-x analysisDirection][-s windowSize][-i windowType][-r frameRate][-j highestFreq][-k minPeakMag][-y refHarmonic][-u defaultFund][-l lowestFund][-h highestFund][-m minRefHarmMag][-z refHarmMagDiffFromMax][-n nGuides][-p nTrajectories][-v freqDeviation][-t peakContToGuide][-o fundContToGuide][-g cleanTraj][-a minTrajLength][-b maxSleepingTime][-e stochasticType][-c nStocCoeff] <inputSoundFile> <outputSmsFile>\n"
+void usage (void)
+{
+    fprintf (stderr, "\n"
+             "Usage: smsAnal [options]  <inputSoundFile> <outputSmsFile>\n"
+             "\n"
+             "analyzes a sound file a stores it in a binary SMS file. All parameters are numbers."
+             "See the man page for details.\n\n"
+             "Options:\n"
+             "      --help (this message)\n"
+             "      -d    debugMode (default 0, none)\n"
+             "      -f    format (default 1, harmonic)\n"
+             "      -q    soundType (default 0, sound phrase)\n"
+             "      -x    analysis direction (default 0, direct)\n"
+             " STFT parameters:\n"
+             "      -s    windowSize (default 3.5 periods)\n"
+             "      -i    windowType (default 1, Blackman-Harris 62 db)\n"
+             "      -r    frameRate (default 400 hz)\n"
+             " Peak Detection parameters:\n"
+             "      -j    highestFreq (default 12000 hz)\n"
+             "      -k    minPeakMag (default 0 dB)\n"
+             " Harmonic Detection parameters:\n"
+             "      -y    refHarmonic (default 1)\n"
+             "      -m    minRefHarmMag (default 30 dB)\n"
+             "      -z    refHarmDiffFromMax (default 30 dB)\n"
+             "      -u    defaultFund (default 100 hz)\n"
+             "      -l    lowestFund (default 50 hz)\n"
+             "      -h    highestFund (default 1000 hz)\n"
+             " Peak Continuation parameters:\n"
+             "      -n    nGuides (default 100)\n"
+             "      -p    nTrajectories (default 60)\n"
+             "      -v    freqDeviation (default .45)\n"
+             "      -t    peakContGuide (default .4)\n"
+             "      -o    fundContToGuide (default .5)\n"
+             " Trajectory Cleaning parameters:\n"
+             "      -g    cleanTaj (default 1, yes)\n"
+             "      -a    minTrajLength (default .1 seconds)\n"
+             "      -v    maxSleepingTime (default .1 seconds)\n"
+             " Stochastic Analysis parameters:\n"
+             "      -e    stochasticType (default 2, approximated spectrum)\n"
+             "      -c    nStocCoeff (default 32)\n"
+             );
+        exit(1);
+}
 
 
 /* function to compute the SMS representation from a sound file
@@ -317,7 +359,7 @@ static int GetArguments (char *argv[], int argc, ARGUMENTS *pArguments)
 				              &pArguments->iStochasticType) < 0) 
 					printf("GetArguments: Invalid stochastic type");
 					break;
-				default:   printf(USAGE);
+                        default:   usage();
 			}
 		}
 	}
@@ -439,11 +481,9 @@ int main (int argc, char *argv[])
 	/* get user arguments */
 	if (argc > 3) 
 		GetArguments (argv, argc, &arguments);
-	else if (argc < 2)
-                {
-                        fprintf(stderr, USAGE);
-                        exit(1);
-                }
+	else if (argc < 2 || !strcmp( argv[1], "--help"))
+                usage();
+
 	pChInputSoundFile = argv[argc-2];
 	pChOutputSmsFile = argv[argc-1];
  
