@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 
-# now using libsndfile-python (http://arcsin.org/softwares/libsndfile-python.html)
+# using libsndfile-python from http://arcsin.org/softwares/libsndfile-python.html
 import sndfile
 #import aifc,  wave, sndhdr
 from pylab import *
@@ -14,10 +14,8 @@ try:
 except ImportError:
     from yaml import Loader, Dumper
 
-soundFilename ='/home/r/samples/instrumental/horn/Flugel/Flug-d5.aiff'
-#soundFilename = 'audio/piano.aiff'
-yamlFilename = '../tools/flugel.yaml'
-#yamlFilename = 'piano.yaml'
+soundFilename = 'audio/flugel.wav'
+yamlFilename = 'flugel.yaml'
 
 sf = sndfile.open(soundFilename, 'r')
 sfinfo = sf.get_info()
