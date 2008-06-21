@@ -1,7 +1,10 @@
 # -*- python -*-
 # scons script for libsms
 
-Import('env')
+Import('*')
+
+lib_prefix = prefix+'/lib'
+env.Alias('install', lib_prefix);
  
 sms_sources = Split(' sineSynth.c sinTab.c variousFunctions.c \
 		peakDetection.c harmDetection.c peakContinuation.c \
@@ -11,5 +14,5 @@ sms_sources = Split(' sineSynth.c sinTab.c variousFunctions.c \
 		getResidual.c interpolateArrays.c filterArray.c \
 		sincTab.c soundIO.c hybridize.c')
 
-env.Library( 'libsms', sms_sources )
-
+lib = env.Library( 'libsms', sms_sources )
+env.Install(lib_prefix, lib) 
