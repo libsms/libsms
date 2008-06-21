@@ -9,13 +9,15 @@ EnsureSConsVersion(0, 96)
 # ::::::::::::::: Command-line options :::::::::::::::::::
 opts = Options()
 opts.AddOptions(
-    BoolOption('debug', 'set to build with debugging information', False),
-    BoolOption('fftw', 'use FFTW3 library', False)
+    PathOption('prefix', 'Directory of architecture independant files.', '/usr/local'),
+    BoolOption('debug', 'Build with debugging information', False),
+    BoolOption('fftw', 'Use FFTW3 library.', False)
 )
 
 
-env = Environment( ENV = os.environ, CCFLAGS='-Wall ')
+env = Environment( ENV = os.environ, options = opts, CCFLAGS='-Wall ')
 
+Help(opts.GenerateHelpText(env))
 
 #print 'ENV: ', env.Dump()
 
@@ -27,22 +29,20 @@ if not conf.CheckLibWithHeader('sndfile','sndfile.h','c'):
         print 'cannot find libsndfile'
         Exit(1)
 
-
-use_fftw = ARGUMENTS.get('fftw', 0)
-if int(use_fftw):
-
+if int(ARGUMENTS.get('fftw', 0)):
     if not conf.CheckLibWithHeader('fftw3f','fftw3.h','c'):
         print 'cannot find fft3w, using realft()'
     else:
         env.Append(CCFLAGS = '-DFFTW ')
 
 env = conf.Finish()
+#done checking for libraries
 
-debug_mode = ARGUMENTS.get('debug',0 )
-if int(debug_mode):
+#debug_mode = ARGUMENTS.get('debug',0 )
+if int(ARGUMENTS.get('debug', 0 )):
     env.Append(CCFLAGS = '-g ')
 
-
+prefix = ARGUMENTS.get('prefix', '/usr/local')
 
 
 
@@ -51,5 +51,5 @@ if int(debug_mode):
 
 #Export('env')
 
-SConscript( ['src/SConscript', 'tools/SConscript'], exports= 'env' )
+SConscript( ['src/SConscript', 'tools/SConscript'], exports= ['env','prefix'] )
 
