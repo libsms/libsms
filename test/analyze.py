@@ -9,22 +9,13 @@ import os
 
 #smsfile = 'flugalD5.sms '
 
-infile = 'audio/piano.aiff '
-smsfile = 'piano.sms '
+infile = 'audio/flugel.wav '
+smsfile = 'sms/flugel.sms '
 
-
-
-
-
-
-
-
-
-
-arg = '-r400 ' # framerate of analysis in hertz
-arg += '-u65 '  # defaukt fundamental  in hertz
-arg += '-e0 ' # stochastic representation type (default: 2, line segments)
-
+arg = ''
+#arg = '-r400 ' # framerate of analysis in hertz
+#arg += '-u65 '  # defaukt fundamental  in hertz
+#arg += '-e0 ' # stochastic representation type (default: 2, line segments)
 
 makeYaml = True
 makeSynth = True
@@ -44,7 +35,7 @@ if makeYaml:
 
 if makeSynth:
     # make combined synth
-    synthfile  = os.path.splitext(os.path.basename(smsfile))[0]+'Synth.wav ' 
+    synthfile  = os.path.splitext(os.path.basename(smsfile))[0]+'Synth.aiff ' 
     arg = ' '
     smsSynth = '../tools/smsSynth'
     toSynth = smsSynth + arg + smsfile + synthfile
@@ -52,15 +43,15 @@ if makeSynth:
     os.system(toSynth)
 
     # make deterministic synth
-    synthfile  = os.path.splitext(os.path.basename(smsfile))[0]+'Det.wav ' 
-    arg = ' -d '
+    synthfile  = os.path.splitext(os.path.basename(smsfile))[0]+'Det.aiff ' 
+    arg = ' -s2 '
     toSynth = smsSynth + arg + smsfile + synthfile
     print toSynth
     os.system(toSynth)
 
     # make stochastic synth
-    synthfile  = os.path.splitext(os.path.basename(smsfile))[0]+'Stoc.wav ' 
-    arg = ' -n '
+    synthfile  = os.path.splitext(os.path.basename(smsfile))[0]+'Stoc.aiff ' 
+    arg = ' -s3 '
     toSynth = smsSynth + arg + smsfile + synthfile
     print toSynth
     os.system(toSynth)
