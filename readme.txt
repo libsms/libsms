@@ -18,17 +18,25 @@ directory.  As you will see, there are many issues still at hand, but the librar
 
 -Overview of subdirectories
 
-src                      - library source files used by sms programs.
-tools                   - small sms programs for analyzing, synthesizing and viewing data.
-         smsAnal             - computes a .sms file from a .snd file. 
-         smsSynth           - synthesizes a soundfile from a .sms file using IFFT.
-         smsClean	    - program to clean the .sms files.
-         smsPrint             - prints the contents of a .sms file.
+src                       - library source files used by sms programs.
+tools                     - small sms programs for analyzing, synthesizing and viewing data.
+         smsAnal          - computes a .sms file from a .snd file. 
+         smsSynth         - synthesizes a soundfile from a .sms file using IFFT.
+         smsClean	  - program to clean the .sms files.
+         smsPrint         - prints the contents of a .sms file.
          smsToYaml        - writes a .sms file to YAML text format.
-         smsResample     - supports frame rate decimation in a .sms file.
-man                    - man pages for the tools
-test                     - various python scripts and files for testing
-pd                      - pd externals (currently only 1) that use the sms library
+         smsResample      - supports frame rate decimation in a .sms file.
+man                       - man pages for the tools
+test                      - various python scripts and files for testing.  These
+                            take alot of python libs (yaml, sndfile, matplotlib)
+                            and are mainly used by me in a python shell, but they
+                            are also executable.  There are two right now:
+	analyze.py        - reads a sample, analyzes it, and synthesizes stochastic, 
+			    deterministic, and combined sound files.
+        smsPlot.py        - reads the .sms file created ith analyze.py (do it first)
+                            and graphs the deterministic component on top of the
+                            original sound file's spectrogram.
+pd                        - pd externals (currently only 1) that use the sms library
 
 - Standard way of using sms programs
 
