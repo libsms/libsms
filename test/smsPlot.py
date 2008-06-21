@@ -38,14 +38,14 @@ title(plotTitle)
 xlabel('time (seconds)')
 ylabel('frequency (hertz)')
 axes().set_ylim(0,5000)
-show()
+
 
 
 
 #import sms analysis data from yaml file
-#print 'loading', yamlFileName, '...'
+print 'loading', yamlFileName, '... it may take a while...'
 smsFile = load(open(yamlFilename).read(), Loader=Loader)
-
+print '... done loading.'
 nRecords = smsFile['smsHeader']['nRecords']
 nTraj = smsFile['smsHeader']['nTrajectories']
 
@@ -83,3 +83,7 @@ if smsFile['smsHeader']['iStochasticType'] == 'waveform' :
 
 if smsFile['smsHeader']['iStochasticType'] == 'approx' :
     print 'approx YEAAHH'
+
+
+#raw_input("hit Enter to close.")
+show()
