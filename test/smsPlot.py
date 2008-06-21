@@ -3,7 +3,6 @@
 
 # using libsndfile-python from http://arcsin.org/softwares/libsndfile-python.html
 import sndfile
-#import aifc,  wave, sndhdr
 from pylab import *
 from numpy import *
 # using the libyaml loader is much faster, if available
@@ -37,13 +36,12 @@ Pxx, freq, bins, im = specgram(sfdata, NFFT=2048, Fs= srate, noverlap=512)
 title(plotTitle)
 xlabel('time (seconds)')
 ylabel('frequency (hertz)')
-axes().set_ylim(0,5000)
 
 
 
 
 #import sms analysis data from yaml file
-print 'loading', yamlFileName, '... it may take a while...'
+print 'loading', yamlFilename, '... it may take a while...'
 smsFile = load(open(yamlFilename).read(), Loader=Loader)
 print '... done loading.'
 nRecords = smsFile['smsHeader']['nRecords']
@@ -74,16 +72,17 @@ for i in range(nTraj): # if traj has data, plot it
 
 
 # make an array of stocWave frames for one continuous waveform
-if smsFile['smsHeader']['iStochasticType'] == 'waveform' :
-    resWave = []
-    for i in range(nRecords):
-        resWave += smsData[i]['stocWave']
+#if smsFile['smsHeader']['iStochasticType'] == 'waveform' :
+#    resWave = []
+#    for i in range(nRecords):
+#        resWave += smsData[i]['stocWave']
 
-    Pxx, freq, bins, im = specgram(resWave, NFFT=2048, Fs= srate, noverlap=512)
+#    Pxx, freq, bins, im = specgram(resWave, NFFT=2048, Fs= srate, noverlap=512)
 
-if smsFile['smsHeader']['iStochasticType'] == 'approx' :
-    print 'approx YEAAHH'
+#if smsFile['smsHeader']['iStochasticType'] == 'approx' :
+#    print 'approx YEAAHH'
 
 
 #raw_input("hit Enter to close.")
+axes().set_ylim(0,5000)
 show()
