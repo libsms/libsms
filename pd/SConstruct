@@ -1,11 +1,11 @@
 # -*- python -*-
 # Top-level scons script for libsms and tools
 
-# is there a way to automatically remove the .os object files?
+# is there a way to automatically remove the .os object files? or maybe just move them to another folder
 
 import os
 
-sms_external = 'smsSynthFile~'
+sms_externals = Split(' smsbuf smsanal smssynth~' )
 
 debug_mode = ARGUMENTS.get('debug',0 )
 
@@ -34,6 +34,6 @@ elif os.name == 'nt':
 else:
     print "scons error: only linux, mac, and nt are covered so far"
 
-
-external = env.LoadableModule( target = 'smsSynthFile~', source = 'smsSynthFile~.c')
-Depends(external, '../src/libsms.a')
+for ext in sms_externals:
+    external = env.LoadableModule( target = ext, source = ext+'.c')
+    Depends(external, '../src/libsms.a')
