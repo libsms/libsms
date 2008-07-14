@@ -20,10 +20,16 @@
  */
 #include "sms.h"
 
-//extern ANAL_FRAME **ppFrames;
 /* debug text file */
 char *pChDebugFile = "debug.txt";
 FILE *pDebug;
+
+// RTE DEBUG //////////////////
+char *fn0 = "blarg0.txt";
+FILE *f0;
+char *fn1 = "blarg1.txt";
+FILE *f1;
+///////////////////////////////////
 
 /* function to create the debug file */
 int CreateDebugFile (ANAL_PARAMS *pAnalParams)
@@ -165,6 +171,7 @@ int GetResidual (float *pFSynthesis, float *pFOriginal,
 	if (pD == NULL)
 		pD = (float *) calloc(5, sizeof(float));	    
 
+        // RTE: why is the window made here.. why not globally or stored in ANAL_PARAMS?
 	if (pFWindow == NULL)
 	{
 		if ((pFWindow = (float *) calloc(sizeWindow, sizeof(float))) == NULL)
@@ -172,20 +179,42 @@ int GetResidual (float *pFSynthesis, float *pFOriginal,
 		Hamming (sizeWindow, pFWindow);
 	}
 
+        ///// RTE DEBUG ///////////////////////////////
+        if(f0 == NULL){
+                f0 =fopen(fn0, "w+");
+                f1 =fopen(fn1, "w+");
+        }
+
+        float rms = 0.0f;
+	for (i=0; i<sizeWindow; i++)
+                rms += pFOriginal[i] * pFOriginal[i];
+        rms = sqrt(rms / sizeWindow);
+//        printf("[%d] rms: %f \n", pAnalParams->ppFrames[0]->iFrameNum, rms);
+
+        ///////////////////////////////////////
+
+
 	/* get residual */
 	for (i=0; i<sizeWindow; i++)
-		pFResidual[i] = pFOriginal[i] - pFSynthesis[i];
+        {
+                pFResidual[i] = pFOriginal[i] - pFSynthesis[i];
+                fprintf(f0, "%f ", pFOriginal[i]); ///// RTE DEBUG
+                fprintf(f1, "%f ", pFSynthesis[i]); ///// RTE DEBUG
+        }
+
   
 	/* get energy of residual */
 	for (i=0; i<sizeWindow; i++)
-		fCurrentResidualMag += fabs((double) pFResidual[i] * pFWindow[i]);
+		fCurrentResidualMag += fabsf( pFResidual[i] * pFWindow[i]);
+
+
 
 	/* if residual is big enough compute coefficients */
 	if (fCurrentResidualMag/sizeWindow > .01)
 	{  
 		/* get energy of original */
 		for (i=0; i<sizeWindow; i++)
-			fCurrentOriginalMag += fabs((double) pFOriginal[i] * pFWindow[i]);
+			fCurrentOriginalMag += fabs( pFOriginal[i] * pFWindow[i]);
   
 		fOriginalMag = 
 			.5 * (fCurrentOriginalMag/sizeWindow + fOriginalMag);

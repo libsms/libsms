@@ -2,6 +2,8 @@
 SMS Library Work Log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 * Present Issues (todonow)
+** smsanal - GetSmsHeader is crashing the open function
+   - [ ] probably because x->pSmsBuf needs to be x->smsBuf (not a pointer)
 ** [#B] plot stochastic coefficients at different rates to see if they are the same for diff sr
 ** [#B] ways to fix the stoc_ big crunch in the beginning:
 *** something to do with sin/sinc tables or SinePhasSynth?
@@ -12,13 +14,22 @@ SMS Library Work Log
 ** what is the difference between smsClean and the cleaning within smsAnal?
 ** what is calcCorr in tools?
 * Pre-modifications: making analysis/plotting scripts
-** DONE smsToYaml for importing into python
 ** TODO [#C] SWIG libsms wrappers for more convenient use in python
-** DONE smsPlot.py for plotting smsData over a spectrogram of audio source.
+** DONE smsPlot.py for plotting smsData over a spectrogram of audio              
+** DONE smsToYaml for importing into python
 * to clean:
+** TODO why use smsHeader & analParams during analysis?
+*** header should only be for writing file
+** TODO export functions in smsAnal to library
+   - have to decide whether ARGUMENTS shoud be exported
+     as well, or if ANAL_PARAMS is enough and ARGUMENTS
+     should be removed
+   - [ ] FillAnalParams
+   - [ ] FillSmsHeader
 ** TODO check for memory leaks
    - [ ] sine/sinc tables
    - [ ] stuff in SmsInitAnalysis
+        - especially ANAL_FRAMES
 *** TODO run memory leak detector
 ** TODO static variables in smsAnalysis
    - ComputeFrame
@@ -39,9 +50,10 @@ SMS Library Work Log
 * Phase 1: Refactoring libsms for usage in real-time and release
 ** TODO [#A] - switch to FFTW3f for fft's
 *** TODO Spectrum
-    - determinate seems to be handled correctly
-    - not stochastic; GetResidual is failing?
-       - the crap in the residual is periodic
+    - deterministic seems to be handled correctly.. or is it?
+    - not stochastic
+       - PeakDetection is producing different results
+       - so, Spectrum must not be right identical yet
 *** DONE start with SineSynthIFFT until it sounds right
 **** questions about SineSynthIFFT()
      - [ ] why is nBins set to 8?
@@ -53,7 +65,7 @@ SMS Library Work Log
       - good samples: 44 ?
       - then, discontinuities (+infinite?) :
 ** TODO [#A] switch build scripts to scons 
-   - [ ] get env. exporting/importing fixed
+   - [X] get env. exporting/importing fixed
    - [ ] add install/uninstall functionality
 ** TODO [#B] convert from short to floating point data
    - will need this for pd anyway
@@ -62,9 +74,13 @@ SMS Library Work Log
 ** TODO [#B] make sure pFStocGain is always set
      - zero if no stoc component, 1 if wave, or val if StocSpectrum
 ** TODO [#C] make example python scripts
-** TODO [#C] move smsMod's stochostic gain adjusting to 
+** TODO [#C] move smsMod's stochostic gain adjusting to smsSynth
    - should stocGain be available for all stoc types?
 
+** TODO [#C] optimizing
+   - [ ] change fabs() to fabsf() if they don't need to be doubles
+   - [ ] same with floorf
+   - [ ] store magnitudes in RMS instead of db
 ** DONE [#B] convert README's to manpages.
    - [ ] update to fit new parameters
    - [ ] proofread** DONE [#B] update USAGE arguments to tell what different values do
@@ -106,3 +122,19 @@ SMS Library Work Log
         - iNumSamples will be a predefined buffer of samples to synthesis at one time,
           indepenent of synthesis blocksize
 * Phase 2: building real-time pd externals for analysis/synthesis
+** prototype: [smsSynthFile~]
+*** TODO crashes if you open a file when dsp is on
+** [smsbuf]
+*** TODO [#A] loads an sms file into a buffer
+**** a header/data should live 
+**** data is an array of sms records
+**** what else needs to be buffered?
+       - timetags? frametag     
+*** TODO [#C] stores the buffer to sms file
+** [smsanal]
+*** TODO [#A] reads a pd array and analyzes it
+*** TODO [#C] resamples the data to be a desired framerate
+** [smssynth]
+*** TODO [#A] has access to an [smsbuf] by symbol name
+*** TODO [#A] synthesizes the [smsbuf]
+** [smsedit]

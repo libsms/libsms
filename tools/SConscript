@@ -22,6 +22,7 @@ env.Alias('install', tools_prefix, "install_manpages")
 
 env.Append(LIBS = 'sms',  CPPPATH = '../src', LIBPATH = '../src')
 
+
 #build each tool
 for t in tools:
 	t_src = t+'.c'

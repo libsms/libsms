@@ -136,8 +136,8 @@ maximum sleeping time in seconds for a given trajectory. Time shorter than this 
 type for the stochastic representation: (0) waveform, (1) STFT real/imaginary pairs, (2) line segments on magnitude spectrum, (3) no stochastic analysis. The first time the analysis is done it is useful to set this to 3, this will let you check if the analysis was well done and the computation time will be much shorter.
 .TP 8
 .BI -c " nStocCoeff"
-.B (default 16) [4 <-> 64 for stochasticType type 2, 4 <-> 20 for stochasticType type 1]
-number of filter coefficients for the stochastic representation. When the stochastic type is set to 2 (line segments on magnitude spectrum), this number corresponds to the number of inflexion points.
+.B (default 32) [min 4]
+When the stochastic type is set to 2 (line segments on magnitude spectrum), this number corresponds to the number of inflexion points (will be interpolated to the necessary number of bins for the stochastic IFFT).
 .SH SEE ALSO
 smsSynth(1), smsSynthDet(1), smsClean(1), smsMod(1), smsPrint(1),
 smsResample(1), smsUnDb(1)

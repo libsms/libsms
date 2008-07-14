@@ -46,7 +46,7 @@ int SmsInitAnalysis ( SMSHeader *pSmsHeader, ANAL_PARAMS *pAnalParams)
         //todo: add a pSoundBuf to simplify things
 
 	int sizeBuffer = (pAnalParams->iMaxDelayFrames * pAnalParams->sizeHop) + MAX_SIZE_WINDOW;
-	int i, sizeFFT;
+	int i;
 
         AllocateSmsRecord (&pAnalParams->prevFrame, pAnalParams->nGuides, 
                            pSmsHeader->nStochasticCoeff, 1, pAnalParams->sizeHop, pAnalParams->iStochasticType);

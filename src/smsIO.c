@@ -199,17 +199,6 @@ int WriteSmsFile (FILE *pSmsFile, SMSHeader *pSmsHeader)
 int WriteSmsRecord (FILE *pSmsFile, SMSHeader *pSmsHeader, 
                     SMS_DATA *pSmsRecord)
 {  
-
-/*         //::::::::::::::::::::: RTE_DEBUG:::::::::::::::::: */
-/*         if(!debugFile)  debugFile = fopen("smsData.txt", "w+"); */
-/*         int i; */
-        
-/*         fprintf(debugFile, "\n frame %d :::::::::::::::::::::::::::\n", fc++); */
-        
-/*         for(i = 0; i < pSmsHeader->iRecordBSize / sizeof(float) ; i++) */
-/*                 fprintf(debugFile, "#%d: %f, ", i, pSmsRecord->pSmsData[i * sizeof(float)]); */
-/*         //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: */
-
 	if (fwrite ((void *)pSmsRecord->pSmsData, 1, pSmsHeader->iRecordBSize, 
 	            pSmsFile) < pSmsHeader->iRecordBSize)
 			quit ("Error: Cannot write SMS record");
@@ -222,23 +211,48 @@ int WriteSmsRecord (FILE *pSmsFile, SMSHeader *pSmsHeader,
  * SMSHeader *pSmsHeader;    pointer to SMS header
  *
  */
-/*
 int GetRecordBSize (SMSHeader *pSmsHeader)
 {
-	int iSize = 0, nGain = 1, nComp = 2;
+/* 	int iSize = 0, nGain = 1, nComp = 2; */
     
-	if (pSmsHeader->iStochasticType == STOC_NONE)
-		nGain = 0;
+/* 	if (pSmsHeader->iStochasticType == STOC_NONE) */
+/* 		nGain = 0; */
     
-	if (pSmsHeader->iFormat == FORMAT_HARMONIC_WITH_PHASE ||
-	    pSmsHeader->iFormat == FORMAT_INHARMONIC_WITH_PHASE)
-		nComp = 3;
+/* 	if (pSmsHeader->iFormat == FORMAT_HARMONIC_WITH_PHASE || */
+/* 	    pSmsHeader->iFormat == FORMAT_INHARMONIC_WITH_PHASE) */
+/* 		nComp = 3; */
      
-	iSize = sizeof (float) * (nComp * pSmsHeader->nTrajectories + 
-		pSmsHeader->nStochasticCoeff + nGain);
+/* 	iSize = sizeof (float) * (nComp * pSmsHeader->nTrajectories +  */
+/* 		pSmsHeader->nStochasticCoeff + nGain); */
+
+	int iSize, nDet;
+  
+	if (pSmsHeader->iFormat == FORMAT_HARMONIC ||
+	    pSmsHeader->iFormat == FORMAT_INHARMONIC)
+		nDet = 2;// freq, mag
+        else nDet = 3; // freq, mag, phase
+
+	iSize = sizeof (float) * (nDet * pSmsHeader->nTrajectories);
+
+	if (pSmsHeader->iStochasticType == STOC_WAVEFORM)
+        {       //numSamples
+//                iSize += sizeof(float) * iHopSize;
+                iSize +=sizeof(float) * ( (int)(pSmsHeader->iOriginalSRate / 
+                                                (float) pSmsHeader->iFrameRate));
+        }
+        else if(pSmsHeader->iStochasticType == STOC_IFFT)
+        {
+                //sizeFFT*2
+        }
+        else if(pSmsHeader->iStochasticType == STOC_APPROX)
+        {       //stocCoeff + 1 (gain)
+                iSize += sizeof(float) * (pSmsHeader->nStochasticCoeff + 1);
+        }
+
+//        printf("iSize: %d \n", iSize);
 	return(iSize);
 }	     
-*/   
+   
 
 /* function to read SMS header
  *
@@ -589,3 +603,5 @@ const char* SmsReadErrorStr(int iError)
         else 
                 return ("read error: error not defined"); 
 }
+
+ 

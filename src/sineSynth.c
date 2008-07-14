@@ -20,6 +20,8 @@
  */
 #include "sms.h"
 
+
+
 /* function to generate a sinusoid given two peaks, current and last
  * it interpolation between phase values and magnitudes   
  * float fFreq;              current frequency
@@ -154,33 +156,47 @@ int FrameSineSynth (SMS_DATA *pSmsData, float *pFBuffer,
                     int iSamplingRate)
 {
 
-  float fMag, fFreq;
-  int i, nTraj = pSmsData->nTraj, iHalfSamplingRate = iSamplingRate >> 1;
-            
-  /* go through all the trajectories */    
-  for (i = 0; i < nTraj; i++)
-  {
-    /* get magnitude */
-    fMag = pSmsData->pFMagTraj[i];
-      
-    fFreq = pSmsData->pFFreqTraj[i];
 
-    /* gaurd so transposed frequencies don't alias */
-    if (fFreq > iHalfSamplingRate || fFreq < 0) 
-      fMag = 0;
+        float fMag, fFreq;
+        int i, nTraj = pSmsData->nTraj, iHalfSamplingRate = iSamplingRate >> 1;
+        
+        /// RTE DEBUG //////////////
+//        static int fc = 0;
+//        printf(" # %d :::::::::::\n",fc++);
+        ///////////////////////////////////////
+
+        /* go through all the trajectories */    
+        for (i = 0; i < nTraj; i++)
+        {
+                /* get magnitude */
+                fMag = pSmsData->pFMagTraj[i];
       
-    /* generate sines if there are magnitude values */
-    if ((fMag > 0) || (pLastFrame->pFMagTraj[i] > 0))
-    {
-      /* frequency from Hz to radians */
-      fFreq = (fFreq == 0) ? 0 : TWO_PI * fFreq / iSamplingRate;
-	  
-      if (pSmsData->pFPhaTraj == NULL)
-        SineSynth(fFreq, fMag, pLastFrame, pFBuffer, sizeBuffer, i);
-      else
-        SinePhaSynth(fFreq, fMag, pSmsData->pFPhaTraj[i], pLastFrame, 
-	      	     pFBuffer, sizeBuffer, i);
-    }
-  }
-  return 1;
+                fFreq = pSmsData->pFFreqTraj[i];
+
+                /* gaurd so transposed frequencies don't alias */
+                if (fFreq > iHalfSamplingRate || fFreq < 0) 
+                        fMag = 0;
+      
+                /* generate sines if there are magnitude values */
+                if ((fMag > 0) || (pLastFrame->pFMagTraj[i] > 0))
+                {
+                        /* frequency from Hz to radians */
+                        fFreq = (fFreq == 0) ? 0 : TWO_PI * fFreq / iSamplingRate;
+
+
+                        // RTE TODO: make seperate function for SineSynth /wo phase
+                        if (pSmsData->pFPhaTraj == NULL)
+                        {                
+                                SineSynth(fFreq, fMag, pLastFrame, pFBuffer, sizeBuffer, i);
+                        }
+                        else
+                        {
+                                SinePhaSynth(fFreq, fMag, pSmsData->pFPhaTraj[i], pLastFrame, 
+                                             pFBuffer, sizeBuffer, i);
+                        }
+                }
+//                printf(" [%d] %f, ",i, pSmsData->pFPhaTraj[i]);
+        }
+//        printf("\n");
+        return 1;
 }     

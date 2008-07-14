@@ -126,16 +126,12 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsData,
 		if (pAnalParams->ppFrames[1]->iStatus != EMPTY &&
 		    pAnalParams->ppFrames[1]->iStatus != END)
 		{
-			/* allocate sine table */
-/* 			if (sms_tab_sine == NULL) */
-/* 				PrepSine(4096); */
- 
 			/* shift synthesis buffer */
-			memcpy ((char *) pAnalParams->synthBuffer.pFBuffer, (char *) 
-			        (pAnalParams->synthBuffer.pFBuffer+pAnalParams->sizeHop), 
+			memcpy ( pAnalParams->synthBuffer.pFBuffer, 
+                                 pAnalParams->synthBuffer.pFBuffer+pAnalParams->sizeHop, 
 			        sizeof(float) * pAnalParams->sizeHop);
-			memset ((char *) (pAnalParams->synthBuffer.pFBuffer+pAnalParams->sizeHop), 0,
-			        sizeof(float) * pAnalParams->sizeHop);
+			memset (pAnalParams->synthBuffer.pFBuffer+pAnalParams->sizeHop,
+                                0, sizeof(float) * pAnalParams->sizeHop);
       
 			/* get deterministic signal with phase  */
 			FrameSineSynth (&pAnalParams->ppFrames[1]->deterministic,
@@ -160,8 +156,10 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsData,
 				     sizeResidual);
 			if ((pFResidual = (float *) calloc (sizeResidual, sizeof(float))) 
 			    == NULL)
-				return -1;
-
+			{
+                                printf("SmsAnalysis: error allocating memory for pFResidual \n");
+                                return -1;
+                        }
 			/* obtain residual sound from original and synthesized sounds */
 			GetResidual (pAnalParams->synthBuffer.pFBuffer, pFData, pFResidual, sizeData, 
 			             pAnalParams);
@@ -256,13 +254,20 @@ void ComputeFrame (int iCurrentFrame, ANAL_PARAMS *pAnalParams,
 	/* compute the magnitude and phase spectra */
 	sizeMag = Spectrum(pFData, pAnalParams->ppFrames[iCurrentFrame]->iFrameSize,
 	                   pFMagSpectrum, pFPhaSpectrum, pAnalParams);
-  
+
+
+
 	/* find the prominent peaks */
 	pAnalParams->ppFrames[iCurrentFrame]->nPeaks = 
 		PeakDetection (pFMagSpectrum, pFPhaSpectrum, sizeMag, 
 		               pAnalParams->ppFrames[iCurrentFrame]->iFrameSize,
 		               pAnalParams->ppFrames[iCurrentFrame]->pSpectralPeaks,
 		               pAnalParams);
+
+        /// RTE DEBUG //////////////
+//        printf(" # %d , nPeaks: %d \n",iCurrentFrame, pAnalParams->ppFrames[iCurrentFrame]->nPeaks);
+        ///////////////////////////////////////
+
   
 	if (pAnalParams->iDebugMode == DEBUG_PEAK_DET || 
 	    pAnalParams->iDebugMode == DEBUG_ALL)
