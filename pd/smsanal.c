@@ -1,10 +1,6 @@
 #include "m_pd.h"
 #include "sms.h"
-#include "sms_pd.h"
-#ifdef NT
-#pragma warning( disable : 4244 )
-#pragma warning( disable : 4305 )
-#endif
+#include "smspd.h"
 
 /* ------------------------ smsanal ----------------------------- */
 
@@ -21,7 +17,7 @@ typedef struct _smsanal
         t_float f;
 	FILE *pSmsFile; 
         SYNTH_PARAMS synthParams;
-        t_smsBuffer smsBuf;
+//        t_smsBuffer smsBuf;
         t_outlet *outlet_ptr;
         t_atom a_ptr;
 } t_smsanal;
@@ -56,7 +52,7 @@ static void smsanal_open(t_smsanal *x, t_symbol *filename)
 {
         long iError;
         t_symbol *fullname;
-        SMSHeader *pHeader = (SMSHeader *)x->smsBuf.pSmsHeader;
+//        SMSHeader *pHeader = (SMSHeader *)x->smsBuf.pSmsHeader;
         x->s_filename = gensym(filename->s_name);
         fullname = getFullPathName(filename, x->canvas);
 
@@ -78,29 +74,29 @@ static void smsanal_open(t_smsanal *x, t_symbol *filename)
 /*                 FreeSmsRecord(&x->newSmsRecord); */
         }
 
-        if ((iError = GetSmsHeader (fullname->s_name, &x->smsBuf.pSmsHeader, &x->pSmsFile)) < 0)
-//        if ((iError = GetSmsHeader (fullname->s_name, &pHeader, &x->pSmsFile)) < 0)
-	{
-                pd_error(x, "smsanal_open: %s", SmsReadErrorStr(iError));
-                return;
-        }
+/*         if ((iError = GetSmsHeader (fullname->s_name, &x->smsBuf.pSmsHeader, &x->pSmsFile)) < 0) */
+/* //        if ((iError = GetSmsHeader (fullname->s_name, &pHeader, &x->pSmsFile)) < 0) */
+/* 	{ */
+/*                 pd_error(x, "smsanal_open: %s", SmsReadErrorStr(iError)); */
+/*                 return; */
+/*         } */
         //post("smsheader address: %p ", x->smsBuf.pSmsHeader);
-
+ 
 
         //SmsInitSynth( x->smsBuf.pSmsHeader, &x->synthParams );
         
         /* allocate memory for nframes of SMS_DATA */
 
-        x->nframes = x->smsBuf.pSmsHeader->nRecords;
+//        x->nframes = x->smsBuf.pSmsHeader->nRecords;
         post("nframes: %d ", x->nframes);
         /*Buffer the entire file in smsBuf.  For now, I'm doing this the simplest way possible.*/        
         // will this be faster with a malloc? try once everything is setup */
-        x->smsBuf.pSmsData = calloc(x->nframes, sizeof(SMS_DATA));
+//        x->smsBuf.pSmsData = calloc(x->nframes, sizeof(SMS_DATA));
         int i;
         for( i = 0; i < x->nframes; i++ )
         {
-                AllocSmsRecord (x->smsBuf.pSmsHeader,  &x->smsBuf.pSmsData[i]);
-                GetSmsRecord (x->pSmsFile, x->smsBuf.pSmsHeader, i, &x->smsBuf.pSmsData[i]);
+//                AllocSmsRecord (x->smsBuf.pSmsHeader,  &x->smsBuf.pSmsData[i]);
+//                GetSmsRecord (x->pSmsFile, x->smsBuf.pSmsHeader, i, &x->smsBuf.pSmsData[i]);
         }
 
         //x->gp.gp_stub = (t_gstub*)&x->smsBuf.pSmsData; 
@@ -114,14 +110,14 @@ static void smsanal_open(t_smsanal *x, t_symbol *filename)
 static void smsanal_info(t_smsanal *x)
 {
         // RTE TODO: once this pointer here works, post all header info, plus length of orig sample
-        SMSHeader *pHeader = x->smsBuf.pSmsHeader;
+//        SMSHeader *pHeader = x->smsBuf.pSmsHeader;
 
         post("sms file : %s ", x->s_filename->s_name );
 //        post("original file length: %f seconds ", (float)  pHeader->nRecords *
 //             x->synthParams.origSizeHop / pHeader->iOriginalSRate );
         post("__header info__");
-        post("fOriginalSRate: %d, iFrameRate: %d, origSizeHop: %d",
-             pHeader->iOriginalSRate, pHeader->iFrameRate, x->synthParams.origSizeHop);
+//        post("fOriginalSRate: %d, iFrameRate: %d, origSizeHop: %d",
+//             pHeader->iOriginalSRate, pHeader->iFrameRate, x->synthParams.origSizeHop);
 
 
 
@@ -160,12 +156,12 @@ static void *smsanal_new(void)
 static void smsanal_free(t_smsanal *x)
 {
         int i;
-        if(x->smsBuf.pSmsHeader != NULL) 
-        {
-                //SmsFreeSynth(&x->synthParams);
-                for( i = 0; i < x->nframes; i++)
-                        FreeSmsRecord(&x->smsBuf.pSmsData[i]);
-        }
+/*         if(x->smsBuf.pSmsHeader != NULL)  */
+/*         { */
+/*                 //SmsFreeSynth(&x->synthParams); */
+/*                 for( i = 0; i < x->nframes; i++) */
+/*                         FreeSmsRecord(&x->smsBuf.pSmsData[i]); */
+/*         } */
 }
 void smsanal_setup(void)
 {

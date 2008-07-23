@@ -1,20 +1,177 @@
 #include "m_pd.h"
 #include "sms.h"
-#ifdef NT
-#pragma warning( disable : 4244 )
-#pragma warning( disable : 4305 )
-#endif
+#include "smspd.h"
+/* ------------------------ smsbuf ----------------------------- */
+
+static t_class *smsbuf_class;
+
+typedef struct _smsbuf
+{
+        t_object x_obj;
+        t_canvas *canvas;
+        t_symbol *filename;
+        t_symbol *bufname;
+        t_int nframes;
+        t_int ready;
+	FILE *pSmsFile; //does this need to be in the struct?
+        char paramString[1024];
+        SMSHeader smsHeader;
+        SMS_DATA *smsData;
+} t_smsbuf;
+
+void CopySmsHeader( SMSHeader *pFileHeader, SMSHeader *pBufHeader, char *paramString  )
+{
+        InitSmsHeader (pBufHeader);
+
+        pBufHeader->nRecords = pFileHeader->nRecords;
+        pBufHeader->iFormat = pFileHeader->iFormat;
+        pBufHeader->iFrameRate = pFileHeader->iFrameRate;
+        pBufHeader->iStochasticType = pFileHeader->iStochasticType;
+        pBufHeader->nTrajectories = pFileHeader->nTrajectories;
+        pBufHeader->nStochasticCoeff = pFileHeader->nStochasticCoeff;
+        pBufHeader->iOriginalSRate = pFileHeader->iOriginalSRate;
+        pBufHeader->iRecordBSize = GetRecordBSize(pBufHeader);
+
+        pBufHeader->nTextCharacters = pFileHeader->nTextCharacters;
+        strcpy(paramString, pFileHeader->pChTextCharacters);
+        pBufHeader->pChTextCharacters = paramString;
+        
+}
+
+/* open function:
+ * 1. get fullname in a system independant manner
+ * 2. read file header
+ * 3. initialize the synthesizer based on header/synth params
+ * 4. because we are synthesizing from file, allocate space for sms frames
+ */
+static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
+{
+        SMSHeader *pSmsHeader;
+        long iError;
+        int i;
+        t_symbol *fullname;
+        x->filename = gensym(filename->s_name);
+        fullname = getFullPathName(filename, x->canvas);
+
+//        printf("smsheader address: %p ", &x->pSmsBuf->pSmsHeader);
+
+        if(fullname == NULL)
+        {
+                pd_error(x, "smsbuf_open: cannot find file: %s", filename->s_name);
+                return;
+        }
+        else post("file: %s", fullname->s_name);
+        //check if a file has been opened, close and init if necessary
+        if(x->nframes != 0)
+        {
+                post("smsbuf_open: re-initializing");
+                for( i = 0; i < x->nframes; i++)
+                        FreeSmsRecord(&x->smsData[i]);
+        }
+
+        if ((iError = GetSmsHeader (fullname->s_name, &pSmsHeader, &x->pSmsFile)) < 0)
+//        if ((iError = GetSmsHeader (fullname->s_name, &pHeader, &x->pSmsFile)) < 0)
+	{
+                pd_error(x, "smsbuf_open: %s", SmsReadErrorStr(iError));
+                return;
+        }
+        //post("smsheader address: %p ", x->smsBuf.pSmsHeader);
+
+        /* allocate memory for nframes of SMS_DATA */
+        x->nframes = pSmsHeader->nRecords;
+        if(0)post("nframes: %d ", x->nframes);
+        /*Buffer the entire file in smsBuf.  For now, I'm doing this the simplest way possible.*/        
+        // will this be faster with one malloc? try once everything is setup */
+        x->smsData = calloc(x->nframes, sizeof(SMS_DATA));
+        for( i = 0; i < x->nframes; i++ )
+        {
+                AllocSmsRecord (pSmsHeader,  &x->smsData[i]);
+                GetSmsRecord (x->pSmsFile, pSmsHeader, i, &x->smsData[i]);
+        }
+
+        /* copy header to buffer */
+        CopySmsHeader( pSmsHeader, &x->smsHeader, x->paramString );
+
+//        post("nRecords: %d ", x->pSmsHeader->nRecords);//x->nframes);
+        x->ready = 1;
+        post("sms file buffered: %s ", filename->s_name );
+        return;
+}
+
+static void smsbuf_info(t_smsbuf *x)
+{
+        post("sms file : %s ", x->filename->s_name );
+        post("original file length: %f seconds ", (float)  x->smsHeader.nRecords /
+             x->smsHeader.iFrameRate);
+        post("__header contents__");
+        post("Number of Frames: %d", x->smsHeader.nRecords);
+	post("Frame rate (Hz) = %d", x->smsHeader.iFrameRate);
+	post("Number of trajectories = %d", x->smsHeader.nTrajectories);
+	post("Number of stochastic coefficients = %d",
+    	   x->smsHeader.nStochasticCoeff);
+        if(x->smsHeader.iFormat == FORMAT_HARMONIC) 
+                post("Format = harmonic");
+        else if(x->smsHeader.iFormat == FORMAT_INHARMONIC) 
+                post("Format = inharmonic");
+        else if(x->smsHeader.iFormat == FORMAT_HARMONIC_WITH_PHASE)
+                post("Format = harmonic with phase");
+        else if(x->smsHeader.iFormat == FORMAT_INHARMONIC_WITH_PHASE)
+                post("Format = inharmonic with phase");
+	if(x->smsHeader.iStochasticType == STOC_WAVEFORM) post("Stochastic type = waveform");
+	else if(x->smsHeader.iStochasticType == STOC_IFFT) post("Stochastic type = IFFT");
+	else if(x->smsHeader.iStochasticType == STOC_APPROX)
+                post("Stochastic type = line segment magnitude spectrum approximation ");
+	else if(x->smsHeader.iStochasticType == STOC_NONE) post("Stochastic type = none");
+	post("Original sampling rate = %d", x->smsHeader.iOriginalSRate);  
+
+	if (x->smsHeader.nTextCharacters > 0)
+		post("ANALISIS ARGUMENTS: %s", x->smsHeader.pChTextCharacters);
+
+}
+
+static void *smsbuf_new(t_symbol *bufname)
+{
+        t_smsbuf *x = (t_smsbuf *)pd_new(smsbuf_class);
+
+        x->canvas = canvas_getcurrent();
+        x->filename = NULL;
+        x->nframes= 0;
+        x->ready= 0;
+
+        //todo: make a default name if none is given:
+        //if (!*s->s_name) s = gensym("delwrite~");
+        // ?? do in need to check if bufname already exists? ??
+        pd_bind(&x->x_obj.ob_pd, bufname);
+        x->bufname = bufname;
+        post("bufname: %s", bufname->s_name);
+
+        SmsInit();
+    
+        return (x);
+}
+
+static void smsbuf_free(t_smsbuf *x)
+{
+        int i;
+//        if(x->pSmsHeader != NULL) //shouldn't need this, if nframes = 0 nothing will happen
+        {
+                for( i = 0; i < x->nframes; i++)
+                        FreeSmsRecord(&x->smsData[i]);
+        }
+        pd_unbind(&x->x_obj.ob_pd, x->bufname);
+}
+void smsbuf_setup(void)
+{
+        smsbuf_class = class_new(gensym("smsbuf"), (t_newmethod)smsbuf_new, 
+                                       (t_method)smsbuf_free, sizeof(t_smsbuf), 0, A_DEFSYM, 0);
+        class_addmethod(smsbuf_class, (t_method)smsbuf_open, gensym("open"), A_DEFSYM, 0);
+        class_addmethod(smsbuf_class, (t_method)smsbuf_info, gensym("info"),  0);
+}
 
 /* ------------------------ smssynth~ ----------------------------- */
 
-
 #define SOURCE_FLOAT 1
 #define SOURCE_SIGNAL 2
-
-// helper functions
-
-
-
 
 static t_class *smssynth_class;
 
@@ -22,15 +179,68 @@ typedef struct _smssynth
 {
         t_object x_obj; 
         t_canvas *canvas;
-        t_symbol *s_filename;
+        t_symbol *bufname;
         t_int i_frame, i_frameSource, synthBufPos;
         t_float *synthBuf;
         t_float f;
-	FILE *pSmsFile; 
         SYNTH_PARAMS synthParams;
         SMSHeader *pSmsHeader;
-        SMS_DATA smsRecordL, smsRecordR, newSmsRecord;
+        SMS_DATA *pSmsData;
+        SMS_DATA interpolatedRecord;
 } t_smssynth;
+
+static void smssynth_read(t_smssynth *x, t_symbol *bufname)
+{
+        long iError;
+
+        if(!*bufname->s_name)
+        {
+                if(!*x->bufname->s_name)
+                {
+                        post("... don't have a bufname");
+                        return;
+                }
+                else post("using initial bufname: %s", x->bufname->s_name);
+        }
+        else
+        {
+                post("new bufname: %s", bufname->s_name);
+                x->bufname = bufname;
+        }
+        t_smsbuf *smsbuf =
+        (t_smsbuf *)pd_findbyclass(x->bufname, smsbuf_class);
+
+        if(!smsbuf)
+        {
+                error("smsbuf: %s was not found", x->bufname->s_name);
+                return;
+        }
+        if(!smsbuf->ready)
+        {
+                post("smsbuf not ready");
+                return;
+        }
+        else post("smsbuf IS REAAAAADDDDYY");
+ 
+        //check if a file has been opened, if so re-init
+        if(x->pSmsHeader != NULL)
+        {
+                post("smssynth_open: re-initializing");
+                SmsFreeSynth(&x->synthParams);                
+                FreeSmsRecord(&x->interpolatedRecord);
+        }
+        x->pSmsHeader = &smsbuf->smsHeader;
+        x->pSmsData = smsbuf->smsData;
+        SmsInitSynth( x->pSmsHeader, &x->synthParams );
+        
+	/* setup for interpolated synthesis from buffer */
+        // I guess I am always ignoring phase information for now..
+	AllocateSmsRecord (&x->interpolatedRecord, x->pSmsHeader->nTrajectories, 
+	                   x->pSmsHeader->nStochasticCoeff, 0,
+                           x->synthParams.origSizeHop, x->pSmsHeader->iStochasticType);
+
+        post("nrecords: %d", x->pSmsHeader->nRecords);
+}
 
 static t_int *smssynth_perform(t_int *w)
 {
@@ -52,13 +262,11 @@ static t_int *smssynth_perform(t_int *w)
                         iLeftRecord = MIN (x->pSmsHeader->nRecords - 1, floor (x->f)); 
                         iRightRecord = (iLeftRecord < x->pSmsHeader->nRecords - 2)
                                 ? (1+ iLeftRecord) : iLeftRecord;
+
+                        InterpolateSmsRecords (&x->pSmsData[iLeftRecord], &x->pSmsData[iRightRecord],
+                                               &x->interpolatedRecord, x->f - iLeftRecord);
                 
-                        GetSmsRecord (x->pSmsFile, x->pSmsHeader, iLeftRecord, &x->smsRecordL);
-                        GetSmsRecord (x->pSmsFile, x->pSmsHeader, iRightRecord,&x->smsRecordR);
-                        InterpolateSmsRecords (&x->smsRecordL, &x->smsRecordR, &x->newSmsRecord,
-                                               x->f - iLeftRecord);
-                
-                        SmsSynthesis (&x->newSmsRecord, x->synthBuf, &x->synthParams);
+                        SmsSynthesis (&x->interpolatedRecord, x->synthBuf, &x->synthParams);
                         x->synthBufPos = 0;
                 }
                 //check when blocksize is larger than hopsize... will probably crash
@@ -89,57 +297,10 @@ static void smssynth_source(t_smssynth *x, t_float f_source)
         }
 }
 
-/* open function:
-** todo: just make this an init function, for when the buffer signals a change
- */
-static void smssynth_open(t_smssynth *x, t_symbol *filename)
-{
-        long iError;
-        t_symbol *fullname;
-
-/*         x->s_filename = gensym(filename->s_name); */
-/*         fullname = getFullPathName(filename, x->canvas); */
-/*         if(fullname == NULL) */
-/*         { */
-                pd_error(x, "smssynth_open: cannot find file: %s", filename->s_name);
-                return;
-/*         } */
- 
-        //check if a file has been opened, close and init if necessary
-        if(x->pSmsHeader != NULL)
-        {
-                post("smssynth_open: re-initializing");
-                SmsFreeSynth(&x->synthParams);                
-                FreeSmsRecord(&x->smsRecordL);
-                FreeSmsRecord(&x->smsRecordR);
-                FreeSmsRecord(&x->newSmsRecord);
-        }
-        
-        if ((iError = GetSmsHeader (x->s_filename->s_name, &x->pSmsHeader, &x->pSmsFile)) < 0)
-	{
-                pd_error(x, "smssynth_open: %s", SmsReadErrorStr(iError));
-                return;
-        }
-
-        SmsInitSynth( x->pSmsHeader, &x->synthParams );
-        
-	/* setup for synthesis from file */
-        /* needs 3 frame buffers: left, right, and interpolated */
-	AllocSmsRecord (x->pSmsHeader, &x->smsRecordL);
-	AllocSmsRecord (x->pSmsHeader, &x->smsRecordR);
-        // I guess I am always ignoring phase information for now..
-	AllocateSmsRecord (&x->newSmsRecord, x->pSmsHeader->nTrajectories, 
-	                   x->pSmsHeader->nStochasticCoeff, 0,
-                           x->synthParams.origSizeHop, x->pSmsHeader->iStochasticType);
-
-        post("sms file initialized: %s ", filename->s_name );
-
-}
 
 static void smssynth_info(t_smssynth *x)
 {
 
-        post("sms file : %s ", x->s_filename->s_name );
         post("__arguments__");
         post("samplingrate: %d  ", x->synthParams.iSamplingRate);
         if(x->synthParams.iSynthesisType == STYPE_ALL) 
@@ -170,13 +331,14 @@ static void smssynth_dsp(t_smssynth *x, t_signal **sp)
         dsp_add(smssynth_perform, 4, x,  sp[0]->s_vec, sp[1]->s_vec, sp[0]->s_n);
 }
 
-static void *smssynth_new(void)
+static void *smssynth_new(t_symbol *bufname)
 {
         t_smssynth *x = (t_smssynth *)pd_new(smssynth_class);
         outlet_new(&x->x_obj, gensym("signal"));
         
-        x->canvas = canvas_getcurrent();
-        x->s_filename = NULL;
+        x->bufname = bufname;
+
+        x->pSmsHeader = NULL;
         x->i_frameSource = SOURCE_FLOAT;
 
         x->synthParams.iSynthesisType = STYPE_ALL;
@@ -197,18 +359,18 @@ static void smssynth_free(t_smssynth *x)
         if(x->pSmsHeader != NULL) 
         {
                 SmsFreeSynth(&x->synthParams);
-                FreeSmsRecord(&x->smsRecordL);
-                FreeSmsRecord(&x->smsRecordR);
-                FreeSmsRecord(&x->newSmsRecord);
+//                FreeSmsRecord(&x->smsRecordL);
+//                FreeSmsRecord(&x->smsRecordR);
+                FreeSmsRecord(&x->interpolatedRecord);
         }
 }
 void smssynth_tilde_setup(void)
 {
         smssynth_class = class_new(gensym("smssynth~"), (t_newmethod)smssynth_new, 
-                                       (t_method)smssynth_free, sizeof(t_smssynth), 0, A_DEFFLOAT, 0);
+                                       (t_method)smssynth_free, sizeof(t_smssynth), 0, A_DEFSYM, 0);
         CLASS_MAINSIGNALIN(smssynth_class, t_smssynth, f);
         class_addmethod(smssynth_class, (t_method)smssynth_dsp, gensym("dsp"), 0);
-        class_addmethod(smssynth_class, (t_method)smssynth_open, gensym("open"), A_DEFSYM, 0);
+        class_addmethod(smssynth_class, (t_method)smssynth_read, gensym("read"), A_DEFSYM, 0);
         class_addmethod(smssynth_class, (t_method)smssynth_info, gensym("info"),  0);
         class_addmethod(smssynth_class, (t_method)smssynth_sizehop, gensym("sizeHop"), A_DEFFLOAT, 0);
         class_addmethod(smssynth_class, (t_method)smssynth_source, gensym("source"), A_DEFFLOAT, 0);

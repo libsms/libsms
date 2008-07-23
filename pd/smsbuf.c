@@ -1,61 +1,24 @@
 #include "m_pd.h"
 #include "sms.h"
-#ifdef NT
-#pragma warning( disable : 4244 )
-#pragma warning( disable : 4305 )
-#endif
+#include "smspd.h"
+#include "smsbuf.h"
 
 /* ------------------------ smsbuf ----------------------------- */
 
 static t_class *smsbuf_class;
 
-typedef struct _smsbuf
-{
-        t_object x_obj; 
-        t_canvas *canvas;
-        t_symbol *s_filename;
-        t_symbol *bufname;
-        t_int nframes;
-	FILE *pSmsFile; 
-        SMSHeader *pSmsHeader;
-        SMS_DATA *pSmsData;
-} t_smsbuf;
+/* typedef struct _smsbuf */
+/* { */
+/*         t_object x_obj;  */
+/*         t_canvas *canvas; */
+/*         t_symbol *s_filename; */
+/*         t_symbol *bufname; */
+/*         t_int nframes; */
+/* 	FILE *pSmsFile;  */
+/*         SMSHeader *pSmsHeader; */
+/*         SMS_DATA *pSmsData; */
+/* } t_smsbuf; */
 
-//method for opening file in canvas directory.
-//Based on zexy's [msgfile], which is based on
-//Pd's [textfile]
-t_symbol* getFullPathName( t_symbol *infilename,  t_canvas *smsCanvas)
-{
-    char nameout[MAXPDSTRING], namebuf[MAXPDSTRING];
-    char dirresult[MAXPDSTRING], *nameresult;
-    char *dirname;
-    char *sym = infilename->s_name;    
-    dirname = canvas_getdir(smsCanvas)->s_name;
-
-    if((open_via_path(dirname, sym,"", dirresult, &nameresult, MAXPDSTRING, 0)) < 0) 
-            return(NULL);
-
-    namebuf[0] = 0;
-    if (*dirresult) //append directory
-    {
-            strcat(namebuf, dirresult);
-            strcat(namebuf, "/");
-    }
-    strcat(namebuf, nameresult); //append name
-    sys_bashfilename(namebuf, nameout);    // cross-platformize slashes
-    
-    if (0)
-    {
-            post("(open_via_path):");
-            post("dirname: %s", dirname);
-            post("filename->s_name: %s", sym);
-            post("dirresult: %s", dirresult);
-            post("nameresult: %s", nameresult);
-            post("namebuf: %s", namebuf);
-            post("nameout: %s ", nameout);
-    }
-    return(gensym( nameout ));
-} 
 
 /* open function:
  * 1. get fullname in a system independant manner
@@ -115,6 +78,7 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
         //outlet_pointer(x->outlet_ptr, &x->gp);
 
 //        post("nRecords: %d ", x->pSmsHeader->nRecords);//x->nframes);
+        x->ready = 1;
         post("sms file buffered: %s ", filename->s_name );
         return;
 }
@@ -150,6 +114,7 @@ static void *smsbuf_new(t_symbol *bufname)
         x->canvas = canvas_getcurrent();
         x->s_filename = NULL;
         x->nframes= 0;
+        x->ready= 0;
 
         //todo: make a default name if none is given:
         //if (!*s->s_name) s = gensym("delwrite~");

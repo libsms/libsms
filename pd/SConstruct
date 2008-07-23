@@ -5,7 +5,8 @@
 
 import os
 
-sms_externals = Split(' smsbuf smsanal smssynth~' )
+#sms_externals = Split(' smsbuf smsanal smssynth~' )
+smspd_sources =  Split(' smspd.c smsanal.c smssynth~.c' )
 
 debug_mode = ARGUMENTS.get('debug',0 )
 
@@ -34,6 +35,11 @@ elif os.name == 'nt':
 else:
     print "scons error: only linux, mac, and nt are covered so far"
 
-for ext in sms_externals:
-    external = env.LoadableModule( target = ext, source = ext+'.c')
-    Depends(external, '../src/libsms.a')
+
+#for ext in sms_externals:
+#    external = env.LoadableModule( target = ext, source = ext+'.c')
+#    Depends(external, '../src/libsms.a')
+
+
+smspd = env.LoadableModule( target = "smspd", source = smspd_sources)
+Depends(smspd, '../src/libsms.a')
