@@ -34,7 +34,7 @@ short MaxDelayFrames;
 int main (int argc, char *argv[])
 {
 	char *pChInputSmsFile = NULL, *pChOutputSoundFile = NULL;
-	SMSHeader *pSmsHeader;
+	SMS_Header *pSmsHeader;
 	FILE *pSmsFile;
 	SMS_DATA smsData;
 	short *pSSynthesis;

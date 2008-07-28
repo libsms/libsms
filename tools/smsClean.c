@@ -54,15 +54,15 @@ void SearchSms (SMS_DATA smsData, float *pFFreq, int *pIGoodRecords)
 /*
  *   calculate size of record in bytes
  */
-int CalcRecordBSize (SMSHeader *pSmsHeader, int nTrajectories)
+int CalcRecordBSize (SMS_Header *pSmsHeader, int nTrajectories)
 {
 	int iSize = 0, nGain = 1, nComp = 2;
     
 	if (pSmsHeader->iStochasticType == STOC_NONE)
 		nGain = 0;
     
-	if (pSmsHeader->iFormat == FORMAT_HARMONIC_WITH_PHASE ||
-	    pSmsHeader->iFormat == FORMAT_INHARMONIC_WITH_PHASE)
+	if (pSmsHeader->iFormat == SMS_FORMAT_HP ||
+	    pSmsHeader->iFormat == SMS_FORMAT_IHP)
 		nComp = 3;
      
 	iSize = sizeof (float) * (nComp * nTrajectories + 
@@ -117,7 +117,7 @@ void CleanSms (SMS_DATA inSmsData, SMS_DATA *pOutSmsData, int *pITrajOrder)
 int main (int argc, char *argv[])
 {
 	char *pChInputSmsFile = NULL, *pChOutputSmsFile = NULL;
-	SMSHeader *pInSmsHeader, OutSmsHeader;
+	SMS_Header *pInSmsHeader, OutSmsHeader;
 	FILE *pInSmsFile, *pOutSmsFile;
 	float *pFFreq;
 	SMS_DATA inSmsData, outSmsData;
@@ -170,7 +170,7 @@ int main (int argc, char *argv[])
 		}
 	
 	iRecordBSize = CalcRecordBSize (pInSmsHeader, iGoodTraj);
-	iHeadBSize = sizeof (SMSHeader);
+	iHeadBSize = sizeof (SMS_Header);
 	iDataBSize = iRecordBSize * pInSmsHeader->nRecords;
 	
 	InitSmsHeader (&OutSmsHeader);

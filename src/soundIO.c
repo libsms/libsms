@@ -34,9 +34,9 @@ const char *pChResidualFile = "residual.aiff";
 /*  open a sound file and check its header
  *
  * char *pChInputSoundFile;    name of soundfile
- * SNDHeader *pSoundHeader;    information of the sound
+ * SMS_SndHeader *pSoundHeader;    information of the sound
  */
-int OpenSound (char *pChInputSoundFile, SNDHeader *pSoundHeader)
+int OpenSound (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader)
 {
     memset (&sfSoundHeader, 0, sizeof (sfSoundHeader)) ;
     // read sound file
@@ -60,12 +60,12 @@ int OpenSound (char *pChInputSoundFile, SNDHeader *pSoundHeader)
 
 /* get a chunk of sound from input file 
  *
- * SNDHeader *pSoundHeader;       sound header information
+ * SMS_SndHeader *pSoundHeader;       sound header information
  * short *pSoundData;             buffer for samples read
  * short sizeSound;               number of samples read
  *
  */
-int GetSoundData (SNDHeader *pSoundHeader, short *pSoundData, long sizeSound,
+int GetSoundData (SMS_SndHeader *pSoundHeader, short *pSoundData, long sizeSound,
                   long offset) 
 {
 	long nSamples;

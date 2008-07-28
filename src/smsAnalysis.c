@@ -109,8 +109,8 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsData,
 	/* incorporate the peaks into the corresponding trajectories */
 	/* This is done after a DELAY_FRAMES delay  */
 	if (pAnalParams->ppFrames[iCurrentFrame - DELAY_FRAMES]->fFundamental > 0 ||
-	    ((pAnalParams->iFormat == FORMAT_INHARMONIC ||
-	      pAnalParams->iFormat == FORMAT_INHARMONIC_WITH_PHASE) &&
+	    ((pAnalParams->iFormat == SMS_FORMAT_IH ||
+	      pAnalParams->iFormat == SMS_FORMAT_IHP) &&
 	     pAnalParams->ppFrames[iCurrentFrame - DELAY_FRAMES]->nPeaks > 0))
 		PeakContinuation (iCurrentFrame - DELAY_FRAMES, pAnalParams);
     
@@ -214,8 +214,8 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsData,
 		        pAnalParams->ppFrames[0]->deterministic.pFFreqTraj, length);
 		memcpy ((char *) pSmsData->pFMagTraj, (char *) 	
 		         pAnalParams->ppFrames[0]->deterministic.pFMagTraj, length);
-		if (pAnalParams->iFormat == FORMAT_HARMONIC_WITH_PHASE ||
-		    pAnalParams->iFormat == FORMAT_INHARMONIC_WITH_PHASE)
+		if (pAnalParams->iFormat == SMS_FORMAT_HP ||
+		    pAnalParams->iFormat == SMS_FORMAT_IHP)
 			memcpy ((char *) pSmsData->pFPhaTraj, (char *) 	
 			        pAnalParams->ppFrames[0]->deterministic.pFPhaTraj, length);
 		return (1);
@@ -284,8 +284,8 @@ void ComputeFrame (int iCurrentFrame, ANAL_PARAMS *pAnalParams,
   
 	/* find a reference harmonic */
 	if (pAnalParams->ppFrames[iCurrentFrame]->nPeaks > 0 && 
-	    (pAnalParams->iFormat == FORMAT_HARMONIC ||
-	    pAnalParams->iFormat == FORMAT_HARMONIC_WITH_PHASE))
+	    (pAnalParams->iFormat == SMS_FORMAT_H ||
+	    pAnalParams->iFormat == SMS_FORMAT_HP))
 		HarmDetection (pAnalParams->ppFrames[iCurrentFrame], fRefFundamental, pAnalParams);
   
 	if (pAnalParams->iDebugMode == DEBUG_HARM_DET || 

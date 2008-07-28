@@ -35,7 +35,7 @@ ANAL_FRAME **ppFrames, *pFrames;
 int main (int argc, char *argv[])
 {
   char *pChInputSmsFile = NULL, *pChOutputSmsFile = NULL;
-  SMSHeader *pSmsHeader;
+  SMS_Header *pSmsHeader;
 	FILE *pSmsFile;
   SMS_DATA smsData;
   int iError, i;

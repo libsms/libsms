@@ -354,8 +354,8 @@ int PeakContinuation (int iFrame, ANAL_PARAMS analParams)
 			pGuides[iGuide].iPeakChosen = -1;
 			pGuides[iGuide].iStatus = DEAD;
 		}
-		if (analParams.iFormat == FORMAT_HARMONIC ||
-		    analParams.iFormat == FORMAT_HARMONIC_WITH_PHASE)
+		if (analParams.iFormat == SMS_FORMAT_H ||
+		    analParams.iFormat == SMS_FORMAT_HP)
 		for (iGuide = 0; iGuide < analParams.nGuides; iGuide++)
 			pGuides[iGuide].fFreq = analParams.fDefaultFundamental 
 			                        * (iGuide + 1);
@@ -363,8 +363,8 @@ int PeakContinuation (int iFrame, ANAL_PARAMS analParams)
 
 	/* update guides with fundamental contribution */
 	if (fFund > 0 &&
-	    (analParams.iFormat == FORMAT_HARMONIC ||
-	     analParams.iFormat == FORMAT_HARMONIC_WITH_PHASE))
+	    (analParams.iFormat == SMS_FORMAT_H ||
+	     analParams.iFormat == SMS_FORMAT_HP))
 		for(iGuide = 0; iGuide < analParams.nGuides; iGuide++)
 			pGuides[iGuide].fFreq = 
 				(1 - analParams.fFundContToGuide) * pGuides[iGuide].fFreq +        
@@ -404,8 +404,8 @@ int PeakContinuation (int iFrame, ANAL_PARAMS analParams)
       
 		pGuides[iGuide].iPeakChosen = -1;
     
-		if (analParams.iFormat == FORMAT_INHARMONIC ||
-		    analParams.iFormat == FORMAT_INHARMONIC_WITH_PHASE)
+		if (analParams.iFormat == SMS_FORMAT_IH ||
+		    analParams.iFormat == SMS_FORMAT_IHP)
 			fFreqDev = pGuides[iGuide].fFreq * analParams.fFreqDeviation;
       
 		/* get the best peak for the guide */
@@ -415,8 +415,8 @@ int PeakContinuation (int iFrame, ANAL_PARAMS analParams)
 	}
   
 	/* try to find good peaks for the DEAD guides */
-	if (analParams.iFormat == FORMAT_INHARMONIC ||
-	    analParams.iFormat == FORMAT_INHARMONIC_WITH_PHASE)
+	if (analParams.iFormat == SMS_FORMAT_IH ||
+	    analParams.iFormat == SMS_FORMAT_IHP)
 		for(iGuide = 0; iGuide < analParams.nGuides; iGuide++)
 		{
 			if (pGuides[iGuide].iStatus != DEAD)
@@ -435,8 +435,8 @@ int PeakContinuation (int iFrame, ANAL_PARAMS analParams)
 		if (pGuides[iGuide].iStatus == DEAD)
 			continue; 
 
-		if (analParams.iFormat == FORMAT_INHARMONIC ||
-		    analParams.iFormat == FORMAT_INHARMONIC_WITH_PHASE)
+		if (analParams.iFormat == SMS_FORMAT_IH ||
+		    analParams.iFormat == SMS_FORMAT_IHP)
 		{
 			if (pGuides[iGuide].iStatus > 0 &&
 			    pGuides[iGuide].iPeakChosen == -1)

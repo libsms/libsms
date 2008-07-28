@@ -54,7 +54,7 @@ void usage (void)
 int main (int argc, char *argv[])
 {
 	char *pChInputSmsFile = NULL, *pChOutputSoundFile = NULL;
-	SMSHeader *pSmsHeader;
+	SMS_Header *pSmsHeader;
 	FILE *pSmsFile; /* pointer to sms file to be synthesized */
 	SMS_DATA smsRecordL, smsRecordR, newSmsRecord; /* left, right, and interpolated records */
 	float *pFSynthesis; /* waveform synthesis buffer */

@@ -18,9 +18,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
-/*
- * header file for all the SMS programs
- *
+/*! \file sms.h
+ * \brief header file to be included in all SMS application
  */
 #ifndef _SMS_H
 #define _SMS_H
@@ -33,54 +32,76 @@
 #include <sndfile.h>
 #include <fftw3.h>
 
-/* structure for header of SMS file */
+/*! \struct SMS_Header 
+ *  \brief structure for the header of an SMS file 
+ *  
+ *  This header contains all the information necessary to read an SMS
+ *  file, prepare memory and synthesizer parameters.
+ *  
+ *  The header also contains variable components for additional information
+ *  that may be stored along with the analysis, such as descriptors or text.
+ *  \todo describe descriptors better.
+ *  \todo trying to change nRecords or nRecordBSize to *Frames* makes
+ *  reading the sms header impossible -- invesigate
+ */
 typedef struct 
 {
-	/* fix part */
-	int iSmsMagic;         /* magic number for SMS data file */
-	int iHeadBSize;        /* size in bytes of header */
-	int nRecords;	         /* number of data records */
-	int iRecordBSize;      /* size in bytes of data record */
-	int iFormat;           /* type of data format */
-	int iFrameRate;        /* rate in Hz of data records */
-	int iStochasticType;   /* representation of stochastic coefficients */
-	int nTrajectories;     /* number of trajectoires in each record */
-	int nStochasticCoeff;  /* number of stochastic coefficients in each	
- 	                          record */
-//        int sizeHop;            /* size of hop used in sinusoidal resynthesis */
-	float fAmplitude;      /* average amplitude of represented sound */
-	float fFrequency;      /* average fundamental frequency */
-	int iOriginalSRate;    /* sampling rate of original sound */
-	int iBegSteadyState;   /* record number of begining of steady state */
-	int iEndSteadyState;   /* record number of end of steady state */
-	float fResidualPerc;   /* percentage of the residual with respect to the 
-	                          original */
-	int nLoopRecords;      /* number of loop records specified */
-	int nSpecEnvelopePoints; /* number of breakpoints in spectral envelope */
-	int nTextCharacters;   /* number of text characters */
+	int iSmsMagic;         /*!< magic number for SMS data file 
+                                 \todo figure out what this magic number is for. */
+	int iHeadBSize;        /*!< size in bytes of header */
+	int nRecords;	         /*!< number of data records */
+	int iRecordBSize;      /*!< size in bytes of each data frame */
+	int iFormat;           /*!< type of data format 
+                                 \todo reference enum */
+	int iFrameRate;        /*!< rate in Hz of data frames */
+	int iStochasticType;   /*!< type stochastic representation */
+	int nTrajectories;     /*!< number of trajectoires per frame */
+	int nStochasticCoeff;  /*!< number of stochastic coefficients per frame  */
+	float fAmplitude;      /*!< average amplitude of represented sound
+                                \todo currently unused, cleanup */
+	float fFrequency;      /*!< average fundamental frequency
+                                \todo currently unused, cleanup */
+	int iOriginalSRate;    /*!< sampling rate of original sound */
+	int iBegSteadyState;   /*!< record number of begining of steady state
+                                \todo currently unused, cleanup */
+	int iEndSteadyState;   /*!< record number of end of steady state
+                                \todo currently unused, cleanup */
+	float fResidualPerc;   /*!< percentage of the residual to original */
+	int nLoopRecords;      /*< number of loop records specified */
+	int nSpecEnvelopePoints; /*< number of breakpoints in spectral envelope */
+	int nTextCharacters;   /*< number of text characters */
 	/* variable part */
-	int *pILoopRecords;    /* array of record numbers of loop points */
-	float *pFSpectralEnvelope; /* spectral envelope of partials */
-	char *pChTextCharacters; /* Textual information relating to the sound */
-} SMSHeader;
+	int *pILoopRecords;    /*!< array of record numbers of loop points */
+	float *pFSpectralEnvelope; /*!< spectral envelope of partials */
+	char *pChTextCharacters; /*!< Text string relating to the sound */
+} SMS_Header;
 
-/* structure  including sound header information */
+/*! \struct SMS_SndHeader 
+ *  \brief structure including sound header information 
+ */
 typedef struct {
-    long nSamples;       /* Number of samples in the sound */
+    int nSamples;       /* Number of samples in the sound */
     int iSamplingRate;   /* The sampling rate */
-    short channelCount;  /* The number of channels */
-    long sizeHeader;	     /* size of sound header in bytes */
-} SNDHeader;
+    int channelCount;  /* The number of channels */
+    int sizeHeader;	     /* size of sound header in bytes */
+} SMS_SndHeader;
 
 
+#define SMS_MAGIC 767  /*!<\brief I don't know what this is for. */
 
-#define SMS_MAGIC 767
+/*!  \brief analysis format */
+enum
+{
+        SMS_FORMAT_H = 1,
+        SMS_FORMAT_IH,
+        SMS_FORMAT_HP,
+        SMS_FORMAT_IHP,
+};
 
-/* for iFormat */
-#define FORMAT_HARMONIC 1
-#define FORMAT_INHARMONIC 2
-#define FORMAT_HARMONIC_WITH_PHASE 3
-#define FORMAT_INHARMONIC_WITH_PHASE 4
+// #define SMS_FORMAT_H 1
+// #define SMS_FORMAT_IH 2
+// #define SMS_FORMAT_HP 3
+// #define SMS_FORMAT_IHP 4
 
 /* Synthesis method for Deterministic */
 #define DET_IFFT 1
@@ -381,9 +402,9 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsRecord,
 
 int SmsInit( void );  
 
-int SmsInitAnalysis ( SMSHeader *pSmsHeader, ANAL_PARAMS *pAnalParams);
+int SmsInitAnalysis ( SMS_Header *pSmsHeader, ANAL_PARAMS *pAnalParams);
 
-int SmsInitSynth( SMSHeader *pSmsHeader, SYNTH_PARAMS *pSynthParams );
+int SmsInitSynth( SMS_Header *pSmsHeader, SYNTH_PARAMS *pSynthParams );
 
 int SmsFreeAnalysis (ANAL_PARAMS *pAnalParams);
 
@@ -483,28 +504,28 @@ int FrameSineSynth (SMS_DATA *pSmsRecord, float *pFBuffer,
 
 long random ();
 
-int WriteSmsHeader (char *pChFileName, SMSHeader *pSmsHeader, 
+int WriteSmsHeader (char *pChFileName, SMS_Header *pSmsHeader, 
                     FILE **ppOutSmsFile);
 
-int WriteSmsFile (FILE *pSmsFile, SMSHeader *pSmsHeader);
+int WriteSmsFile (FILE *pSmsFile, SMS_Header *pSmsHeader);
 
-int WriteSmsRecord (FILE *pSmsFile, SMSHeader *pSmsHeader, 
+int WriteSmsRecord (FILE *pSmsFile, SMS_Header *pSmsHeader, 
                     SMS_DATA *pSmsRecord);
 
-int InitSmsHeader (SMSHeader *pSmsHeader);
+int InitSmsHeader (SMS_Header *pSmsHeader);
 
-int AllocSmsRecord (SMSHeader *pSmsHeader, SMS_DATA *pSmsRecord);
+int AllocSmsRecord (SMS_Header *pSmsHeader, SMS_DATA *pSmsRecord);
 
 int AllocateSmsRecord (SMS_DATA *pSmsRecord, int nTraj, int nCoeff, 
                        int iPhase, int sizeHop, int stochType);
 
-int GetSmsRecord (FILE *pInputFile, SMSHeader *pSmsHeader, int iRecord,
+int GetSmsRecord (FILE *pInputFile, SMS_Header *pSmsHeader, int iRecord,
                   SMS_DATA *pSmsRecord);
 
-int GetSmsHeader (char *pChFileName, SMSHeader **ppSmsHeader,
+int GetSmsHeader (char *pChFileName, SMS_Header **ppSmsHeader,
                   	FILE **ppInputFile);
 
-int GetRecordBSize (SMSHeader *pSmsHeader);
+int GetRecordBSize (SMS_Header *pSmsHeader);
 
 const char* SmsReadErrorStr( int iError);
 
@@ -549,10 +570,10 @@ void ClearSine();
 
 void IFFTwindow (int sizeWindow, float *pFWindow);
 
-int GetSoundData (SNDHeader *pSoundHeader, short *pSoundData, long sizeSound,
+int GetSoundData (SMS_SndHeader *pSoundHeader, short *pSoundData, long sizeSound,
                   long offset);
 
-int OpenSound (char *pChInputSoundFile, SNDHeader *pSoundHeader);
+int OpenSound (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader);
 
 int CreateOutputSoundFile (SYNTH_PARAMS synthParams, char *pChOutputSoundFile);
 

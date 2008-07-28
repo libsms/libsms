@@ -64,9 +64,12 @@ SMS Library Work Log
       - 9 samples of zero
       - good samples: 44 ?
       - then, discontinuities (+infinite?) :
-** TODO [#A] switch build scripts to scons 
-   - [X] get env. exporting/importing fixed
-   - [ ] add install/uninstall functionality
+** TODO [#A] Doxygen documentation
+   - at the same time, rename functions to be coherent:
+       - structs get SMS_CamelCase
+       - functions get sms_camelCase 
+       - #defines get SMS_UPPER_CASE
+        - ?? should they be enums instead?
 ** TODO [#B] convert from short to floating point data
    - will need this for pd anyway
    - everything is computed in float point, so why range from 0-16000   then?
@@ -81,6 +84,9 @@ SMS Library Work Log
    - [ ] change fabs() to fabsf() if they don't need to be doubles
    - [ ] same with floorf
    - [ ] store magnitudes in RMS instead of db
+** DONE [#A] switch build scripts to scons
+   - [X] get env. exporting/importing fixed
+   - [ ] add install/uninstall functionality
 ** DONE [#B] convert README's to manpages.
    - [ ] update to fit new parameters
    - [ ] proofread** DONE [#B] update USAGE arguments to tell what different values do

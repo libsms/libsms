@@ -28,7 +28,7 @@ int main (int ac, char *av[])
 	char *pData, *inputFileName, *outputFileName;
 	int j, i, NRec, Ntrajet, counter=0;
 	float freqs, printfreqs, freqsm1, freqsp1, Sum=0.0;
-	SMSHeader *pSmsHeader;
+	SMS_Header *pSmsHeader;
 	SMS_DATA smsData;
   
         initSms(&smsData);

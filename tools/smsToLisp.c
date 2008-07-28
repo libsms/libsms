@@ -31,7 +31,7 @@ ANAL_FRAME **ppFrames, *pFrames;
 
 void main (int ac, char *av[])
 {
-	SMSHeader *pSmsHeader;
+	SMS_Header *pSmsHeader;
 	char *namedata, *outfile;
 	SMS_DATA smsData;
 	FILE *pSmsFile;
@@ -53,8 +53,8 @@ void main (int ac, char *av[])
 	}
 	AllocSmsRecord (pSmsHeader, &smsData);
 
-	havePhs = (!(pSmsHeader->iFormat == FORMAT_HARMONIC ||
-               pSmsHeader->iFormat == FORMAT_INHARMONIC));
+	havePhs = (!(pSmsHeader->iFormat == SMS_FORMAT_H ||
+               pSmsHeader->iFormat == SMS_FORMAT_IH));
 	haveStoch = (pSmsHeader->iStochasticType != STOC_NONE);
 	Ntrajet = pSmsHeader->nTrajectories;
 	NRec = pSmsHeader->nRecords;

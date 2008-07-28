@@ -29,7 +29,7 @@ ANAL_FRAME **ppFrames, *pFrames;
 
 void main (int argc, char *argv[])
 {
-	SMSHeader *pSmsHeader;
+	SMS_Header *pSmsHeader;
 	char *namedata;
 	SMS_DATA smsData;
 	int iError, i, j;
@@ -95,8 +95,8 @@ void main (int argc, char *argv[])
 		fprintf(fp,"];\n");
 	}
       
-	if (!(pSmsHeader->iFormat == FORMAT_HARMONIC ||
-	     pSmsHeader->iFormat == FORMAT_INHARMONIC))
+	if (!(pSmsHeader->iFormat == SMS_FORMAT_H ||
+	     pSmsHeader->iFormat == SMS_FORMAT_IH))
 	{
 		fprintf(fp,"\n%s_phases = zeros(%s_nrec,%s_ntraj);\n", namedata, namedata, 
 	            namedata);

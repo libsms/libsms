@@ -56,7 +56,7 @@ void usage (void)
 
 int main (int argc, char *argv[])
 {
-	SMSHeader *pSmsHeader;
+	SMS_Header *pSmsHeader;
 	FILE *pSmsFile;
 	SMS_DATA smsData;
 	int iError, i, j, iFormat = 1, iFirstFrame = 0, iLastFrame = -1, 
@@ -160,8 +160,8 @@ int main (int argc, char *argv[])
                                 if (iFormat != PRINT_STOC) 
                                 {
                                         printf("\n    det:\n");
-                                        if((pSmsHeader->iFormat == FORMAT_HARMONIC ||
-                                            pSmsHeader->iFormat == FORMAT_INHARMONIC))
+                                        if((pSmsHeader->iFormat == SMS_FORMAT_H ||
+                                            pSmsHeader->iFormat == SMS_FORMAT_IH))
                                         {
                                                 for(j = iFirstTraj; j < iLastTraj; j++)
                                                         printf("%5.2f[%2.4f]  ", smsData.pFFreqTraj[j], smsData.pFMagTraj[j]);

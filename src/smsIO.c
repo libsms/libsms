@@ -27,15 +27,15 @@
 
 /* initialize the header structure of an SMS file
  *
- * SMSHeader *pSmsHeader	header for SMS file
+ * SMS_Header *pSmsHeader	header for SMS file
  */
-int InitSmsHeader (SMSHeader *pSmsHeader)
+int InitSmsHeader (SMS_Header *pSmsHeader)
 {    
 	pSmsHeader->iSmsMagic = SMS_MAGIC;
-	pSmsHeader->iHeadBSize =  sizeof(SMSHeader);
+	pSmsHeader->iHeadBSize =  sizeof(SMS_Header);
 	pSmsHeader->nRecords = 0;
 	pSmsHeader->iRecordBSize = 0;
-	pSmsHeader->iFormat = FORMAT_HARMONIC;
+	pSmsHeader->iFormat = SMS_FORMAT_H;
 	pSmsHeader->iFrameRate = 0;
 	pSmsHeader->iStochasticType = STOC_APPROX;
 	pSmsHeader->nTrajectories = 0;
@@ -74,11 +74,11 @@ void InitSmsRecord (SMS_DATA *pSmsRecord)
 /* write SMS header to file
  *
  * char *pChFileName	   file name for SMS file
- * SMSHeader *pSmsHeader header for SMS file
+ * SMS_Header *pSmsHeader header for SMS file
  * FILE **ppSmsFile      file to be created
  *
  */
-int WriteSmsHeader (char *pChFileName, SMSHeader *pSmsHeader, 
+int WriteSmsHeader (char *pChFileName, SMS_Header *pSmsHeader, 
                     FILE **ppSmsFile)
 {
 	int iVariableSize = 0;
@@ -93,11 +93,11 @@ int WriteSmsHeader (char *pChFileName, SMSHeader *pSmsHeader,
 		sizeof (float) * pSmsHeader->nSpecEnvelopePoints +
 		sizeof(char) * pSmsHeader->nTextCharacters;
 
-	pSmsHeader->iHeadBSize = sizeof(SMSHeader) + iVariableSize;
+	pSmsHeader->iHeadBSize = sizeof(SMS_Header) + iVariableSize;
 
 	/* write header */
-	if (fwrite((void *)pSmsHeader, (size_t)1, (size_t)sizeof(SMSHeader),
-	    *ppSmsFile) < (size_t)sizeof(SMSHeader))
+	if (fwrite((void *)pSmsHeader, (size_t)1, (size_t)sizeof(SMS_Header),
+	    *ppSmsFile) < (size_t)sizeof(SMS_Header))
 		quit ("Error: Cannot write SMS header");
 	
 	/* write variable part of header */
@@ -134,10 +134,10 @@ int WriteSmsHeader (char *pChFileName, SMSHeader *pSmsHeader,
 /* rewrite SMS header and close file
  *
  * FILE *pChFileName	pointer to SMS file
- * SMSHeader *pSmsHeader header for SMS file
+ * SMS_Header *pSmsHeader header for SMS file
  *
  */
-int WriteSmsFile (FILE *pSmsFile, SMSHeader *pSmsHeader)
+int WriteSmsFile (FILE *pSmsFile, SMS_Header *pSmsHeader)
 {
 /*         fclose(debugFile); */
 
@@ -149,11 +149,11 @@ int WriteSmsFile (FILE *pSmsFile, SMSHeader *pSmsHeader)
 		sizeof (float) * pSmsHeader->nSpecEnvelopePoints +
 		sizeof(char) * pSmsHeader->nTextCharacters;
 
-	pSmsHeader->iHeadBSize = sizeof(SMSHeader) + iVariableSize;
+	pSmsHeader->iHeadBSize = sizeof(SMS_Header) + iVariableSize;
 
 	/* write header */
-	if (fwrite((void *)pSmsHeader, (size_t)1, (size_t)sizeof(SMSHeader),
-	    pSmsFile) < (size_t)sizeof(SMSHeader))
+	if (fwrite((void *)pSmsHeader, (size_t)1, (size_t)sizeof(SMS_Header),
+	    pSmsFile) < (size_t)sizeof(SMS_Header))
 		quit ("Error: Cannot write SMS header");
 	
 	/* write variable part of header */
@@ -192,11 +192,11 @@ int WriteSmsFile (FILE *pSmsFile, SMSHeader *pSmsHeader)
 /* write SMS record
  *
  * FILE *pSmsFile	        pointer to SMS file
- * SMSHeader *pSmsHeader  pointer to SMS header
+ * SMS_Header *pSmsHeader  pointer to SMS header
  * SMS_DATA *pSmsRecord   pointer to SMS data record
  *
  */
-int WriteSmsRecord (FILE *pSmsFile, SMSHeader *pSmsHeader, 
+int WriteSmsRecord (FILE *pSmsFile, SMS_Header *pSmsHeader, 
                     SMS_DATA *pSmsRecord)
 {  
 	if (fwrite ((void *)pSmsRecord->pSmsData, 1, pSmsHeader->iRecordBSize, 
@@ -208,18 +208,18 @@ int WriteSmsRecord (FILE *pSmsFile, SMSHeader *pSmsHeader,
 
 /* function return the size in bytes of the record in a SMS file 
  *
- * SMSHeader *pSmsHeader;    pointer to SMS header
+ * SMS_Header *pSmsHeader;    pointer to SMS header
  *
  */
-int GetRecordBSize (SMSHeader *pSmsHeader)
+int GetRecordBSize (SMS_Header *pSmsHeader)
 {
 /* 	int iSize = 0, nGain = 1, nComp = 2; */
     
 /* 	if (pSmsHeader->iStochasticType == STOC_NONE) */
 /* 		nGain = 0; */
     
-/* 	if (pSmsHeader->iFormat == FORMAT_HARMONIC_WITH_PHASE || */
-/* 	    pSmsHeader->iFormat == FORMAT_INHARMONIC_WITH_PHASE) */
+/* 	if (pSmsHeader->iFormat == SMS_FORMAT_HP || */
+/* 	    pSmsHeader->iFormat == SMS_FORMAT_IHP) */
 /* 		nComp = 3; */
      
 /* 	iSize = sizeof (float) * (nComp * pSmsHeader->nTrajectories +  */
@@ -227,8 +227,8 @@ int GetRecordBSize (SMSHeader *pSmsHeader)
 
 	int iSize, nDet;
   
-	if (pSmsHeader->iFormat == FORMAT_HARMONIC ||
-	    pSmsHeader->iFormat == FORMAT_INHARMONIC)
+	if (pSmsHeader->iFormat == SMS_FORMAT_H ||
+	    pSmsHeader->iFormat == SMS_FORMAT_IH)
 		nDet = 2;// freq, mag
         else nDet = 3; // freq, mag, phase
 
@@ -257,7 +257,7 @@ int GetRecordBSize (SMSHeader *pSmsHeader)
 /* function to read SMS header
  *
  * char *pChFileName;		      file name for SMS file
- * SMSHeader  *pSmsHeader;	SMS header
+ * SMS_Header  *pSmsHeader;	SMS header
  * FILE **ppSmsFile         pointer to inputfile
  *
  * returns SMS_NOPEN   if can't open
@@ -266,7 +266,7 @@ int GetRecordBSize (SMSHeader *pSmsHeader)
  *        SMS_MALLOC  if can't get memory
  *        SMS_OK      otherwise	
  */
-int GetSmsHeader (char *pChFileName, SMSHeader **ppSmsHeader,
+int GetSmsHeader (char *pChFileName, SMS_Header **ppSmsHeader,
                   FILE **ppSmsFile)
 {
 	int iHeadBSize, iRecordBSize, nRecords;
@@ -284,6 +284,7 @@ int GetSmsHeader (char *pChFileName, SMSHeader **ppSmsHeader,
 	if (iMagicNumber != SMS_MAGIC)
 		return (SMS_NSMS);
 
+
 	/* read size of of header */
 	if (fread ((void *) &iHeadBSize, (size_t) sizeof(int), (size_t)1, 
 		*ppSmsFile) < (size_t)1)
@@ -291,6 +292,7 @@ int GetSmsHeader (char *pChFileName, SMSHeader **ppSmsHeader,
 	
 	if (iHeadBSize <= 0)
 		return (SMS_RDERR);
+        printf("size of Header: %d \n ", iHeadBSize);
      
   /* read number of data Records */
   if (fread ((void *) &nRecords, (size_t) sizeof(int), (size_t)1, 
@@ -299,7 +301,7 @@ int GetSmsHeader (char *pChFileName, SMSHeader **ppSmsHeader,
 
 	if (nRecords <= 0)
 		return (SMS_RDERR);
-	
+        printf("nRecords: %d \n", nRecords);
   /* read size of data Records */
 	if (fread ((void *) &iRecordBSize, (size_t) sizeof(int), (size_t)1, 
 	           *ppSmsFile) < (size_t)1)
@@ -309,7 +311,7 @@ int GetSmsHeader (char *pChFileName, SMSHeader **ppSmsHeader,
 		return (SMS_RDERR);
 
 	/* allocate memory for header */
-	if (((*ppSmsHeader) = (SMSHeader *)malloc (iHeadBSize)) == NULL)
+	if (((*ppSmsHeader) = (SMS_Header *)malloc (iHeadBSize)) == NULL)
 		return (SMS_MALLOC);
 
 	/* read header */
@@ -320,16 +322,16 @@ int GetSmsHeader (char *pChFileName, SMSHeader **ppSmsHeader,
 	/* set pointers to variable part of header */
 	if ((*ppSmsHeader)->nLoopRecords > 0)
 		(*ppSmsHeader)->pILoopRecords = (int *) ((char *)(*ppSmsHeader) + 
-			sizeof(SMSHeader));
+			sizeof(SMS_Header));
 						
 	if ((*ppSmsHeader)->nSpecEnvelopePoints > 0)
 		(*ppSmsHeader)->pFSpectralEnvelope = 
-			(float *) ((char *)(*ppSmsHeader) + sizeof(SMSHeader) + 
+			(float *) ((char *)(*ppSmsHeader) + sizeof(SMS_Header) + 
 			           sizeof(int) * (*ppSmsHeader)->nLoopRecords);
 			
 	if ((*ppSmsHeader)->nTextCharacters > 0)
 		(*ppSmsHeader)->pChTextCharacters = 
-			(char *) ((char *)(*ppSmsHeader) + sizeof(SMSHeader) + 
+			(char *) ((char *)(*ppSmsHeader) + sizeof(SMS_Header) + 
 			sizeof(int) * (*ppSmsHeader)->nLoopRecords +
 			sizeof(float) * (*ppSmsHeader)->nSpecEnvelopePoints);
 
@@ -339,7 +341,7 @@ int GetSmsHeader (char *pChFileName, SMSHeader **ppSmsHeader,
 /* function to read SMS data record
  *
  * FILE *pSmsFile;		     pointer to SMS file
- * SMSHeader *pSmsHeader;	   pointer to SMS header
+ * SMS_Header *pSmsHeader;	   pointer to SMS header
  * int iRecord;              record number
  * SMS_DATA *pSmsRecord;       pointer to SMS record
  *
@@ -347,7 +349,7 @@ int GetSmsHeader (char *pChFileName, SMSHeader **ppSmsHeader,
  *        SMS_OK      if it could read the data
  *	
  */
-int GetSmsRecord (FILE *pSmsFile, SMSHeader *pSmsHeader, int iRecord,
+int GetSmsRecord (FILE *pSmsFile, SMS_Header *pSmsHeader, int iRecord,
                   SMS_DATA *pSmsRecord)
 {    
 	if (fseek (pSmsFile, pSmsHeader->iHeadBSize + iRecord * 
@@ -371,17 +373,17 @@ int GetSmsRecord (FILE *pSmsFile, SMSHeader *pSmsHeader, int iRecord,
 
 /* function to allocate an SMS data record
  *
- * SMSHeader *pSmsHeader;	   pointer to SMS header
+ * SMS_Header *pSmsHeader;	   pointer to SMS header
  * SMS_DATA *pSmsRecord;     pointer to SMS record
  *
  * returns
  *        SMS_OK      if it could read the data
  *	      SMS_MALLOC  if it could not allocate record
  */
-int AllocSmsRecord (SMSHeader *pSmsHeader, SMS_DATA *pSmsRecord)
+int AllocSmsRecord (SMS_Header *pSmsHeader, SMS_DATA *pSmsRecord)
 {
-	int iPhase = (pSmsHeader->iFormat == FORMAT_HARMONIC_WITH_PHASE ||
-	              pSmsHeader->iFormat == FORMAT_INHARMONIC_WITH_PHASE) ? 1 : 0;
+	int iPhase = (pSmsHeader->iFormat == SMS_FORMAT_HP ||
+	              pSmsHeader->iFormat == SMS_FORMAT_IHP) ? 1 : 0;
         int sizeHop = pSmsHeader->iOriginalSRate / pSmsHeader->iFrameRate;
 
 	return (AllocateSmsRecord (pSmsRecord, pSmsHeader->nTrajectories, 

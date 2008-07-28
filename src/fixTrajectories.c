@@ -61,8 +61,8 @@ static void FillGap (int iCurrentFrame, int iTraj, int *pIState,
   
 	/* if inharmonic format and the two extremes are very different  */
 	/* do not interpolate, it means that they are different trajectories */
-	if ((pAnalParams->iFormat == FORMAT_INHARMONIC ||
-	     pAnalParams->iFormat == FORMAT_INHARMONIC_WITH_PHASE) &&
+	if ((pAnalParams->iFormat == SMS_FORMAT_IH ||
+	     pAnalParams->iFormat == SMS_FORMAT_IHP) &&
 		(MIN (fFirstFreq, fLastFreq) * .5 * pAnalParams->fFreqDeviation <
 	     fabs ((double) fLastFreq - fFirstFreq)))
 	{
@@ -158,8 +158,8 @@ int CleanTrajectories (int iCurrentFrame, ANAL_PARAMS *pAnalParams)
 		pIState = (int *) calloc (pAnalParams->nGuides, sizeof(int));
   
 	/* if fundamental and first partial are short, delete everything */
-	if ((pAnalParams->iFormat == FORMAT_HARMONIC ||
-	     pAnalParams->iFormat == FORMAT_HARMONIC_WITH_PHASE) &&
+	if ((pAnalParams->iFormat == SMS_FORMAT_H ||
+	     pAnalParams->iFormat == SMS_FORMAT_HP) &&
 	     pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFMagTraj[0] == 0 &&
 	     pIState[0] > 0 &&
 	     pIState[0] < pAnalParams->iMinTrajLength &&

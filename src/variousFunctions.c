@@ -39,7 +39,7 @@ int SmsInit( void )
  * ANAL_PARAMS analParams;    analysis paramaters
  *
  */
-int SmsInitAnalysis ( SMSHeader *pSmsHeader, ANAL_PARAMS *pAnalParams)
+int SmsInitAnalysis ( SMS_Header *pSmsHeader, ANAL_PARAMS *pAnalParams)
 {
 
         SOUND_BUFFER *pSynthBuf = &pAnalParams->synthBuffer;
@@ -120,7 +120,7 @@ int SmsInitAnalysis ( SMSHeader *pSmsHeader, ANAL_PARAMS *pAnalParams)
 	return (1);
 }
 
-int SmsInitSynth( SMSHeader *pSmsHeader, SYNTH_PARAMS *pSynthParams )
+int SmsInitSynth( SMS_Header *pSmsHeader, SYNTH_PARAMS *pSynthParams )
 {
         /* set synthesis parameters from arguments and header */
 	pSynthParams->iOriginalSRate = pSmsHeader->iOriginalSRate;

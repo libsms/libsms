@@ -34,7 +34,7 @@
 int main (int argc, char *argv[])
 {
 	char *pChInputSmsFile = NULL, *pChOutputSmsFile = NULL;
-	SMSHeader *pSmsHeader;
+	SMS_Header *pSmsHeader;
 	FILE *pInSmsFile, *pOutSmsFile;
 	SMS_DATA inSmsData;
 	int iError, iFactor, i;

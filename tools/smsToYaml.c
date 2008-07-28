@@ -56,7 +56,7 @@ void usage (void)
 int main (int argc, char *argv[])
 {
      char *pChInputSmsFile = NULL, *pChOutputYamlFile = NULL;
-     SMSHeader *pSmsHeader;
+     SMS_Header *pSmsHeader;
      FILE *pSmsFile, *fp;
      SMS_DATA smsData;
      int iError, i, j, nSamples, iFormat = 1, iFirstFrame = 0, iLastFrame = -1, 
@@ -113,13 +113,13 @@ int main (int argc, char *argv[])
      fprintf(fp,"    nTrajectories    : %d\n", pSmsHeader->nTrajectories);
      fprintf(fp,"    nStochasticCoeff : %d\n", pSmsHeader->nStochasticCoeff);
      fprintf(fp,"    iFormat          : ");
-     if(pSmsHeader->iFormat == FORMAT_HARMONIC) 
+     if(pSmsHeader->iFormat == SMS_FORMAT_H) 
           fprintf(fp,"harmonic\n");
-     else if(pSmsHeader->iFormat == FORMAT_INHARMONIC) 
+     else if(pSmsHeader->iFormat == SMS_FORMAT_IH) 
           fprintf(fp,"inharmonic\n");
-     else if(pSmsHeader->iFormat == FORMAT_HARMONIC_WITH_PHASE) 
+     else if(pSmsHeader->iFormat == SMS_FORMAT_HP) 
           fprintf(fp,"harmonic_with_phase\n");
-     else if(pSmsHeader->iFormat == FORMAT_INHARMONIC_WITH_PHASE) 
+     else if(pSmsHeader->iFormat == SMS_FORMAT_IHP) 
           fprintf(fp,"inharmonic_with_phase\n");
      fprintf(fp,"    iStochasticType  : ");
      if(pSmsHeader->iStochasticType == STOC_WAVEFORM) 
@@ -186,14 +186,14 @@ int main (int argc, char *argv[])
                fprintf(fp,"    timetag  : %f \n", (float) i / pSmsHeader->iFrameRate);
                if(iFormat != 3)
                {
-                    if(pSmsHeader->iFormat == FORMAT_HARMONIC ||
-                       pSmsHeader->iFormat == FORMAT_HARMONIC_WITH_PHASE)
+                    if(pSmsHeader->iFormat == SMS_FORMAT_H ||
+                       pSmsHeader->iFormat == SMS_FORMAT_HP)
                          fprintf(fp,"    harmonics:\n");
-                    if(pSmsHeader->iFormat == FORMAT_INHARMONIC ||
-                       pSmsHeader->iFormat == FORMAT_INHARMONIC_WITH_PHASE)
+                    if(pSmsHeader->iFormat == SMS_FORMAT_IH ||
+                       pSmsHeader->iFormat == SMS_FORMAT_IHP)
                          fprintf(fp,"    tracks:\n");
-                    if (pSmsHeader->iFormat == FORMAT_HARMONIC ||
-                        pSmsHeader->iFormat == FORMAT_INHARMONIC)
+                    if (pSmsHeader->iFormat == SMS_FORMAT_H ||
+                        pSmsHeader->iFormat == SMS_FORMAT_IH)
                     {	
                          for(j = iFirstTraj; j < iLastTraj; j++)
                          {

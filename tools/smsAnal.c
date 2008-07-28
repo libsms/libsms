@@ -74,13 +74,13 @@ void usage (void)
 
 /* function to compute the SMS representation from a sound file
  *
- * SNDHeader *pSoundHeader; 	header input soundfile
- * SMSHeader *pSmsHeader;		  pointer to SMS header
+ * SMS_SndHeader *pSoundHeader; 	header input soundfile
+ * SMS_Header *pSmsHeader;		  pointer to SMS header
  * FILE *pSmsFile;            pointer to output SMS file
  * ANAL_PARAMS *pAnalParams;		analysis parameters
  *
  */
-/* static int ComputeSms (SNDHeader *pSoundHeader, SMSHeader *pSmsHeader, */
+/* static int ComputeSms (SMS_SndHeader *pSoundHeader, SMS_Header *pSmsHeader, */
 /*                        FILE *pSmsFile, ANAL_PARAMS *pAnalParams) */
 /* { */
 /* 	short pSoundData[MAX_SIZE_WINDOW]; */
@@ -158,7 +158,7 @@ void usage (void)
 static int InitArguments (ARGUMENTS *pArguments)
 {
 	pArguments->iDebugMode = 0;
-	pArguments->iFormat = FORMAT_HARMONIC;
+	pArguments->iFormat = SMS_FORMAT_H;
 	pArguments->iSoundType = TYPE_MELODY;
 	pArguments->iAnalysisDirection = DIRECT;
 	pArguments->fWindowSize = 3.5;
@@ -194,8 +194,8 @@ static int InitArguments (ARGUMENTS *pArguments)
 /* { */
 /* 	int iSize, nDet; */
   
-/* 	if (pArguments->iFormat == FORMAT_HARMONIC || */
-/* 	    pArguments->iFormat == FORMAT_INHARMONIC) */
+/* 	if (pArguments->iFormat == SMS_FORMAT_H || */
+/* 	    pArguments->iFormat == SMS_FORMAT_IH) */
 /* 		nDet = 2;// freq, mag */
 /*         else nDet = 3; // freq, mag, phase */
 
@@ -357,7 +357,7 @@ static int GetArguments (char *argv[], int argc, ARGUMENTS *pArguments)
 
 /* function to fill SMS header of the output file
  *
- * SMSHeader *pSmsHeader; 	pointer to SMS header
+ * SMS_Header *pSmsHeader; 	pointer to SMS header
  * int iRecordBSize;		size in bytes of an output record
  * int nRecords;		number of records in output file
  * ARGUMENTS arguments;		user arguments
@@ -365,7 +365,7 @@ static int GetArguments (char *argv[], int argc, ARGUMENTS *pArguments)
  */
 char pChTextString[1024]; // RTE TODO: encapsulate this somehow
 
-static int FillSmsHeader (SMSHeader *pSmsHeader, 
+static int FillSmsHeader (SMS_Header *pSmsHeader, 
                           int nRecords, ARGUMENTS arguments,
                           int iOriginalSRate, int iHopSize)
 {
@@ -416,12 +416,12 @@ static int FillSmsHeader (SMSHeader *pSmsHeader,
  *
  * ARGUMENTS arguments;			      user arguments
  * ANAL_PARAMS *pAnalParams;    	analysis parameters
- * SNDHeader *pSoundHeader;	      pointer to header of input sound
+ * SMS_SndHeader *pSoundHeader;	      pointer to header of input sound
  * int iHopSize;			            hop size of analysis frame
  *
  */  
 static int FillAnalParams (ARGUMENTS arguments, ANAL_PARAMS *pAnalParams,
-                           SNDHeader *pSoundHeader, int iHopSize)
+                           SMS_SndHeader *pSoundHeader, int iHopSize)
 {
 	/* fill analysis parameters structure */
 	pAnalParams->iDebugMode = arguments.iDebugMode;
@@ -473,10 +473,10 @@ int main (int argc, char *argv[])
 
 	FILE *pOutputSmsFile; 
 	SMS_DATA smsData;
-	SMSHeader smsHeader;
+	SMS_Header smsHeader;
 
 	short pSoundData[MAX_SIZE_WINDOW];
-	SNDHeader SoundHeader;
+	SMS_SndHeader SoundHeader;
 
 	char *pChInputSoundFile = NULL, *pChOutputSmsFile = NULL;
 	int iHopSize, nRecords;
