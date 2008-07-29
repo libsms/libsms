@@ -36,7 +36,7 @@ int main (int argc, char *argv[])
 	char *pChInputSmsFile = NULL, *pChOutputSoundFile = NULL;
 	SMS_Header *pSmsHeader;
 	FILE *pSmsFile;
-	SMS_DATA smsData;
+	SMS_Data smsData;
 	short *pSSynthesis;
 	int iError, iRecord, i, iSamplingRate = 44100;
 	SYNTH_PARAMS synthParams;
@@ -116,7 +116,7 @@ int main (int argc, char *argv[])
 	GetSmsRecord (pSmsFile, pSmsHeader, 0, &smsData);
 	CopySmsRecord (&synthParams.previousFrame, &smsData);
 
-	for (iRecord = 1; iRecord < pSmsHeader->nRecords; iRecord++)
+	for (iRecord = 1; iRecord < pSmsHeader->nFrames; iRecord++)
 	{
 		GetSmsRecord (pSmsFile, pSmsHeader, iRecord, &smsData);
 		memset ((char *)pFBuffer, 0, sizeof(float) * synthParams.sizeHop);

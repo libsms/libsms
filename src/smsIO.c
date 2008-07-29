@@ -33,11 +33,11 @@ int InitSmsHeader (SMS_Header *pSmsHeader)
 {    
 	pSmsHeader->iSmsMagic = SMS_MAGIC;
 	pSmsHeader->iHeadBSize =  sizeof(SMS_Header);
-	pSmsHeader->nRecords = 0;
+	pSmsHeader->nFrames = 0;
 	pSmsHeader->iRecordBSize = 0;
 	pSmsHeader->iFormat = SMS_FORMAT_H;
 	pSmsHeader->iFrameRate = 0;
-	pSmsHeader->iStochasticType = STOC_APPROX;
+	pSmsHeader->iStochasticType = SMS_STOC_APPROX;
 	pSmsHeader->nTrajectories = 0;
 	pSmsHeader->nStochasticCoeff = 0;
 	pSmsHeader->fAmplitude = 0;
@@ -56,9 +56,9 @@ int InitSmsHeader (SMS_Header *pSmsHeader)
  
 /* initialize an SMS data record
  *
- * SMS_DATA *pSmsRecord;	pointer to a frame of SMS data
+ * SMS_Data *pSmsRecord;	pointer to a frame of SMS data
  */
-void InitSmsRecord (SMS_DATA *pSmsRecord)
+void InitSmsRecord (SMS_Data *pSmsRecord)
 {
 	pSmsRecord->pSmsData = NULL;
 	pSmsRecord->pFFreqTraj = NULL;
@@ -193,11 +193,11 @@ int WriteSmsFile (FILE *pSmsFile, SMS_Header *pSmsHeader)
  *
  * FILE *pSmsFile	        pointer to SMS file
  * SMS_Header *pSmsHeader  pointer to SMS header
- * SMS_DATA *pSmsRecord   pointer to SMS data record
+ * SMS_Data *pSmsRecord   pointer to SMS data record
  *
  */
 int WriteSmsRecord (FILE *pSmsFile, SMS_Header *pSmsHeader, 
-                    SMS_DATA *pSmsRecord)
+                    SMS_Data *pSmsRecord)
 {  
 	if (fwrite ((void *)pSmsRecord->pSmsData, 1, pSmsHeader->iRecordBSize, 
 	            pSmsFile) < pSmsHeader->iRecordBSize)
@@ -215,7 +215,7 @@ int GetRecordBSize (SMS_Header *pSmsHeader)
 {
 /* 	int iSize = 0, nGain = 1, nComp = 2; */
     
-/* 	if (pSmsHeader->iStochasticType == STOC_NONE) */
+/* 	if (pSmsHeader->iStochasticType == SMS_STOC_NONE) */
 /* 		nGain = 0; */
     
 /* 	if (pSmsHeader->iFormat == SMS_FORMAT_HP || */
@@ -234,17 +234,17 @@ int GetRecordBSize (SMS_Header *pSmsHeader)
 
 	iSize = sizeof (float) * (nDet * pSmsHeader->nTrajectories);
 
-	if (pSmsHeader->iStochasticType == STOC_WAVEFORM)
+	if (pSmsHeader->iStochasticType == SMS_STOC_WAVE)
         {       //numSamples
 //                iSize += sizeof(float) * iHopSize;
                 iSize +=sizeof(float) * ( (int)(pSmsHeader->iOriginalSRate / 
                                                 (float) pSmsHeader->iFrameRate));
         }
-        else if(pSmsHeader->iStochasticType == STOC_IFFT)
+        else if(pSmsHeader->iStochasticType == SMS_STOC_IFFT)
         {
                 //sizeFFT*2
         }
-        else if(pSmsHeader->iStochasticType == STOC_APPROX)
+        else if(pSmsHeader->iStochasticType == SMS_STOC_APPROX)
         {       //stocCoeff + 1 (gain)
                 iSize += sizeof(float) * (pSmsHeader->nStochasticCoeff + 1);
         }
@@ -269,7 +269,7 @@ int GetRecordBSize (SMS_Header *pSmsHeader)
 int GetSmsHeader (char *pChFileName, SMS_Header **ppSmsHeader,
                   FILE **ppSmsFile)
 {
-	int iHeadBSize, iRecordBSize, nRecords;
+	int iHeadBSize, iRecordBSize, nFrames;
 	int iMagicNumber;
     
 	/* open file for reading */
@@ -292,21 +292,20 @@ int GetSmsHeader (char *pChFileName, SMS_Header **ppSmsHeader,
 	
 	if (iHeadBSize <= 0)
 		return (SMS_RDERR);
-        printf("size of Header: %d \n ", iHeadBSize);
      
-  /* read number of data Records */
-  if (fread ((void *) &nRecords, (size_t) sizeof(int), (size_t)1, 
-	         *ppSmsFile) < (size_t)1)
+        /* read number of data Records */
+        if (fread ((void *) &nFrames, (size_t) sizeof(int), (size_t)1, 
+                   *ppSmsFile) < (size_t)1)
 		return (SMS_RDERR);
-
-	if (nRecords <= 0)
+        
+	if (nFrames <= 0)
 		return (SMS_RDERR);
-        printf("nRecords: %d \n", nRecords);
-  /* read size of data Records */
+        
+        /* read size of data Records */
 	if (fread ((void *) &iRecordBSize, (size_t) sizeof(int), (size_t)1, 
 	           *ppSmsFile) < (size_t)1)
 		return (SMS_RDERR);
-
+        
 	if (iRecordBSize <= 0)
 		return (SMS_RDERR);
 
@@ -343,14 +342,14 @@ int GetSmsHeader (char *pChFileName, SMS_Header **ppSmsHeader,
  * FILE *pSmsFile;		     pointer to SMS file
  * SMS_Header *pSmsHeader;	   pointer to SMS header
  * int iRecord;              record number
- * SMS_DATA *pSmsRecord;       pointer to SMS record
+ * SMS_Data *pSmsRecord;       pointer to SMS record
  *
  * returns
  *        SMS_OK      if it could read the data
  *	
  */
 int GetSmsRecord (FILE *pSmsFile, SMS_Header *pSmsHeader, int iRecord,
-                  SMS_DATA *pSmsRecord)
+                  SMS_Data *pSmsRecord)
 {    
 	if (fseek (pSmsFile, pSmsHeader->iHeadBSize + iRecord * 
 	                     pSmsHeader->iRecordBSize, SEEK_SET) < 0)
@@ -374,13 +373,13 @@ int GetSmsRecord (FILE *pSmsFile, SMS_Header *pSmsHeader, int iRecord,
 /* function to allocate an SMS data record
  *
  * SMS_Header *pSmsHeader;	   pointer to SMS header
- * SMS_DATA *pSmsRecord;     pointer to SMS record
+ * SMS_Data *pSmsRecord;     pointer to SMS record
  *
  * returns
  *        SMS_OK      if it could read the data
  *	      SMS_MALLOC  if it could not allocate record
  */
-int AllocSmsRecord (SMS_Header *pSmsHeader, SMS_DATA *pSmsRecord)
+int AllocSmsRecord (SMS_Header *pSmsHeader, SMS_Data *pSmsRecord)
 {
 	int iPhase = (pSmsHeader->iFormat == SMS_FORMAT_HP ||
 	              pSmsHeader->iFormat == SMS_FORMAT_IHP) ? 1 : 0;
@@ -394,14 +393,14 @@ int AllocSmsRecord (SMS_Header *pSmsHeader, SMS_DATA *pSmsRecord)
 
 /* allocate memory for a frame of SMS data
  *
- * SMS_DATA *pSmsRecord;	pointer to a frame of SMS data
+ * SMS_Data *pSmsRecord;	pointer to a frame of SMS data
  * int nTraj;		        number of trajectories in frame
  * int nCoeff;		      number of stochastic coefficients in frame
  * int iPhase;		      whether phase information is in the frame
  * int sizeHop;               the hopsize used for residual resynthesis
  * int stochType;           stochastic resynthesis type
  */
-int AllocateSmsRecord (SMS_DATA *pSmsRecord, int nTraj, int nCoeff, int iPhase,
+int AllocateSmsRecord (SMS_Data *pSmsRecord, int nTraj, int nCoeff, int iPhase,
                                        int sizeHop, int stochType)
 {
 //        printf("sizeHop: %d, stochType: %d \n", sizeHop, stochType);
@@ -412,7 +411,7 @@ int AllocateSmsRecord (SMS_DATA *pSmsRecord, int nTraj, int nCoeff, int iPhase,
         sizeData += 1 * sizeof(float); //adding one for nSamples
 	if (iPhase > 0) sizeData += nTraj * sizeof(float);
 	if (nCoeff > 0) sizeData += (nCoeff + 1) * sizeof(float);
-        if( stochType == STOC_WAVEFORM)
+        if( stochType == SMS_STOC_WAVE)
         {
                 sizeData += sizeHop * sizeof(float);
                 pSmsRecord->nSamples = sizeHop;
@@ -449,7 +448,7 @@ int AllocateSmsRecord (SMS_DATA *pSmsRecord, int nTraj, int nCoeff, int iPhase,
                 pSmsRecord->pFStocCoeff = NULL;
                 pSmsRecord->pFStocGain = NULL;
         }
-        if( stochType == STOC_WAVEFORM)
+        if( stochType == SMS_STOC_WAVE)
         {
                 pSmsRecord->pFStocWave = dataPos;
                 dataPos = (float *)(pSmsRecord->pFStocWave + sizeHop);
@@ -461,10 +460,10 @@ int AllocateSmsRecord (SMS_DATA *pSmsRecord, int nTraj, int nCoeff, int iPhase,
 
 /* free the SMS data structure
  * 
- * SMS_DATA *pSmsRecord;	pointer to frame of SMS data
+ * SMS_Data *pSmsRecord;	pointer to frame of SMS data
  *
  */
-void FreeSmsRecord (SMS_DATA *pSmsRecord)
+void FreeSmsRecord (SMS_Data *pSmsRecord)
 {
 	free(pSmsRecord->pSmsData);
 	pSmsRecord->nTraj = 0;
@@ -478,21 +477,21 @@ void FreeSmsRecord (SMS_DATA *pSmsRecord)
 
 /* clear the SMS data structure
  * 
- * SMS_DATA *pSmsRecord;	pointer to frame of SMS data
+ * SMS_Data *pSmsRecord;	pointer to frame of SMS data
  *
  */
-void ClearSmsRecord (SMS_DATA *pSmsRecord)
+void ClearSmsRecord (SMS_Data *pSmsRecord)
 {
 	memset ((char *) pSmsRecord->pSmsData, 0, pSmsRecord->sizeData);
 }
   
 /* copy a record of SMS data into another
  *
- * SMS_DATA *pCopySmsData;	copy of frame
- * SMS_DATA *pOriginalSmsData;	original frame
+ * SMS_Data *pCopySmsData;	copy of frame
+ * SMS_Data *pOriginalSmsData;	original frame
  *
  */
-int CopySmsRecord (SMS_DATA *pCopySmsData, SMS_DATA *pOriginalSmsData)
+int CopySmsRecord (SMS_Data *pCopySmsData, SMS_Data *pOriginalSmsData)
 {
 	/* if the two records are the same size just copy data */
 	if (pCopySmsData->sizeData == pOriginalSmsData->sizeData &&
@@ -539,14 +538,14 @@ int CopySmsRecord (SMS_DATA *pCopySmsData, SMS_DATA *pOriginalSmsData)
 /* function to interpolate two SMS records
  * it assumes that the two records are of the same size
  *
- * SMS_DATA *pSmsRecord1            sms record 1
- * SMS_DATA *pSmsRecord2            sms record 2
- * SMS_DATA *pSmsRecordOut          sms output record
+ * SMS_Data *pSmsRecord1            sms record 1
+ * SMS_Data *pSmsRecord2            sms record 2
+ * SMS_Data *pSmsRecordOut          sms output record
  * float fInterpFactor              interpolation factor
  *
  */
-int InterpolateSmsRecords (SMS_DATA *pSmsRecord1, SMS_DATA *pSmsRecord2,
-                           SMS_DATA *pSmsRecordOut, float fInterpFactor)
+int InterpolateSmsRecords (SMS_Data *pSmsRecord1, SMS_Data *pSmsRecord2,
+                           SMS_Data *pSmsRecordOut, float fInterpFactor)
 {
 	int i, nTraj = pSmsRecord1->nTraj, nCoeff = pSmsRecord1->nCoeff; 
 	float fFreq1, fFreq2;

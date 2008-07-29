@@ -27,12 +27,12 @@
  * float fFreq;              current frequency
  * float fMag;               current magnitude
  * float fPhase;             current phase
- * SMS_DATA                  values from last frame
+ * SMS_Data                  values from last frame
  * float *pFWaveform;	     pointer to output waveform
  * int sizeBuffer;	     size of the synthesis buffer 
  */
 static void SinePhaSynth (float fFreq, float fMag, float fPhase,
-                          SMS_DATA *pLastFrame, float *pFWaveform, 
+                          SMS_Data *pLastFrame, float *pFWaveform, 
                           int sizeBuffer, int iTraj)
 {
   float  fMagIncr, fInstMag, fInstPhase, fTmp;
@@ -95,12 +95,12 @@ static void SinePhaSynth (float fFreq, float fMag, float fPhase,
  * 
  * float fFreq;	         current frequency 
  * float fMag;              current magnitude  
- * SMS_DATA *pLastFrame;   values from last frame 
+ * SMS_Data *pLastFrame;   values from last frame 
  * float *pFBuffer;	 pointer to output waveform 
  * int sizeBuffer;		 size of the synthesis buffer 
  * int iTraj;               current trajectory 
  */
-static void SineSynth (float fFreq, float fMag, SMS_DATA *pLastFrame,
+static void SineSynth (float fFreq, float fMag, SMS_Data *pLastFrame,
                        float *pFBuffer, int sizeBuffer, int iTraj)
 {
   float  fMagIncr, fInstMag, fFreqIncr, fInstPhase, fInstFreq;
@@ -145,14 +145,14 @@ static void SineSynth (float fFreq, float fMag, SMS_DATA *pLastFrame,
 /*
  * function to generate all the sinusoids for a given frame
  * 
- * SMS_DATA *pSmsData;     SMS data for current frame 
+ * SMS_Data *pSmsData;     SMS data for current frame 
  * int nTraj;     	   number of partial trajectories 
  * float *pFBuffer;	   pointer to output waveform 
  * int sizeBuffer;	   size of the synthesis buffer
- * SMS_DATA *pLastFrame;  SMS data from last frame 
+ * SMS_Data *pLastFrame;  SMS data from last frame 
  */
-int FrameSineSynth (SMS_DATA *pSmsData, float *pFBuffer, 
-                    int sizeBuffer, SMS_DATA *pLastFrame, 
+int FrameSineSynth (SMS_Data *pSmsData, float *pFBuffer, 
+                    int sizeBuffer, SMS_Data *pLastFrame, 
                     int iSamplingRate)
 {
 

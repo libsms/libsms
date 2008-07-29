@@ -51,7 +51,7 @@ int main (int argc, char *argv[])
 {
 	SMS_Header *pSmsHeader;
 	FILE *pSmsFile;
-	SMS_DATA smsData;
+	SMS_Data smsData;
 	int iError, i, j, iFormat = 1, iFirstFrame = 0, iLastFrame = -1, 
 		iFirstTraj = 0, iLastTraj = -1;
         float fInitialTime = 0, fEndTime = 0;
@@ -166,20 +166,20 @@ int main (int argc, char *argv[])
                                                                smsData.pFMagTraj[j], smsData.pFPhaTraj[j]);
                                         }
                                 }
-                                if(iFormat != PRINT_DET && pSmsHeader->iStochasticType != STOC_NONE)
+                                if(iFormat != PRINT_DET && pSmsHeader->iStochasticType != SMS_STOC_NONE)
                                         {	
-                                                if(pSmsHeader->iStochasticType == STOC_WAVEFORM)
+                                                if(pSmsHeader->iStochasticType == SMS_STOC_WAVE)
                                                 {
                                                         nSamples = pSmsHeader->iOriginalSRate / pSmsHeader->iFrameRate;
                                                         printf("\n    stoc_wave (%d samples):\n", nSamples);
                                                         for( j = 0; j < nSamples; j++)
                                                                 printf("%f, ", smsData.pFStocWave[j]);
                                                 }
-                                                else if(pSmsHeader->iStochasticType == STOC_IFFT)
+                                                else if(pSmsHeader->iStochasticType == SMS_STOC_IFFT)
                                                  {
 
                                                  }
-                                                else if( pSmsHeader->iStochasticType == STOC_APPROX )
+                                                else if( pSmsHeader->iStochasticType == SMS_STOC_APPROX )
                                                 {
                                                         printf("\n    stoc_gain: %f\n", *(smsData.pFStocGain));
                                                         printf("stoc_coefficients: ");

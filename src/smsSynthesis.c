@@ -28,7 +28,7 @@ float max, min;
 /* // ################################### */
 
 
-static int SineSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer, 
+static int SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer, 
                           SYNTH_PARAMS *pSynthParams)
 {
         long sizeFft = pSynthParams->sizeHop << 1; 
@@ -186,7 +186,7 @@ static int SineSynthIFFT (SMS_DATA *pSmsData, float *pFBuffer,
 
 /* synthesis of one frame of the stochastic component using approximated 
  * spectral envelopes and random phases*/
-static int StocSynthApprox (SMS_DATA *pSmsData, float *pFBuffer, 
+static int StocSynthApprox (SMS_Data *pSmsData, float *pFBuffer, 
                           SYNTH_PARAMS *pSynthParams)
 {
         float *pFMagSpectrum, *pFPhaseSpectrum;
@@ -259,11 +259,11 @@ static int StocSynthApprox (SMS_DATA *pSmsData, float *pFBuffer,
 
 /* synthesizes one frame of SMS data
  *
- * SMS_DATA *pSmsData;      input SMS data
+ * SMS_Data *pSmsData;      input SMS data
  * short *pSSynthesis;      output sound buffer  RTE: switching to float
  * SYNTH_PARAMS *pSynthParams;   synthesis parameters
  */
-int SmsSynthesis (SMS_DATA *pSmsData, float *pFSynthesis,  
+int SmsSynthesis (SMS_Data *pSmsData, float *pFSynthesis,  
                   SYNTH_PARAMS *pSynthParams)
 {
         static float *pFBuffer = NULL;
@@ -280,23 +280,23 @@ int SmsSynthesis (SMS_DATA *pSmsData, float *pFSynthesis,
         memset ((char *)(pFBuffer+sizeHop), 0, sizeof(float) * sizeHop);
         
         /* decide which combo of synthesis methods to use */
-        if(pSynthParams->iSynthesisType == STYPE_ALL)
+        if(pSynthParams->iSynthesisType == SMS_STYPE_ALL)
         {
-                if(pSynthParams->iDetSynthType == DET_IFFT &&
-                   pSynthParams->iStochasticType == STOC_IFFT)
+                if(pSynthParams->iDetSynthType == SMS_DET_IFFT &&
+                   pSynthParams->iStochasticType == SMS_STOC_IFFT)
                         quit("SmsSynthesis: COMBO_SYNTH not implemented yet.");
                 else /* can't use combo STFT, synthesize seperately and sum */
                 {
-                        if(pSynthParams->iDetSynthType == DET_IFFT)
+                        if(pSynthParams->iDetSynthType == SMS_DET_IFFT)
                         {
                                 SineSynthIFFT (pSmsData, pFBuffer, pSynthParams);
                         }
-                        else /*pSynthParams->iDetSynthType == DET_OSC*/
+                        else /*pSynthParams->iDetSynthType == SMS_DET_SIN*/
                         {
                                 FrameSineSynth (pSmsData, pFBuffer, pSynthParams->sizeHop,
                                                 &(pSynthParams->previousFrame), pSynthParams->iSamplingRate);
                         }
-                        if(pSynthParams->iStochasticType == STOC_WAVEFORM)
+                        if(pSynthParams->iStochasticType == SMS_STOC_WAVE)
                         {
                                 //copy stocWave to pFSynthesis
                                 for(i = 0, j = 0; i < sizeHop; i++, j++)
@@ -307,11 +307,11 @@ int SmsSynthesis (SMS_DATA *pSmsData, float *pFSynthesis,
 //                                printf("3\n");
 
                         }
-                        else if(pSynthParams->iStochasticType == STOC_IFFT)
+                        else if(pSynthParams->iStochasticType == SMS_STOC_IFFT)
                         {
-                                quit("SmsSynthesis: STOC_IFFT not implemented yet.");
+                                quit("SmsSynthesis: SMS_STOC_IFFT not implemented yet.");
                         }
-                        else if(pSynthParams->iStochasticType == STOC_APPROX)
+                        else if(pSynthParams->iStochasticType == SMS_STOC_APPROX)
                         {
                                 StocSynthApprox (pSmsData, pFBuffer, pSynthParams);
 //                              printf("4\n");
@@ -320,23 +320,23 @@ int SmsSynthesis (SMS_DATA *pSmsData, float *pFSynthesis,
 
                 
         }
-        else if(pSynthParams->iSynthesisType == STYPE_DET)
+        else if(pSynthParams->iSynthesisType == SMS_STYPE_DET)
         {
-                if(pSynthParams->iDetSynthType == DET_IFFT)
+                if(pSynthParams->iDetSynthType == SMS_DET_IFFT)
                 {
                         SineSynthIFFT (pSmsData, pFBuffer, pSynthParams);
 //                        printf("5\n");
                 }
-                else /*pSynthParams->iDetSynthType == DET_OSC*/
+                else /*pSynthParams->iDetSynthType == SMS_DET_SIN*/
                 {
                         FrameSineSynth (pSmsData, pFBuffer, pSynthParams->sizeHop,
                                         &(pSynthParams->previousFrame), pSynthParams->iSamplingRate);
 //                        printf("6\n");
                 }
         }
-        else /* pSynthParams->iSynthesisType == STYPE_STOC */
+        else /* pSynthParams->iSynthesisType == SMS_STYPE_STOC */
         {
-                if(pSynthParams->iStochasticType == STOC_WAVEFORM)
+                if(pSynthParams->iStochasticType == SMS_STOC_WAVE)
                 {
                         //copy stocWave to pFSynthesis
                         for(i = 0, j = 0; i < sizeHop; i++, j++)
@@ -346,11 +346,11 @@ int SmsSynthesis (SMS_DATA *pSmsData, float *pFSynthesis,
                         }
 //                        printf("7\n");
                 }
-                else if(pSynthParams->iStochasticType == STOC_IFFT)
+                else if(pSynthParams->iStochasticType == SMS_STOC_IFFT)
                 {
-                        quit("SmsSynthesis: STOC_IFFT not implemented yet.");
+                        quit("SmsSynthesis: SMS_STOC_IFFT not implemented yet.");
                 }
-                else /*pSynthParams->iStochasticType == STOC_APPROX*/
+                else /*pSynthParams->iStochasticType == SMS_STOC_APPROX*/
                 {
                         StocSynthApprox(pSmsData, pFBuffer, pSynthParams);
 //                        printf("8\n");

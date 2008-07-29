@@ -34,12 +34,12 @@ ANAL_FRAME **ppFrames, *pFrames;
 /*
  * search over all the data of a record for empy slots
  *
- * SMS_DATA smsData     SMS data record
+ * SMS_Data smsData     SMS data record
  * float *pFFreq
  * int *pIGoodRecords
  *
  */
-void SearchSms (SMS_DATA smsData, float *pFFreq, int *pIGoodRecords)
+void SearchSms (SMS_Data smsData, float *pFFreq, int *pIGoodRecords)
 {
 	int i;
 
@@ -58,7 +58,7 @@ int CalcRecordBSize (SMS_Header *pSmsHeader, int nTrajectories)
 {
 	int iSize = 0, nGain = 1, nComp = 2;
     
-	if (pSmsHeader->iStochasticType == STOC_NONE)
+	if (pSmsHeader->iStochasticType == SMS_STOC_NONE)
 		nGain = 0;
     
 	if (pSmsHeader->iFormat == SMS_FORMAT_HP ||
@@ -91,7 +91,7 @@ void SetTraj (float *pFFreq, int inNTraj,
 	}
 }
 
-void CleanSms (SMS_DATA inSmsData, SMS_DATA *pOutSmsData, int *pITrajOrder)
+void CleanSms (SMS_Data inSmsData, SMS_Data *pOutSmsData, int *pITrajOrder)
 {
 	int iTraj, iCoeff;
 
@@ -120,7 +120,7 @@ int main (int argc, char *argv[])
 	SMS_Header *pInSmsHeader, OutSmsHeader;
 	FILE *pInSmsFile, *pOutSmsFile;
 	float *pFFreq;
-	SMS_DATA inSmsData, outSmsData;
+	SMS_Data inSmsData, outSmsData;
 	int iError, *pIGoodRecords, *pITrajOrder, iRecord, iGoodTraj = 0, iTraj,
 		iRecordBSize, iHeadBSize, iDataBSize;
   
@@ -156,7 +156,7 @@ int main (int argc, char *argv[])
 
 	AllocSmsRecord (pInSmsHeader, &inSmsData);
 
-	for (iRecord = 1; iRecord < pInSmsHeader->nRecords; iRecord++)
+	for (iRecord = 1; iRecord < pInSmsHeader->nFrames; iRecord++)
 	{
 		GetSmsRecord (pInSmsFile, pInSmsHeader, iRecord, &inSmsData);
 		SearchSms (inSmsData, pFFreq, pIGoodRecords);	
@@ -171,11 +171,11 @@ int main (int argc, char *argv[])
 	
 	iRecordBSize = CalcRecordBSize (pInSmsHeader, iGoodTraj);
 	iHeadBSize = sizeof (SMS_Header);
-	iDataBSize = iRecordBSize * pInSmsHeader->nRecords;
+	iDataBSize = iRecordBSize * pInSmsHeader->nFrames;
 	
 	InitSmsHeader (&OutSmsHeader);
 	OutSmsHeader.iRecordBSize = iRecordBSize;
-	OutSmsHeader.nRecords = pInSmsHeader->nRecords;
+	OutSmsHeader.nFrames = pInSmsHeader->nFrames;
 	OutSmsHeader.iFormat = pInSmsHeader->iFormat;
 	OutSmsHeader.iFrameRate = pInSmsHeader->iFrameRate;
 	OutSmsHeader.iStochasticType = pInSmsHeader->iStochasticType;
@@ -197,7 +197,7 @@ int main (int argc, char *argv[])
 	WriteSmsHeader (pChOutputSmsFile, &OutSmsHeader, &pOutSmsFile);
 	
 	/* iterate over the input file and clean it */
-	for (iRecord = 1; iRecord < OutSmsHeader.nRecords; iRecord++)
+	for (iRecord = 1; iRecord < OutSmsHeader.nFrames; iRecord++)
 	{
 		GetSmsRecord (pInSmsFile, pInSmsHeader, iRecord, &inSmsData);
 		CleanSms (inSmsData, &outSmsData, pITrajOrder);

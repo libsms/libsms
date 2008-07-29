@@ -100,7 +100,7 @@ static int InitArguments (ARGUMENTS *pArguments)
 	pArguments->iCleanTraj = 1;
 	pArguments->fMinTrajLength = .1;
 	pArguments->fMaxSleepingTime = .1;
-	pArguments->iStochasticType =STOC_APPROX;
+	pArguments->iStochasticType =SMS_STOC_APPROX;
 	pArguments->nStochasticCoeff = 32;
 	return (1);
 }
@@ -265,7 +265,7 @@ static int FillSmsHeader (SMS_Header *pSmsHeader,
         pSmsHeader->iFrameRate = arguments.iFrameRate;
         pSmsHeader->iStochasticType = arguments.iStochasticType;
         pSmsHeader->nTrajectories = arguments.nTrajectories;
-	if(arguments.iStochasticType != STOC_APPROX)
+	if(arguments.iStochasticType != SMS_STOC_APPROX)
 		pSmsHeader->nStochasticCoeff = 0;
         else
                 pSmsHeader->nStochasticCoeff = arguments.nStochasticCoeff;
@@ -361,7 +361,7 @@ int main (int argc, char *argv[])
 	ANAL_PARAMS analParams;
 
 	FILE *pOutputSmsFile; 
-	SMS_DATA smsData;
+	SMS_Data smsData;
 	SMS_Header smsHeader;
 
 	short pSoundData[MAX_SIZE_WINDOW];

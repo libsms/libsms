@@ -56,7 +56,7 @@ int main (int argc, char *argv[])
 	char *pChInputSmsFile = NULL, *pChOutputSoundFile = NULL;
 	SMS_Header *pSmsHeader;
 	FILE *pSmsFile; /* pointer to sms file to be synthesized */
-	SMS_DATA smsRecordL, smsRecordR, newSmsRecord; /* left, right, and interpolated records */
+	SMS_Data smsRecordL, smsRecordR, newSmsRecord; /* left, right, and interpolated records */
 	float *pFSynthesis; /* waveform synthesis buffer */
 	long iError, iSample, i, nSamples, iLeftRecord, iRightRecord;
         int verboseMode = 0;
@@ -65,8 +65,8 @@ int main (int argc, char *argv[])
         int  detSynthType, synthType, sizeHop, iSamplingRate; /*  argument holders */
         float timeFactor = 1.0;
 	SYNTH_PARAMS synthParams;
-	synthParams.iSynthesisType = STYPE_ALL;
-        synthParams.iDetSynthType = DET_IFFT;
+	synthParams.iSynthesisType = SMS_STYPE_ALL;
+        synthParams.iDetSynthType = SMS_DET_IFFT;
 	synthParams.sizeHop = SIZE_SYNTH_FRAME;
 	synthParams.iSamplingRate = 44100;
 
@@ -129,18 +129,18 @@ int main (int argc, char *argv[])
         {
                 printf("__arguments__\n");
                 printf("samplingrate: %d \nsynthesis type: ", synthParams.iSamplingRate);
-                if(synthParams.iSynthesisType == STYPE_ALL) printf("all ");
-                else if(synthParams.iSynthesisType == STYPE_DET) printf("deterministic only ");
-                else if(synthParams.iSynthesisType == STYPE_STOC) printf("stochastic only ");
+                if(synthParams.iSynthesisType == SMS_STYPE_ALL) printf("all ");
+                else if(synthParams.iSynthesisType == SMS_STYPE_DET) printf("deterministic only ");
+                else if(synthParams.iSynthesisType == SMS_STYPE_STOC) printf("stochastic only ");
                 printf("\ndeteministic synthesis method: ");
-                if(synthParams.iDetSynthType == DET_IFFT) printf("ifft ");
-                else if(synthParams.iDetSynthType == DET_OSC) printf("oscillator bank ");
+                if(synthParams.iDetSynthType == SMS_DET_IFFT) printf("ifft ");
+                else if(synthParams.iDetSynthType == SMS_DET_SIN) printf("oscillator bank ");
                 printf("\nsizeHop: %d \n", synthParams.sizeHop);
                 printf("time factor: %f \n", timeFactor);
                 printf("__header info__\n");
                 printf("fOriginalSRate: %d, iFrameRate: %d, origSizeHop: %d\n", 
                        pSmsHeader->iOriginalSRate, pSmsHeader->iFrameRate, synthParams.origSizeHop);
-                printf("original file length: %f seconds \n", (float)  pSmsHeader->nRecords * 
+                printf("original file length: %f seconds \n", (float)  pSmsHeader->nFrames * 
                        synthParams.origSizeHop / pSmsHeader->iOriginalSRate );
         }
 
@@ -166,7 +166,7 @@ int main (int argc, char *argv[])
         /* number of samples is a factor of the ratio of samplerates */
         /* multiply by timeFactor to increase samples to desired file length */
         fFsRatio = (float) synthParams.iSamplingRate / pSmsHeader->iOriginalSRate;
-	nSamples = pSmsHeader->nRecords * synthParams.origSizeHop * timeFactor * fFsRatio;
+	nSamples = pSmsHeader->nFrames * synthParams.origSizeHop * timeFactor * fFsRatio;
 
         /* divide timeFactor out to get the correct record */
         fLocIncr = pSmsHeader->iOriginalSRate / 
@@ -177,8 +177,8 @@ int main (int argc, char *argv[])
 	{
 		fRecordLoc =  iSample *  fLocIncr;
                 // left and right records around location, gaurding for end of file
-		iLeftRecord = MIN (pSmsHeader->nRecords - 1, floor (fRecordLoc)); 
-		iRightRecord = (iLeftRecord < pSmsHeader->nRecords - 2)
+		iLeftRecord = MIN (pSmsHeader->nFrames - 1, floor (fRecordLoc)); 
+		iRightRecord = (iLeftRecord < pSmsHeader->nFrames - 2)
 			? (1+ iLeftRecord) : iLeftRecord;
 		GetSmsRecord (pSmsFile, pSmsHeader, iLeftRecord, &smsRecordL);
 		GetSmsRecord (pSmsFile, pSmsHeader, iRightRecord,&smsRecordR);

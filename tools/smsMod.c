@@ -37,7 +37,7 @@ int main (int argc, char *argv[])
   char *pChInputSmsFile = NULL, *pChOutputSmsFile = NULL;
   SMS_Header *pSmsHeader;
 	FILE *pSmsFile;
-  SMS_DATA smsData;
+  SMS_Data smsData;
   int iError, i;
   float fStocFactor = 1, fFundamental = 1;
   
@@ -81,7 +81,7 @@ int main (int argc, char *argv[])
 	pSmsHeader->fFrequency = fFundamental;
 	AllocSmsRecord (pSmsHeader, &smsData);
 
-  for(i = 1; i < pSmsHeader->nRecords; i++)
+  for(i = 1; i < pSmsHeader->nFrames; i++)
   {
     GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
     *smsData.pFStocGain += fStocFactor;

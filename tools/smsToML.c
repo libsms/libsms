@@ -31,7 +31,7 @@ void main (int argc, char *argv[])
 {
 	SMS_Header *pSmsHeader;
 	char *namedata;
-	SMS_DATA smsData;
+	SMS_Data smsData;
 	int iError, i, j;
 	FILE *fp, *pSmsFile;
 
@@ -64,7 +64,7 @@ void main (int argc, char *argv[])
 	fprintf(fp,"%% All variable names are prefixed by '%s_'.\n", namedata);
 
 	fprintf(fp,"\n%% HEADER INFORMATION:\n");
-	fprintf(fp,"%s_nrec = %d;\n", namedata, pSmsHeader->nRecords);
+	fprintf(fp,"%s_nrec = %d;\n", namedata, pSmsHeader->nFrames);
 	fprintf(fp,"%s_framerate = %d;\n", namedata, pSmsHeader->iFrameRate);
 	fprintf(fp,"%s_ntraj = %d;\n", namedata, pSmsHeader->nTrajectories);
 	fprintf(fp,"%s_nstoccoeffs = %d;\n", namedata, pSmsHeader->nStochasticCoeff);
@@ -75,7 +75,7 @@ void main (int argc, char *argv[])
 	fprintf(fp,"\n%s_amps = zeros(%s_nrec,%s_ntraj);\n", namedata, namedata, 
 	        namedata);
 
-	for(i = 0; i < pSmsHeader->nRecords; i++)
+	for(i = 0; i < pSmsHeader->nFrames; i++)
 	{
 		GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
 		fprintf(fp,"%s_amps(%d,:) = [", namedata, i+1);
@@ -86,7 +86,7 @@ void main (int argc, char *argv[])
       
 	fprintf(fp,"\n%s_freqs = zeros(%s_nrec, %s_ntraj);\n", namedata, namedata, 
 	        namedata);
-	for(i = 0; i < pSmsHeader->nRecords; i++)
+	for(i = 0; i < pSmsHeader->nFrames; i++)
 	{
 		GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
 		fprintf(fp,"%s_freqs(%d,:) = [", namedata, i+1);
@@ -100,7 +100,7 @@ void main (int argc, char *argv[])
 	{
 		fprintf(fp,"\n%s_phases = zeros(%s_nrec,%s_ntraj);\n", namedata, namedata, 
 	            namedata);
-		for(i = 0; i < pSmsHeader->nRecords; i++)
+		for(i = 0; i < pSmsHeader->nFrames; i++)
 		{
 			GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
 			fprintf(fp,"%s_phases(%d,:) = [", namedata, i+1);
@@ -109,11 +109,11 @@ void main (int argc, char *argv[])
 			fprintf(fp," ];\n");
 		}
 	}
-	if (pSmsHeader->iStochasticType != STOC_NONE) 
+	if (pSmsHeader->iStochasticType != SMS_STOC_NONE) 
 	{		   
 		fprintf(fp,"\n%s_stoccoeffs = zeros(%s_nrec, %s_nstoccoeffs);\n", namedata, 
 		        namedata, namedata);
-		for(i = 0; i < pSmsHeader->nRecords; i++)
+		for(i = 0; i < pSmsHeader->nFrames; i++)
 		{
 			GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
 			fprintf(fp,"%s_stoccoeffs(%d,:) = [", namedata, i+1);
@@ -123,7 +123,7 @@ void main (int argc, char *argv[])
 		} 
 		fprintf(fp,"\n%s_stocgain = zeros(1, %s_nrec);\n", namedata, 
 		        namedata);
-		for(i = 0; i < pSmsHeader->nRecords; i++)
+		for(i = 0; i < pSmsHeader->nFrames; i++)
 		{
 			GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
 			fprintf(fp,"%s_stocgain (%d) = %.4f ;\n", namedata, i+1, 

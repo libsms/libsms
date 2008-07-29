@@ -41,15 +41,12 @@
  *  The header also contains variable components for additional information
  *  that may be stored along with the analysis, such as descriptors or text.
  *  \todo describe descriptors better.
- *  \todo trying to change nRecords or nRecordBSize to *Frames* makes
- *  reading the sms header impossible -- invesigate
  */
 typedef struct 
 {
-	int iSmsMagic;         /*!< magic number for SMS data file 
-                                 \todo figure out what this magic number is for. */
+	int iSmsMagic;         /*!< identification constant */
 	int iHeadBSize;        /*!< size in bytes of header */
-	int nRecords;	         /*!< number of data records */
+	int nFrames;	         /*!< number of data records */
 	int iRecordBSize;      /*!< size in bytes of each data frame */
 	int iFormat;           /*!< type of data format 
                                  \todo reference enum */
@@ -80,60 +77,114 @@ typedef struct
  *  \brief structure including sound header information 
  */
 typedef struct {
-    int nSamples;       /* Number of samples in the sound */
-    int iSamplingRate;   /* The sampling rate */
-    int channelCount;  /* The number of channels */
-    int sizeHeader;	     /* size of sound header in bytes */
+    int nSamples;       /*!< Number of samples in the sound */
+    int iSamplingRate;   /*!< The sampling rate */
+    int channelCount;  /*!< The number of channels */
+    int sizeHeader;	     /*!< size of sound header in bytes */
 } SMS_SndHeader;
 
-
-#define SMS_MAGIC 767  /*!<\brief I don't know what this is for. */
-
-/*!  \brief analysis format */
-enum
-{
-        SMS_FORMAT_H = 1,
-        SMS_FORMAT_IH,
-        SMS_FORMAT_HP,
-        SMS_FORMAT_IHP,
-};
-
-// #define SMS_FORMAT_H 1
-// #define SMS_FORMAT_IH 2
-// #define SMS_FORMAT_HP 3
-// #define SMS_FORMAT_IHP 4
-
-/* Synthesis method for Deterministic */
-#define DET_IFFT 1
-#define DET_OSC 2
-
-
-/* for iStochasticType */
-#define STOC_WAVEFORM 0
-#define STOC_IFFT 1
-#define STOC_APPROX 2
-#define STOC_NONE 3
-
-/* Synthesis Types */
-#define STYPE_ALL 1
-#define STYPE_DET 2
-#define STYPE_STOC 3
-
-/* structure with SMS data */
+/*! \struct SMS_Data
+ *  \brief structure with SMS data
+ *
+ * \todo details..
+ */
 typedef struct 
 {
-	float *pSmsData;           /* pointer to all SMS data */
-	int sizeData;              /* size of all the data */
-	float *pFFreqTraj;         /* frequency of sinusoids */
-	float *pFMagTraj;          /* magnitude of sinusoids */
-	float *pFPhaTraj;          /* phase of sinusoids */
-	int nTraj;                 /* number of sinusoids */
-        float *pFStocWave;
-        int nSamples;        /* number of samples in StocWave */
-	float *pFStocGain;         /* gain of stochastic component */
-	float *pFStocCoeff;        /* filter coefficients for stochastic component */
-	int nCoeff;                /* number of filter coefficients */
-} SMS_DATA;
+	float *pSmsData;        /*!< pointer to all SMS data */
+	int sizeData;               /*!< size of all the data */
+	float *pFFreqTraj;       /*!< frequency of sinusoids */
+	float *pFMagTraj;       /*!< magnitude of sinusoids */
+	float *pFPhaTraj;        /*!< phase of sinusoids */
+	int nTraj;                     /*!< number of sinusoids */
+        float *pFStocWave;   /*!< sampled waveform (if stoc type = wave) */
+        int nSamples;             /*!< number of samples in StocWave */
+	float *pFStocGain;     /*!< gain of stochastic component */
+	float *pFStocCoeff;    /*!< filter coefficients for stochastic component */
+	int nCoeff;                  /*!< number of filter coefficients */
+} SMS_Data;
+
+/*! \brief identification constant
+ * 
+ * constant number that is first within SMS_Header, in order to correctly
+ * identify an SMS file when read.  */
+#define SMS_MAGIC 767  
+
+/*!  \brief analysis format
+ *
+ *   \todo explain how this is important for the analysis
+ */
+enum SMS_Format
+{
+        SMS_FORMAT_H = 1, /*!< format harmonic */
+        SMS_FORMAT_IH,      /*!< format inharmonic */
+        SMS_FORMAT_HP,     /*!< format harmonic with phase */
+        SMS_FORMAT_IHP    /*!< format inharmonic with phase */
+};
+
+/*! \brief synthesis types
+ * 
+ * These values are used to determine whether to synthesize
+ * both deterministic and stochastic components together,
+ * the deterministic component alone, or the stochastic 
+ * component alone.
+ */
+enum SMS_SynthType
+{
+        SMS_STYPE_ALL =1, /*!< both components combined */
+        SMS_STYPE_DET,      /*!< deterministic component alone */
+        SMS_STYPE_STOC    /*!< stochastic component alone */
+};
+
+/*! \brief synthesis method for deterministic component
+ * 
+ * There are two options for deterministic synthesis available to the 
+ * SMS synthesizer.  The Inverse Fast Fourier Transform method
+ * (IFFT) is more effecient for models with lots of partial trajectories, but can
+ * possibly smear transients.  The Sinusoidal Table Lookup (SIN) can
+ * theoritically support faster moving trajectories at a higher fidelity, but
+ * can consume lots of cpu at varying rates.  
+ */
+enum SMS_DetSynthType
+{
+        SMS_DET_IFFT = 1, /*!< Inverse Fast Fourier Transform (IFFT) */
+        SMS_DET_SIN          /*!< Sinusoidal Table Lookup (SIN) */
+};
+
+/*! \brief synthesis method for stochastic component
+ *
+ * Currently, Stochastic Approximation is the only reasonable choice 
+ * for stochastic synthesis: this method approximates the spectrum of
+ * the stochastic component by a specified number of coefficients during
+ * analyses, and then approximates another set of coefficients during
+ * synthesis in order to fit the specified hopsize. The phases of the
+ * coefficients are randomly generated, according to the theory that a
+ * stochastic spectrum consists of random phases.
+ * 
+ * Waveform samples simply stores the residual component to file. During
+ * resynthesis, the samples are looped in order to fit the specified 
+ * hopsize. 
+ *
+ * The Inverse FFT method is not implemented, but holds the idea of storing
+ * the exact spectrum and phases of the residual component to file.  During
+ * synthesis, it may be possible to achieve higher fidelity by interpolating this
+ * data, instead of approximating the phases
+ *
+ * No stochastic component can also be specified in order to skip the this
+ * time consuming process altogether.  This is especially useful when 
+ * performing multiple analyses to fine tune parameters pertaining to the 
+ * determistic component; once that is achieved, the stochastic component
+ * will be much better as well.
+ *  
+ * \todo review the various options for stochastic synthesis and determine
+ * which ones should stay
+ */
+enum SMS_StocSynthType
+{
+        SMS_STOC_WAVE,            /*!< waveform samples */
+        SMS_STOC_IFFT,               /*!< inverse FFT (not used) */
+        SMS_STOC_APPROX,        /*!< spectral approximation */
+        SMS_STOC_NONE              /*!< no stochastistic component */
+};
 
 /* useful macros */
 
@@ -303,7 +354,7 @@ typedef struct
 	PEAK pSpectralPeaks[MAX_NUM_PEAKS];  /* spectral peaks found in frame */
 	int nPeaks;               /* number of peaks found */
 	float fFundamental;       /* fundamental frequency in frame */
-	SMS_DATA deterministic;   /* deterministic data */
+	SMS_Data deterministic;   /* deterministic data */
 	enum frameStatus iStatus; /* status of frame */
 } ANAL_FRAME;
 
@@ -337,7 +388,7 @@ typedef struct
 	int iSizeSound;             /* total size of input sound */	 	
 	int iWindowType;            /* type of analysis window */			  	 			 
         int iMaxDelayFrames;
-        SMS_DATA prevFrame;
+        SMS_Data prevFrame;
         SOUND_BUFFER soundBuffer;
         SOUND_BUFFER synthBuffer;
         ANAL_FRAME *pFrames;
@@ -358,7 +409,7 @@ typedef struct
         int iDetSynthType;         /* globally defined above */
 	int iOriginalSRate;
 	int iSamplingRate;
-	SMS_DATA previousFrame;
+	SMS_Data previousFrame;
 	int sizeHop;
         int origSizeHop;
 	float *pFDetWindow;
@@ -397,7 +448,7 @@ extern float *sms_window_spec;
 
 /* function declarations */ 
 
-int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsRecord,
+int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_Data *pSmsRecord,
                  ANAL_PARAMS *pAnalParams, long *pINextSizeRead);
 
 int SmsInit( void );  
@@ -494,12 +545,12 @@ int PrepSinc ();
 
 double SincTab (double fTheta);
 
-int SmsSynthesis (SMS_DATA *pSmsRecord, float*pFSynthesis, 
+int SmsSynthesis (SMS_Data *pSmsRecord, float*pFSynthesis, 
                   SYNTH_PARAMS *pSynthParams);
                 
 
-int FrameSineSynth (SMS_DATA *pSmsRecord, float *pFBuffer, 
-                    int sizeBuffer, SMS_DATA *pLastFrame,
+int FrameSineSynth (SMS_Data *pSmsRecord, float *pFBuffer, 
+                    int sizeBuffer, SMS_Data *pLastFrame,
                     int iSamplingRate);
 
 long random ();
@@ -510,17 +561,17 @@ int WriteSmsHeader (char *pChFileName, SMS_Header *pSmsHeader,
 int WriteSmsFile (FILE *pSmsFile, SMS_Header *pSmsHeader);
 
 int WriteSmsRecord (FILE *pSmsFile, SMS_Header *pSmsHeader, 
-                    SMS_DATA *pSmsRecord);
+                    SMS_Data *pSmsRecord);
 
 int InitSmsHeader (SMS_Header *pSmsHeader);
 
-int AllocSmsRecord (SMS_Header *pSmsHeader, SMS_DATA *pSmsRecord);
+int AllocSmsRecord (SMS_Header *pSmsHeader, SMS_Data *pSmsRecord);
 
-int AllocateSmsRecord (SMS_DATA *pSmsRecord, int nTraj, int nCoeff, 
+int AllocateSmsRecord (SMS_Data *pSmsRecord, int nTraj, int nCoeff, 
                        int iPhase, int sizeHop, int stochType);
 
 int GetSmsRecord (FILE *pInputFile, SMS_Header *pSmsHeader, int iRecord,
-                  SMS_DATA *pSmsRecord);
+                  SMS_Data *pSmsRecord);
 
 int GetSmsHeader (char *pChFileName, SMS_Header **ppSmsHeader,
                   	FILE **ppInputFile);
@@ -531,13 +582,13 @@ const char* SmsReadErrorStr( int iError);
 
 int quit (char *pChText);
 
-void InitSmsRecord (SMS_DATA *pSmsRecord);
+void InitSmsRecord (SMS_Data *pSmsRecord);
 
-void FreeSmsRecord (SMS_DATA *pSmsRecord);
+void FreeSmsRecord (SMS_Data *pSmsRecord);
 
-void ClearSmsRecord (SMS_DATA *pSmsRecord);
+void ClearSmsRecord (SMS_Data *pSmsRecord);
 
-int CopySmsRecord (SMS_DATA *pCopySmsRecord, SMS_DATA *pOriginalSmsRecord);
+int CopySmsRecord (SMS_Data *pCopySmsRecord, SMS_Data *pOriginalSmsRecord);
 
 void MoveFrames (ANAL_PARAMS *pAnalParams);
 
@@ -545,7 +596,7 @@ int GetResidual (float *pFSynthesis, float *pFOriginal,
                  float *pFResidual, int sizeWindow, ANAL_PARAMS *pAnalParams);
 
 int StocAnalysis (float *pFResidual, int sizeWindow, 
-                  SMS_DATA *pSmsRecord, ANAL_PARAMS *pAnalParams);
+                  SMS_Data *pSmsRecord, ANAL_PARAMS *pAnalParams);
 
 int CreateResidualFile (ANAL_PARAMS *pAnalParams);
 
@@ -561,8 +612,8 @@ int InterpolateArrays (float *pFArray1, int sizeArray1, float *pFArray2,
                        int sizeArray2, float *pFArrayOut, int sizeArrayOut,
                        float fInterpFactor);
 
-int InterpolateSmsRecords (SMS_DATA *pSmsRecord1, SMS_DATA *pSmsRecord2,
-                           SMS_DATA *pSmsRecordOut, float fInterpFactor);
+int InterpolateSmsRecords (SMS_Data *pSmsRecord1, SMS_Data *pSmsRecord2,
+                           SMS_Data *pSmsRecordOut, float fInterpFactor);
 
 int FilterArray (float *pFArray, int size1, int size2, float *pFOutArray);
 

@@ -33,13 +33,13 @@
  *
  * short *pSWaveform;	     input data
  * long sizeNewData;	     the size of input data
- * SMS_DATA *pSmsData;     output SMS data
+ * SMS_Data *pSmsData;     output SMS data
  * ANAL_PARAMS analParams; analysis parameters
  * long *pINextSizeRead;   size of next data to read
  *
  */
 
-int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsData, 
+int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_Data *pSmsData, 
                  ANAL_PARAMS *pAnalParams, long *pINextSizeRead)
 {    
 
@@ -120,7 +120,7 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_DATA *pSmsData,
 		CleanTrajectories (iCurrentFrame - DELAY_FRAMES, pAnalParams);
 
 	/* do stochastic analysis */
-	if (pAnalParams->iStochasticType != STOC_NONE)
+	if (pAnalParams->iStochasticType != SMS_STOC_NONE)
 	{
 		/* synthesize deterministic signal */
 		if (pAnalParams->ppFrames[1]->iStatus != EMPTY &&

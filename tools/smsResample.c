@@ -36,7 +36,7 @@ int main (int argc, char *argv[])
 	char *pChInputSmsFile = NULL, *pChOutputSmsFile = NULL;
 	SMS_Header *pSmsHeader;
 	FILE *pInSmsFile, *pOutSmsFile;
-	SMS_DATA inSmsData;
+	SMS_Data inSmsData;
 	int iError, iFactor, i;
   
 	/* get user arguments */
@@ -66,13 +66,13 @@ int main (int argc, char *argv[])
 	AllocSmsRecord (pSmsHeader, &inSmsData);
 	WriteSmsHeader (pChOutputSmsFile, pSmsHeader, &pOutSmsFile);
 
-	for (i = 1 + iFactor; i < pSmsHeader->nRecords; i += iFactor)
+	for (i = 1 + iFactor; i < pSmsHeader->nFrames; i += iFactor)
 	{
 		GetSmsRecord (pInSmsFile, pSmsHeader, i, &inSmsData);
 		WriteSmsRecord (pOutSmsFile, pSmsHeader, &inSmsData);
 	}
   
-	pSmsHeader->nRecords /= iFactor;
+	pSmsHeader->nFrames /= iFactor;
 	pSmsHeader->iFrameRate /= iFactor;
   
 	/* rewrite the header and close the output SMS file */

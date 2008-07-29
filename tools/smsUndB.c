@@ -29,7 +29,7 @@ int main (int ac, char *av[])
 	int j, i, NRec, Ntrajet, counter=0;
 	float freqs, printfreqs, freqsm1, freqsp1, Sum=0.0;
 	SMS_Header *pSmsHeader;
-	SMS_DATA smsData;
+	SMS_Data smsData;
   
         initSms(&smsData);
 	if (ac != 3) quit(USAGE);
@@ -39,7 +39,7 @@ int main (int ac, char *av[])
 	  printf("error");
 
 	Ntrajet = pSmsHeader->nTrajectories;
-	NRec    = pSmsHeader->nRecords;
+	NRec    = pSmsHeader->nFrames;
 	for(j = 0; j < Ntrajet; j++) 
            {
 	    pData = (char *) pSmsHeader + pSmsHeader->iHeadBSize;

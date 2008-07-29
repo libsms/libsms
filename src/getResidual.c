@@ -156,7 +156,7 @@ static void FilterResidual (float *pFResidual, int sizeResidual,
  * float *pFOriginal;        original waveform
  * float *pFResidual;        output residual waveform
  * int sizeWindow;           size of buffer
- * SMS_DATA *pSmsData;       pointer to output SMS data
+ * SMS_Data *pSmsData;       pointer to output SMS data
  * ANAL_PARAMS *pAnalParams;   analysis parameters
  */
 int GetResidual (float *pFSynthesis, float *pFOriginal,  
