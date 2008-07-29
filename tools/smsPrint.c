@@ -26,13 +26,6 @@
 #define PRINT_STOC 3
 #define PRINT_HDR 4
 
-
-//short MaxDelayFrames;
-//float FResidualPerc;
-//SOUND_BUFFER soundBuffer, synthBuffer;
-//ANAL_FRAME **ppFrames, *pFrames;
-
-
 void usage (void)
 {
         fprintf (stderr, "\n"
@@ -113,7 +106,7 @@ int main (int argc, char *argv[])
 	AllocSmsRecord (pSmsHeader, &smsData);
 
 	printf("\nHEADER INFORMATION:\n");
-	printf("Number of records = %d\n", pSmsHeader->nRecords);
+	printf("Number of records = %d\n", pSmsHeader->nFrames);
 	printf("Frame rate (Hz) = %d\n", pSmsHeader->iFrameRate);
 	printf("Number of trajectories = %d\n", pSmsHeader->nTrajectories);
 	printf("Number of stochastic coefficients = %d\n",
@@ -131,17 +124,17 @@ int main (int argc, char *argv[])
 
 	if (pSmsHeader->nTextCharacters > 0)
 	{
-		printf("\nANALISIS ARGUMENTS:\n");
+		printf("\nHeader Text String:\n");
 		printf("%s\n", pSmsHeader->pChTextCharacters);
 	} 
 
 	iFirstFrame = 
-		MIN (pSmsHeader->nRecords - 1, fInitialTime * pSmsHeader->iFrameRate);
+		MIN (pSmsHeader->nFrames - 1, fInitialTime * pSmsHeader->iFrameRate);
 	if (fEndTime > 0) 
 		iLastFrame = 
-		MIN (fEndTime * pSmsHeader->iFrameRate, pSmsHeader->nRecords);
+		MIN (fEndTime * pSmsHeader->iFrameRate, pSmsHeader->nFrames);
 	else
-		iLastFrame = pSmsHeader->nRecords; 
+		iLastFrame = pSmsHeader->nFrames; 
 
 	if (iFirstTraj > 0)
 		iFirstTraj = MIN (pSmsHeader->nTrajectories, iFirstTraj);

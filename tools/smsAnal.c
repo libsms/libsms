@@ -18,14 +18,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
-/*
- *    main program for smsAnal
+/*! \file smsAnal.c
+ *  \brief command line program for SMS analysis.
  *
  */
 #include "sms.h"
 #include "smsAnal.h"
-
-
 
 void usage (void)
 {
@@ -72,84 +70,6 @@ void usage (void)
 }
 
 
-/* function to compute the SMS representation from a sound file
- *
- * SMS_SndHeader *pSoundHeader; 	header input soundfile
- * SMS_Header *pSmsHeader;		  pointer to SMS header
- * FILE *pSmsFile;            pointer to output SMS file
- * ANAL_PARAMS *pAnalParams;		analysis parameters
- *
- */
-/* static int ComputeSms (SMS_SndHeader *pSoundHeader, SMS_Header *pSmsHeader, */
-/*                        FILE *pSmsFile, ANAL_PARAMS *pAnalParams) */
-/* { */
-/* 	short pSoundData[MAX_SIZE_WINDOW]; */
-/* 	SMS_DATA smsData; */
-/* 	long iStatus = 0, iSample = 0, iNextSizeRead = 0, sizeNewData = 0; */
-/* 	short iDoAnalysis = 1, iRecord = 0; */
-/*         /\* allocate output SMS record *\/ */
-/* 	AllocSmsRecord (pSmsHeader, &smsData); */
-
-/* 	iNextSizeRead = (pAnalParams->iDefaultSizeWindow + 1) / 2.0; */
-
-  
-/* 	if (pAnalParams->iAnalysisDirection == REVERSE) */
-/* 		iSample = pSoundHeader->nSamples; */
-
-/* 	/\* loop for analysis *\/ */
-/* 	while(iDoAnalysis > 0) */
-/* 	{ */
-
-/* 		if (pAnalParams->iAnalysisDirection == REVERSE) */
-/* 		{ */
-/* 			if ((iSample - iNextSizeRead) >= 0) */
-/* 				sizeNewData = iNextSizeRead; */
-/* 			else */
-/* 				sizeNewData = iSample; */
-/* 				iSample -= sizeNewData; */
-/* 		} */
-/* 		else */
-/* 		{ */
-/* 			iSample += sizeNewData; */
-/* 			if((iSample + iNextSizeRead) < pSoundHeader->nSamples) */
-/* 				sizeNewData = iNextSizeRead; */
-/* 			else */
-/* 				sizeNewData = pSoundHeader->nSamples - iSample; */
-/* 		} */
-/* 		/\* get one frame of sound *\/ */
-/* 		if (GetSoundData (pSoundHeader, pSoundData, sizeNewData, iSample) < 0) */
-/* 		{ */
-/* 			fprintf(stderr, "ComputeSms: could not read sound record %d\n", iRecord); */
-/* 			break; */
-/* 		} */
-/* 		/\* perform analysis of one frame of sound *\/ */
-/* 		iStatus = SmsAnalysis (pSoundData, sizeNewData, &smsData,  */
-/* 		                       pAnalParams, &iNextSizeRead); */
-
-/* 		/\* if there is an output SMS record, write it *\/ */
-/* 		if (iStatus == 1) */
-/* 		{ */
-/* 			WriteSmsRecord (pSmsFile, pSmsHeader, &smsData); */
-/* 			if(1)//todo: add verbose flag */
-/*                         { */
-/*                                 if (iRecord % 10 == 0) */
-/*                                         fprintf (stderr, "%.2f ", */
-/*                                                  iRecord / (float) pSmsHeader->iFrameRate); */
-/*                         } */
-/* 			iRecord++; */
-/* 		} */
-/* 		else if (iStatus == -1) /\* done *\/ */
-/* 		{ */
-/* 			iDoAnalysis = 0; */
-/* 			pSmsHeader->nRecords = iRecord; */
-/* 		} */
-
-/* 	} */
-/*         printf("\n"); */
-/* 	pSmsHeader->fResidualPerc = pAnalParams->fResidualPercentage / iRecord; */
-/* 	return (1); */
-/* } */
-
 /* function to initialize the input command  arguments
  * 
  * ARGUMENTS *pArguments;	command arguments 
@@ -184,38 +104,6 @@ static int InitArguments (ARGUMENTS *pArguments)
 	pArguments->nStochasticCoeff = 32;
 	return (1);
 }
-
-/* function to compute the record size from the command arguments
- *
- * ARGUMENTS *pArguments;	pointer to command arguments 
- *
- */
-/* static int ComputeRecordBSize (ARGUMENTS *pArguments, int iHopSize) */
-/* { */
-/* 	int iSize, nDet; */
-  
-/* 	if (pArguments->iFormat == SMS_FORMAT_H || */
-/* 	    pArguments->iFormat == SMS_FORMAT_IH) */
-/* 		nDet = 2;// freq, mag */
-/*         else nDet = 3; // freq, mag, phase */
-
-/* 	iSize = sizeof (float) * (nDet * pArguments->nTrajectories); */
-
-/* 	if (pArguments->iStochasticType == STOC_WAVEFORM) */
-/*         {       //numSamples */
-/*                 iSize += sizeof(float) * iHopSize; */
-/*         } */
-/*         else if(pArguments->iStochasticType == STOC_IFFT) */
-/*         { */
-/*                 //sizeFFT*2 */
-/*         } */
-/*         else if(pArguments->iStochasticType == STOC_APPROX) */
-/*         {       //stocCoeff + 1 (gain) */
-/*                 iSize += sizeof(float) * (pArguments->nStochasticCoeff + 1); */
-/*         } */
-/*         printf("iSize: %d \n", iSize); */
-/* 	return (iSize); */
-/* }	      */
 
 /* function to get the user arguments 
  *
@@ -343,7 +231,7 @@ static int GetArguments (char *argv[], int argc, ARGUMENTS *pArguments)
 	else if (frameRateOrOverlapFactor < 0.0)
 	{ 
 		/* -overlapFactor specified */
-      	/* overlap ratio K = windowSize * frameRate / 
+                /* overlap ratio K = windowSize * frameRate / 
 		   defaultFund = w * r / u => r = K * u / w */
 		pArguments->iFrameRate = (int) ((-frameRateOrOverlapFactor) * 
 			                             pArguments->fDefaultFund /
@@ -359,20 +247,20 @@ static int GetArguments (char *argv[], int argc, ARGUMENTS *pArguments)
  *
  * SMS_Header *pSmsHeader; 	pointer to SMS header
  * int iRecordBSize;		size in bytes of an output record
- * int nRecords;		number of records in output file
+ * int nFrames;		number of records in output file
  * ARGUMENTS arguments;		user arguments
  *
  */
 char pChTextString[1024]; // RTE TODO: encapsulate this somehow
 
 static int FillSmsHeader (SMS_Header *pSmsHeader, 
-                          int nRecords, ARGUMENTS arguments,
+                          int nFrames, ARGUMENTS arguments,
                           int iOriginalSRate, int iHopSize)
 {
 
         InitSmsHeader (pSmsHeader);
 
-        pSmsHeader->nRecords = nRecords;
+        pSmsHeader->nFrames = nFrames;
         pSmsHeader->iFormat = arguments.iFormat;
         pSmsHeader->iFrameRate = arguments.iFrameRate;
         pSmsHeader->iStochasticType = arguments.iStochasticType;
@@ -385,7 +273,8 @@ static int FillSmsHeader (SMS_Header *pSmsHeader,
         pSmsHeader->iRecordBSize = GetRecordBSize(pSmsHeader);
 
         sprintf (pChTextString, 
-                 "format %d, soundType %d, analysisDirection %d, windowSize %.2f,"
+                 "created by smsAnal with parameters: format %d, soundType %d, "
+                 "analysisDirection %d, windowSize %.2f,"
                  " windowType %d, frameRate %d, highestFreq %.2f, minPeakMag %.2f,"
                  " refHarmonic %d, minRefHarmMag %.2f, refHarmMagDiffFromMax %.2f,"
                  " defaultFund %.2f, lowestFund %.2f, highestFund %.2f, nGuides %d,"
@@ -479,7 +368,7 @@ int main (int argc, char *argv[])
 	SMS_SndHeader SoundHeader;
 
 	char *pChInputSoundFile = NULL, *pChOutputSmsFile = NULL;
-	int iHopSize, nRecords;
+	int iHopSize, nFrames;
 	long iStatus = 0, iSample = 0, iNextSizeRead = 0, sizeNewData = 0;
 	short iDoAnalysis = 1, iRecord = 0;
 
@@ -516,11 +405,11 @@ int main (int argc, char *argv[])
 	iHopSize = (int)(SoundHeader.iSamplingRate / 
 	                (float) arguments.iFrameRate);
         /* define how many records*/
-	nRecords = 3 + SoundHeader.nSamples / (float) iHopSize;
+	nFrames = 3 + SoundHeader.nSamples / (float) iHopSize;
 
         /* initialize everything */
 	FillAnalParams (arguments, &analParams, &SoundHeader, iHopSize);
-	FillSmsHeader (&smsHeader, nRecords, arguments,
+	FillSmsHeader (&smsHeader, nFrames, arguments,
 	               SoundHeader.iSamplingRate, iHopSize);
 	WriteSmsHeader (pChOutputSmsFile, &smsHeader, &pOutputSmsFile);
 	if (analParams.iDebugMode == DEBUG_SYNC)
@@ -586,7 +475,7 @@ int main (int argc, char *argv[])
 		else if (iStatus == -1) /* done */
 		{
 			iDoAnalysis = 0;
-			smsHeader.nRecords = iRecord;
+			smsHeader.nFrames = iRecord;
 		}
 
 	}

@@ -108,7 +108,7 @@ int main (int argc, char *argv[])
      //:::::::::: write Header ::::::::::::::::
      printf("writing %s.\n", pChOutputYamlFile);
      fprintf(fp,"smsHeader:\n");
-     fprintf(fp,"    nRecords         : %d\n", pSmsHeader->nRecords);
+     fprintf(fp,"    nFrames         : %d\n", pSmsHeader->nFrames);
      fprintf(fp,"    iFrameRate       : %d\n", pSmsHeader->iFrameRate);
      fprintf(fp,"    nTrajectories    : %d\n", pSmsHeader->nTrajectories);
      fprintf(fp,"    nStochasticCoeff : %d\n", pSmsHeader->nStochasticCoeff);
@@ -138,7 +138,7 @@ int main (int argc, char *argv[])
      {
           char cOneLine[100];
           int t, iStrStart, nBytes;
-          fprintf(fp,"\nanalysis_arguments: >\n");
+          fprintf(fp,"\ntext_string: >\n");
           iStrStart = 0;
           for(t = 0; t < pSmsHeader->nTextCharacters; t++)
           {
@@ -161,12 +161,12 @@ int main (int argc, char *argv[])
      } 
 
      iFirstFrame = 
-          MIN (pSmsHeader->nRecords - 1, fInitialTime * pSmsHeader->iFrameRate);
+          MIN (pSmsHeader->nFrames - 1, fInitialTime * pSmsHeader->iFrameRate);
      if (fEndTime > 0) 
           iLastFrame = 
-               MIN (fEndTime * pSmsHeader->iFrameRate, pSmsHeader->nRecords);
+               MIN (fEndTime * pSmsHeader->iFrameRate, pSmsHeader->nFrames);
      else
-          iLastFrame = pSmsHeader->nRecords; 
+          iLastFrame = pSmsHeader->nFrames; 
 
      if (iFirstTraj > 0)
           iFirstTraj = MIN (pSmsHeader->nTrajectories, iFirstTraj);
