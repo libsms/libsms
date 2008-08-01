@@ -52,7 +52,7 @@ static float PeakInterpolation (float fMaxVal, float fLeftBinVal,
  */
 static int FindNextMax (float *pFMagSpectrum, int iHighBinBound, 
                         int *pICurrentLoc, float *pFMaxVal, 
-                        ANAL_PARAMS *pAnalParams)
+                        SMS_AnalParams *pAnalParams)
 {
 	int iCurrentBin = *pICurrentLoc;
 	float fPrevVal = pFMagSpectrum[iCurrentBin - 1],
@@ -89,7 +89,7 @@ static int FindNextMax (float *pFMagSpectrum, int iHighBinBound,
  */
 static int FindNextPeak (float *pFMagSpectrum, int iHighBinBound, 
                          int *pICurrentLoc, float *pFPeakMag, float *pFPeakLoc,
-                         ANAL_PARAMS *pAnalParams)
+                         SMS_AnalParams *pAnalParams)
 {
 	int iMaxBin = 0;		/* location of the local maximum */
 	float fMaxVal = 0;
@@ -146,12 +146,12 @@ static float GetPhaseVal (float *pAPhaSpectrum, float fPeakLoc)
  * float *pFMagSpectrum;     pointer to power spectrum
  * float *pAPhaSpectrum;     pointer to phase spectrum
  * int sizeMag;              size of magnitude spectrum
- * PEAK *pSpectralPeaks;	 pointer to array of peaks
+ * SMS_Peak *pSpectralPeaks;	 pointer to array of peaks
  * int iSamplingRate;      sampling rate of sound
  */
 int PeakDetection (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag, 
-                   int sizeWindow, PEAK *pSpectralPeaks, 
-                   ANAL_PARAMS *pAnalParams)
+                   int sizeWindow, SMS_Peak *pSpectralPeaks, 
+                   SMS_AnalParams *pAnalParams)
 {
 	int iPeak = 0;		/* index for spectral search */
 	int sizeFft = sizeMag * 2;
@@ -164,11 +164,11 @@ int PeakDetection (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag,
 	float fPeakLoc = 0;		/* location of peak */
 
 	/* clear peak structure */
-	memset (pSpectralPeaks, 0, MAX_NUM_PEAKS * sizeof(PEAK));
+	memset (pSpectralPeaks, 0, SMS_MAX_NPEAKS * sizeof(SMS_Peak));
   
 	/* find peaks */
 	iPeak = 0;
-	while ((iPeak < MAX_NUM_PEAKS) &&
+	while ((iPeak < SMS_MAX_NPEAKS) &&
 	       (FindNextPeak(pFMagSpectrum, iHighestBin,
 	                     &iCurrentLoc, &fPeakMag, &fPeakLoc, pAnalParams)
 	        == 1))

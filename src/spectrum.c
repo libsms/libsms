@@ -20,6 +20,9 @@
  */
 #include "sms.h"
 
+/*! \brief overlap factor, or the number of analysis windows that fit in one FFT */
+#define SMS_OVERLAP_FACTOR 2  
+
 float *sms_window_spec;
 
 /* 
@@ -32,11 +35,11 @@ float *sms_window_spec;
  * float *pFPhaseSpectrum; pointer to output phase spectrum 
  */
 int Spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum, 
-              float *pFPhaseSpectrum, ANAL_PARAMS *pAnalParams)
+              float *pFPhaseSpectrum, SMS_AnalParams *pAnalParams)
 {
         /* sizeFft is a power of 2 that is greater than 2x sizeWindow */
         int sizeFft = (int) pow (2.0, 
-		          (float)(1 + (floor (log ((float)(WINDOWS_IN_FFT * 
+		          (float)(1 + (floor (log ((float)(SMS_OVERLAP_FACTOR * 
 		                                           sizeWindow)) / LOG2))));
 	int sizeMag = sizeFft >> 1;
         int iMiddleWindow = (sizeWindow+1) >> 1; 
@@ -55,8 +58,8 @@ int Spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
                 
 /*                 fftwf_free(pSynthParams->pSpectrum); */
 /*                 fftwf_free(pSynthParams->pWaveform); */
-/*                 pAnalParams->pWaveform = fftwf_malloc(sizeof(float) * MAX_SIZE_WINDOW); */
-/*                 pAnalParams->pSpectrum = fftwf_malloc(sizeof(fftwf_complex) * (MAX_SIZE_WINDOW / 2 + 1)); */
+/*                 pAnalParams->pWaveform = fftwf_malloc(sizeof(float) * SMS_MAX_WINDOW); */
+/*                 pAnalParams->pSpectrum = fftwf_malloc(sizeof(fftwf_complex) * (SMS_MAX_WINDOW / 2 + 1)); */
 
                 if((pAnalParams->fftPlan =  fftwf_plan_dft_r2c_1d( sizeFft, pAnalParams->pWaveform,
                                                                    pAnalParams->pSpectrum, FFTW_ESTIMATE)) == NULL)
@@ -68,7 +71,7 @@ int Spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
         }
 	iOldSizeWindow = sizeWindow;
 
-//        printf("sizeWindow: %d, windows: %d, sizeFft: %d \n", sizeWindow, WINDOWS_IN_FFT, sizeFft);
+//        printf("sizeWindow: %d, windows: %d, sizeFft: %d \n", sizeWindow, SMS_OVERLAP_FACTOR, sizeFft);
 
         memset(pAnalParams->pWaveform, 0, sizeFft * sizeof(float));
         memset(pAnalParams->pWaveform, 0, (sizeFft/2 + 1) * sizeof(float));

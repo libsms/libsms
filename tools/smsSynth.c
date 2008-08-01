@@ -26,8 +26,8 @@
 #include "sms.h"
 
 
-//SOUND_BUFFER soundBuffer, synthBuffer;
-//ANAL_FRAME **ppFrames, *pFrames;
+//SMS_SndBuffer soundBuffer, synthBuffer;
+//SMS_AnalFrame **ppFrames, *pFrames;
 //short MaxDelayFrames;
 
 void usage (void)
@@ -91,7 +91,7 @@ int main (int argc, char *argv[])
                                         synthParams.iDetSynthType = detSynthType;
                                         break;
                                 case 'h': sscanf(argv[i], "%d", &sizeHop);
-                                        if(sizeHop < SIZE_SYNTH_FRAME || sizeHop > MAX_SIZE_WINDOW) 
+                                        if(sizeHop < SIZE_SYNTH_FRAME || sizeHop > SMS_MAX_WINDOW) 
                                                 quit("error: invalid sizeHop");
                                         synthParams.sizeHop = sizeHop;
                                         //RTE TODO: round to power of 2 (is it necessary?)

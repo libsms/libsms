@@ -79,10 +79,10 @@ static int InitArguments (ARGUMENTS *pArguments)
 {
 	pArguments->iDebugMode = 0;
 	pArguments->iFormat = SMS_FORMAT_H;
-	pArguments->iSoundType = TYPE_MELODY;
-	pArguments->iAnalysisDirection = DIRECT;
+	pArguments->iSoundType = SMS_SOUND_TYPE_MELODY;
+	pArguments->iAnalysisDirection = SMS_DIR_FWD;
 	pArguments->fWindowSize = 3.5;
-	pArguments->iWindowType = BLACKMAN_HARRIS_70;
+	pArguments->iWindowType = SMS_WIN_BH_70;
 	pArguments->iFrameRate = 400;
 	pArguments->fHighestFreq = 12000.;
 	pArguments->fMinPeakMag = 0;
@@ -304,12 +304,12 @@ static int FillSmsHeader (SMS_Header *pSmsHeader,
 /* function to fill the analysis parameters from the user arguments
  *
  * ARGUMENTS arguments;			      user arguments
- * ANAL_PARAMS *pAnalParams;    	analysis parameters
+ * SMS_AnalParams *pAnalParams;    	analysis parameters
  * SMS_SndHeader *pSoundHeader;	      pointer to header of input sound
  * int iHopSize;			            hop size of analysis frame
  *
  */  
-static int FillAnalParams (ARGUMENTS arguments, ANAL_PARAMS *pAnalParams,
+static int FillAnalParams (ARGUMENTS arguments, SMS_AnalParams *pAnalParams,
                            SMS_SndHeader *pSoundHeader, int iHopSize)
 {
 	/* fill analysis parameters structure */
@@ -345,7 +345,7 @@ static int FillAnalParams (ARGUMENTS arguments, ANAL_PARAMS *pAnalParams,
 		arguments.fMaxSleepingTime * arguments.iFrameRate;
 	pAnalParams->iMaxDelayFrames = 
 		MAX(pAnalParams->iMinTrajLength, pAnalParams->iMaxSleepingTime) + 2 +
-			DELAY_FRAMES;
+			SMS_DELAY_FRAMES;
 	pAnalParams->fResidualPercentage = 0;
 
 	return (1);
@@ -358,13 +358,13 @@ static int FillAnalParams (ARGUMENTS arguments, ANAL_PARAMS *pAnalParams,
 int main (int argc, char *argv[])
 {
 	ARGUMENTS arguments;
-	ANAL_PARAMS analParams;
+	SMS_AnalParams analParams;
 
 	FILE *pOutputSmsFile; 
 	SMS_Data smsData;
 	SMS_Header smsHeader;
 
-	short pSoundData[MAX_SIZE_WINDOW];
+	short pSoundData[SMS_MAX_WINDOW];
 	SMS_SndHeader SoundHeader;
 
 	char *pChInputSoundFile = NULL, *pChOutputSmsFile = NULL;
@@ -412,9 +412,9 @@ int main (int argc, char *argv[])
 	FillSmsHeader (&smsHeader, nFrames, arguments,
 	               SoundHeader.iSamplingRate, iHopSize);
 	WriteSmsHeader (pChOutputSmsFile, &smsHeader, &pOutputSmsFile);
-	if (analParams.iDebugMode == DEBUG_SYNC)
+	if (analParams.iDebugMode == SMS_DBG_SYNC)
 		CreateDebugFile (&analParams);
-	if (analParams.iDebugMode == DEBUG_RESIDUAL)
+	if (analParams.iDebugMode == SMS_DBG_RESIDUAL)
 		CreateResidualFile (&analParams);
         SmsInit();
         SmsInitAnalysis (&smsHeader, &analParams);
@@ -427,14 +427,14 @@ int main (int argc, char *argv[])
     
 	iNextSizeRead = (analParams.iDefaultSizeWindow + 1) / 2.0;
 
-	if (analParams.iAnalysisDirection == REVERSE)
+	if (analParams.iAnalysisDirection == SMS_DIR_REV)
 		iSample = SoundHeader.nSamples;
 
 	/* loop for analysis */
 	while(iDoAnalysis > 0)
 	{
 
-		if (analParams.iAnalysisDirection == REVERSE)
+		if (analParams.iAnalysisDirection == SMS_DIR_REV)
 		{
 			if ((iSample - iNextSizeRead) >= 0)
 				sizeNewData = iNextSizeRead;
@@ -485,9 +485,9 @@ int main (int argc, char *argv[])
 
 	/* write an close output files */
 	WriteSmsFile (pOutputSmsFile, &smsHeader);
-	if (analParams.iDebugMode == DEBUG_RESIDUAL)
+	if (analParams.iDebugMode == SMS_DBG_RESIDUAL)
 		WriteResidualFile ();
-	if (analParams.iDebugMode == DEBUG_SYNC)
+	if (analParams.iDebugMode == SMS_DBG_SYNC)
 		WriteDebugFile ();
 
         /* cleanup */

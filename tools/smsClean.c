@@ -28,8 +28,8 @@
 
 short MaxDelayFrames;
 float FResidualPerc;
-SOUND_BUFFER soundBuffer, synthBuffer;
-ANAL_FRAME **ppFrames, *pFrames;
+SMS_SndBuffer soundBuffer, synthBuffer;
+SMS_AnalFrame **ppFrames, *pFrames;
 
 /*
  * search over all the data of a record for empy slots

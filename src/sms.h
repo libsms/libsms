@@ -103,11 +103,170 @@ typedef struct
 	int nCoeff;                  /*!< number of filter coefficients */
 } SMS_Data;
 
-/*! \brief identification constant
+/*! \struct SMS_SndBuffer
+ * \brief buffer for sound data 
  * 
- * constant number that is first within SMS_Header, in order to correctly
- * identify an SMS file when read.  */
-#define SMS_MAGIC 767  
+ * This structure is used for holding a buffer of audio data. iMarker is a 
+ * sample number of the sound source that corresponds to the first sample 
+ * in the buffer.
+ *
+ * \todo document what iFirst good is for.
+ */
+typedef struct
+{
+	float *pFBuffer;          /*!< buffer for sound data*/
+	int sizeBuffer;            /*!< size of buffer */
+	int iMarker;               /*!< sample marker relating to sound source */
+	int iFirstGood;          /*!< first sample in buffer that is a good one */
+} SMS_SndBuffer;
+
+/*! \struct SMS_Peak 
+ * \brief structure for sinusodial peak   
+ */
+
+/* information attached to a spectral peak */
+typedef struct 
+{
+	float fFreq;           /*!< frequency of peak */
+	float fMag;           /*!< magnitude of peak */
+	float fPhase;        /*!< phase of peak */
+} SMS_Peak;
+
+#define SMS_MIN_MAG     .3      /*!< \brief minimum magnitude to be searched */
+#define SMS_MAX_NPEAKS      200    /*!< \brief maximum number of peaks  */
+                                    
+/*! \struct SMS_HarmCandidate
+ * \brief structure to hold information about a harmonic candidate 
+ *
+ * \todo details, and maybe move to harmDetection.c
+ */
+typedef struct 
+{
+	float fFreq;                   /*!< frequency of harmonic */
+	float fMag;                   /*!< magnitude of harmonic */
+	float fMagPerc;           /*!< percentage of magnitude */
+	float fFreqDev;            /*!< deviation from perfect harmonic */
+	float fHarmRatio;         /*!< percentage of harmonics found */
+} SMS_HarmCandidate;
+
+/*! \struct SMS_ContCandidate
+ * \brief structure to hold information about a continuation candidate 
+ *
+ * \todo details, and maybe move to harmDetection.c
+ */
+typedef struct
+{
+	float fFreqDev;       /*!< frequency deviation from guide */
+	float fMagDev;        /*!< magnitude deviation from guide */
+	int iPeak;                /* peak number */
+} SMS_ContCandidate;        
+
+/*! \struct SMS_Guide
+ * \brief information attached to a guide
+ *
+ * used in peak continuation    
+ * \todo details, possibly move
+ */
+typedef struct
+{
+	float fFreq;          /*!< frequency of guide */
+	float fMag;           /*!< magnitude of guide */
+	int iStatus;          /*!< status of guide: DEAD, SLEEPING, ACTIVE */
+	int iPeakChosen;    /*!< peak number chosen by the guide (was a short) */
+} SMS_Guide;
+
+/*! \struct SMS_AnalFrame
+ *  \brief structure to hold an analysis frame
+ *
+ *  \todo details..
+ */
+typedef struct 
+{
+	int iFrameSample;         /*!< sample number of the sound file that 
+                               corresponds to the middle of the frame */
+	int iFrameSize;           /*!< number of samples used in the frame */
+	int iFrameNum;            /*!< frame number */
+	SMS_Peak pSpectralPeaks[SMS_MAX_NPEAKS];  /*!< spectral peaks found in frame
+                                                   \see SMS_Peak */
+	int nPeaks;               /*!< number of peaks found */
+	float fFundamental;       /*!< fundamental frequency in frame */
+	SMS_Data deterministic;   /*!< deterministic data \see SMS_Data */
+	int iStatus; /*!< status of frame enumerated by SMS_FRAME_STATUS
+                       \see SMS_FRAME_STATUS */
+} SMS_AnalFrame;
+
+/*! \struct SMS_AnalParams
+ * \brief structure with useful information for the analysis functions
+ *
+ * \todo details
+ */
+typedef struct 
+{
+	int iDebugMode; /*!< debug codes enumerated by SMS_DBG \see SMS_DBG */
+	int iFormat;          /*!< analysis format code defined by SMS_Format \see SMS_Format */
+	int iStochasticType;      /*!<  type of stochastic model defined by SMS_StocSynthType 
+                                                     \see SMS_StocSynthType */
+	float fLowestFundamental; /*!< lowest fundamental frequency in Hz */
+	float fHighestFundamental;/*!< highest fundamental frequency in Hz */
+	float fDefaultFundamental;/*!< default fundamental in Hz */
+	float fPeakContToGuide;   /*!< contribution of previous peak to current guide (between 0 and 1) */
+	float fFundContToGuide;   /*!< contribution of current fundamental to current guide (between 0 and 1) */
+	float fFreqDeviation;     /*!< maximum deviation from peak to peak */				     
+	int iSamplingRate;        /*! sampling rate of sound to be analyzed */
+	int iDefaultSizeWindow;   /*!< default size of analysis window in samples */
+	int sizeHop;              /*!< hop size of analysis window in samples */
+	float fSizeWindow;       /*!< size of analysis window in number of periods */
+	int nGuides;              /*!< number of guides used \todo explain */
+	int iCleanTraj;           /*!< whether or not to clean trajectories */
+	float fMinRefHarmMag;     /*!< minimum magnitude in dB for reference peak */
+	float fRefHarmMagDiffFromMax; /*!< maximum magnitude difference from reference peak to highest peak */
+	int iRefHarmonic;	       /*!< reference harmonic to use in the fundamental detection */
+	int iMinTrajLength;	       /*!< minimum length in samples of a given trajectory */
+	int iMaxSleepingTime;	   /*!< maximum sleeping time for a trajectory */
+	float fHighestFreq;        /*!< highest frequency to be searched */
+	float fMinPeakMag;         /*!< minimum magnitude in dB for a good peak */	
+	int iSoundType;            /*!< type of sound to be analyzed emumerated by SMS_SOUND_TYPE 
+                                                   \see SMS_SOUND_TYPE */	
+	int iAnalysisDirection;    /*!< analysis direction, direct or reverse */	
+	int iSizeSound;             /*!< total size of sound to be analyzed in samples */	 	
+	int iWindowType;            /*!< type of analysis window enumerated by SMS_WINDOWS 
+                                                       \see SMS_WINDOWS */			  	 			 
+        int iMaxDelayFrames;     /*!< maximum number of frames to delay before peak continuation */
+        SMS_Data prevFrame;   /*!< the previous analysis frame \see SMS_Data */
+        SMS_SndBuffer soundBuffer; /*!< samples to be analyzed */
+        SMS_SndBuffer synthBuffer; /*!< resynthesized samples needed to get the residual */
+        SMS_AnalFrame *pFrames;  /*!< \todo explain why AnalFrame is necessary here */
+        SMS_AnalFrame **ppFrames; /*!< \todo explain why this double pointer is necessary */
+        float fResidualPercentage; /*!< accumalitive residual percentage */
+#ifdef FFTW
+        fftwf_plan  fftPlan; /*!< plan for FFTW's fourier analysis functions, floating point */
+        float *pWaveform; /*< array of samples to be passed to fftwf_execute 
+                           \todo why isn't the sound buffer above used here, why both? */
+        fftwf_complex *pSpectrum; /*< complex array of spectrum produced by fftwf_execute */
+#endif
+} SMS_AnalParams;
+
+/* structure with useful information for synthesis */
+typedef struct
+{
+	int iStochasticType; 
+	int iSynthesisType;        /* globally defined above */
+        int iDetSynthType;         /* globally defined above */
+	int iOriginalSRate;
+	int iSamplingRate;
+	SMS_Data previousFrame;
+	int sizeHop;
+        int origSizeHop;
+	float *pFDetWindow;
+        float *pFStocWindow;
+#ifdef FFTW
+        fftwf_plan  fftPlan;
+        fftwf_complex *pSpectrum;
+        float *pWaveform;
+#else
+        float *realftOut; // RTE_DEBUG : comparing realft and fftw
+#endif
+} SYNTH_PARAMS;
 
 /*!  \brief analysis format
  *
@@ -115,7 +274,7 @@ typedef struct
  */
 enum SMS_Format
 {
-        SMS_FORMAT_H = 1, /*!< format harmonic */
+        SMS_FORMAT_H, /*!< format harmonic */
         SMS_FORMAT_IH,      /*!< format inharmonic */
         SMS_FORMAT_HP,     /*!< format harmonic with phase */
         SMS_FORMAT_IHP    /*!< format inharmonic with phase */
@@ -130,7 +289,7 @@ enum SMS_Format
  */
 enum SMS_SynthType
 {
-        SMS_STYPE_ALL =1, /*!< both components combined */
+        SMS_STYPE_ALL, /*!< both components combined */
         SMS_STYPE_DET,      /*!< deterministic component alone */
         SMS_STYPE_STOC    /*!< stochastic component alone */
 };
@@ -146,7 +305,7 @@ enum SMS_SynthType
  */
 enum SMS_DetSynthType
 {
-        SMS_DET_IFFT = 1, /*!< Inverse Fast Fourier Transform (IFFT) */
+        SMS_DET_IFFT,        /*!< Inverse Fast Fourier Transform (IFFT) */
         SMS_DET_SIN          /*!< Sinusoidal Table Lookup (SIN) */
 };
 
@@ -186,259 +345,106 @@ enum SMS_StocSynthType
         SMS_STOC_NONE              /*!< no stochastistic component */
 };
 
-/* useful macros */
 
-/* Error codes returned by SMS file functions */
-#define SMS_OK      0  /* no error*/
-#define SMS_NOPEN  -1  /* couldn't open file */
-#define SMS_NSMS   -2  /* not a SMS file */
-#define SMS_MALLOC -3  /* couldn't allocate memory */
-#define SMS_RDERR  -4  /* read error */
-#define SMS_WRERR	 -5  /* write error */
-
-
-/* debug modes */
-#define DEBUG_NONE 0
-#define DEBUG_INIT        1     /* debug initialitzation functions */
-#define DEBUG_PEAK_DET    2	    /* debug peak detection function */
-#define DEBUG_HARM_DET    3	    /* debug harmonic detection function */
-#define DEBUG_PEAK_CONT   4     /* debug peak continuation function */
-#define DEBUG_CLEAN_TRAJ  5	    /* debug clean trajectories function */
-#define DEBUG_SINE_SYNTH  6	    /* debug sine synthesis function */
-#define DEBUG_STOC_ANAL   7     /* debug stochastic analysis function */
-#define DEBUG_STOC_SYNTH  8     /* debug stochastic synthesis function */
-#define DEBUG_SMS_ANAL    9     /* debug top level analysis function */
-#define DEBUG_ALL         10    /* debug everything */
-#define DEBUG_RESIDUAL    11    /* write residual to file */
-#define DEBUG_SYNC	      12    /* write original, synthesis and residual to
-                                   a text file */
-
-#ifndef MAX
-#define MAX(a,b)	((a) > (b) ? (a) : (b))
-#endif
-
-#ifndef MIN
-#define MIN(a,b)	((a) < (b) ? (a) : (b))
-#endif
-
-#define TWO_PI 6.28318530717958647692
-#define PI 3.141592653589793238462643
-#define PI_2 1.57079632679489661923
-#define HALF_MAX 1073741823.5  /* half the max of a 32-bit word */
-#define LOG2 0.69314718
-
-#define EMPHASIS_COEFF    .9      /* coefficient for pre_emphasis filter */
-
-#define TO_DB(x)    	((x > MAG_THRESHOLD) ? 20 * log10(x/MAG_THRESHOLD) : 0)
-#define TO_MAG(x)     ((x <= 0) ? 0 : MAG_THRESHOLD * pow(10.0, x/20.0))
-
-#define SHORT_TO_FLOAT ( 2.0f / pow(2.0,16)) 
-
-/* for hybrid program */
-#define MAX_BUFF 1000000
-#define ENV_THRESHOLD     .01
-
-/*    short-time Fourier analysis   */
-
-#define WINDOWS_IN_FFT 2        /* the number of analysis windows
-                                   that fit in one FFT */
-#define MAX_SIZE_WINDOW 8190    /* maximum size for analysis window */
-#define MAX_SIZE_MAG    8192    /* maximum size for magnitude spectrum */
-
-/*    peak detection   */
-
-/* information attached to a spectral peak */
-typedef struct 
+/*! \brief Error codes returned by SMS file functions */
+enum SMS_ERRORS
 {
-	float fFreq;                  /* frequency of peak */
-	float fMag;                   /* magnitude of peak */
-	float fPhase;                 /* phase of peak */
-} PEAK;
+        SMS_OK,              /*!< no error*/
+        SMS_NOPEN,       /*!< couldn't open file */
+        SMS_NSMS ,        /*!< not a SMS file */
+        SMS_MALLOC,    /*!< couldn't allocate memory */
+        SMS_RDERR,        /*!< read error */
+        SMS_WRERR	      /*!< write error */
+};
 
-#define MAG_THRESHOLD     .3      /* minimum magnitude to be searched */
-#define MAX_NUM_PEAKS      200    /* maximum number of peaks */
-
-/*   harmonic detection */
-
-/* information attached to a harmonic candidate */
-typedef struct 
+/*! \brief debug modes 
+ *
+ * \todo write details about debug files
+ */
+enum SMS_DBG
 {
-	float fFreq;                  /* frequency */
-	float fMag;                   /* magnitude */
-	float fMagPerc;               /* percentage of magnitude */
-	float fFreqDev;               /* deviation from perfect harmonic */
-	float fHarmRatio;             /* percentage of harmonics found */
-} HARM_CANDIDATE;
+        SMS_DBG_NONE,                    /*!< no debugging */
+        SMS_DBG_INIT,                       /*!< debug initialitzation functions */
+        SMS_DBG_PEAK_DET,	          /*!< debug peak detection function */
+        SMS_DBG_HARM_DET,	  /*!< debug harmonic detection function */
+        SMS_DBG_PEAK_CONT,        /*!< debug peak continuation function */
+        SMS_DBG_CLEAN_TRAJ,	  /*!< debug clean trajectories function */
+        SMS_DBG_SINE_SYNTH,	  /*!< debug sine synthesis function */
+        SMS_DBG_STOC_ANAL,        /*!< debug stochastic analysis function */
+        SMS_DBG_STOC_SYNTH,      /*!< debug stochastic synthesis function */
+        SMS_DBG_SMS_ANAL,          /*!< debug top level analysis function */
+        SMS_DBG_ALL,                       /*!< debug everything */
+        SMS_DBG_RESIDUAL,            /*!< write residual to file */
+        SMS_DBG_SYNC,                    /*!< write original, synthesis and residual 
+                                                                to a text file */
+ };
 
+#define SMS_MAX_WINDOW 8190    /*!< \brief maximum size for analysis window */
 
-#define N_FUND_HARM      6 /* number of harmonics to use for fundamental 
-                              detection */
-#define N_HARM_PEAKS     4 /* number of peaks to check as possible ref 
-                              harmonics */
-#define FREQ_DEV_THRES  .07 /* threshold for deviation from perfect 
-                               harmonics */
-#define MAG_PERC_THRES   .6 /* threshold for magnitude of harmonics
-                               with respect to the total magnitude */
-#define HARM_RATIO_THRES .8 /* threshold for percentage of harmonics found */
-#define TYPE_MELODY		0    /* sound composed of several notes */
-#define TYPE_SINGLE_NOTE	1  /* sound composed of a single note */
-#define DIRECT	0           /* analysis from left to right */
-#define REVERSE	1           /* analysis from right to left */
-
-
-#define HAMMING 		   0
-#define BLACKMAN_HARRIS_62 1
-#define BLACKMAN_HARRIS_70 2
-#define BLACKMAN_HARRIS_74 3
-#define BLACKMAN_HARRIS_92 4
-
-/*    peak continuation    */
-
-/* diferent status of guide */
-#define BEGINNING -2
-#define DEAD -1
-#define ACTIVE 0
-
-/* information attached to a guide */
-typedef struct
+/* \brief type of sound to be analyzed
+ *
+ * \todo explain the differences between these two 
+ */
+enum SMS_SOUND_TYPE
 {
-	float fFreq;          /* frequency of guide */
-	float fMag;           /* magnitude of guide */
-	int iStatus;          /* status of guide: DEAD, SLEEPING, ACTIVE */
-	short iPeakChosen;    /* peak number chosen by the guide */
-} GUIDE;
+        SMS_SOUND_TYPE_MELODY,    /*!< sound composed of several notes */
+        SMS_SOUND_TYPE_NOTE          /*!< sound composed of a single note */
+};
 
-/* information attached to a continuation candidate */
-typedef struct
+/* \brief direction of analysis
+ *
+ * \todo explain when to use reverse 
+ */
+enum SMS_DIRECTION
 {
-	float fFreqDev;       /* frequency deviation from guide */
-	float fMagDev;        /* magnitude deviation from guide */
-	int iPeak;            /* peak number */
-} CONT_CANDIDATE;        
+        SMS_DIR_FWD,           /*!< analysis from left to right */
+        SMS_DIR_REV           /*!< analysis from right to left */
+};
 
-#define MAX_CONT_CANDIDATES 5  /* maximum number of peak continuation
-                                  candidates */
-
+/* \brief window selection
+ *
+ * \todo verify terminolgy and usage 
+ */
+enum SMS_WINDOWS
+{
+        SMS_WIN_HAMMING,     /*!< hamming */ 		
+        SMS_WIN_BH_62,            /*!< blackman-harris, 62dB cutoff */ 		
+        SMS_WIN_BH_70,            /*!< blackman-harris, 70dB cutoff */ 	
+        SMS_WIN_BH_74,            /*!< blackman-harris, 74dB cutoff */ 
+        SMS_WIN_BH_92             /*!< blackman-harris, 92dB cutoff */ 
+};
 
 /*    re-analyze and clean trajectories */
 
-#define MIN_GOOD_FRAMES 3  /* minimum number of stable frames for backward 
-                              search */
-#define MAX_DEVIATION .01   /* maximum deviation allowed */
-#define ANAL_DELAY     10   /* number of frames in the past to be
-                               looked in possible re-analyze */
-/* total number of delay frames */
-#define DELAY_FRAMES (MIN_GOOD_FRAMES + ANAL_DELAY)
+#define SMS_MIN_GOOD_FRAMES 3  /*!< minimum number of stable frames for backward search */
 
+#define SMS_MAX_DEVIATION .01   /*!< maximum deviation allowed */
+/*! number of frames in the past to be looked in possible re-analyze */
+#define SMS_ANAL_DELAY     10   
+/*! total number of delay frames */
+#define SMS_DELAY_FRAMES (SMS_MIN_GOOD_FRAMES + SMS_ANAL_DELAY)
 
-/* buffer for sound data */
-typedef struct
+/*!
+ *  \brief frame status
+ */
+enum SMS_FRAME_STATUS 
 {
-	int iSoundSample;          /* sample number of the sound file that
-                                corresponds to the first sample in buffer */
-	float *pFBuffer;           /* buffer for original sound */
-	int sizeBuffer;            /* size of buffer */
-	int iFirstSample;          /* first sample in buffer that is a good one */
-} SOUND_BUFFER;
+        SMS_FRAME_EMPTY,
+        SMS_FRAME_READY,
+        SMS_FRAME_PEAKS_FOUND,
+        SMS_FRAME_FUND_FOUND,
+        SMS_FRAME_TRAJ_FOUND,
+        SMS_FRAME_CLEANED, 
+        SMS_FRAME_RECOMPUTED,
+        SMS_FRAME_DETER_SYNTH,
+        SMS_FRAME_STOC_COMPUTED, 
+        SMS_FRAME_DONE,
+        SMS_FRAME_END
+};
 
-enum frameStatus {EMPTY, READY, PEAKS_FOUND, FUND_FOUND, TRAJ_FOUND, CLEANED, 
-                  RECOMPUTED, DETER_SYNTH, STOC_COMPUTED, DONE, END};
-
-/* analysis frame structure */
-typedef struct 
-{
-	int iFrameSample;         /* sample number of the sound file that 
-                               corresponds to the middle of the frame */
-	int iFrameSize;           /* number of samples used in the frame */
-	int iFrameNum;            /* frame number */
-	PEAK pSpectralPeaks[MAX_NUM_PEAKS];  /* spectral peaks found in frame */
-	int nPeaks;               /* number of peaks found */
-	float fFundamental;       /* fundamental frequency in frame */
-	SMS_Data deterministic;   /* deterministic data */
-	enum frameStatus iStatus; /* status of frame */
-} ANAL_FRAME;
-
-/* structure with useful information for the analysis program */
-typedef struct 
-{
-	int iDebugMode; /* debug codes defined below */
-	int iFormat;          /* format code defined below */
-	int iStochasticType;      /*  type of stochastic synthesis */
-	float fLowestFundamental; /* lowest fundamental frequency in Hz */
-	float fHighestFundamental;/* highest fundamental frequency in Hz */
-	float fDefaultFundamental;/* default fundamental in Hz */
-	float fPeakContToGuide;   /* contribution of previous peak to current guide (between 0 and 1) */
-	float fFundContToGuide;   /* contribution of current fundamental to current guide (between 0 and 1) */
-	float fFreqDeviation;     /* maximum deviation from peak to peak */				     
-	int iSamplingRate;        /* sampling rate of input sound */
-	int iDefaultSizeWindow;   /* default size of analysis window in samples */
-	int sizeHop;              /* hop size of analysis window in samples */
-	float fSizeWindow;       /* size of analysis window in number of periods */
-	int nGuides;              /* number of guides used */
-	int iCleanTraj;           /* whether or not to clean trajectories */
-	float fMinRefHarmMag;     /* minimum magnitude in dB for reference peak */
-	float fRefHarmMagDiffFromMax; /* maximum magnitude difference from reference peak to highest peak */
-	int iRefHarmonic;	       /* reference harmonic to use in the fundamental detection */
-	int iMinTrajLength;	       /* minimum length in samples of a given  trajectory */
-	int iMaxSleepingTime;	   /* maximum sleeping time for a trajectory */
-	float fHighestFreq;        /* highest frequency to be searched */
-	float fMinPeakMag;         /* minimum magnitude in dB for a good peak */	
-	int iSoundType;            /* type of sound to be analyzed */	
-	int iAnalysisDirection;    /* analysis direction, direct or reverse */	
-	int iSizeSound;             /* total size of input sound */	 	
-	int iWindowType;            /* type of analysis window */			  	 			 
-        int iMaxDelayFrames;
-        SMS_Data prevFrame;
-        SOUND_BUFFER soundBuffer;
-        SOUND_BUFFER synthBuffer;
-        ANAL_FRAME *pFrames;
-        ANAL_FRAME **ppFrames;
-        float fResidualPercentage; /* accumalitive residual percentage */
-#ifdef FFTW
-        fftwf_plan  fftPlan;
-        float *pWaveform;
-        fftwf_complex *pSpectrum;
-#endif
-} ANAL_PARAMS;
-
-/* structure with useful information for synthesis */
-typedef struct
-{
-	int iStochasticType; 
-	int iSynthesisType;        /* globally defined above */
-        int iDetSynthType;         /* globally defined above */
-	int iOriginalSRate;
-	int iSamplingRate;
-	SMS_Data previousFrame;
-	int sizeHop;
-        int origSizeHop;
-	float *pFDetWindow;
-        float *pFStocWindow;
-#ifdef FFTW
-        fftwf_plan  fftPlan;
-        fftwf_complex *pSpectrum;
-        float *pWaveform;
-#else
-        float *realftOut; // RTE_DEBUG : comparing realft and fftw
-#endif
-} SYNTH_PARAMS;
 
 #define SIZE_SYNTH_FRAME  128   /* size of synthesis frame */
 
-
-
-/* structure for hybrid program */
-typedef struct
-{
-  int nCoefficients;
-  float fGain;
-  float fMagBalance;
-  int iSmoothOrder;
-  float *pCompressionEnv;
-  int sizeCompressionEnv;
-} HYB_PARAMS;
-
-/* todo: define sin table size here too */
 #define SIN_TABLE_SIZE 4096//was 2046
 #define SINC_TABLE_SIZE 4096
 extern float *sms_tab_sine;
@@ -446,29 +452,56 @@ extern float *sms_tab_sinc;
 
 extern float *sms_window_spec;
 
+
+/*! \defgroup Math_Macros 
+ *  \brief mathematical operations and values needed for functions within
+ *   this library 
+ * \{
+ */
+#define PI 3.141592653589793238462643    /*!< pi */
+#define TWO_PI 6.28318530717958647692 /*!< pi * 2 */
+#define PI_2 1.57079632679489661923        /*< pi / 2 */
+#define HALF_MAX 1073741823.5  /*!< half the max of a 32-bit word */
+#define LOG2 0.69314718 /*!< \todo write this in mathematical terms */
+
+#define TO_DB(x)    	((x > SMS_MIN_MAG) ? 20 * log10(x/SMS_MIN_MAG) : 0)
+#define TO_MAG(x)     ((x <= 0) ? 0 : SMS_MIN_MAG * pow(10.0, x/20.0))
+
+#ifndef MAX
+/*! \brief returns the maximum of a and b */
+#define MAX(a,b)	((a) > (b) ? (a) : (b))
+#endif
+#ifndef MIN
+/*! \brief returns the minimum of a and b */
+#define MIN(a,b)	((a) < (b) ? (a) : (b))
+#endif
+
+#define SHORT_TO_FLOAT ( 2.0f / pow(2.0,16)) /*!< \todo should not be necessary, if all shorts are removed */
+/*! \} */
+
 /* function declarations */ 
 
 int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_Data *pSmsRecord,
-                 ANAL_PARAMS *pAnalParams, long *pINextSizeRead);
+                 SMS_AnalParams *pAnalParams, long *pINextSizeRead);
 
 int SmsInit( void );  
 
-int SmsInitAnalysis ( SMS_Header *pSmsHeader, ANAL_PARAMS *pAnalParams);
+int SmsInitAnalysis ( SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams);
 
 int SmsInitSynth( SMS_Header *pSmsHeader, SYNTH_PARAMS *pSynthParams );
 
-int SmsFreeAnalysis (ANAL_PARAMS *pAnalParams);
+int SmsFreeAnalysis (SMS_AnalParams *pAnalParams);
 
 int SmsFreeSynth( SYNTH_PARAMS *pSynthParams );
 
-void FillBuffer (short *pSWaveform, long sizeNewData, ANAL_PARAMS *pAnalParams);
+void FillBuffer (short *pSWaveform, long sizeNewData, SMS_AnalParams *pAnalParams);
 
 void moveFrames();
 
-void InitializeFrame (int iCurrentFrame, ANAL_PARAMS *pAnalParams, 
+void InitializeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
                       int sizeWindow);
 		     
-void ComputeFrame (int iCurrentFrame, ANAL_PARAMS *pAnalParams, 
+void ComputeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
                    float fRefFundamental);
 
 void GetWindow (int sizeWindow, float *pFWindow, int iWindowType);
@@ -481,12 +514,8 @@ void Hanning (int sizeWindow, float *pFWindow);
 
 void realft (float *data, int n, int isign);
 
-//int initFFTW( ANAL_PARAMS *pAnalParams);
-
-//int initInverseFFTW( SYNTH_PARAMS *pSynthParams);
-
 int Spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum, 
-             float *pFPhaseSpectrum, ANAL_PARAMS *pAnalParams);
+             float *pFPhaseSpectrum, SMS_AnalParams *pAnalParams);
 
 int QuickSpectrum (short *pIWaveform, float *pFWindow, int sizeWindow, 
                    float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft);
@@ -504,24 +533,24 @@ int InverseQuickSpectrumW (float *pFMagSpectrum, float *pFPhaseSpectrum,
 int SpectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
                     float *pFSpec2, int sizeSpec2, int nCoefficients);
 		  
-int SetSizeWindow (int iCurrentFrame, ANAL_PARAMS *pAnalParams);
+int SetSizeWindow (int iCurrentFrame, SMS_AnalParams *pAnalParams);
 
-float GetDeviation (ANAL_PARAMS *pAnalParams, int iCurrentFrame);
+float GetDeviation (SMS_AnalParams *pAnalParams, int iCurrentFrame);
 
-int ReAnalyze (int iCurrentFrame, ANAL_PARAMS *pAnalParams);
+int ReAnalyze (int iCurrentFrame, SMS_AnalParams *pAnalParams);
 
 int PeakDetection (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag, 
-                   int sizeWindow, PEAK *pSpectralPeaks, 
-                   ANAL_PARAMS *pAnalParams);
+                   int sizeWindow, SMS_Peak *pSpectralPeaks, 
+                   SMS_AnalParams *pAnalParams);
 
-void HarmDetection (ANAL_FRAME *pFrame, float fRefFundamental,
-                    ANAL_PARAMS *pAnalParams);
+void HarmDetection (SMS_AnalFrame *pFrame, float fRefFundamental,
+                    SMS_AnalParams *pAnalParams);
 
-void GenPeakContinuation (int iFrame, ANAL_PARAMS *pAnalParams);
+void GenPeakContinuation (int iFrame, SMS_AnalParams *pAnalParams);
 
-int DeleteCandidate (CONT_CANDIDATE *pCandidate, int nCand, int iBestPeak);
+int DeleteCandidate (SMS_ContCandidate *pCandidate, int nCand, int iBestPeak);
 
-int PeakContinuation (int iFrame, ANAL_PARAMS *pAnalParams);
+int PeakContinuation (int iFrame, SMS_AnalParams *pAnalParams);
 
 float PreEmphasis (float fInput);
 
@@ -532,10 +561,10 @@ void Covariance (float *pFSig, int nSig, int nStage, float *pFPhi, int nMax);
 void CovLatticeHarm (float *pFPhi, int nMax, int m, float *pFPredCoeff, 
                      float *pFReflexCoeff, float *pFError, float *pFScr);
 
-int CleanTrajectories (int iCurrentFrame, ANAL_PARAMS *pAnalParams);
+int CleanTrajectories (int iCurrentFrame, SMS_AnalParams *pAnalParams);
 
 void ScaleDeterministic (float *pFSynthBuffer, float *pFOriginalBuffer,
-                         float *pFMagTraj, ANAL_PARAMS *pAnalParams, int nTraj);
+                         float *pFMagTraj, SMS_AnalParams *pAnalParams, int nTraj);
 			
 int PrepSine (int nTableSize);
 
@@ -590,21 +619,21 @@ void ClearSmsRecord (SMS_Data *pSmsRecord);
 
 int CopySmsRecord (SMS_Data *pCopySmsRecord, SMS_Data *pOriginalSmsRecord);
 
-void MoveFrames (ANAL_PARAMS *pAnalParams);
+void MoveFrames (SMS_AnalParams *pAnalParams);
 
 int GetResidual (float *pFSynthesis, float *pFOriginal,  
-                 float *pFResidual, int sizeWindow, ANAL_PARAMS *pAnalParams);
+                 float *pFResidual, int sizeWindow, SMS_AnalParams *pAnalParams);
 
 int StocAnalysis (float *pFResidual, int sizeWindow, 
-                  SMS_Data *pSmsRecord, ANAL_PARAMS *pAnalParams);
+                  SMS_Data *pSmsRecord, SMS_AnalParams *pAnalParams);
 
-int CreateResidualFile (ANAL_PARAMS *pAnalParams);
+int CreateResidualFile (SMS_AnalParams *pAnalParams);
 
 int WriteToResidualFile (float *pFBuffer, int sizeBuffer);
 
 int WriteResidualFile ();
 
-int CreateDebugFile (ANAL_PARAMS *pAnalParams);
+int CreateDebugFile (SMS_AnalParams *pAnalParams);
 
 int WriteDebugFile ();
 
@@ -632,9 +661,27 @@ int WriteToOutputFile (float *pFBuffer, int sizeBuffer);
 
 int WriteOutputFile ();
 
+int freeBuffers ();
+
+/***********************************************************************************/
+/************ things for hybrid program that may not be necessary ***********************/
+
+#define MAX_BUFF 1000000
+#define ENV_THRESHOLD     .01
+
+/* structure for hybrid program */
+typedef struct
+{
+  int nCoefficients;
+  float fGain;
+  float fMagBalance;
+  int iSmoothOrder;
+  float *pCompressionEnv;
+  int sizeCompressionEnv;
+} HYB_PARAMS;
+
 int Hybridize (short *pIWaveform1, int sizeWave1, short *pIWaveform2, 
                int sizeWave2, float *pFWaveform, HYB_PARAMS params);
 
-int freeBuffers ();
 
-#endif
+#endif /* _SMS_H */

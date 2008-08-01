@@ -20,6 +20,9 @@
  */
 #include "sms.h"
 
+/*! \brief coefficient for pre_emphasis filter */
+#define SMS_EMPH_COEF    .9   
+
 /* pre-emphasis filter function, it returns the filtered value   
  *
  * float fInput;   sound sample
@@ -29,7 +32,7 @@ float PreEmphasis (float fInput)
 	static float fLastValue = 0;
 	float fOutput = 0;
   
-	fOutput = fInput - EMPHASIS_COEFF * fLastValue;
+	fOutput = fInput - SMS_EMPH_COEF * fLastValue;
 	fLastValue = fOutput;
   
 	return (fOutput);
@@ -44,7 +47,7 @@ float DeEmphasis (float fInput)
 	static float fLastValue = 0;
 	float fOutput = 0;
   
-	fOutput = fInput + EMPHASIS_COEFF * fLastValue;
+	fOutput = fInput + SMS_EMPH_COEF * fLastValue;
 	fLastValue = fInput;
   
 	return(fOutput);

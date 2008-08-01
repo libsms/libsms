@@ -34,15 +34,15 @@
 
 //short MaxDelayFrames;
 float FResidualPerc;
-SOUND_BUFFER soundBuffer, synthBuffer;
-ANAL_FRAME **ppFrames, *pFrames;
+SMS_SndBuffer soundBuffer, synthBuffer;
+SMS_AnalFrame **ppFrames, *pFrames;
 
 void main (int argc, char *argv[])
 {
   char *pChSndFile = NULL;
   SNDSoundStruct *pSndHeader;
   short *pSData;
-  int iError, i, j, sizeData, iLength = 1024, iFirstSample = 0, iType = 0, 
+  int iError, i, j, sizeData, iLength = 1024, iFirstGood = 0, iType = 0, 
     iNumber= 1;
   float fTime = 0, *pFData, *pFOut;
   double *pFOutput;
@@ -91,21 +91,21 @@ void main (int argc, char *argv[])
   pFOutput = (double *) calloc ((iLength+1)/2, sizeof (double));
 
   sizeData = pSndHeader->dataSize / sizeof(short);
-  iFirstSample = pSndHeader->samplingRate * fTime;
-  if ((iLength * iNumber) + iFirstSample >= sizeData)
+  iFirstGood = pSndHeader->samplingRate * fTime;
+  if ((iLength * iNumber) + iFirstGood >= sizeData)
     quit ("Data out of bounds");
 
   for (j = 0; j <= iNumber; j++)
     {
       for(i = 1; i <= iLength; i++)
-        pFData[i] = pSData[i + iFirstSample];
+        pFData[i] = pSData[i + iFirstGood];
   
       correl (pFData, pFData, iLength, pFOut);
   
       for(i = 1; i <= iLength/2; i++)
         pFOutput[i] += pFOut[i];
 
-      iFirstSample += iLength;
+      iFirstGood += iLength;
     }	
 
   for(i = 2; i <= iLength/2; i++)

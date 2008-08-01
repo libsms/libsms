@@ -27,8 +27,8 @@
 #define USAGE "Usage: smsSynthDet [-s samplingRate] <inputSmsFile> <outputSoundFile>"
 
 double *pFSTab = NULL;
-SOUND_BUFFER soundBuffer, synthBuffer;
-ANAL_FRAME **ppFrames, *pFrames;
+SMS_SndBuffer soundBuffer, synthBuffer;
+SMS_AnalFrame **ppFrames, *pFrames;
 short MaxDelayFrames;
 
 int main (int argc, char *argv[])

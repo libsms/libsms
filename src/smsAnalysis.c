@@ -20,12 +20,8 @@
  */
 #include "sms.h"
 
-/* global variables */
-
-//SOUND_BUFFER soundBuffer;// synthBuffer;
-//ANAL_FRAME **ppFrames, *pFrames;
-//double *pFSTab;
-//extern short MaxDelayFrames;
+/*! \brief maximum size for magnitude spectrum */
+#define SMS_MAX_SPEC    8192  
 
 /* 
  * function to perform the SMS analysis on a single frame 
@@ -34,16 +30,16 @@
  * short *pSWaveform;	     input data
  * long sizeNewData;	     the size of input data
  * SMS_Data *pSmsData;     output SMS data
- * ANAL_PARAMS analParams; analysis parameters
+ * SMS_AnalParams analParams; analysis parameters
  * long *pINextSizeRead;   size of next data to read
  *
  */
 
 int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_Data *pSmsData, 
-                 ANAL_PARAMS *pAnalParams, long *pINextSizeRead)
+                 SMS_AnalParams *pAnalParams, long *pINextSizeRead)
 {    
 
-//        SOUND_BUFFER *pSynthBuf = &analParams.synthBuffer;
+//        SMS_SndBuffer *pSynthBuf = &analParams.synthBuffer;
 	static int sizeWindow = 0;      /* size of current analysis window */ //RTE ?: shouldn't this just be initilalized outside?
 
 	int iCurrentFrame = pAnalParams->iMaxDelayFrames - 1;  /* frame # of current frame */
@@ -68,22 +64,22 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_Data *pSmsData,
 	InitializeFrame (iCurrentFrame, pAnalParams, sizeWindow);
   
 	/* if right data in the sound buffer do analysis */
-	if (pAnalParams->ppFrames[iCurrentFrame]->iStatus == READY)
+	if (pAnalParams->ppFrames[iCurrentFrame]->iStatus == SMS_FRAME_READY)
 	{
 		float fAvgDev = GetDeviation( pAnalParams, iCurrentFrame - 1);
       
-		if (pAnalParams->iDebugMode == DEBUG_SMS_ANAL || 
-		    pAnalParams->iDebugMode == DEBUG_ALL)
+		if (pAnalParams->iDebugMode == SMS_DBG_SMS_ANAL || 
+		    pAnalParams->iDebugMode == SMS_DBG_ALL)
 			fprintf (stdout, "Frame %d: sizeWindow %d, sizeNewData %ld, firstSampleBuffer %d, centerSample %d\n",
 			         pAnalParams->ppFrames[iCurrentFrame]->iFrameNum,
-			         sizeWindow, sizeNewData, pAnalParams->soundBuffer.iSoundSample,
+			         sizeWindow, sizeNewData, pAnalParams->soundBuffer.iMarker,
 		           pAnalParams->ppFrames[iCurrentFrame]->iFrameSample);
 
 		/* if single note use the default fundamental as reference */
-		if (pAnalParams->iSoundType == TYPE_SINGLE_NOTE)
+		if (pAnalParams->iSoundType == SMS_SOUND_TYPE_NOTE)
 			fRefFundamental = pAnalParams->fDefaultFundamental;
 		/* if sound is stable use the last fundamental as a reference */
-		else if (fAvgDev != -1 && fAvgDev <= MAX_DEVIATION)
+		else if (fAvgDev != -1 && fAvgDev <= SMS_MAX_DEVIATION)
 			fRefFundamental = pAnalParams->ppFrames[iCurrentFrame - 1]->fFundamental;
 		else
 			fRefFundamental = 0;
@@ -93,12 +89,12 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_Data *pSmsData,
       
 		/* set the size of the next analysis window */
 		if (pAnalParams->ppFrames[iCurrentFrame]->fFundamental > 0 &&
-		    pAnalParams->iSoundType != TYPE_SINGLE_NOTE)
+		    pAnalParams->iSoundType != SMS_SOUND_TYPE_NOTE)
 			sizeWindow = SetSizeWindow (iCurrentFrame, pAnalParams);
       
 		/* figure out how much needs to be read next time */
 		iExtraSamples = 
-			(pAnalParams->soundBuffer.iSoundSample + pAnalParams->soundBuffer.sizeBuffer) -
+			(pAnalParams->soundBuffer.iMarker + pAnalParams->soundBuffer.sizeBuffer) -
 			(pAnalParams->ppFrames[iCurrentFrame]->iFrameSample + pAnalParams->sizeHop);
 		*pINextSizeRead = MAX (0, (sizeWindow+1)/2 - iExtraSamples);
 
@@ -107,24 +103,24 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_Data *pSmsData,
 	}
   
 	/* incorporate the peaks into the corresponding trajectories */
-	/* This is done after a DELAY_FRAMES delay  */
-	if (pAnalParams->ppFrames[iCurrentFrame - DELAY_FRAMES]->fFundamental > 0 ||
+	/* This is done after a SMS_DELAY_FRAMES delay  */
+	if (pAnalParams->ppFrames[iCurrentFrame - SMS_DELAY_FRAMES]->fFundamental > 0 ||
 	    ((pAnalParams->iFormat == SMS_FORMAT_IH ||
 	      pAnalParams->iFormat == SMS_FORMAT_IHP) &&
-	     pAnalParams->ppFrames[iCurrentFrame - DELAY_FRAMES]->nPeaks > 0))
-		PeakContinuation (iCurrentFrame - DELAY_FRAMES, pAnalParams);
+	     pAnalParams->ppFrames[iCurrentFrame - SMS_DELAY_FRAMES]->nPeaks > 0))
+		PeakContinuation (iCurrentFrame - SMS_DELAY_FRAMES, pAnalParams);
     
 	/* fill gaps and delete short trajectories */
 	if (pAnalParams->iCleanTraj > 0 &&
-	    pAnalParams->ppFrames[iCurrentFrame - DELAY_FRAMES]->iStatus != EMPTY)
-		CleanTrajectories (iCurrentFrame - DELAY_FRAMES, pAnalParams);
+	    pAnalParams->ppFrames[iCurrentFrame - SMS_DELAY_FRAMES]->iStatus != SMS_FRAME_EMPTY)
+		CleanTrajectories (iCurrentFrame - SMS_DELAY_FRAMES, pAnalParams);
 
 	/* do stochastic analysis */
 	if (pAnalParams->iStochasticType != SMS_STOC_NONE)
 	{
 		/* synthesize deterministic signal */
-		if (pAnalParams->ppFrames[1]->iStatus != EMPTY &&
-		    pAnalParams->ppFrames[1]->iStatus != END)
+		if (pAnalParams->ppFrames[1]->iStatus != SMS_FRAME_EMPTY &&
+		    pAnalParams->ppFrames[1]->iStatus != SMS_FRAME_END)
 		{
 			/* shift synthesis buffer */
 			memcpy ( pAnalParams->synthBuffer.pFBuffer, 
@@ -142,17 +138,17 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_Data *pSmsData,
   
 		/* perform stochastic analysis after 1 frame of the     */
 		/* deterministic synthesis because it needs two frames  */
-		if (pAnalParams->ppFrames[0]->iStatus != EMPTY &&
-		    pAnalParams->ppFrames[0]->iStatus != END)
+		if (pAnalParams->ppFrames[0]->iStatus != SMS_FRAME_EMPTY &&
+		    pAnalParams->ppFrames[0]->iStatus != SMS_FRAME_END)
 		{
 			int sizeResidual = pAnalParams->sizeHop * 2;
 			int iSoundLoc = pAnalParams->ppFrames[0]->iFrameSample - pAnalParams->sizeHop;
 			float *pFData = &(pAnalParams->soundBuffer.pFBuffer[iSoundLoc - 
-			                                       pAnalParams->soundBuffer.iSoundSample]);
+			                                       pAnalParams->soundBuffer.iMarker]);
 			float *pFResidual;
 			int sizeData = 
 				MIN (pAnalParams->soundBuffer.sizeBuffer - 
-				      (iSoundLoc - pAnalParams->soundBuffer.iSoundSample),
+				      (iSoundLoc - pAnalParams->soundBuffer.iMarker),
 				     sizeResidual);
 			if ((pFResidual = (float *) calloc (sizeResidual, sizeof(float))) 
 			    == NULL)
@@ -190,23 +186,23 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_Data *pSmsData,
 			                    pAnalParams->ppFrames[0]->deterministic.pFMagTraj,
 			                    pAnalParams, pSmsData->nTraj);
       
-			pAnalParams->ppFrames[0]->iStatus = DONE;
+			pAnalParams->ppFrames[0]->iStatus = SMS_FRAME_DONE;
 
 			free ((char *) pFResidual);
 		}
 	}
-	else if (pAnalParams->ppFrames[0]->iStatus != EMPTY &&
-	         pAnalParams->ppFrames[0]->iStatus != END)
-		pAnalParams->ppFrames[0]->iStatus = DONE;
+	else if (pAnalParams->ppFrames[0]->iStatus != SMS_FRAME_EMPTY &&
+	         pAnalParams->ppFrames[0]->iStatus != SMS_FRAME_END)
+		pAnalParams->ppFrames[0]->iStatus = SMS_FRAME_DONE;
 
 	/* get the result */
-	if (pAnalParams->ppFrames[0]->iStatus == EMPTY)
+	if (pAnalParams->ppFrames[0]->iStatus == SMS_FRAME_EMPTY)
         {
-//                printf("returning EMPTY \n");
+//                printf("returning SMS_FRAME_EMPTY \n");
 		return (0);
         }
 	/* return analysis data */
-	else if (pAnalParams->ppFrames[0]->iStatus == DONE)
+	else if (pAnalParams->ppFrames[0]->iStatus == SMS_FRAME_DONE)
 	{
 		/* put data into output */
 		int length = sizeof(float) * pSmsData->nTraj;
@@ -221,7 +217,7 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_Data *pSmsData,
 		return (1);
 	}
 	/* done, end of sound */
-	else if (pAnalParams->ppFrames[0]->iStatus == END)
+	else if (pAnalParams->ppFrames[0]->iStatus == SMS_FRAME_END)
 		return (-1);
 	else
 	{
@@ -234,22 +230,22 @@ int SmsAnalysis (short *pSWaveform, long sizeNewData, SMS_Data *pSmsData,
 /* compute spectrum, find peaks, and fundamental of given frame
  *
  * int iCurrentFrame          frame number to be computed
- * ANAL_PARAMS analParams     analysis parameters
+ * SMS_AnalParams analParams     analysis parameters
  * float fRefFundamental      reference fundamental 
  */
-void ComputeFrame (int iCurrentFrame, ANAL_PARAMS *pAnalParams, 
+void ComputeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
                    float fRefFundamental)
 {
-//	extern SOUND_BUFFER soundBuffer;
-//	extern ANAL_FRAME **ppFrames;
+//	extern SMS_SndBuffer soundBuffer;
+//	extern SMS_AnalFrame **ppFrames;
 
-	static float pFMagSpectrum[MAX_SIZE_MAG];
-	static float pFPhaSpectrum[MAX_SIZE_MAG];
+	static float pFMagSpectrum[SMS_MAX_SPEC];
+	static float pFPhaSpectrum[SMS_MAX_SPEC];
 	int sizeMag, i;
 	int iSoundLoc = pAnalParams->ppFrames[iCurrentFrame]->iFrameSample - 
 		((pAnalParams->ppFrames[iCurrentFrame]->iFrameSize + 1) >> 1) + 1;
 	float *pFData = 
-		&(pAnalParams->soundBuffer.pFBuffer[iSoundLoc - pAnalParams->soundBuffer.iSoundSample]);
+		&(pAnalParams->soundBuffer.pFBuffer[iSoundLoc - pAnalParams->soundBuffer.iMarker]);
   
 	/* compute the magnitude and phase spectra */
 	sizeMag = Spectrum(pFData, pAnalParams->ppFrames[iCurrentFrame]->iFrameSize,
@@ -269,8 +265,8 @@ void ComputeFrame (int iCurrentFrame, ANAL_PARAMS *pAnalParams,
         ///////////////////////////////////////
 
   
-	if (pAnalParams->iDebugMode == DEBUG_PEAK_DET || 
-	    pAnalParams->iDebugMode == DEBUG_ALL)
+	if (pAnalParams->iDebugMode == SMS_DBG_PEAK_DET || 
+	    pAnalParams->iDebugMode == SMS_DBG_ALL)
 	{
 		fprintf(stdout, "Frame %d peaks: ", 
 		        pAnalParams->ppFrames[iCurrentFrame]->iFrameNum);
@@ -288,8 +284,8 @@ void ComputeFrame (int iCurrentFrame, ANAL_PARAMS *pAnalParams,
 	    pAnalParams->iFormat == SMS_FORMAT_HP))
 		HarmDetection (pAnalParams->ppFrames[iCurrentFrame], fRefFundamental, pAnalParams);
   
-	if (pAnalParams->iDebugMode == DEBUG_HARM_DET || 
-	    pAnalParams->iDebugMode == DEBUG_ALL)
+	if (pAnalParams->iDebugMode == SMS_DBG_HARM_DET || 
+	    pAnalParams->iDebugMode == SMS_DBG_ALL)
 		fprintf(stdout, "Frame %d: fundamental %f\n", 
 		        pAnalParams->ppFrames[iCurrentFrame]->iFrameNum,
 		        pAnalParams->ppFrames[iCurrentFrame]->fFundamental);

@@ -203,19 +203,19 @@ void GetWindow (int sizeWindow, float *pFWindow, int iWindowType)
 {
 	switch (iWindowType)
 	{
-		case BLACKMAN_HARRIS_62: 
+		case SMS_WIN_BH_62: 
 			BlackmanHarris62 (sizeWindow, pFWindow);
 			break;
-		case BLACKMAN_HARRIS_70: 
+		case SMS_WIN_BH_70: 
 			BlackmanHarris70 (sizeWindow, pFWindow);			
 			break;
-		case BLACKMAN_HARRIS_74: 
+		case SMS_WIN_BH_74: 
 			BlackmanHarris74 (sizeWindow, pFWindow);
 			break;
-		case BLACKMAN_HARRIS_92: 
+		case SMS_WIN_BH_92: 
 			BlackmanHarris92 (sizeWindow, pFWindow);
 			break;
-		case HAMMING: 
+		case SMS_WIN_HAMMING: 
 			Hamming (sizeWindow, pFWindow);
 			break;
 		default:

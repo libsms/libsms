@@ -31,10 +31,10 @@
  * float *pFResidual;        residual signal
  * int sizeBuffer;           size of buffer
  * SMS_Data *pSmsData;       pointer to output SMS data
- * ANAL_PARAMS *pAnalParams;   analysis parameters
+ * SMS_AnalParams *pAnalParams;   analysis parameters
  */
 static int StocApproxFFT (float *pFResidual, int sizeBuffer, 
-                            SMS_Data *pSmsData, ANAL_PARAMS *pAnalParams)
+                            SMS_Data *pSmsData, SMS_AnalParams *pAnalParams)
 {
 	int i;
         int sizeFft = (int) pow(2.0, (float)(1+(floor(log((float) sizeBuffer) / LOG2))));
@@ -82,10 +82,10 @@ static int StocApproxFFT (float *pFResidual, int sizeBuffer,
  * float *pFResidual;        residual signal
  * int sizeBuffer;           size of buffer
  * SMS_Data *pSmsData;       pointer to output SMS data
- * ANAL_PARAMS *pAnalParams;   analysis parameters
+ * SMS_AnalParams *pAnalParams;   analysis parameters
  */
 int StocAnalysis (float *pFResidual, int sizeBuffer, 
-                  SMS_Data *pSmsData, ANAL_PARAMS *pAnalParams)
+                  SMS_Data *pSmsData, SMS_AnalParams *pAnalParams)
 {
 	int iError = 1;
 	if (pAnalParams->iStochasticType == SMS_STOC_WAVE)

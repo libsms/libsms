@@ -29,8 +29,8 @@
 
 short MaxDelayFrames;
 float FResidualPerc;
-SOUND_BUFFER soundBuffer, synthBuffer;
-ANAL_FRAME **ppFrames, *pFrames;
+SMS_SndBuffer soundBuffer, synthBuffer;
+SMS_AnalFrame **ppFrames, *pFrames;
 
 int main (int argc, char *argv[])
 {

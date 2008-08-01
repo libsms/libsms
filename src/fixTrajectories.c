@@ -20,18 +20,18 @@
  */
 #include "sms.h"
 
-//extern ANAL_FRAME **ppFrames;
+//extern SMS_AnalFrame **ppFrames;
 
 /* function to fill a gap in a given trajectory 
  *
  * int iCurrentFrame;      currrent frame number 
  * int iTraj;              trajectory to be filled
  * int *pIState;           state of trajectories
- * ANAL_PARAMS *pAnalParams; analysis parameters
+ * SMS_AnalParams *pAnalParams; analysis parameters
  *
  */
 static void FillGap (int iCurrentFrame, int iTraj, int *pIState, 
-                     ANAL_PARAMS *pAnalParams)
+                     SMS_AnalParams *pAnalParams)
 {
 	int iFrame, iLastFrame = - (pIState[iTraj] - 1);
 	float fConstant = TWO_PI / pAnalParams->iSamplingRate;
@@ -92,8 +92,8 @@ static void FillGap (int iCurrentFrame, int iTraj, int *pIState,
 			fTmpPha - floor(fTmpPha/ TWO_PI) * TWO_PI;
 	}
   
-	if(pAnalParams->iDebugMode == DEBUG_CLEAN_TRAJ || 
-	   pAnalParams->iDebugMode == DEBUG_ALL)
+	if(pAnalParams->iDebugMode == SMS_DBG_CLEAN_TRAJ || 
+	   pAnalParams->iDebugMode == SMS_DBG_ALL)
 	{
 		fprintf (stdout, "fillGap: traj %d, frames %d to %d filled\n",
 		        iTraj, pAnalParams->ppFrames[iCurrentFrame-iLastFrame + 1]->iFrameNum, 
@@ -113,11 +113,11 @@ static void FillGap (int iCurrentFrame, int iTraj, int *pIState,
  * int iCurrentFrame;    current frame
  * int iTraj;            trajectory to be deleted
  * int *pIState;         state of trajectories
- * ANAL_PARAMS *pAnalParams; analysis parameters
+ * SMS_AnalParams *pAnalParams; analysis parameters
  *
  */
 static void DeleteShortTraj (int iCurrentFrame, int iTraj, int *pIState,
-                             ANAL_PARAMS *pAnalParams)
+                             SMS_AnalParams *pAnalParams)
 {
 	int iFrame, frame;
   
@@ -133,8 +133,8 @@ static void DeleteShortTraj (int iCurrentFrame, int iTraj, int *pIState,
 		pAnalParams->ppFrames[frame]->deterministic.pFPhaTraj[iTraj] = 0;
 	}
   
-	if (pAnalParams->iDebugMode == DEBUG_CLEAN_TRAJ ||
-	    pAnalParams->iDebugMode == DEBUG_ALL)
+	if (pAnalParams->iDebugMode == SMS_DBG_CLEAN_TRAJ ||
+	    pAnalParams->iDebugMode == SMS_DBG_ALL)
 		fprintf (stdout, "deleteShortTraj: traj %d, frames %d to %d deleted\n",
 		         iTraj, pAnalParams->ppFrames[iCurrentFrame - pIState[iTraj]]->iFrameNum, 
 		         pAnalParams->ppFrames[iCurrentFrame-1]->iFrameNum);
@@ -146,10 +146,10 @@ static void DeleteShortTraj (int iCurrentFrame, int iTraj, int *pIState,
 /* function to fill gaps and delete short trajectories 
  *
  * int iCurrentFrame;     current frame number
- * ANAL_PARAMS *pAnalParams analysis parameters
+ * SMS_AnalParams *pAnalParams analysis parameters
  *
  */
-int CleanTrajectories (int iCurrentFrame, ANAL_PARAMS *pAnalParams)
+int CleanTrajectories (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 {
 	int iTraj, iLength, iFrame;
 	static int *pIState = NULL;
@@ -181,8 +181,8 @@ int CleanTrajectories (int iCurrentFrame, ANAL_PARAMS *pAnalParams)
 			}
 			pIState[iTraj] = -pAnalParams->iMaxSleepingTime;
 		}
-		if (pAnalParams->iDebugMode == DEBUG_CLEAN_TRAJ || 
-		    pAnalParams->iDebugMode == DEBUG_ALL)
+		if (pAnalParams->iDebugMode == SMS_DBG_CLEAN_TRAJ || 
+		    pAnalParams->iDebugMode == SMS_DBG_ALL)
 			fprintf(stdout, "cleanTraj: frame %d to frame %d deleted\n",
 			        pAnalParams->ppFrames[iCurrentFrame-iLength]->iFrameNum, 
 			        pAnalParams->ppFrames[iCurrentFrame-1]->iFrameNum);
@@ -224,7 +224,7 @@ int CleanTrajectories (int iCurrentFrame, ANAL_PARAMS *pAnalParams)
  *
  */
 void  ScaleDeterministic (float *pFSynthBuffer, float *pFOriginalBuffer, 
-                          float *pFMagTraj, ANAL_PARAMS *pAnalParams, int nTraj)
+                          float *pFMagTraj, SMS_AnalParams *pAnalParams, int nTraj)
 {
 	float fOriginalMag = 0, fSynthesisMag = 0;
 	float fCosScaleFactor;
@@ -243,8 +243,8 @@ void  ScaleDeterministic (float *pFSynthBuffer, float *pFOriginalBuffer,
 	{
 		fCosScaleFactor = fOriginalMag / fSynthesisMag;
       
-		if(pAnalParams->iDebugMode == DEBUG_CLEAN_TRAJ || 
-		   pAnalParams->iDebugMode == DEBUG_ALL)
+		if(pAnalParams->iDebugMode == SMS_DBG_CLEAN_TRAJ || 
+		   pAnalParams->iDebugMode == SMS_DBG_ALL)
 			fprintf (stdout, "Frame %d: magnitude scaled by %f\n",
 			         pAnalParams->ppFrames[0]->iFrameNum, fCosScaleFactor);
       

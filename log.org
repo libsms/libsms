@@ -35,6 +35,7 @@ SMS Library Work Log
    - ComputeFrame
    - Spectrum
    - GetResidual
+   - static functions in peakDetection.c and peakContinuation.c
 ** TODO append sms_ to functions declared in sms.h
 ** DONE make a function for returning a string to the error
    - right now it is necessary to cop/paste a large block of code to do this

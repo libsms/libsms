@@ -20,10 +20,11 @@
  */
 #include "sms.h"
 
-/* //########## RTE DEBUG ############### */
-/* FILE *debugFile; */
-/* int fc = 0; */
-/* // ################################### */
+/*! \brief file identification constant
+ * 
+ * constant number that is first within SMS_Header, in order to correctly
+ * identify an SMS file when read.  */
+#define SMS_MAGIC 767  
 
 /* initialize the header structure of an SMS file
  *

@@ -37,7 +37,7 @@ int SpectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 {
 	float fHopSize, fCurrentLoc = 0, fLeft = 0, fRight = 0, fValue = 0, 
 		fLastLocation, fSizeX, fSpec2Acum=0, fNextHop, fDeltaY, *pFEnvelope;
-	int iFirstSample = 0, iLastSample = 0, i, j;
+	int iFirstGood = 0, iLastSample = 0, i, j;
 
   	/* when number of coefficients is smaller than 2 do not approximate */
 	if (nCoefficients < 2)
@@ -59,7 +59,7 @@ int SpectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 	/* approximate by linear interpolation */
 	if (fHopSize > 1)
 	{
-		iFirstSample = 0;
+		iFirstGood = 0;
 		for (i = 0; i < nCoefficients; i++)
 		{
 			iLastSample = fLastLocation = fCurrentLoc + fHopSize;
@@ -71,13 +71,13 @@ int SpectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 			else
 				fRight = pFSpec1[iLastSample];
 			fValue = 0;
-			for (j = iFirstSample; j <= iLastSample; j++)
+			for (j = iFirstGood; j <= iLastSample; j++)
 				fValue = MAX (fValue, pFSpec1[j]);
 			fValue = MAX (fValue, MAX (fRight, fLeft));
 			pFEnvelope[i] = fValue;
 			fLeft = fRight;
 			fCurrentLoc = fLastLocation;
-			iFirstSample = (int) (1+ fCurrentLoc);
+			iFirstGood = (int) (1+ fCurrentLoc);
 		}
 	}
 	else if (fHopSize == 1)

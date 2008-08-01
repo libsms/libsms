@@ -20,21 +20,21 @@
  */
 #include "../sms.h"
 
-extern ANAL_FRAME **ppFrames;
+extern SMS_AnalFrame **ppFrames;
 
 /* function to get the next closest peak from a guide
  * float fGuideFreq;		guide's frequency
  * float *pFFreqDistance;	distance of last best peak from guide
  * PEAK *pSpectralPeaks;	array of peaks
- * ANAL_PARAMS analParams;	analysis parameters
+ * SMS_AnalParams analParams;	analysis parameters
  * float fFreqDev;		maximum deviation from guide
  */
 static int GetNextClosestPeak (float fGuideFreq, float *pFFreqDistance, 
-                               PEAK *pSpectralPeaks, ANAL_PARAMS analParams,
+                               PEAK *pSpectralPeaks, SMS_AnalParams analParams,
                                float fFreqDev)
 {
 	int iInitialPeak = 
-		MAX_NUM_PEAKS * fGuideFreq / (analParams.iSamplingRate * .5),
+		SMS_MAX_NPEAKS * fGuideFreq / (analParams.iSamplingRate * .5),
 		iLowPeak, iHighPeak, iChosenPeak = -1;
 	float fLowDistance, fHighDistance, fFreq;
 
@@ -55,7 +55,7 @@ static int GetNextClosestPeak (float fGuideFreq, float *pFFreqDistance,
 	else
 	{
 		while (floor(fLowDistance) >= floor(*pFFreqDistance) &&
-		       iInitialPeak < MAX_NUM_PEAKS)
+		       iInitialPeak < SMS_MAX_NPEAKS)
 		{
 			iInitialPeak++;	 
 			if ((fFreq = pSpectralPeaks[iInitialPeak].fFreq) == 0)
@@ -80,7 +80,7 @@ static int GetNextClosestPeak (float fGuideFreq, float *pFFreqDistance,
 	iHighPeak = iInitialPeak;
 	fHighDistance = fGuideFreq - pSpectralPeaks[iHighPeak].fFreq;
 	while (floor(fHighDistance) >= floor(-*pFFreqDistance) &&
-	       iHighPeak < MAX_NUM_PEAKS)
+	       iHighPeak < SMS_MAX_NPEAKS)
 	{
 		iHighPeak++;	 
 		if ((fFreq = pSpectralPeaks[iHighPeak].fFreq) == 0)
@@ -116,11 +116,11 @@ static int GetNextClosestPeak (float fGuideFreq, float *pFFreqDistance,
 /* choose the best candidate out of all, returns the peak number of 
  * the best candidate
  *
- * CONT_CANDIDATE *pCandidate;  pointer to all the continuation candidates
+ * SMS_ContCandidate *pCandidate;  pointer to all the continuation candidates
  * int nCandidates;             number of candidates
  * float fFreqDev;              maximum frequency deviation allowed
  */
-static int ChooseBestCand (CONT_CANDIDATE *pCandidate, int nCandidates, 
+static int ChooseBestCand (SMS_ContCandidate *pCandidate, int nCandidates, 
                            float fFreqDev)
 {
 	int i, iHighestCand, iClosestCand, iBestCand = 0;
@@ -199,20 +199,20 @@ static int BestGuide (int iConflictingGuide, int iGuide, GUIDE *pGuides,
  *	returns the peak number
  * GUIDE *pGuideVal;		guide attributes
  * PEAK *pSpectralPeaks;	peak values at the current frame
- * ANAL_PARAMS analParams;	analysis parameters
+ * SMS_AnalParams analParams;	analysis parameters
  * float fFreqDev;              frequency deviation allowed
  */
 static int GetBestPeak (GUIDE *pGuides, int iGuide, PEAK *pSpectralPeaks, 
-                        ANAL_PARAMS analParams, float fFreqDev)
+                        SMS_AnalParams analParams, float fFreqDev)
 {
 	int iCand = 0, iPeak, iBestPeak, iConflictingGuide, iWinnerGuide;
 	float fGuideFreq = pGuides[iGuide].fFreq,
 		fGuideMag = pGuides[iGuide].fMag,
 		fFreqDistance = -1, fMagDistance = 0;
-	CONT_CANDIDATE pCandidate[MAX_CONT_CANDIDATES];
+	SMS_ContCandidate pCandidate[MAX_CONT_CANDIDATES];
 
 	/* find all possible candidates */
-	while (iCand < MAX_CONT_CANDIDATES)
+	while (iCand < MAX_SMS_ContCandidateS)
 	{
 		/* find the next best peak */
 		if ((iPeak = GetNextClosestPeak (fGuideFreq, &fFreqDistance,
@@ -228,8 +228,8 @@ static int GetBestPeak (GUIDE *pGuides, int iGuide, PEAK *pSpectralPeaks,
 			pCandidate[iCand].fMagDev = fMagDistance;
 			pCandidate[iCand].iPeak = iPeak;
       	      
-			if(analParams.iDebugMode == DEBUG_PEAK_CONT ||
-			   analParams.iDebugMode == DEBUG_ALL)
+			if(analParams.iDebugMode == SMS_DBG_PEAK_CONT ||
+			   analParams.iDebugMode == SMS_DBG_ALL)
 				fprintf (stdout, "candidate %d: freq %f mag %f\n", 
 				         iCand, pSpectralPeaks[iPeak].fFreq, 	
 				         pSpectralPeaks[iPeak].fMag);
@@ -245,8 +245,8 @@ static int GetBestPeak (GUIDE *pGuides, int iGuide, PEAK *pSpectralPeaks,
 		iBestPeak = ChooseBestCand (pCandidate, iCand, 
 		                            analParams.fFreqDeviation);
       
-	if(analParams.iDebugMode == DEBUG_PEAK_CONT ||
-	   analParams.iDebugMode == DEBUG_ALL)
+	if(analParams.iDebugMode == SMS_DBG_PEAK_CONT ||
+	   analParams.iDebugMode == SMS_DBG_ALL)
 		fprintf (stdout, "BestCandidate: freq %f\n",
 		         pSpectralPeaks[iBestPeak].fFreq);
 
@@ -256,8 +256,8 @@ static int GetBestPeak (GUIDE *pGuides, int iGuide, PEAK *pSpectralPeaks,
 	{
 		iWinnerGuide = BestGuide (iConflictingGuide, iGuide, pGuides, 
 		                          pSpectralPeaks);
-		if(analParams.iDebugMode == DEBUG_PEAK_CONT ||
-		   analParams.iDebugMode == DEBUG_ALL)
+		if(analParams.iDebugMode == SMS_DBG_PEAK_CONT ||
+		   analParams.iDebugMode == SMS_DBG_ALL)
 			fprintf (stdout, 
 			         "Conflict: guide: %d (%f), and guide: %d (%f). best: %d\n", 
 			         iGuide, pGuides[iGuide].fFreq, 
@@ -282,10 +282,10 @@ static int GetBestPeak (GUIDE *pGuides, int iGuide, PEAK *pSpectralPeaks,
  */
 static int GetNextMax (PEAK *pSpectralPeaks, float *pFCurrentMax)
 {
-	float fPeakMag, fMaxMag = MAG_THRESHOLD;
+	float fPeakMag, fMaxMag = SMS_MIN_MAG;
 	int iPeak, iMaxPeak = -1;
   
-	for (iPeak = 0; iPeak < MAX_NUM_PEAKS; iPeak++)
+	for (iPeak = 0; iPeak < SMS_MAX_NPEAKS; iPeak++)
 	{
 		fPeakMag = pSpectralPeaks[iPeak].fMag;
     
@@ -335,9 +335,9 @@ static int GetStartingPeak (int iGuide, GUIDE *pGuides, int nGuides,
  * the output is the freq., mag., and phase trajectories
  *
  * int iFrame;	 current frame number
- * ANAL_PARAMS analParams; analysis parameters
+ * SMS_AnalParams analParams; analysis parameters
  */
-int PeakContinuation (int iFrame, ANAL_PARAMS analParams)
+int PeakContinuation (int iFrame, SMS_AnalParams analParams)
 {
 	int iGuide, iCurrentPeak = -1, iGoodPeak = -1;
 	float fFund = ppFrames[iFrame]->fFundamental,
@@ -370,8 +370,8 @@ int PeakContinuation (int iFrame, ANAL_PARAMS analParams)
 				(1 - analParams.fFundContToGuide) * pGuides[iGuide].fFreq +        
 				analParams.fFundContToGuide * fFund * (iGuide + 1);
   
-	if (analParams.iDebugMode == DEBUG_PEAK_CONT ||
-	    analParams.iDebugMode == DEBUG_ALL)
+	if (analParams.iDebugMode == SMS_DBG_PEAK_CONT ||
+	    analParams.iDebugMode == SMS_DBG_ALL)
 		fprintf (stdout, 
 		         "Frame %d Peak Continuation: \n", 
 		         ppFrames[iFrame]->iFrameNum);
@@ -388,8 +388,8 @@ int PeakContinuation (int iFrame, ANAL_PARAMS analParams)
 				(1 - analParams.fPeakContToGuide) * pGuides[iGuide].fFreq +
 				analParams.fPeakContToGuide * fPreviousFreq;
    
-		if (analParams.iDebugMode == DEBUG_PEAK_CONT ||
-		    analParams.iDebugMode == DEBUG_ALL)
+		if (analParams.iDebugMode == SMS_DBG_PEAK_CONT ||
+		    analParams.iDebugMode == SMS_DBG_ALL)
 			fprintf (stdout, "Guide %d:  freq %f, mag %f\n", 
 			         iGuide, pGuides[iGuide].fFreq, pGuides[iGuide].fMag);
       
