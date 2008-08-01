@@ -196,7 +196,7 @@ typedef struct
 } SMS_AnalFrame;
 
 /*! \struct SMS_AnalParams
- * \brief structure with useful information for the analysis functions
+ * \brief structure with useful information for analysis functions
  *
  * \todo details
  */
@@ -232,41 +232,51 @@ typedef struct
 	int iWindowType;            /*!< type of analysis window enumerated by SMS_WINDOWS 
                                                        \see SMS_WINDOWS */			  	 			 
         int iMaxDelayFrames;     /*!< maximum number of frames to delay before peak continuation */
-        SMS_Data prevFrame;   /*!< the previous analysis frame \see SMS_Data */
+        SMS_Data prevFrame;   /*!< the previous analysis frame  */
         SMS_SndBuffer soundBuffer; /*!< samples to be analyzed */
         SMS_SndBuffer synthBuffer; /*!< resynthesized samples needed to get the residual */
         SMS_AnalFrame *pFrames;  /*!< \todo explain why AnalFrame is necessary here */
         SMS_AnalFrame **ppFrames; /*!< \todo explain why this double pointer is necessary */
         float fResidualPercentage; /*!< accumalitive residual percentage */
 #ifdef FFTW
-        fftwf_plan  fftPlan; /*!< plan for FFTW's fourier analysis functions, floating point */
+        fftwf_plan  fftPlan; /*!< plan for FFTW's fourier transform functions, floating point */
         float *pWaveform; /*< array of samples to be passed to fftwf_execute 
                            \todo why isn't the sound buffer above used here, why both? */
-        fftwf_complex *pSpectrum; /*< complex array of spectrum produced by fftwf_execute */
+        fftwf_complex *pSpectrum; /*< complex array of spectra produced by fftwf_execute */
 #endif
 } SMS_AnalParams;
 
-/* structure with useful information for synthesis */
+/*! \struct SMS_SynthParams
+ * \brief structure with useful information for synthesis functions
+ *
+ * \todo details
+ */
 typedef struct
 {
-	int iStochasticType; 
-	int iSynthesisType;        /* globally defined above */
-        int iDetSynthType;         /* globally defined above */
-	int iOriginalSRate;
-	int iSamplingRate;
-	SMS_Data previousFrame;
-	int sizeHop;
-        int origSizeHop;
-	float *pFDetWindow;
-        float *pFStocWindow;
+	int iStochasticType;       /*!<  type of stochastic model defined by SMS_StocSynthType 
+                                                     \see SMS_StocSynthType */
+	int iSynthesisType;        /*!< type of synthesis to perform \see SMS_SynthType */
+        int iDetSynthType;         /*!< method for synthesizing deterministic component
+                                                 \see SMS_DetSynthType */
+	int iOriginalSRate;  /*!< samplerate of the sound model source \todo this should not be necessary, 
+                                             it is only used to create other parameters... should just use that param
+                                             here instead */
+	int iSamplingRate;         /*!< synthesis samplerate */
+	SMS_Data prevFrame; /*!< previous data frame, used for smooth interpolation between frames */
+	int sizeHop;                   /*!< number of samples to synthesis for each frame */
+        int origSizeHop;            /*!< original number of samples used to create each analysis frame */
+	float *pFDetWindow;    /*!< array to hold the window used for deterministic synthesis
+                                                \todo explain which window this is */
+        float *pFStocWindow; /*!< array to hold the window used for stochastic synthesis
+                                                \todo explain which window this is */
 #ifdef FFTW
-        fftwf_plan  fftPlan;
-        fftwf_complex *pSpectrum;
-        float *pWaveform;
+        fftwf_plan  fftPlan;         /*!< plan for FFTW's inverse fourier transform functions, floating point */
+        fftwf_complex *pSpectrum; /*!< complex array of spectra used to create synthesis */
+        float *pWaveform;       /*!< synthesis samples produced by fftwf_execute */
 #else
-        float *realftOut; // RTE_DEBUG : comparing realft and fftw
+        float *realftOut; /*!< RTE_DEBUG : comparing realft and fftw \todo remove this */
 #endif
-} SYNTH_PARAMS;
+} SMS_SynthParams;
 
 /*!  \brief analysis format
  *
@@ -443,12 +453,10 @@ enum SMS_FRAME_STATUS
 };
 
 
-#define SIZE_SYNTH_FRAME  128   /* size of synthesis frame */
+#define SMS_MIN_SIZE_FRAME  128   /* size of synthesis frame */
 
-#define SIN_TABLE_SIZE 4096//was 2046
-#define SINC_TABLE_SIZE 4096
-extern float *sms_tab_sine;
-extern float *sms_tab_sinc;
+extern float *sms_tab_sine; /*!< global table to hold a sine function */
+extern float *sms_tab_sinc; /*!< global table to hold a sinc function */
 
 extern float *sms_window_spec;
 
@@ -488,11 +496,11 @@ int SmsInit( void );
 
 int SmsInitAnalysis ( SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams);
 
-int SmsInitSynth( SMS_Header *pSmsHeader, SYNTH_PARAMS *pSynthParams );
+int SmsInitSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams );
 
 int SmsFreeAnalysis (SMS_AnalParams *pAnalParams);
 
-int SmsFreeSynth( SYNTH_PARAMS *pSynthParams );
+int SmsFreeSynth( SMS_SynthParams *pSynthParams );
 
 void FillBuffer (short *pSWaveform, long sizeNewData, SMS_AnalParams *pAnalParams);
 
@@ -575,7 +583,7 @@ int PrepSinc ();
 double SincTab (double fTheta);
 
 int SmsSynthesis (SMS_Data *pSmsRecord, float*pFSynthesis, 
-                  SYNTH_PARAMS *pSynthParams);
+                  SMS_SynthParams *pSynthParams);
                 
 
 int FrameSineSynth (SMS_Data *pSmsRecord, float *pFBuffer, 
@@ -655,7 +663,7 @@ int GetSoundData (SMS_SndHeader *pSoundHeader, short *pSoundData, long sizeSound
 
 int OpenSound (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader);
 
-int CreateOutputSoundFile (SYNTH_PARAMS synthParams, char *pChOutputSoundFile);
+int CreateOutputSoundFile (SMS_SynthParams synthParams, char *pChOutputSoundFile);
 
 int WriteToOutputFile (float *pFBuffer, int sizeBuffer);
 
@@ -666,10 +674,12 @@ int freeBuffers ();
 /***********************************************************************************/
 /************ things for hybrid program that may not be necessary ***********************/
 
-#define MAX_BUFF 1000000
-#define ENV_THRESHOLD     .01
+//#define MAX_BUFF 1000000
 
-/* structure for hybrid program */
+/*! \struct SMS_HybParams
+ * \brief structure for hybrid program 
+ * \todo find out wha this is, hah 
+ */
 typedef struct
 {
   int nCoefficients;
@@ -678,10 +688,10 @@ typedef struct
   int iSmoothOrder;
   float *pCompressionEnv;
   int sizeCompressionEnv;
-} HYB_PARAMS;
+} SMS_HybParams;
 
 int Hybridize (short *pIWaveform1, int sizeWave1, short *pIWaveform2, 
-               int sizeWave2, float *pFWaveform, HYB_PARAMS params);
+               int sizeWave2, float *pFWaveform, SMS_HybParams params);
 
 
 #endif /* _SMS_H */

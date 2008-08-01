@@ -24,16 +24,20 @@ static float *pFWindow1 = NULL, *pFWindow2 = NULL;
 static int sizeFft1, sizeFft2, sizeMag1, sizeMag2, sizeSmooth;
 static float *pFMagSpectrum1, *pFMagSpectrum2, *pFPhaseSpectrum1, 
 	     *pFPhaseSpectrum2, *pFMagEnv, *pFEnvBuffer, *pFMagEnvFilt;
+
+#ifndef ENV_THRESHOLD
+#define ENV_THRESHOLD     .01
+#endif
 /* 
  * initialize static arrays 
  *
  * int sizeWave1        size of waveform 1
  * int sizeWave2        size of waveform 2
- * HYB_PARAMS params    parameters for hybridization
+ * SMS_HybParams params    parameters for hybridization
  *
  */
 
-static int InitializeHybrid (int sizeWave1, int sizeWave2, HYB_PARAMS params)
+static int InitializeHybrid (int sizeWave1, int sizeWave2, SMS_HybParams params)
 {
     if ((pFWindow1 = (float *) calloc(sizeWave1, sizeof(float))) == NULL)
       return -1;
@@ -139,11 +143,11 @@ static int FilterMagEnv (float *pFMagEnv, float *pFMagEnvFilt, int sizeMag)
  * float *pFMagEnv		envelope from hybridizing sound
  * float *pFMagSpectrum		magnitude spectrum of excitation sound
  * int sizeMag			size of magnitude spectrum
- * HYB_PARAMS params		control parameters
+ * SMS_HybParams params		control parameters
  */
 static int MultiplySpectra (float *pFMagEnv, float *pFMagSpectrum, int sizeMag, 
                             float *pFMagSpectrum2, int sizeMag2, 
-                            HYB_PARAMS params)
+                            SMS_HybParams params)
 {
 	float *pFBuffer, fMag = 0, fAverageMag, fMagEnv = 0, fAverageMagEnv, 
 		fHybAverage, fMagHyb = 0, fAverageMagHyb;
@@ -207,11 +211,11 @@ static int MultiplySpectra (float *pFMagEnv, float *pFMagSpectrum, int sizeMag,
  * short *pIWaveform2		hybridization waveform
  * int sizeWave2		    size of hybridization waveform
  * float *pFWaveform		output waveform (hybridized)
- * HYB_PARAMS params		control parameters
+ * SMS_HybParams params		control parameters
  *
  */
 void HybridizeMag (short *pIWaveform1, int sizeWave1, short *pIWaveform2, 
-                   int sizeWave2, float *pFWaveform, HYB_PARAMS params)
+                   int sizeWave2, float *pFWaveform, SMS_HybParams params)
 {
 	int i;
 	double fMag1 = 0, fMag2 = 0, fScalar;
@@ -242,11 +246,11 @@ void HybridizeMag (short *pIWaveform1, int sizeWave1, short *pIWaveform2,
  * short *pIWaveform2		hybridization waveform
  * int sizeWave2		    size of hybridization waveform
  * float *pFWaveform		output waveform (hybridized)
- * HYB_PARAMS params		control parameters
+ * SMS_HybParams params		control parameters
  *
  */
 int Hybridize (short *pIWaveform1, int sizeWave1, short *pIWaveform2, 
-               int sizeWave2, float *pFWaveform, HYB_PARAMS params)
+               int sizeWave2, float *pFWaveform, SMS_HybParams params)
 {
 	/* initialize static variables and arrays */
 	if (pFWindow1 == NULL)

@@ -20,6 +20,7 @@
  */
 #include "sms.h"
 
+#define SINC_TABLE_SIZE 4096
 
 float *sms_tab_sinc;
 

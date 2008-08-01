@@ -29,7 +29,7 @@ float max, min;
 
 
 static int SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer, 
-                          SYNTH_PARAMS *pSynthParams)
+                          SMS_SynthParams *pSynthParams)
 {
         long sizeFft = pSynthParams->sizeHop << 1; 
         long iHalfSamplingRate = pSynthParams->iSamplingRate >> 1;
@@ -51,14 +51,14 @@ static int SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                 if (((fMag = pSmsData->pFMagTraj[i]) > 0) &&
                     ((fFreq = pSmsData->pFFreqTraj[i]) < iHalfSamplingRate))
                 {
-                        if (pSynthParams->previousFrame.pFMagTraj[i] <= 0)
+                        if (pSynthParams->prevFrame.pFMagTraj[i] <= 0)
                         {
-                                pSynthParams->previousFrame.pFPhaTraj[i] = 
+                                pSynthParams->prevFrame.pFPhaTraj[i] = 
                                         TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
                         }
                         // can fMag here be stored as magnitude instead of DB within smsData?
                         fMag = TO_MAG (fMag);
-                        fTmp = pSynthParams->previousFrame.pFPhaTraj[i] +
+                        fTmp = pSynthParams->prevFrame.pFPhaTraj[i] +
                                 TWO_PI * fFreq * fSamplingPeriod * sizeMag;
                         fPhase = fTmp - floor(fTmp / TWO_PI) * TWO_PI;
                         fLoc = sizeFft * fFreq  * fSamplingPeriod;
@@ -100,9 +100,9 @@ static int SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                                 }
                         }
                 }
-                pSynthParams->previousFrame.pFMagTraj[i] = fMag;
-                pSynthParams->previousFrame.pFPhaTraj[i] = fPhase;
-                pSynthParams->previousFrame.pFFreqTraj[i] = fFreq;
+                pSynthParams->prevFrame.pFMagTraj[i] = fMag;
+                pSynthParams->prevFrame.pFPhaTraj[i] = fPhase;
+                pSynthParams->prevFrame.pFFreqTraj[i] = fFreq;
         }
 
         fftwf_execute(pSynthParams->fftPlan);
@@ -120,14 +120,14 @@ static int SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                 if (((fMag = pSmsData->pFMagTraj[i]) > 0) &&
                     ((fFreq = pSmsData->pFFreqTraj[i]) < iHalfSamplingRate))
                 {
-                        if (pSynthParams->previousFrame.pFMagTraj[i] <= 0)
+                        if (pSynthParams->prevFrame.pFMagTraj[i] <= 0)
                         {
-                                pSynthParams->previousFrame.pFPhaTraj[i] = 
+                                pSynthParams->prevFrame.pFPhaTraj[i] = 
                                         TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
                         }
                         // can fMag here be stored as magnitude instead of DB within smsData?
                         fMag = TO_MAG (fMag);
-                        fTmp = pSynthParams->previousFrame.pFPhaTraj[i] +
+                        fTmp = pSynthParams->prevFrame.pFPhaTraj[i] +
                                 TWO_PI * fFreq * fSamplingPeriod * sizeMag;
                         fPhase = fTmp - floor(fTmp / TWO_PI) * TWO_PI;
                         fLoc = sizeFft * fFreq  * fSamplingPeriod;
@@ -167,9 +167,9 @@ static int SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                                 }
                         }
                 }
-                pSynthParams->previousFrame.pFMagTraj[i] = fMag;
-                pSynthParams->previousFrame.pFPhaTraj[i] = fPhase;
-                pSynthParams->previousFrame.pFFreqTraj[i] = fFreq;
+                pSynthParams->prevFrame.pFMagTraj[i] = fMag;
+                pSynthParams->prevFrame.pFPhaTraj[i] = fPhase;
+                pSynthParams->prevFrame.pFFreqTraj[i] = fFreq;
         }
 
         realft (pSynthParams->realftOut-1, sizeMag, -1);
@@ -187,7 +187,7 @@ static int SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
 /* synthesis of one frame of the stochastic component using approximated 
  * spectral envelopes and random phases*/
 static int StocSynthApprox (SMS_Data *pSmsData, float *pFBuffer, 
-                          SYNTH_PARAMS *pSynthParams)
+                          SMS_SynthParams *pSynthParams)
 {
         float *pFMagSpectrum, *pFPhaseSpectrum;
         int i, sizeSpec1Used;
@@ -261,10 +261,10 @@ static int StocSynthApprox (SMS_Data *pSmsData, float *pFBuffer,
  *
  * SMS_Data *pSmsData;      input SMS data
  * short *pSSynthesis;      output sound buffer  RTE: switching to float
- * SYNTH_PARAMS *pSynthParams;   synthesis parameters
+ * SMS_SynthParams *pSynthParams;   synthesis parameters
  */
 int SmsSynthesis (SMS_Data *pSmsData, float *pFSynthesis,  
-                  SYNTH_PARAMS *pSynthParams)
+                  SMS_SynthParams *pSynthParams)
 {
         static float *pFBuffer = NULL;
         int i, j, sizeHop = pSynthParams->sizeHop;
@@ -294,7 +294,7 @@ int SmsSynthesis (SMS_Data *pSmsData, float *pFSynthesis,
                         else /*pSynthParams->iDetSynthType == SMS_DET_SIN*/
                         {
                                 FrameSineSynth (pSmsData, pFBuffer, pSynthParams->sizeHop,
-                                                &(pSynthParams->previousFrame), pSynthParams->iSamplingRate);
+                                                &(pSynthParams->prevFrame), pSynthParams->iSamplingRate);
                         }
                         if(pSynthParams->iStochasticType == SMS_STOC_WAVE)
                         {
@@ -330,7 +330,7 @@ int SmsSynthesis (SMS_Data *pSmsData, float *pFSynthesis,
                 else /*pSynthParams->iDetSynthType == SMS_DET_SIN*/
                 {
                         FrameSineSynth (pSmsData, pFBuffer, pSynthParams->sizeHop,
-                                        &(pSynthParams->previousFrame), pSynthParams->iSamplingRate);
+                                        &(pSynthParams->prevFrame), pSynthParams->iSamplingRate);
 //                        printf("6\n");
                 }
         }

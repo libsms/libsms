@@ -64,10 +64,10 @@ int main (int argc, char *argv[])
         float fFsRatio,  fLocIncr; 
         int  detSynthType, synthType, sizeHop, iSamplingRate; /*  argument holders */
         float timeFactor = 1.0;
-	SYNTH_PARAMS synthParams;
+	SMS_SynthParams synthParams;
 	synthParams.iSynthesisType = SMS_STYPE_ALL;
         synthParams.iDetSynthType = SMS_DET_IFFT;
-	synthParams.sizeHop = SIZE_SYNTH_FRAME;
+	synthParams.sizeHop = SMS_MIN_SIZE_FRAME;
 	synthParams.iSamplingRate = 44100;
 
 	if (argc > 3) 
@@ -91,7 +91,7 @@ int main (int argc, char *argv[])
                                         synthParams.iDetSynthType = detSynthType;
                                         break;
                                 case 'h': sscanf(argv[i], "%d", &sizeHop);
-                                        if(sizeHop < SIZE_SYNTH_FRAME || sizeHop > SMS_MAX_WINDOW) 
+                                        if(sizeHop < SMS_MIN_SIZE_FRAME || sizeHop > SMS_MAX_WINDOW) 
                                                 quit("error: invalid sizeHop");
                                         synthParams.sizeHop = sizeHop;
                                         //RTE TODO: round to power of 2 (is it necessary?)

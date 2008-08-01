@@ -20,6 +20,8 @@
  */
 #include "sms.h"
 
+#define SIN_TABLE_SIZE 4096//was 2046
+
 static double fSineScale;
 float *sms_tab_sine;
 

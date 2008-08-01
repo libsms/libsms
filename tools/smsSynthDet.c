@@ -39,7 +39,7 @@ int main (int argc, char *argv[])
 	SMS_Data smsData;
 	short *pSSynthesis;
 	int iError, iRecord, i, iSamplingRate = 44100;
-	SYNTH_PARAMS synthParams;
+	SMS_SynthParams synthParams;
 	float *pFBuffer;
 
 	synthParams.iSynthesisType = 1;

@@ -121,7 +121,7 @@ int SmsInitAnalysis ( SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams)
 	return (1);
 }
 
-int SmsInitSynth( SMS_Header *pSmsHeader, SYNTH_PARAMS *pSynthParams )
+int SmsInitSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
 {
         /* set synthesis parameters from arguments and header */
 	pSynthParams->iOriginalSRate = pSmsHeader->iOriginalSRate;
@@ -141,7 +141,7 @@ int SmsInitSynth( SMS_Header *pSmsHeader, SYNTH_PARAMS *pSynthParams )
 
 
         /* allocate memory for analysis data - size of original hopsize */
-	AllocateSmsRecord (&pSynthParams->previousFrame, pSmsHeader->nTrajectories, 
+	AllocateSmsRecord (&pSynthParams->prevFrame, pSmsHeader->nTrajectories, 
 	                   1 + pSmsHeader->nStochasticCoeff, 1,
                            pSynthParams->origSizeHop, pSmsHeader->iStochasticType);
 
@@ -177,7 +177,7 @@ int SmsFreeAnalysis( SMS_AnalParams *pAnalParams )
 }
 
 
-int SmsFreeSynth( SYNTH_PARAMS *pSynthParams )
+int SmsFreeSynth( SMS_SynthParams *pSynthParams )
 {
 
 #ifdef FFTW

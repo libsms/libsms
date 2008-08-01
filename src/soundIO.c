@@ -89,11 +89,11 @@ int GetSoundData (SMS_SndHeader *pSoundHeader, short *pSoundData, long sizeSound
 
 /* function to create the residual sound file 
  *
- *  SYNTH_PARAMS synthParams;   synthesis paramenters
+ *  SMS_SynthParams synthParams;   synthesis paramenters
  *  char *pChOutputSoundFile;   name of output file
  *
  */
-int CreateOutputSoundFile (SYNTH_PARAMS synthParams, char *pChOutputSoundFile)
+int CreateOutputSoundFile (SMS_SynthParams synthParams, char *pChOutputSoundFile)
 {
     memset (&sfOutputSoundHeader, 0, sizeof (sfOutputSoundHeader)) ;
    
