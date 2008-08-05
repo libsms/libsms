@@ -47,13 +47,13 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
         {
                 post("smsbuf_open: re-initializing");
                 for( i = 0; i < x->nframes; i++)
-                        FreeSmsRecord(&x->pSmsData[i]);
+                        sms_freeRecord(&x->pSmsData[i]);
         }
 
-        if ((iError = GetSmsHeader (fullname->s_name, &x->pSmsHeader, &x->pSmsFile)) < 0)
-//        if ((iError = GetSmsHeader (fullname->s_name, &pHeader, &x->pSmsFile)) < 0)
+        if ((iError = sms_getHeader (fullname->s_name, &x->pSmsHeader, &x->pSmsFile)) < 0)
+//        if ((iError = sms_getHeader (fullname->s_name, &pHeader, &x->pSmsFile)) < 0)
 	{
-                pd_error(x, "smsbuf_open: %s", SmsReadErrorStr(iError));
+                pd_error(x, "smsbuf_open: %s", sms_errorString(iError));
                 return;
         }
         //post("smsheader address: %p ", x->smsBuf.pSmsHeader);
@@ -70,8 +70,8 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
         x->pSmsData = calloc(x->nframes, sizeof(SMS_DATA));
         for( i = 0; i < x->nframes; i++ )
         {
-                AllocSmsRecord (x->pSmsHeader,  &x->pSmsData[i]);
-                GetSmsRecord (x->pSmsFile, x->pSmsHeader, i, &x->pSmsData[i]);
+                sms_allocRecordH (x->pSmsHeader,  &x->pSmsData[i]);
+                sms_getRecord (x->pSmsFile, x->pSmsHeader, i, &x->pSmsData[i]);
         }
 
         //x->gp.gp_stub = (t_gstub*)&x->smsBuf.pSmsData; 
@@ -134,7 +134,7 @@ static void smsbuf_free(t_smsbuf *x)
         if(x->pSmsHeader != NULL) 
         {
                 for( i = 0; i < x->nframes; i++)
-                        FreeSmsRecord(&x->pSmsData[i]);
+                        sms_freeRecord(&x->pSmsData[i]);
         }
         pd_unbind(&x->x_obj.ob_pd, x->bufname);
 }

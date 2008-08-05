@@ -339,7 +339,7 @@ static int GetStartingPeak (int iGuide, SMS_Guide *pGuides, int nGuides,
  * int iFrame;	 current frame number
  * SMS_AnalParams *pAnalParams; analysis parameters
  */
-int PeakContinuation (int iFrame, SMS_AnalParams *pAnalParams)
+int sms_peakContinuation (int iFrame, SMS_AnalParams *pAnalParams)
 {
 	int iGuide, iCurrentPeak = -1, iGoodPeak = -1;
 	float fFund = pAnalParams->ppFrames[iFrame]->fFundamental,

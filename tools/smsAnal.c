@@ -258,7 +258,7 @@ static int FillSmsHeader (SMS_Header *pSmsHeader,
                           int iOriginalSRate, int iHopSize)
 {
 
-        InitSmsHeader (pSmsHeader);
+        sms_initHeader (pSmsHeader);
 
         pSmsHeader->nFrames = nFrames;
         pSmsHeader->iFormat = arguments.iFormat;
@@ -270,7 +270,7 @@ static int FillSmsHeader (SMS_Header *pSmsHeader,
         else
                 pSmsHeader->nStochasticCoeff = arguments.nStochasticCoeff;
         pSmsHeader->iOriginalSRate = iOriginalSRate;
-        pSmsHeader->iRecordBSize = GetRecordBSize(pSmsHeader);
+        pSmsHeader->iRecordBSize = sms_recordSizeB(pSmsHeader);
 
         sprintf (pChTextString, 
                  "created by smsAnal with parameters: format %d, soundType %d, "
@@ -385,7 +385,7 @@ int main (int argc, char *argv[])
 	pChOutputSmsFile = argv[argc-1];
  
 	/* open input sound */
-	OpenSound (pChInputSoundFile, &SoundHeader);
+	sms_openSF (pChInputSoundFile, &SoundHeader);
 
 	/* check default fundamental */
 	if (arguments.fDefaultFund < arguments.fLowestFund)
@@ -411,16 +411,16 @@ int main (int argc, char *argv[])
 	FillAnalParams (arguments, &analParams, &SoundHeader, iHopSize);
 	FillSmsHeader (&smsHeader, nFrames, arguments,
 	               SoundHeader.iSamplingRate, iHopSize);
-	WriteSmsHeader (pChOutputSmsFile, &smsHeader, &pOutputSmsFile);
+	sms_writeHeader (pChOutputSmsFile, &smsHeader, &pOutputSmsFile);
 	if (analParams.iDebugMode == SMS_DBG_SYNC)
-		CreateDebugFile (&analParams);
+		sms_createDebugFile (&analParams);
 	if (analParams.iDebugMode == SMS_DBG_RESIDUAL)
-		CreateResidualFile (&analParams);
-        SmsInit();
-        SmsInitAnalysis (&smsHeader, &analParams);
+		sms_createResSF (&analParams);
+        sms_init();
+        sms_initAnalysis (&smsHeader, &analParams);
 
         /* allocate output SMS record */
-	AllocSmsRecord (&smsHeader, &smsData);
+	sms_allocRecordH (&smsHeader, &smsData);
 
 	/* perform analysis */
 	//ComputeSms (&SoundHeader, &smsHeader, pOutputSmsFile, &analParams);
@@ -451,19 +451,19 @@ int main (int argc, char *argv[])
 				sizeNewData = SoundHeader.nSamples - iSample;
 		}
 		/* get one frame of sound */
-		if (GetSoundData (&SoundHeader, pSoundData, sizeNewData, iSample) < 0)
+		if (sms_getSound (&SoundHeader, pSoundData, sizeNewData, iSample) < 0)
 		{
 			fprintf(stderr, "ComputeSms: could not read sound record %d\n", iRecord);
 			break;
 		}
 		/* perform analysis of one frame of sound */
-		iStatus = SmsAnalysis (pSoundData, sizeNewData, &smsData, 
+		iStatus = sms_analyze (pSoundData, sizeNewData, &smsData, 
 		                       &analParams, &iNextSizeRead);
 
 		/* if there is an output SMS record, write it */
 		if (iStatus == 1)
 		{
-			WriteSmsRecord (pOutputSmsFile, &smsHeader, &smsData);
+			sms_writeRecord (pOutputSmsFile, &smsHeader, &smsData);
 			if(1)//todo: add verbose flag
                         {
                                 if (iRecord % 10 == 0)
@@ -484,14 +484,15 @@ int main (int argc, char *argv[])
         smsHeader.fResidualPerc = analParams.fResidualPercentage / iRecord;
 
 	/* write an close output files */
-	WriteSmsFile (pOutputSmsFile, &smsHeader);
+	sms_writeFile (pOutputSmsFile, &smsHeader);
 	if (analParams.iDebugMode == SMS_DBG_RESIDUAL)
-		WriteResidualFile ();
+		sms_writeResSF ();
 	if (analParams.iDebugMode == SMS_DBG_SYNC)
-		WriteDebugFile ();
+		sms_writeDebugFile ();
 
         /* cleanup */
-        SmsFreeAnalysis(&analParams);
+        sms_freeAnalysis(&analParams);
+        sms_free();
 	return 0;	
 }
 

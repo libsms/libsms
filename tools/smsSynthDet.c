@@ -66,7 +66,7 @@ int main (int argc, char *argv[])
 	pChInputSmsFile = argv[argc-2];
 	pChOutputSoundFile = argv[argc-1];
       
-	if ((iError = GetSmsHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile)) < 0)
+	if ((iError = sms_getHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile)) < 0)
 	{
 		if (iError == SMS_NOPEN)
 			quit ("cannot open input file");
@@ -80,7 +80,7 @@ int main (int argc, char *argv[])
 	}	    
   
 	/* allocate two SMS records */
-	AllocSmsRecord (pSmsHeader, &smsData);
+	sms_allocRecordH (pSmsHeader, &smsData);
 
 	synthParams.iOriginalSRate = pSmsHeader->iOriginalSRate;
 	synthParams.iStochasticType = pSmsHeader->iStochasticType;
@@ -94,7 +94,7 @@ int main (int argc, char *argv[])
 		fprintf(stderr, "Sampling Rate set to 22050 Hz\n");
 	}
 
-	CreateOutputSoundFile (synthParams, pChOutputSoundFile);
+	sms_createSF (synthParams, pChOutputSoundFile);
 
 	synthParams.sizeHop = synthParams.iSamplingRate / pSmsHeader->iFrameRate;
 	if ((pFBuffer = (float *) calloc(synthParams.sizeHop, sizeof(float)))
@@ -108,17 +108,17 @@ int main (int argc, char *argv[])
 	if (pFSTab == NULL)
 		PrepSine (4096);
     
-	AllocateSmsRecord (&synthParams.previousFrame, pSmsHeader->nTrajectories, 
+	sms_allocRecord (&synthParams.previousFrame, pSmsHeader->nTrajectories, 
 	                   1 + pSmsHeader->nStochasticCoeff, 1,
                            pSmsHeader->sizeHop, pSmsHeader->iStochasticType);
   
 	/* use first record as memory */
-	GetSmsRecord (pSmsFile, pSmsHeader, 0, &smsData);
-	CopySmsRecord (&synthParams.previousFrame, &smsData);
+	sms_getRecord (pSmsFile, pSmsHeader, 0, &smsData);
+	sms_copyRecord (&synthParams.previousFrame, &smsData);
 
 	for (iRecord = 1; iRecord < pSmsHeader->nFrames; iRecord++)
 	{
-		GetSmsRecord (pSmsFile, pSmsHeader, iRecord, &smsData);
+		sms_getRecord (pSmsFile, pSmsHeader, iRecord, &smsData);
 		memset ((char *)pFBuffer, 0, sizeof(float) * synthParams.sizeHop);
 		FrameSineSynth (&smsData, pFBuffer, synthParams.sizeHop, 
 		                &(synthParams.previousFrame), synthParams.iSamplingRate);
@@ -126,14 +126,14 @@ int main (int argc, char *argv[])
 		for(i = 0; i < synthParams.sizeHop; i++)
 			pSSynthesis[i] = (short) DeEmphasis(pFBuffer[i]);
 
-		WriteToOutputFile (pSSynthesis, synthParams.sizeHop);
+		sms_writeSound (pSSynthesis, synthParams.sizeHop);
 		if (iRecord % 10 == 0)
 			fprintf(stderr,"%.2f ", iRecord / (float) pSmsHeader->iFrameRate);
 	}
   
-	WriteOutputFile ();
+	sms_writeSF ();
   
-	ClearSine ();
+	sms_clearSine ();
 	free (pSmsHeader);
 	free (pFBuffer);
 	free (pSSynthesis);

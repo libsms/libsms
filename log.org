@@ -18,6 +18,10 @@ SMS Library Work Log
 ** DONE smsPlot.py for plotting smsData over a spectrogram of audio              
 ** DONE smsToYaml for importing into python
 * to clean:
+** TODO research the covariance functions
+*** they wee used in StocAnalysisIIR, which is no good apparently
+** TODO research Hybridize functions, organize
+*** was previously only used with the MK tool, which isn't available now
 ** TODO why use smsHeader & analParams during analysis?
 *** header should only be for writing file
 ** TODO export functions in smsAnal to library
@@ -37,6 +41,8 @@ SMS Library Work Log
    - GetResidual
    - static functions in peakDetection.c and peakContinuation.c
 ** TODO append sms_ to functions declared in sms.h
+** TODO organize files/functions
+** TODO update documentation of functions
 ** DONE make a function for returning a string to the error
    - right now it is necessary to cop/paste a large block of code to do this
    - should replace the 'quit' function, and shouldn't exit by default
@@ -85,6 +91,9 @@ SMS Library Work Log
    - [ ] change fabs() to fabsf() if they don't need to be doubles
    - [ ] same with floorf
    - [ ] store magnitudes in RMS instead of db
+   - [ ] currently uses random() from stdlib.
+          - could there be a better/faster version?
+          - should the random number be filtered?
 ** DONE [#A] switch build scripts to scons
    - [X] get env. exporting/importing fixed
    - [ ] add install/uninstall functionality
@@ -127,7 +136,7 @@ SMS Library Work Log
 *** In order for real-time synthesis:
 **** iLastSample in smsSynth must be replaced with 
         - iNumSamples will be a predefined buffer of samples to synthesis at one time,
-          indepenent of synthesis blocksize
+          indepenent of synthesis blocksize       
 * Phase 2: building real-time pd externals for analysis/synthesis
 ** prototype: [smsSynthFile~]
 *** TODO crashes if you open a file when dsp is on

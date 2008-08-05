@@ -64,24 +64,24 @@ int main (int argc, char *argv[])
 			{
 				case 't': if (sscanf(argv[i],"%d", 
 				              &iFormat) < 1)
-					quit("Invalid format");
-					break;
+					printf("Invalid format");
+					exit(1);
 				case 'i': if (sscanf(argv[i],"%f", 
 				              &fInitialTime) < 0)
-					quit("Invalid initialTime");
-					break;
+					printf("Invalid initialTime");
+					exit(1);
 				case 'e': if (sscanf(argv[i],"%f", 
 				              &fEndTime) < 0)
-					quit("Invalid EndTime");
-					break;
+					printf("Invalid EndTime");
+					exit(1);
 				case 'f': if (sscanf(argv[i],"%d", 
 				              &iFirstTraj) < 0)
-					quit("Invalid FirstTraj");
-					break;
+					printf("Invalid FirstTraj");
+					exit(1);
 				case 'l': if (sscanf(argv[i],"%d", 
 				              &iLastTraj) < 0)
-					quit("Invalid LastTraj");
-					break;
+					printf("Invalid LastTraj");
+					exit(1);
 
                         default:   usage();
 			}
@@ -90,20 +90,13 @@ int main (int argc, char *argv[])
 
 	if (argc <= 1) usage();
 
-	if((iError = GetSmsHeader (argv[argc-1], &pSmsHeader, &pSmsFile)) < 0)
-	{
-		if(iError == SMS_NOPEN)
-			quit("cannot open file");
-		if(iError == SMS_RDERR)
-			quit("read error");
-		if(iError == SMS_NSMS)
-			quit("not an SMS file");
-		if(iError == SMS_MALLOC)
-			quit("cannot allocate memory");
-		quit("error");
+	if((iError = sms_getHeader (argv[argc-1], &pSmsHeader, &pSmsFile)) < 0)
+    	{
+                printf("error in sms_getHeader: %s", sms_errorString(iError));
+                exit(EXIT_FAILURE);
 	}	    
-    
-	AllocSmsRecord (pSmsHeader, &smsData);
+
+	sms_allocRecordH (pSmsHeader, &smsData);
 
 	printf("\nHEADER INFORMATION:\n");
 	printf("Number of records = %d\n", pSmsHeader->nFrames);
@@ -148,7 +141,7 @@ int main (int argc, char *argv[])
         {
                 for(i = iFirstFrame; i < iLastFrame; i++)
                 {
-                                GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
+                                sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
                                 printf("\nFrame #%d {%1.3fs}: ", i, (float) i / pSmsHeader->iFrameRate);
                                 if (iFormat != PRINT_STOC) 
                                 {

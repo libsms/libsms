@@ -20,48 +20,12 @@
  */
 #include "sms.h"
 
-/* debug text file */
-char *pChDebugFile = "debug.txt";
-FILE *pDebug;
-
 // RTE DEBUG //////////////////
 char *fn0 = "blarg0.txt";
 FILE *f0;
 char *fn1 = "blarg1.txt";
 FILE *f1;
 ///////////////////////////////////
-
-/* function to create the debug file */
-int CreateDebugFile (SMS_AnalParams *pAnalParams)
-{
-	if ((pDebug = fopen(pChDebugFile, "w+")) == NULL) 
-	{
-		fprintf(stderr, "Cannot open debugfile: %s\n", pChDebugFile);
-		exit(1);
-	}
-	return 1;
-}
-
-/* function to write to the debug file */
-static int WriteToDebugFile (float *pFBuffer1, float *pFBuffer2, 
-                             float *pFBuffer3, int sizeBuffer)
-{
-	int i;
-	static int counter = 0;
-
-	for (i = 0; i < sizeBuffer; i++)
-		fprintf (pDebug, "%d %d %d %d\n", counter++, (int)pFBuffer1[i],
-		         (int)pFBuffer2[i], (int)pFBuffer3[i]);
-
-	return 1;
-}
-
-/* function to write the residual sound file to disk */
-int WriteDebugFile ()
-{
-	fclose (pDebug);
-	return 1;		  
-}
 
 /* function to implement a pole-zero filter
  * the returned value is the  filtered sample
@@ -159,7 +123,7 @@ static void FilterResidual (float *pFResidual, int sizeResidual,
  * SMS_Data *pSmsData;       pointer to output SMS data
  * SMS_AnalParams *pAnalParams;   analysis parameters
  */
-int GetResidual (float *pFSynthesis, float *pFOriginal,  
+int sms_residual (float *pFSynthesis, float *pFOriginal,  
                  float *pFResidual, int sizeWindow, SMS_AnalParams *pAnalParams)
 {
 	static float fResidualMag = 0, fOriginalMag = 0, *pD = NULL, 
@@ -176,7 +140,8 @@ int GetResidual (float *pFSynthesis, float *pFOriginal,
 	{
 		if ((pFWindow = (float *) calloc(sizeWindow, sizeof(float))) == NULL)
 			return -1;
-		Hamming (sizeWindow, pFWindow);
+		//Hamming (sizeWindow, pFWindow);
+                sms_getWindow( sizeWindow, pFWindow, SMS_WIN_HAMMING);
 	}
 
         ///// RTE DEBUG ///////////////////////////////
@@ -248,14 +213,14 @@ int GetResidual (float *pFSynthesis, float *pFOriginal,
 			         fCurrentResidualMag / fCurrentOriginalMag);
 
 		if (pAnalParams->iDebugMode == SMS_DBG_SYNC)
-			WriteToDebugFile (pFOriginal+sizeWindow/2, 
+			sms_writeDebugData (pFOriginal+sizeWindow/2, 
 			                  pFSynthesis+sizeWindow/2,
 		                    pFResidual+sizeWindow/2, sizeWindow/2);
 
 		if (pAnalParams->iDebugMode == SMS_DBG_RESIDUAL)
 		{
-			CreateResidualFile( pAnalParams );
-			WriteToResidualFile (pFResidual+sizeWindow/2, sizeWindow/2);
+			sms_createResSF( pAnalParams );
+			sms_writeResSound (pFResidual+sizeWindow/2, sizeWindow/2);
 		}
 		/* filter residual with a high pass filter (it solves some problems) */
 		FilterResidual (pFResidual, sizeWindow, pAnalParams->iSamplingRate, pD);
@@ -263,14 +228,14 @@ int GetResidual (float *pFSynthesis, float *pFOriginal,
 		return (1);
 	}
 	if (pAnalParams->iDebugMode == SMS_DBG_SYNC)
-		WriteToDebugFile (pFOriginal+sizeWindow/2, 
+		sms_writeDebugData (pFOriginal+sizeWindow/2, 
 			                pFSynthesis+sizeWindow/2,
 		                  pFResidual+sizeWindow/2, sizeWindow/2);
 
 	if (pAnalParams->iDebugMode == SMS_DBG_RESIDUAL)
 	{
-		CreateResidualFile( pAnalParams );
-		WriteToResidualFile (pFResidual+sizeWindow/2, sizeWindow/2);
+		sms_createResSF( pAnalParams );
+		sms_writeResSound (pFResidual+sizeWindow/2, sizeWindow/2);
 	}
 	return (0);
 }

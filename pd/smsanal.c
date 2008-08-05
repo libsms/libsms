@@ -69,15 +69,15 @@ static void smsanal_open(t_smsanal *x, t_symbol *filename)
         {
                 post("smsanal_open: re-initializing");
                 SmsFreeSynth(&x->synthParams);                
-/*                 FreeSmsRecord(&x->smsRecordL); */
-/*                 FreeSmsRecord(&x->smsRecordR); */
-/*                 FreeSmsRecord(&x->newSmsRecord); */
+/*                 sms_freeRecord(&x->smsRecordL); */
+/*                 sms_freeRecord(&x->smsRecordR); */
+/*                 sms_freeRecord(&x->newSmsRecord); */
         }
 
-/*         if ((iError = GetSmsHeader (fullname->s_name, &x->smsBuf.pSmsHeader, &x->pSmsFile)) < 0) */
-/* //        if ((iError = GetSmsHeader (fullname->s_name, &pHeader, &x->pSmsFile)) < 0) */
+/*         if ((iError = sms_getHeader (fullname->s_name, &x->smsBuf.pSmsHeader, &x->pSmsFile)) < 0) */
+/* //        if ((iError = sms_getHeader (fullname->s_name, &pHeader, &x->pSmsFile)) < 0) */
 /* 	{ */
-/*                 pd_error(x, "smsanal_open: %s", SmsReadErrorStr(iError)); */
+/*                 pd_error(x, "smsanal_open: %s", sms_errorString(iError)); */
 /*                 return; */
 /*         } */
         //post("smsheader address: %p ", x->smsBuf.pSmsHeader);
@@ -95,8 +95,8 @@ static void smsanal_open(t_smsanal *x, t_symbol *filename)
         int i;
         for( i = 0; i < x->nframes; i++ )
         {
-//                AllocSmsRecord (x->smsBuf.pSmsHeader,  &x->smsBuf.pSmsData[i]);
-//                GetSmsRecord (x->pSmsFile, x->smsBuf.pSmsHeader, i, &x->smsBuf.pSmsData[i]);
+//                sms_allocRecordH (x->smsBuf.pSmsHeader,  &x->smsBuf.pSmsData[i]);
+//                sms_getRecord (x->pSmsFile, x->smsBuf.pSmsHeader, i, &x->smsBuf.pSmsData[i]);
         }
 
         //x->gp.gp_stub = (t_gstub*)&x->smsBuf.pSmsData; 
@@ -160,7 +160,7 @@ static void smsanal_free(t_smsanal *x)
 /*         { */
 /*                 //SmsFreeSynth(&x->synthParams); */
 /*                 for( i = 0; i < x->nframes; i++) */
-/*                         FreeSmsRecord(&x->smsBuf.pSmsData[i]); */
+/*                         sms_freeRecord(&x->smsBuf.pSmsData[i]); */
 /*         } */
 }
 void smsanal_setup(void)

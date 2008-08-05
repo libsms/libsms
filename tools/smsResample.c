@@ -24,12 +24,15 @@
  *
  */
 #include "sms.h"
-#define USAGE "Usage: smsResample [factor] <inputSmsFile> <outputSmsFile>"
+//#define USAGE 
 
-//short MaxDelayFrames;
-//float FResidualPerc;
-//SMS_SndBuffer soundBuffer, synthBuffer;
-//SMS_AnalFrame **ppFrames, *pFrames;
+void usage (void)
+{
+        fprintf (stderr, "\n"
+                 "Usage: smsResample [factor] <inputSmsFile> <outputSmsFile>"
+                 "\n\n");
+        exit(1);
+}
 
 int main (int argc, char *argv[])
 {
@@ -40,43 +43,38 @@ int main (int argc, char *argv[])
 	int iError, iFactor, i;
   
 	/* get user arguments */
-	if (argc != 4) 
-		quit(USAGE);   
+	if (argc != 4) usage();
     
 	if (sscanf(argv[1],"%d",&iFactor) < 1)
-		quit("Invalid factor");
+        {
+		printf("Invalid factor");
+                exit(1);
+        }
 
 	pChInputSmsFile = argv[2];
 	pChOutputSmsFile = argv[3];
 
-	if ((iError = GetSmsHeader (pChInputSmsFile, &pSmsHeader,
+	if ((iError = sms_getHeader (pChInputSmsFile, &pSmsHeader,
 	                            &pInSmsFile)) < 0)
 	{
-		if (iError == SMS_NOPEN)
-			quit ("cannot open file");
-		if (iError == SMS_RDERR)
-			quit("read error");
-		if (iError == SMS_NSMS)
-			quit ("not an SMS file");
-		if (iError == SMS_MALLOC)
-			quit ("cannot allocate memory");
-			quit ("error");
+                printf("error in sms_getHeader: %s", sms_errorString(iError));
+                exit(EXIT_FAILURE);
 	}	    
   
-	AllocSmsRecord (pSmsHeader, &inSmsData);
-	WriteSmsHeader (pChOutputSmsFile, pSmsHeader, &pOutSmsFile);
+	sms_allocRecordH (pSmsHeader, &inSmsData);
+	sms_writeHeader (pChOutputSmsFile, pSmsHeader, &pOutSmsFile);
 
 	for (i = 1 + iFactor; i < pSmsHeader->nFrames; i += iFactor)
 	{
-		GetSmsRecord (pInSmsFile, pSmsHeader, i, &inSmsData);
-		WriteSmsRecord (pOutSmsFile, pSmsHeader, &inSmsData);
+		sms_getRecord (pInSmsFile, pSmsHeader, i, &inSmsData);
+		sms_writeRecord (pOutSmsFile, pSmsHeader, &inSmsData);
 	}
   
 	pSmsHeader->nFrames /= iFactor;
 	pSmsHeader->iFrameRate /= iFactor;
   
 	/* rewrite the header and close the output SMS file */
-	WriteSmsFile (pOutSmsFile, pSmsHeader);
+	sms_writeFile (pOutSmsFile, pSmsHeader);
 
 	fclose (pInSmsFile);
 	free (pSmsHeader);

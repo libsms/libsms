@@ -36,19 +36,19 @@ const char *pChResidualFile = "residual.aiff";
  * char *pChInputSoundFile;    name of soundfile
  * SMS_SndHeader *pSoundHeader;    information of the sound
  */
-int OpenSound (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader)
+int sms_openSF (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader)
 {
     memset (&sfSoundHeader, 0, sizeof (sfSoundHeader)) ;
     // read sound file
     if( !(pSNDStream = sf_open (pChInputSoundFile, SFM_READ, &sfSoundHeader)))
     {
-        printf("OpenSound: can't open %s \n", pChInputSoundFile);  
+        printf("sms_openSF: can't open %s \n", pChInputSoundFile);  
         exit(1);
     }
     // Abort if multi-channel sound
     if (sfSoundHeader.channels > 1)
     {
-	  fprintf (stderr,"OpenSound: multi-channel soundfile  unsupported\n");
+	  fprintf (stderr,"sms_openSF: multi-channel soundfile  unsupported\n");
 	  exit(1);
     }
    pSoundHeader->channelCount = sfSoundHeader.channels;
@@ -65,21 +65,21 @@ int OpenSound (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader)
  * short sizeSound;               number of samples read
  *
  */
-int GetSoundData (SMS_SndHeader *pSoundHeader, short *pSoundData, long sizeSound,
+int sms_getSound (SMS_SndHeader *pSoundHeader, short *pSoundData, long sizeSound,
                   long offset) 
 {
 	long nSamples;
 
 	if (sf_seek(pSNDStream,  offset , SEEK_SET) < 0)
 	{
-		fprintf (stderr,"GetSoundData: could not seek to the sound location %ld\n", 
+		fprintf (stderr,"sms_getSound: could not seek to the sound location %ld\n", 
 		         offset);
 		return (-1);
 	}
 	if ((nSamples = (long) sf_readf_short( pSNDStream, pSoundData, sizeSound ))
 	    != sizeSound)
 	{
-	    fprintf (stderr,"GetSoundData: could not read %ld samples, it read %ld\n", 
+	    fprintf (stderr,"sms_getSound: could not read %ld samples, it read %ld\n", 
 			 sizeSound, nSamples);
 	    return (-1);
 	}
@@ -93,7 +93,7 @@ int GetSoundData (SMS_SndHeader *pSoundHeader, short *pSoundData, long sizeSound
  *  char *pChOutputSoundFile;   name of output file
  *
  */
-int CreateOutputSoundFile (SMS_SynthParams synthParams, char *pChOutputSoundFile)
+int sms_createSF (SMS_SynthParams synthParams, char *pChOutputSoundFile)
 {
     memset (&sfOutputSoundHeader, 0, sizeof (sfOutputSoundHeader)) ;
    
@@ -115,14 +115,14 @@ int CreateOutputSoundFile (SMS_SynthParams synthParams, char *pChOutputSoundFile
  * int sizeBuffer;     size of data buffer
  *
  */
-int WriteToOutputFile (float *pFBuffer, int sizeBuffer)
+int sms_writeSound (float *pFBuffer, int sizeBuffer)
 {
     sf_writef_float( pOutputSNDStream, pFBuffer, sizeBuffer);
     return 1;
 }
 
 /* function to write the output sound file to disk */
-int WriteOutputFile ()
+int sms_writeSF ()
 {
     //   sf_writef_short( pOutputSNDStream, pSBuffer, sizeBuffer);
     sf_close(pOutputSNDStream);
@@ -134,7 +134,7 @@ int WriteOutputFile ()
  *  SMS_AnalParams *pAnalParams;   analysis paramenters
  *
  */
-int CreateResidualFile (SMS_AnalParams *pAnalParams)
+int sms_createResSF (SMS_AnalParams *pAnalParams)
 {
     memset (&sfResidualHeader, 0, sizeof (sfResidualHeader)) ;
     sfResidualHeader.format = SF_FORMAT_AIFF | SF_FORMAT_PCM_16;
@@ -144,13 +144,13 @@ int CreateResidualFile (SMS_AnalParams *pAnalParams)
     int err = sf_format_check (&sfResidualHeader);
     if(err == 0)
     {
-        printf("CreateResidualFile: invalid file format.");
+        printf("sms_createResSF: invalid file format.");
         exit(1);
     }
     if( !(pResidualSNDStream = sf_open (pChResidualFile, SFM_WRITE, &sfResidualHeader)))
     {
         err = sf_error(pResidualSNDStream);
-        printf("CreateResidualFile: can't open %s for writing; SNDFILE ERR: %d, %s.\n", pChResidualFile, err,  sf_error_number(err));  
+        printf("sms_createResSF: can't open %s for writing; SNDFILE ERR: %d, %s.\n", pChResidualFile, err,  sf_error_number(err));  
         exit(1);
     }
  
@@ -163,7 +163,7 @@ int CreateResidualFile (SMS_AnalParams *pAnalParams)
  * int sizeBuffer;     size of data buffer
  *
  */
-int WriteToResidualFile (float *pBuffer, int sizeBuffer)
+int sms_writeResSound (float *pBuffer, int sizeBuffer)
 {
 	int i;
 	short *pSResidual;
@@ -172,7 +172,7 @@ int WriteToResidualFile (float *pBuffer, int sizeBuffer)
 		return -1;
 
 	for (i = 0; i < sizeBuffer; i++)
-		pSResidual[i] = (short) DeEmphasis (pBuffer[i]);
+		pSResidual[i] = (short) sms_deEmphasis (pBuffer[i]);
 
                 sf_writef_float( pResidualSNDStream, pBuffer, sizeBuffer);
 	
@@ -181,7 +181,7 @@ int WriteToResidualFile (float *pBuffer, int sizeBuffer)
 }
 
 /* function to write the residual sound file to disk */
-int WriteResidualFile ()
+int sms_writeResSF ()
 {
     sf_close(pOutputSNDStream);
     return 1;		  

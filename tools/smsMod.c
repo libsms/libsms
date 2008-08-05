@@ -65,7 +65,7 @@ int main (int argc, char *argv[])
   pChInputSmsFile = argv[argc-2];
   pChOutputSmsFile = argv[argc-1];
   
-  if((iError = GetSmsHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile)) < 0)
+  if((iError = sms_getHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile)) < 0)
     {
       if(iError == SMS_NOPEN)
 	quit("cannot open file");
@@ -79,15 +79,15 @@ int main (int argc, char *argv[])
     }	    
   
 	pSmsHeader->fFrequency = fFundamental;
-	AllocSmsRecord (pSmsHeader, &smsData);
+	sms_allocRecordH (pSmsHeader, &smsData);
 
   for(i = 1; i < pSmsHeader->nFrames; i++)
   {
-    GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
+    sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
     *smsData.pFStocGain += fStocFactor;
   }
   
-  WriteSmsFile (pSmsFile, pSmsHeader);
+  sms_writeFile (pSmsFile, pSmsHeader);
 
   free(pSmsHeader);
   return 0;

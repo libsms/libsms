@@ -22,44 +22,42 @@
 
 #define SIN_TABLE_SIZE 4096//was 2046
 
-static double fSineScale;
+static float fSineScale;
 float *sms_tab_sine;
 
+/* prepares the sine table, returns 1 if allocations made, 0 on failure
+ * int nTableSize;    size of table
+ */
+int sms_prepSine (int nTableSize)
+{
+  register int i;
+  float fTheta;
+  
+  if((sms_tab_sine = (float *)malloc(nTableSize*sizeof(float))) == 0)
+    return (0);
+  fSineScale =  (float)(TWO_PI) / (float)(nTableSize - 1);
+  fTheta = 0.0;
+  for(i = 0; i < nTableSize; i++) 
+  {
+    fTheta = fSineScale * (float)i;
+    sms_tab_sine[i] = sin(fTheta);
+  }
+  return (1);
+}
 /* clear sine table */
-void ClearSine()
+void sms_clearSine()
 {
   if(sms_tab_sine)
     free(sms_tab_sine);
   sms_tab_sine = 0;
 }
 
-/* prepares the sine table, returns 1 if allocations made, 0 on failure
- * int nTableSize;    size of table
- */
-int PrepSine (int nTableSize)
-{
-  register int i;
-  double fTheta;
-  
-  if((sms_tab_sine = (float *)malloc(SIN_TABLE_SIZE*sizeof(float))) == 0)
-    return (0);
-  //nSineTabSize = SIN_TABLE_SIZE;
-  fSineScale =  (double)(TWO_PI) / (double)(SIN_TABLE_SIZE - 1);
-  fTheta = 0.0;
-  for(i = 0; i < SIN_TABLE_SIZE; i++) 
-  {
-    fTheta = fSineScale * (double)i;
-    sms_tab_sine[i] = sin(fTheta);
-  }
-  return (1);
-}
-
 /* function that returns approximately sin(fTheta)
- * double fTheta;    angle in radians
+ * float fTheta;    angle in radians
  */
-double SinTab (double fTheta)
+float sms_sine (float fTheta)
 {
-  double fSign = 1.0, fT;
+  float fSign = 1.0, fT;
   int i;
   
   fTheta = fTheta - floor(fTheta / TWO_PI) * TWO_PI;
@@ -78,3 +76,4 @@ double SinTab (double fTheta)
   else
     return(-fT);
 }
+

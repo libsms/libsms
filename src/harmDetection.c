@@ -310,7 +310,7 @@ static int GetBestCandidate (SMS_HarmCandidate *pCHarmonic,
  * float fRefFundamental;           frequency of previous frame
  * SMS_AnalParams *pAnalParams;          analysis parameters
  */
-void HarmDetection (SMS_AnalFrame *pFrame, float fRefFundamental,
+void sms_harmDetection (SMS_AnalFrame *pFrame, float fRefFundamental,
                     SMS_AnalParams *pAnalParams)
 {
 	int iPeak = -1, nGoodPeaks = 0, iCandidate, iBestCandidate;

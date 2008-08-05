@@ -43,7 +43,7 @@ void main (int ac, char *av[])
 	outfile = av[2];
 	fp = fopen(outfile,"w");
 	namedata = (char *)strtok (outfile,".");
-	if((iError = GetSmsHeader (av[1], &pSmsHeader, &pSmsFile)) < 0)
+	if((iError = sms_getHeader (av[1], &pSmsHeader, &pSmsFile)) < 0)
 	{ 
 		if (iError == SMS_NOPEN)  printf("cannot open file");
 		if (iError == SMS_RDERR)  printf("read error");
@@ -51,7 +51,7 @@ void main (int ac, char *av[])
 		if (iError == SMS_MALLOC) printf("cannot allocate memory");
 		printf("error");
 	}
-	AllocSmsRecord (pSmsHeader, &smsData);
+	sms_allocRecordH (pSmsHeader, &smsData);
 
 	havePhs = (!(pSmsHeader->iFormat == SMS_FORMAT_H ||
                pSmsHeader->iFormat == SMS_FORMAT_IH));
@@ -91,7 +91,7 @@ void main (int ac, char *av[])
 		fprintf (fp,"(setf (aref amp-%s %i) (make-array %i :initial-contents '(", namedata, j, NRec);
 		for(i = 0; i < NRec; i++) 
 		{
-			GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
+			sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
 			amps = TO_MAG (smsData.pFMagTraj[j]);
 			fprintf (fp,"%f ", amps);
 		}
@@ -105,11 +105,11 @@ void main (int ac, char *av[])
 		counter = 0;
 		Sum = 0;
 		freqsm1 = 0.0;
-		GetSmsRecord(pSmsFile, pSmsHeader, i, &smsData);
+		sms_getRecord(pSmsFile, pSmsHeader, i, &smsData);
 		freqs = smsData.pFFreqTraj[j];
 		for(i = 0; i < NRec; i++) 
 		{
-			GetSmsRecord(pSmsFile, pSmsHeader, i, &smsData);
+			sms_getRecord(pSmsFile, pSmsHeader, i, &smsData);
 			freqsp1 = smsData.pFFreqTraj[j];
 			printfreqs = freqs;
 			if (freqs<0.000001 && freqsm1>0.0) printfreqs = freqsm1;
@@ -139,7 +139,7 @@ void main (int ac, char *av[])
 			fprintf (fp,"(setf (aref pha-%s %i) (make-array %i :initial-contents '(", namedata, j, NRec);
 			for (i = 0; i < NRec; i++) 
 			{
-				GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
+				sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
 				phs = smsData.pFPhaTraj[j];
 				fprintf (fp,"%f ", phs);
 			}
@@ -152,7 +152,7 @@ void main (int ac, char *av[])
 		fprintf (fp,"(defparameter gain-%s (make-array %i :initial-contents '(", namedata, NRec);
 		for (i = 0; i < NRec; i++)
 		{
-			GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
+			sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
 			gain = TO_MAG (*(smsData.pFStocGain));
 			fprintf (fp,"%f ", gain);
 		}
@@ -160,7 +160,7 @@ void main (int ac, char *av[])
 
 		for(i = 0; i < NRec; i++) 
 		{
-			GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
+			sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
 			fprintf (fp,"(setf (aref coef-%s %i) (make-array %i :initial-contents '(0.00 ", namedata, i, 
 			              2+pSmsHeader->nStochasticCoeff);
 		        for (j = 0; j < smsData.nCoeff; j++)

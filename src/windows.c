@@ -199,27 +199,33 @@ void Hanning (int sizeWindow, float *pFWindow)
 }
 
 
-void GetWindow (int sizeWindow, float *pFWindow, int iWindowType)
+void sms_getWindow (int sizeWindow, float *pFWindow, int iWindowType)
 {
 	switch (iWindowType)
 	{
-		case SMS_WIN_BH_62: 
-			BlackmanHarris62 (sizeWindow, pFWindow);
-			break;
-		case SMS_WIN_BH_70: 
-			BlackmanHarris70 (sizeWindow, pFWindow);			
-			break;
-		case SMS_WIN_BH_74: 
-			BlackmanHarris74 (sizeWindow, pFWindow);
-			break;
-		case SMS_WIN_BH_92: 
-			BlackmanHarris92 (sizeWindow, pFWindow);
-			break;
-		case SMS_WIN_HAMMING: 
-			Hamming (sizeWindow, pFWindow);
-			break;
-		default:
-			BlackmanHarris (sizeWindow, pFWindow);
+        case SMS_WIN_BH_62: 
+                BlackmanHarris62 (sizeWindow, pFWindow);
+                break;
+        case SMS_WIN_BH_70: 
+                BlackmanHarris70 (sizeWindow, pFWindow);			
+                break;
+        case SMS_WIN_BH_74: 
+                BlackmanHarris74 (sizeWindow, pFWindow);
+                break;
+        case SMS_WIN_BH_92: 
+                BlackmanHarris92 (sizeWindow, pFWindow);
+                break;
+        case SMS_WIN_HAMMING: 
+                Hamming (sizeWindow, pFWindow);
+                break;
+        case SMS_WIN_HANNING: 
+                Hanning (sizeWindow, pFWindow);
+                break;
+        case SMS_WIN_IFFT: 
+                IFFTwindow (sizeWindow, pFWindow);
+                break;
+        default:
+                BlackmanHarris (sizeWindow, pFWindow);
 	}
 }
 

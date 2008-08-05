@@ -77,27 +77,42 @@ int main (int argc, char *argv[])
 				switch (*(argv[i]++)) 
 				{
                                 case 'r':  if (sscanf(argv[i],"%d",&iSamplingRate) < 0 )
-						quit("error: invalid sampling rate");
+                                        {
+						printf("error: invalid sampling rate");
+                                                exit(1);
+                                        }
                                         synthParams.iSamplingRate = iSamplingRate;
                                         break;
                                 case 's': sscanf(argv[i], "%d", &synthType);
                                         if(synthType < 1 || synthType > 3)
-                                                quit("error: detSynthType must be 1, 2, or  3");
+                                        {
+                                                printf("error: detSynthType must be 1, 2, or  3");
+                                                exit(1);
+                                        }
                                         synthParams.iSynthesisType = synthType;
                                         break;
                                 case 'd': sscanf(argv[i], "%d", &detSynthType);
                                         if(detSynthType < 1 || detSynthType > 2)
-                                                quit("error: detSynthType must be 1 or 2");
+                                        {
+                                                printf("error: detSynthType must be 1 or 2");
+                                                exit(1);
+                                        }
                                         synthParams.iDetSynthType = detSynthType;
                                         break;
                                 case 'h': sscanf(argv[i], "%d", &sizeHop);
                                         if(sizeHop < SMS_MIN_SIZE_FRAME || sizeHop > SMS_MAX_WINDOW) 
-                                                quit("error: invalid sizeHop");
+                                        {
+                                                printf("error: invalid sizeHop");
+                                                exit(1);
+                                        }
                                         synthParams.sizeHop = sizeHop;
                                         //RTE TODO: round to power of 2 (is it necessary?)
                                         break;
                                 case 't':  if (sscanf(argv[i],"%f",&timeFactor) < 0 )
-						quit("error: invalid time factor");
+                                        {
+						printf("error: invalid time factor");
+                                                exit(1);
+                                        }
                                         break;
                                 case 'v': verboseMode = 1;
                                         break;
@@ -109,21 +124,14 @@ int main (int argc, char *argv[])
 	pChInputSmsFile = argv[argc-2];
 	pChOutputSoundFile = argv[argc-1];
         
-	if ((iError = GetSmsHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile)) < 0)
+	if ((iError = sms_getHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile)) < 0)
 	{
-		if (iError == SMS_NOPEN)
-			quit ("cannot open input file");
-		if (iError == SMS_RDERR)
-			quit ("read error in input file");
-		if (iError == SMS_NSMS)
-			quit("the input file not an SMS file");
-		if (iError == SMS_MALLOC)
-			quit ("cannot allocate memory for input file");
-		quit ("error reading input file");
+                printf("error in sms_getHeader: %s", sms_errorString(iError));
+                exit(EXIT_FAILURE);
 	}	    
  
-        SmsInit();
-        SmsInitSynth( pSmsHeader, &synthParams );
+        sms_init();
+        sms_initSynth( pSmsHeader, &synthParams );
 
         if(verboseMode)
         {
@@ -145,18 +153,21 @@ int main (int argc, char *argv[])
         }
 
         /* initialize libsndfile for writing a soundfile */
-	CreateOutputSoundFile (synthParams, pChOutputSoundFile);
+	sms_createSF (synthParams, pChOutputSoundFile);
 
 	/* setup for synthesis from file */
-	AllocSmsRecord (pSmsHeader, &smsRecordL);
-	AllocSmsRecord (pSmsHeader, &smsRecordR);
-	AllocateSmsRecord (&newSmsRecord, pSmsHeader->nTrajectories, 
+	sms_allocRecordH (pSmsHeader, &smsRecordL);
+	sms_allocRecordH (pSmsHeader, &smsRecordR);
+	sms_allocRecord (&newSmsRecord, pSmsHeader->nTrajectories, 
 	                   pSmsHeader->nStochasticCoeff, 0,
                            synthParams.origSizeHop, pSmsHeader->iStochasticType);
 
 	if ((pFSynthesis = (float *) calloc(synthParams.sizeHop, sizeof(float)))
 	    == NULL)
-		quit ("Could not allocate memory for pFSynthesis");
+        {
+                printf ("Could not allocate memory for pFSynthesis");
+                exit(0);
+        }
 
 #ifdef FFTW
         printf("## using fftw3 ##  \n");
@@ -180,13 +191,13 @@ int main (int argc, char *argv[])
 		iLeftRecord = MIN (pSmsHeader->nFrames - 1, floor (fRecordLoc)); 
 		iRightRecord = (iLeftRecord < pSmsHeader->nFrames - 2)
 			? (1+ iLeftRecord) : iLeftRecord;
-		GetSmsRecord (pSmsFile, pSmsHeader, iLeftRecord, &smsRecordL);
-		GetSmsRecord (pSmsFile, pSmsHeader, iRightRecord,&smsRecordR);
-		InterpolateSmsRecords (&smsRecordL, &smsRecordR, &newSmsRecord,
+		sms_getRecord (pSmsFile, pSmsHeader, iLeftRecord, &smsRecordL);
+		sms_getRecord (pSmsFile, pSmsHeader, iRightRecord,&smsRecordR);
+		sms_interpolateRecords (&smsRecordL, &smsRecordR, &newSmsRecord,
                                        fRecordLoc - iLeftRecord);
 
-                SmsSynthesis (&newSmsRecord, pFSynthesis, &synthParams);
-		WriteToOutputFile (pFSynthesis, synthParams.sizeHop);
+                sms_synthesize (&newSmsRecord, pFSynthesis, &synthParams);
+		sms_writeSound (pFSynthesis, synthParams.sizeHop);
     
 		iSample += synthParams.sizeHop;
 
@@ -206,9 +217,10 @@ int main (int argc, char *argv[])
 
 	/* close output sound file, free memory and exit */
         //why aren't we freeing the records?
-	WriteOutputFile ();
+	sms_writeSF ();
 	free (pFSynthesis);
         free (pSmsHeader);
-        SmsFreeSynth(&synthParams);
+        sms_freeSynth(&synthParams);
+        sms_free();
 	return(1);
 }

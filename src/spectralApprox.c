@@ -32,7 +32,7 @@
  * int sizeSpec2      size of output envelope
  * int nCoefficients  number of coefficients to use in approximation
  */
-int SpectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
+int sms_spectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
                     float *pFSpec2, int sizeSpec2, int nCoefficients)
 {
 	float fHopSize, fCurrentLoc = 0, fLeft = 0, fRight = 0, fValue = 0, 

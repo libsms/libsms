@@ -149,7 +149,7 @@ static void DeleteShortTraj (int iCurrentFrame, int iTraj, int *pIState,
  * SMS_AnalParams *pAnalParams analysis parameters
  *
  */
-int CleanTrajectories (int iCurrentFrame, SMS_AnalParams *pAnalParams)
+int sms_cleanTrajectories (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 {
 	int iTraj, iLength, iFrame;
 	static int *pIState = NULL;
@@ -223,7 +223,7 @@ int CleanTrajectories (int iCurrentFrame, SMS_AnalParams *pAnalParams)
  * int nTraj;                    number of trajectories
  *
  */
-void  ScaleDeterministic (float *pFSynthBuffer, float *pFOriginalBuffer, 
+void  sms_scaleDet (float *pFSynthBuffer, float *pFOriginalBuffer, 
                           float *pFMagTraj, SMS_AnalParams *pAnalParams, int nTraj)
 {
 	float fOriginalMag = 0, fSynthesisMag = 0;

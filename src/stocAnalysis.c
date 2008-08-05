@@ -51,14 +51,15 @@ static int StocApproxFFT (float *pFResidual, int sizeBuffer,
 	{
 		if ((pFWindow = (float *) calloc(sizeBuffer, sizeof(float))) == NULL)
 			return -1;
-		Hamming (sizeBuffer, pFWindow);
+		//Hamming (sizeBuffer, pFWindow);
+                sms_getWindow(sizeBuffer, pFWindow, SMS_WIN_HAMMING);
 	}
 //        printf("sizeFft: %d, sizeBuffer: %d \n", sizeFft, sizeBuffer);
-	QuickSpectrumF (pFResidual, pFWindow, sizeBuffer, pFMagSpectrum, 
+	sms_quickSpectrum (pFResidual, pFWindow, sizeBuffer, pFMagSpectrum, 
 	                (float *) NULL, sizeFft);
 
  
-	SpectralApprox (pFMagSpectrum, sizeMag, sizeMag, pSmsData->pFStocCoeff, 
+	sms_spectralApprox (pFMagSpectrum, sizeMag, sizeMag, pSmsData->pFStocCoeff, 
 	                pSmsData->nCoeff, pSmsData->nCoeff);
   
 	/* get energy of spectrum  */
@@ -84,7 +85,7 @@ static int StocApproxFFT (float *pFResidual, int sizeBuffer,
  * SMS_Data *pSmsData;       pointer to output SMS data
  * SMS_AnalParams *pAnalParams;   analysis parameters
  */
-int StocAnalysis (float *pFResidual, int sizeBuffer, 
+int sms_stocAnalysis (float *pFResidual, int sizeBuffer, 
                   SMS_Data *pSmsData, SMS_AnalParams *pAnalParams)
 {
 	int iError = 1;

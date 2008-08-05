@@ -149,7 +149,7 @@ static float GetPhaseVal (float *pAPhaSpectrum, float fPeakLoc)
  * SMS_Peak *pSpectralPeaks;	 pointer to array of peaks
  * int iSamplingRate;      sampling rate of sound
  */
-int PeakDetection (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag, 
+int sms_detectPeaks (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag, 
                    int sizeWindow, SMS_Peak *pSpectralPeaks, 
                    SMS_AnalParams *pAnalParams)
 {

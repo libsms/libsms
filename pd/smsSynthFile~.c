@@ -90,9 +90,9 @@ static t_int *smsSynthFile_perform(t_int *w)
                         iRightRecord = (iLeftRecord < x->pSmsHeader->nRecords - 2)
                                 ? (1+ iLeftRecord) : iLeftRecord;
                 
-                        GetSmsRecord (x->pSmsFile, x->pSmsHeader, iLeftRecord, &x->smsRecordL);
-                        GetSmsRecord (x->pSmsFile, x->pSmsHeader, iRightRecord,&x->smsRecordR);
-                        InterpolateSmsRecords (&x->smsRecordL, &x->smsRecordR, &x->newSmsRecord,
+                        sms_getRecord (x->pSmsFile, x->pSmsHeader, iLeftRecord, &x->smsRecordL);
+                        sms_getRecord (x->pSmsFile, x->pSmsHeader, iRightRecord,&x->smsRecordR);
+                        sms_interpolateRecords (&x->smsRecordL, &x->smsRecordR, &x->newSmsRecord,
                                                x->f - iLeftRecord);
                 
                         SmsSynthesis (&x->newSmsRecord, x->synthBuf, &x->synthParams);
@@ -150,14 +150,14 @@ static void smsSynthFile_open(t_smsSynthFile *x, t_symbol *filename)
         {
                 post("smsSynthFile_open: re-initializing");
                 SmsFreeSynth(&x->synthParams);                
-                FreeSmsRecord(&x->smsRecordL);
-                FreeSmsRecord(&x->smsRecordR);
-                FreeSmsRecord(&x->newSmsRecord);
+                sms_freeRecord(&x->smsRecordL);
+                sms_freeRecord(&x->smsRecordR);
+                sms_freeRecord(&x->newSmsRecord);
         }
         
-        if ((iError = GetSmsHeader (x->s_filename->s_name, &x->pSmsHeader, &x->pSmsFile)) < 0)
+        if ((iError = sms_getHeader (x->s_filename->s_name, &x->pSmsHeader, &x->pSmsFile)) < 0)
 	{
-                pd_error(x, "smsSynthFile_open: %s", SmsReadErrorStr(iError));
+                pd_error(x, "smsSynthFile_open: %s", sms_errorString(iError));
                 return;
         }
 
@@ -165,10 +165,10 @@ static void smsSynthFile_open(t_smsSynthFile *x, t_symbol *filename)
         
 	/* setup for synthesis from file */
         /* needs 3 frame buffers: left, right, and interpolated */
-	AllocSmsRecord (x->pSmsHeader, &x->smsRecordL);
-	AllocSmsRecord (x->pSmsHeader, &x->smsRecordR);
+	sms_allocRecordH (x->pSmsHeader, &x->smsRecordL);
+	sms_allocRecordH (x->pSmsHeader, &x->smsRecordR);
         // I guess I am always ignoring phase information for now..
-	AllocateSmsRecord (&x->newSmsRecord, x->pSmsHeader->nTrajectories, 
+	sms_allocRecord (&x->newSmsRecord, x->pSmsHeader->nTrajectories, 
 	                   x->pSmsHeader->nStochasticCoeff, 0,
                            x->synthParams.origSizeHop, x->pSmsHeader->iStochasticType);
 
@@ -237,9 +237,9 @@ static void smsSynthFile_free(t_smsSynthFile *x)
         if(x->pSmsHeader != NULL) 
         {
                 SmsFreeSynth(&x->synthParams);
-                FreeSmsRecord(&x->smsRecordL);
-                FreeSmsRecord(&x->smsRecordR);
-                FreeSmsRecord(&x->newSmsRecord);
+                sms_freeRecord(&x->smsRecordL);
+                sms_freeRecord(&x->smsRecordR);
+                sms_freeRecord(&x->newSmsRecord);
         }
 }
 void smsSynthFile_tilde_setup(void)

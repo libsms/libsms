@@ -47,9 +47,9 @@ int InterpolateArrays (float *pFArray1, int sizeArray1, float *pFArray2,
      return -1;
 
   /* make the two array of sizeArrayOut */
-  SpectralApprox (pFArray1, sizeArray1, sizeArray1, pFArrayOne, sizeArrayOut,
+  sms_spectralApprox (pFArray1, sizeArray1, sizeArray1, pFArrayOne, sizeArrayOut,
 		  sizeArray1);
-  SpectralApprox (pFArray2, sizeArray2, sizeArray2, pFArrayTwo, sizeArrayOut,
+  sms_spectralApprox (pFArray2, sizeArray2, sizeArray2, pFArrayTwo, sizeArrayOut,
 		  sizeArray2);
 
   /* interpolate the two arrays */

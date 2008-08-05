@@ -80,8 +80,8 @@ static void SinePhaSynth (float fFreq, float fMag, float fPhase,
 			pLastFrame->pFFreqTraj[iTraj] * i + 
 			fAlpha * i * i + fBeta * i * i * i;
 
-//why is SinTab causing a seg fault here?
-    pFWaveform[i] += TO_MAG(fInstMag) * SinTab(fInstPhase + PI_2);
+//why is sms_sine causing a seg fault here?
+    pFWaveform[i] += TO_MAG(fInstMag) * sms_sine(fInstPhase + PI_2);
 //    pFWaveform[i] += TO_MAG(fInstMag) * sin(fInstPhase + PI_2);
   }
   /* save current values into buffer */
@@ -132,7 +132,7 @@ static void SineSynth (float fFreq, float fMag, SMS_Data *pLastFrame,
     fInstFreq += fFreqIncr;
     fInstPhase += fInstFreq;
       
-    pFBuffer[i] += TO_MAG (fInstMag) * SinTab (fInstPhase);
+    pFBuffer[i] += TO_MAG (fInstMag) * sms_sine (fInstPhase);
   }
   
   /* save current values into last values */
@@ -151,7 +151,7 @@ static void SineSynth (float fFreq, float fMag, SMS_Data *pLastFrame,
  * int sizeBuffer;	   size of the synthesis buffer
  * SMS_Data *pLastFrame;  SMS data from last frame 
  */
-int FrameSineSynth (SMS_Data *pSmsData, float *pFBuffer, 
+int sms_sineSynthFrame (SMS_Data *pSmsData, float *pFBuffer, 
                     int sizeBuffer, SMS_Data *pLastFrame, 
                     int iSamplingRate)
 {

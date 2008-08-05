@@ -23,28 +23,30 @@
 #define SINC_TABLE_SIZE 4096
 
 float *sms_tab_sinc;
+static float fSincScale;
 
-static double Sinc (double x, short N)	
+static float Sinc (float x, float N)	
 {
-	return (sin ((N/2) * x) / sin (x/2));
+	return (sinf ((N/2) * x) / sinf (x/2));
 }
 
 /* function to prepare the main lobe of a frequency domain 
  *  BlackmanHarris92 window
  *
  */
-int PrepSinc ()
+int sms_prepSinc (int nTableSize)
 {
-	short N = 512, i, m;
+        int i, m;
+	float N = 512.0;
 	float fA[4] = {.35875, .48829, .14128, .01168},
 		fMax = 0;
-	double fTheta = -4.0 * TWO_PI / N, 
-	       fThetaIncr = (8.0 * TWO_PI / N) / (SINC_TABLE_SIZE);
+	float fTheta = -4.0 * TWO_PI / N, 
+	       fThetaIncr = (8.0 * TWO_PI / N) / (nTableSize);
 
-	if((sms_tab_sinc = (float *) calloc (SINC_TABLE_SIZE, sizeof(float))) == 0)
+	if((sms_tab_sinc = (float *) calloc (nTableSize, sizeof(float))) == 0)
 		return (0);
 
-	for(i = 0; i < SINC_TABLE_SIZE; i++) 
+	for(i = 0; i < nTableSize; i++) 
 	{
 		for (m = 0; m < 4; m++)
 			sms_tab_sinc[i] +=  -1 * (fA[m]/2) * 
@@ -52,19 +54,28 @@ int PrepSinc ()
 			     Sinc (fTheta + m * TWO_PI/N, N));
 		fTheta += fThetaIncr;
 	}
-	fMax = sms_tab_sinc[(int) SINC_TABLE_SIZE / 2];
-	for (i = 0; i < SINC_TABLE_SIZE; i++) 
+	fMax = sms_tab_sinc[(int) nTableSize / 2];
+	for (i = 0; i < nTableSize; i++) 
 		sms_tab_sinc[i] = sms_tab_sinc[i] / fMax;
 
+        fSincScale = (float) nTableSize / 8.0;
+
 	return (1);
+}
+/* clear sine table */
+void sms_clearSinc()
+{
+  if(sms_tab_sinc)
+    free(sms_tab_sinc);
+  sms_tab_sinc = 0;
 }
 
 /*
  * fTheta has to be from 0 to 8
  */
-double SincTab (double fTheta)
+float sms_sinc (float fTheta)
 {
-	long index = (long) (.5 + SINC_TABLE_SIZE * fTheta / 8.0);
+	int index = (int) (.5 + fSincScale * fTheta);
 
 	return (sms_tab_sinc[index]);
 }

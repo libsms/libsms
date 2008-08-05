@@ -21,7 +21,7 @@ typedef struct _smsbuf
 
 void CopySmsHeader( SMSHeader *pFileHeader, SMSHeader *pBufHeader, char *paramString  )
 {
-        InitSmsHeader (pBufHeader);
+        sms_initHeader (pBufHeader);
 
         pBufHeader->nRecords = pFileHeader->nRecords;
         pBufHeader->iFormat = pFileHeader->iFormat;
@@ -30,7 +30,7 @@ void CopySmsHeader( SMSHeader *pFileHeader, SMSHeader *pBufHeader, char *paramSt
         pBufHeader->nTrajectories = pFileHeader->nTrajectories;
         pBufHeader->nStochasticCoeff = pFileHeader->nStochasticCoeff;
         pBufHeader->iOriginalSRate = pFileHeader->iOriginalSRate;
-        pBufHeader->iRecordBSize = GetRecordBSize(pBufHeader);
+        pBufHeader->iRecordBSize = sms_recordSizeB(pBufHeader);
 
         pBufHeader->nTextCharacters = pFileHeader->nTextCharacters;
         strcpy(paramString, pFileHeader->pChTextCharacters);
@@ -66,13 +66,13 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
         {
                 post("smsbuf_open: re-initializing");
                 for( i = 0; i < x->nframes; i++)
-                        FreeSmsRecord(&x->smsData[i]);
+                        sms_freeRecord(&x->smsData[i]);
         }
 
-        if ((iError = GetSmsHeader (fullname->s_name, &pSmsHeader, &x->pSmsFile)) < 0)
-//        if ((iError = GetSmsHeader (fullname->s_name, &pHeader, &x->pSmsFile)) < 0)
+        if ((iError = sms_getHeader (fullname->s_name, &pSmsHeader, &x->pSmsFile)) < 0)
+//        if ((iError = sms_getHeader (fullname->s_name, &pHeader, &x->pSmsFile)) < 0)
 	{
-                pd_error(x, "smsbuf_open: %s", SmsReadErrorStr(iError));
+                pd_error(x, "smsbuf_open: %s", sms_errorString(iError));
                 return;
         }
         //post("smsheader address: %p ", x->smsBuf.pSmsHeader);
@@ -85,8 +85,8 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
         x->smsData = calloc(x->nframes, sizeof(SMS_DATA));
         for( i = 0; i < x->nframes; i++ )
         {
-                AllocSmsRecord (pSmsHeader,  &x->smsData[i]);
-                GetSmsRecord (x->pSmsFile, pSmsHeader, i, &x->smsData[i]);
+                sms_allocRecordH (pSmsHeader,  &x->smsData[i]);
+                sms_getRecord (x->pSmsFile, pSmsHeader, i, &x->smsData[i]);
         }
 
         /* copy header to buffer */
@@ -156,7 +156,7 @@ static void smsbuf_free(t_smsbuf *x)
 //        if(x->pSmsHeader != NULL) //shouldn't need this, if nframes = 0 nothing will happen
         {
                 for( i = 0; i < x->nframes; i++)
-                        FreeSmsRecord(&x->smsData[i]);
+                        sms_freeRecord(&x->smsData[i]);
         }
         pd_unbind(&x->x_obj.ob_pd, x->bufname);
 }
@@ -227,7 +227,7 @@ static void smssynth_read(t_smssynth *x, t_symbol *bufname)
         {
                 post("smssynth_open: re-initializing");
                 SmsFreeSynth(&x->synthParams);                
-                FreeSmsRecord(&x->interpolatedRecord);
+                sms_freeRecord(&x->interpolatedRecord);
         }
         x->pSmsHeader = &smsbuf->smsHeader;
         x->pSmsData = smsbuf->smsData;
@@ -235,7 +235,7 @@ static void smssynth_read(t_smssynth *x, t_symbol *bufname)
         
 	/* setup for interpolated synthesis from buffer */
         // I guess I am always ignoring phase information for now..
-	AllocateSmsRecord (&x->interpolatedRecord, x->pSmsHeader->nTrajectories, 
+	sms_allocRecord (&x->interpolatedRecord, x->pSmsHeader->nTrajectories, 
 	                   x->pSmsHeader->nStochasticCoeff, 0,
                            x->synthParams.origSizeHop, x->pSmsHeader->iStochasticType);
 
@@ -263,7 +263,7 @@ static t_int *smssynth_perform(t_int *w)
                         iRightRecord = (iLeftRecord < x->pSmsHeader->nRecords - 2)
                                 ? (1+ iLeftRecord) : iLeftRecord;
 
-                        InterpolateSmsRecords (&x->pSmsData[iLeftRecord], &x->pSmsData[iRightRecord],
+                        sms_interpolateRecords (&x->pSmsData[iLeftRecord], &x->pSmsData[iRightRecord],
                                                &x->interpolatedRecord, x->f - iLeftRecord);
                 
                         SmsSynthesis (&x->interpolatedRecord, x->synthBuf, &x->synthParams);
@@ -359,9 +359,9 @@ static void smssynth_free(t_smssynth *x)
         if(x->pSmsHeader != NULL) 
         {
                 SmsFreeSynth(&x->synthParams);
-//                FreeSmsRecord(&x->smsRecordL);
-//                FreeSmsRecord(&x->smsRecordR);
-                FreeSmsRecord(&x->interpolatedRecord);
+//                sms_freeRecord(&x->smsRecordL);
+//                sms_freeRecord(&x->smsRecordR);
+                sms_freeRecord(&x->interpolatedRecord);
         }
 }
 void smssynth_tilde_setup(void)

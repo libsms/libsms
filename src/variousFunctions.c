@@ -20,16 +20,26 @@
  */
 #include "sms.h"
 
+/* debug text file */
+char *pChDebugFile = "debug.txt";
+FILE *pDebug;
 
 float *sms_window_spec;
 float  *sms_tab_sine, *sms_tab_sinc;
 
-int SmsInit( void )
+int sms_init( void )
 {
 	/* prepare sinc and sine tables only the first time */
-	if (sms_tab_sine == NULL) PrepSine (2046); //try 4096
-	if (sms_tab_sinc == NULL) PrepSinc ();
+	if (sms_tab_sine == NULL) sms_prepSine (2046); //try 4096
+	if (sms_tab_sinc == NULL) sms_prepSinc (4096);
 
+        return (1);
+}
+
+int sms_free( void )
+{
+        sms_clearSine();
+        sms_clearSinc();
         return (1);
 }
 
@@ -40,7 +50,7 @@ int SmsInit( void )
  * SMS_AnalParams analParams;    analysis paramaters
  *
  */
-int SmsInitAnalysis ( SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams)
+int sms_initAnalysis ( SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams)
 {
 
         SMS_SndBuffer *pSynthBuf = &pAnalParams->synthBuffer;
@@ -49,7 +59,7 @@ int SmsInitAnalysis ( SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams)
 	int sizeBuffer = (pAnalParams->iMaxDelayFrames * pAnalParams->sizeHop) + SMS_MAX_WINDOW;
 	int i;
 
-        AllocateSmsRecord (&pAnalParams->prevFrame, pAnalParams->nGuides, 
+        sms_allocRecord (&pAnalParams->prevFrame, pAnalParams->nGuides, 
                            pSmsHeader->nStochasticCoeff, 1, pAnalParams->sizeHop, pAnalParams->iStochasticType);
   
 	/* sound buffer */
@@ -111,7 +121,7 @@ int SmsInitAnalysis ( SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams)
 /*                                                            pAnalParams->pSpectrum, FFTW_ESTIMATE)) == NULL) */
 
 /*         { */
-/*                 printf("SmsInitAnalysis: could not make fftw plan \n"); */
+/*                 printf("sms_initAnalysis: could not make fftw plan \n"); */
 /*                 return -1; */
 /*         } */
 
@@ -121,7 +131,7 @@ int SmsInitAnalysis ( SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams)
 	return (1);
 }
 
-int SmsInitSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
+int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
 {
         /* set synthesis parameters from arguments and header */
 	pSynthParams->iOriginalSRate = pSmsHeader->iOriginalSRate;
@@ -134,14 +144,16 @@ int SmsInitSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
 
         pSynthParams->pFStocWindow = 
 		(float *) calloc(sizeHop * 2, sizeof(float));
-	Hanning (sizeHop * 2, pSynthParams->pFStocWindow);
+	//Hanning (sizeHop * 2, pSynthParams->pFStocWindow);
+        sms_getWindow( sizeHop * 2, pSynthParams->pFStocWindow, SMS_WIN_HANNING );
 	pSynthParams->pFDetWindow =
 		(float *) calloc(sizeHop * 2, sizeof(float));
-	IFFTwindow (sizeHop * 2, pSynthParams->pFDetWindow);
+	//IFFTwindow (sizeHop * 2, pSynthParams->pFDetWindow);
+        sms_getWindow( sizeHop * 2, pSynthParams->pFDetWindow, SMS_WIN_IFFT );
 
 
         /* allocate memory for analysis data - size of original hopsize */
-	AllocateSmsRecord (&pSynthParams->prevFrame, pSmsHeader->nTrajectories, 
+	sms_allocRecord (&pSynthParams->prevFrame, pSmsHeader->nTrajectories, 
 	                   1 + pSmsHeader->nStochasticCoeff, 1,
                            pSynthParams->origSizeHop, pSmsHeader->iStochasticType);
 
@@ -154,7 +166,7 @@ int SmsInitSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
             fftwf_plan_dft_c2r_1d( sizeFft, pSynthParams->pSpectrum,
                                    pSynthParams->pWaveform, FFTW_ESTIMATE)) == NULL)
         {
-                printf("SmsInitSynth: could not make fftw plan \n");
+                printf("sms_initSynth: could not make fftw plan \n");
                 return -1;
         }
 #else        
@@ -165,7 +177,7 @@ int SmsInitSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
         return 1;
 }
 
-int SmsFreeAnalysis( SMS_AnalParams *pAnalParams )
+int sms_freeAnalysis( SMS_AnalParams *pAnalParams )
 {
 #ifdef FFTW
         fftwf_free(pAnalParams->pWaveform);
@@ -177,7 +189,7 @@ int SmsFreeAnalysis( SMS_AnalParams *pAnalParams )
 }
 
 
-int SmsFreeSynth( SMS_SynthParams *pSynthParams )
+int sms_freeSynth( SMS_SynthParams *pSynthParams )
 {
 
 #ifdef FFTW
@@ -197,7 +209,7 @@ int SmsFreeSynth( SMS_SynthParams *pSynthParams )
  * int sizeNewData             size of input data
  * int sizeHop                 analysis hop size
  */
-void FillBuffer (short *pSWaveform, long sizeNewData, SMS_AnalParams *pAnalParams)
+void sms_fillSndBuffer (short *pSWaveform, long sizeNewData, SMS_AnalParams *pAnalParams)
 {
 //	extern SMS_SndBuffer soundBuffer;
 	int i;
@@ -214,28 +226,13 @@ void FillBuffer (short *pSWaveform, long sizeNewData, SMS_AnalParams *pAnalParam
 	if (pAnalParams->iAnalysisDirection == SMS_DIR_REV)
 		for (i=0; i<sizeNewData; i++)
 			pAnalParams->soundBuffer.pFBuffer[pAnalParams->soundBuffer.sizeBuffer - sizeNewData + i] = 
-				PreEmphasis((float) pSWaveform[sizeNewData - (1+ i)]);
+				sms_preEmphasis((float) pSWaveform[sizeNewData - (1+ i)]);
 	else
 		for (i=0; i<sizeNewData; i++)
 			pAnalParams->soundBuffer.pFBuffer[pAnalParams->soundBuffer.sizeBuffer - sizeNewData + i] = 
-				PreEmphasis((float) pSWaveform[i]);
+				sms_preEmphasis((float) pSWaveform[i]);
 }
 
-/* shift the buffer of analysis frames to the left */
-void MoveFrames (SMS_AnalParams *pAnalParams)
-{
-//	extern short MaxDelayFrames;
-//	extern SMS_AnalFrame **ppFrames;
-	int i;
-	SMS_AnalFrame *tmp;
-  
-	/* shift the frame pointers */
-	tmp = pAnalParams->ppFrames[0];
-	for(i = 1; i < pAnalParams->iMaxDelayFrames; i++)
-		pAnalParams->ppFrames[i-1] = pAnalParams->ppFrames[i];
-  
-	pAnalParams->ppFrames[pAnalParams->iMaxDelayFrames-1] = tmp;
-}
 
 /* initialize the current frame
  *
@@ -243,7 +240,7 @@ void MoveFrames (SMS_AnalParams *pAnalParams)
  * SMS_AnalParams analParams;       analysis parameters
  * int sizeWindow;                  size of analysis window 
  */
-void InitializeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
+void sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
                       int sizeWindow)
 {
 //	extern SMS_SndBuffer soundBuffer;
@@ -301,7 +298,7 @@ void InitializeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams,
  * int iCurrentFrame;         number of current frame
  * SMS_AnalParams analParams;    analysis parameters
  */
-int SetSizeWindow (int iCurrentFrame, SMS_AnalParams *pAnalParams)
+int sms_sizeNextWindow (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 {
 //	extern SMS_AnalFrame **ppFrames;
 	float fFund = pAnalParams->ppFrames[iCurrentFrame]->fFundamental,
@@ -332,7 +329,7 @@ int SetSizeWindow (int iCurrentFrame, SMS_AnalParams *pAnalParams)
  * return -1 if really off
  * int iCurrentFrame;        number of current frame 
  */
-float GetDeviation ( SMS_AnalParams *pAnalParams, int iCurrentFrame)
+float sms_fundDeviation ( SMS_AnalParams *pAnalParams, int iCurrentFrame)
 {
 //	extern SMS_AnalFrame **ppFrames;
 	float fFund, fSum = 0, fAverage, fDeviation = 0;
@@ -363,11 +360,12 @@ float GetDeviation ( SMS_AnalParams *pAnalParams, int iCurrentFrame)
  *
  * int iCurrentFrame;             current frame number
  * SMS_AnalParams analParams;           analysis parameters
+ * \todo move to smsAnalysis.c
  */
-int ReAnalyze (int iCurrentFrame, SMS_AnalParams *pAnalParams)
+int sms_reAnalyze (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 {
 //	extern SMS_AnalFrame **ppFrames;
-	float fAvgDeviation = GetDeviation(pAnalParams, iCurrentFrame),
+	float fAvgDeviation = sms_fundDeviation(pAnalParams, iCurrentFrame),
 		fFund, fLastFund, fDev;
 	int iNewFrameSize, i,
 		iFirstFrame = iCurrentFrame - SMS_MIN_GOOD_FRAMES;
@@ -408,7 +406,7 @@ int ReAnalyze (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 					        pAnalParams->ppFrames[iFirstFrame - i]->iFrameNum);
 	    
 				/* recompute frame */
-				ComputeFrame (iFirstFrame - i, pAnalParams, fLastFund);
+				sms_computeFrame (iFirstFrame - i, pAnalParams, fLastFund);
 				pAnalParams->ppFrames[iFirstFrame - i]->iStatus = SMS_FRAME_RECOMPUTED;
 	    
 				if (fabs(pAnalParams->ppFrames[iFirstFrame - i]->fFundamental - fLastFund) / 
@@ -421,11 +419,43 @@ int ReAnalyze (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 /* this should only be used in the case of a horrible problem.
    otherwise, keep sailing and let the parent app decide what 
    to do with an error code. */
-int quit (char *pChText)
+/* int quit (char *pChText) */
+/* { */
+/* 	fprintf (stderr, pChText); */
+/* 	fprintf (stderr, "\n"); */
+/* 	exit (1); */
+/* 	return (1); */
+/* } */
+
+/* function to create the debug file */
+int sms_createDebugFile (SMS_AnalParams *pAnalParams)
 {
-	fprintf (stderr, pChText);
-	fprintf (stderr, "\n");
-	exit (1);
-	return (1);
+	if ((pDebug = fopen(pChDebugFile, "w+")) == NULL) 
+	{
+		fprintf(stderr, "Cannot open debugfile: %s\n", pChDebugFile);
+		exit(1);
+	}
+	return 1;
+}
+
+/* function to write to the debug file */
+int sms_writeDebugData (float *pFBuffer1, float *pFBuffer2, 
+                             float *pFBuffer3, int sizeBuffer)
+{
+	int i;
+	static int counter = 0;
+
+	for (i = 0; i < sizeBuffer; i++)
+		fprintf (pDebug, "%d %d %d %d\n", counter++, (int)pFBuffer1[i],
+		         (int)pFBuffer2[i], (int)pFBuffer3[i]);
+
+	return 1;
+}
+
+/* function to write the residual sound file to disk */
+int sms_writeDebugFile ()
+{
+	fclose (pDebug);
+	return 1;		  
 }
 

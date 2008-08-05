@@ -24,12 +24,20 @@
  *
  */
 #include "sms.h"
-#define USAGE "Usage: smsClean <inputSmsFile> <outputSmsFile>"
+//#define USAGE "Usage: smsClean <inputSmsFile> <outputSmsFile>"
 
 short MaxDelayFrames;
 float FResidualPerc;
 SMS_SndBuffer soundBuffer, synthBuffer;
 SMS_AnalFrame **ppFrames, *pFrames;
+
+void usage (void)
+{
+        fprintf (stderr, "\n"
+                 "Usage: smsClean <inputSmsFile> <outputSmsFile>"
+                 "\n\n");
+        exit(1);
+}
 
 /*
  * search over all the data of a record for empy slots
@@ -125,40 +133,39 @@ int main (int argc, char *argv[])
 		iRecordBSize, iHeadBSize, iDataBSize;
   
 	/* get user arguments */
-	if (argc != 3) 
-		quit(USAGE);   
+	if (argc != 3) usage();
+		
     
 	pChInputSmsFile = argv[1];
 	pChOutputSmsFile = argv[2];
 
 	/* open SMS file and read the header */
-	if ((iError = GetSmsHeader (pChInputSmsFile, &pInSmsHeader, 
+	if ((iError = sms_getHeader (pChInputSmsFile, &pInSmsHeader, 
 	                            &pInSmsFile)) < 0)
 	{
-		if (iError == SMS_NOPEN)
-			quit ("cannot open file");
-		if (iError == SMS_RDERR)
-			quit("read error");
-		if (iError == SMS_NSMS)
-			quit ("not an SMS file");
-		if (iError == SMS_MALLOC)
-			quit ("cannot allocate memory");
-			quit ("error");
+                printf("error in sms_getHeader: %s", sms_errorString(iError));
+                exit(EXIT_FAILURE);
 	}	    
   
 	if ((pFFreq =  
 	     (float *) calloc (pInSmsHeader->nTrajectories, sizeof (float))) == 
 		 NULL)
-		quit ("error allocating memory for pFFreq");
+        {
+                printf("error allocating memory for pFFreq: %s", sms_errorString(iError));
+                exit(EXIT_FAILURE);
+        }
 	if ((pIGoodRecords =  
 	     (int *) calloc (pInSmsHeader->nTrajectories, sizeof (int))) == NULL)
-		quit ("error allocating memory for pIGoodRecords");
+        {
+                printf("error allocating memory for plGoodRecords: %s", sms_errorString(iError));
+                exit(EXIT_FAILURE);
+        }
 
-	AllocSmsRecord (pInSmsHeader, &inSmsData);
+	sms_allocRecordH (pInSmsHeader, &inSmsData);
 
 	for (iRecord = 1; iRecord < pInSmsHeader->nFrames; iRecord++)
 	{
-		GetSmsRecord (pInSmsFile, pInSmsHeader, iRecord, &inSmsData);
+		sms_getRecord (pInSmsFile, pInSmsHeader, iRecord, &inSmsData);
 		SearchSms (inSmsData, pFFreq, pIGoodRecords);	
 	}
   
@@ -173,7 +180,7 @@ int main (int argc, char *argv[])
 	iHeadBSize = sizeof (SMS_Header);
 	iDataBSize = iRecordBSize * pInSmsHeader->nFrames;
 	
-	InitSmsHeader (&OutSmsHeader);
+	sms_initHeader (&OutSmsHeader);
 	OutSmsHeader.iRecordBSize = iRecordBSize;
 	OutSmsHeader.nFrames = pInSmsHeader->nFrames;
 	OutSmsHeader.iFormat = pInSmsHeader->iFormat;
@@ -185,27 +192,30 @@ int main (int argc, char *argv[])
 	OutSmsHeader.nTextCharacters = pInSmsHeader->nTextCharacters;
 	OutSmsHeader.pChTextCharacters = pInSmsHeader->pChTextCharacters;
 
-	AllocSmsRecord (&OutSmsHeader, &outSmsData);
+	sms_allocRecordH (&OutSmsHeader, &outSmsData);
 	if ((pITrajOrder =  
 	     (int *) calloc (OutSmsHeader.nTrajectories, sizeof (int))) == NULL)
-		quit ("error allocating memory for pITrajOrder");
+        {
+                printf("error allocating memory for pITrajOrder: %s", sms_errorString(iError));
+                exit(EXIT_FAILURE);
+        }
 
 	SetTraj (pFFreq, pInSmsHeader->nTrajectories, pITrajOrder, 
 	         OutSmsHeader.nTrajectories);
 
 	/* create output SMS file and write the header */
-	WriteSmsHeader (pChOutputSmsFile, &OutSmsHeader, &pOutSmsFile);
+	sms_writeHeader (pChOutputSmsFile, &OutSmsHeader, &pOutSmsFile);
 	
 	/* iterate over the input file and clean it */
 	for (iRecord = 1; iRecord < OutSmsHeader.nFrames; iRecord++)
 	{
-		GetSmsRecord (pInSmsFile, pInSmsHeader, iRecord, &inSmsData);
+		sms_getRecord (pInSmsFile, pInSmsHeader, iRecord, &inSmsData);
 		CleanSms (inSmsData, &outSmsData, pITrajOrder);
-		WriteSmsRecord (pOutSmsFile, &OutSmsHeader, &outSmsData);
+		sms_writeRecord (pOutSmsFile, &OutSmsHeader, &outSmsData);
 	}
 	
 	/* rewrite the header and close the output SMS file */
-	WriteSmsFile (pOutSmsFile, &OutSmsHeader);
+	sms_writeFile (pOutSmsFile, &OutSmsHeader);
 
 	free (pInSmsHeader);
 	free (pFFreq);

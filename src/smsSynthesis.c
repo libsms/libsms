@@ -37,7 +37,7 @@ static int SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
         long nBins = 8;
         long  nTraj = pSmsData->nTraj;
         long iFirstBin, k, i, l, b;
-        float fMag=0, fFreq=0, fPhase=0, fLoc, fSin, fCos, fBinRemainder, 
+        float fMag=0.0, fFreq=0.0, fPhase=0.0, fLoc, fSin, fCos, fBinRemainder, 
                 fTmp, fNewMag,  fIndex;
         float fSamplingPeriod = 1.0 / pSynthParams->iSamplingRate;
 #ifdef FFTW
@@ -64,13 +64,13 @@ static int SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                         fLoc = sizeFft * fFreq  * fSamplingPeriod;
                         iFirstBin = (int) fLoc - 3;
                         fBinRemainder = fLoc - floor (fLoc);
-                        fSin = SinTab (fPhase);
-                        fCos = SinTab (fPhase + PI_2);
+                        fSin = sms_sine (fPhase);
+                        fCos = sms_sine (fPhase + PI_2);
                         for (k = 1, l = iFirstBin; k <= nBins; k++, l++)
                         {
                                 fIndex = (k - fBinRemainder);
                                 if (fIndex > 7.999) fIndex = 0;
-                                fNewMag = fMag * SincTab (fIndex);
+                                fNewMag = fMag * sms_sinc (fIndex);
                                 if (l > 0 && l < sizeMag)
                                 {
                                         pSynthParams->pSpectrum[l][0] += fNewMag * fCos;
@@ -133,13 +133,13 @@ static int SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                         fLoc = sizeFft * fFreq  * fSamplingPeriod;
                         iFirstBin = (int) fLoc - 3;
                         fBinRemainder = fLoc - floor (fLoc);
-                        fSin = SinTab (fPhase);
-                        fCos = SinTab (fPhase + PI_2);
+                        fSin = sms_sine (fPhase);
+                        fCos = sms_sine (fPhase + PI_2);
                         for (k = 1, l = iFirstBin; k <= nBins; k++, l++)
                         {
                                 fIndex = (k - fBinRemainder);
                                 if (fIndex > 7.999) fIndex = 0;
-                                fNewMag = fMag * SincTab (fIndex);
+                                fNewMag = fMag * sms_sinc (fIndex);
                                 if (l > 0 && l < sizeMag)
                                 {
                                         pSynthParams->realftOut[l*2+1] += fNewMag * fCos;
@@ -213,7 +213,7 @@ static int StocSynthApprox (SMS_Data *pSmsData, float *pFBuffer,
                 pSynthParams->iOriginalSRate;
         /* sizeSpec1Used cannot be more than what is available RTE TODO check that these look right */
         if(sizeSpec1Used  > sizeSpec1) sizeSpec1Used = sizeSpec1;
-        SpectralApprox (pSmsData->pFStocCoeff, sizeSpec1, sizeSpec1Used,
+        sms_spectralApprox (pSmsData->pFStocCoeff, sizeSpec1, sizeSpec1Used,
                         pFMagSpectrum, sizeSpec2, sizeSpec1Used);
 
         /* generate random phases */
@@ -245,7 +245,7 @@ static int StocSynthApprox (SMS_Data *pSmsData, float *pFBuffer,
                         * pSynthParams->pFStocWindow[i] * 0.25; //.5;
  
 #else        
-        InverseQuickSpectrumW (pFMagSpectrum, pFPhaseSpectrum, 
+        sms_invQuickSpectrumW (pFMagSpectrum, pFPhaseSpectrum, 
                                sizeFft, pFBuffer, sizeFft, 
                                pSynthParams->pFStocWindow);
 #endif
@@ -263,7 +263,7 @@ static int StocSynthApprox (SMS_Data *pSmsData, float *pFBuffer,
  * short *pSSynthesis;      output sound buffer  RTE: switching to float
  * SMS_SynthParams *pSynthParams;   synthesis parameters
  */
-int SmsSynthesis (SMS_Data *pSmsData, float *pFSynthesis,  
+int sms_synthesize (SMS_Data *pSmsData, float *pFSynthesis,  
                   SMS_SynthParams *pSynthParams)
 {
         static float *pFBuffer = NULL;
@@ -284,7 +284,10 @@ int SmsSynthesis (SMS_Data *pSmsData, float *pFSynthesis,
         {
                 if(pSynthParams->iDetSynthType == SMS_DET_IFFT &&
                    pSynthParams->iStochasticType == SMS_STOC_IFFT)
-                        quit("SmsSynthesis: COMBO_SYNTH not implemented yet.");
+                {
+                        printf("sms_synthesize: COMBO_SYNTH not implemented yet.");
+                        return (-1);
+                }
                 else /* can't use combo STFT, synthesize seperately and sum */
                 {
                         if(pSynthParams->iDetSynthType == SMS_DET_IFFT)
@@ -293,7 +296,7 @@ int SmsSynthesis (SMS_Data *pSmsData, float *pFSynthesis,
                         }
                         else /*pSynthParams->iDetSynthType == SMS_DET_SIN*/
                         {
-                                FrameSineSynth (pSmsData, pFBuffer, pSynthParams->sizeHop,
+                                sms_sineSynthFrame (pSmsData, pFBuffer, pSynthParams->sizeHop,
                                                 &(pSynthParams->prevFrame), pSynthParams->iSamplingRate);
                         }
                         if(pSynthParams->iStochasticType == SMS_STOC_WAVE)
@@ -309,7 +312,8 @@ int SmsSynthesis (SMS_Data *pSmsData, float *pFSynthesis,
                         }
                         else if(pSynthParams->iStochasticType == SMS_STOC_IFFT)
                         {
-                                quit("SmsSynthesis: SMS_STOC_IFFT not implemented yet.");
+                                printf("sms_synthesize: SMS_STOC_IFFT not implemented yet.");
+                                return(-1);
                         }
                         else if(pSynthParams->iStochasticType == SMS_STOC_APPROX)
                         {
@@ -329,7 +333,7 @@ int SmsSynthesis (SMS_Data *pSmsData, float *pFSynthesis,
                 }
                 else /*pSynthParams->iDetSynthType == SMS_DET_SIN*/
                 {
-                        FrameSineSynth (pSmsData, pFBuffer, pSynthParams->sizeHop,
+                        sms_sineSynthFrame (pSmsData, pFBuffer, pSynthParams->sizeHop,
                                         &(pSynthParams->prevFrame), pSynthParams->iSamplingRate);
 //                        printf("6\n");
                 }
@@ -348,7 +352,8 @@ int SmsSynthesis (SMS_Data *pSmsData, float *pFSynthesis,
                 }
                 else if(pSynthParams->iStochasticType == SMS_STOC_IFFT)
                 {
-                        quit("SmsSynthesis: SMS_STOC_IFFT not implemented yet.");
+                        printf("sms_synthesize: SMS_STOC_IFFT not implemented yet.");
+                        return(-1);
                 }
                 else /*pSynthParams->iStochasticType == SMS_STOC_APPROX*/
                 {
@@ -360,7 +365,7 @@ int SmsSynthesis (SMS_Data *pSmsData, float *pFSynthesis,
      
         /* de-emphasize the sound and normalize*/
         for(i = 0; i < sizeHop; i++)
-                pFSynthesis[i] = SHORT_TO_FLOAT * DeEmphasis(pFBuffer[i]);
+                pFSynthesis[i] = SHORT_TO_FLOAT * sms_deEmphasis(pFBuffer[i]);
 
         return (1);
 }

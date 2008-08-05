@@ -34,7 +34,7 @@ main (int argc, char *argv[])
 	if (argc > 1)
 		sscanf(argv[1],"%d",&windowType);
 
-	GetWindow (1024, window, windowType);
+	sms_getWindow (1024, window, windowType);
 
 	for (i = 0; i < 1024; i++)
 		printf (" %d %f\n", i, window[i]);

@@ -73,35 +73,37 @@ int main (int argc, char *argv[])
                switch (*(argv[i]++)) 
                {
                case 't': if (sscanf(argv[i],"%d", &iFormat) < 1)
-                         quit("Invalid format");
+                       {
+                               printf("Invalid format");
+                               exit(1);
+                       }
                     break;
                case 'i': if (sscanf(argv[i],"%f", 
                                     &fInitialTime) < 0)
-                         quit("Invalid initialTime");
+                    {
+                            printf("Invalid initialTime");
+                            exit(1);
+                    }
                     else printf("initialTime: %f\n", fInitialTime);
                     break;
                case 'e': if (sscanf(argv[i],"%f", 
                                     &fEndTime) < 0)
-                         quit("Invalid EndTime");
+                    {
+                            printf("Invalid EndTime");
+                            exit(1);
+                    }
                     break;				
                default:   usage();
                }
           }
      }
-     if((iError = GetSmsHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile)) < 0)
+     if((iError = sms_getHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile)) < 0)
      {
-          if(iError == SMS_NOPEN)
-               quit("cannot open file");
-          if(iError == SMS_RDERR)
-               quit("read error");
-          if(iError == SMS_NSMS)
-               quit("not an SMS file");
-          if(iError == SMS_MALLOC)
-               quit("cannot allocate memory");
-          quit("error");
+             printf("error in sms_getHeader: %s", sms_errorString(iError));
+             exit(EXIT_FAILURE);
      }	    
-    
-     AllocSmsRecord (pSmsHeader, &smsData);
+     
+     sms_allocRecordH (pSmsHeader, &smsData);
 	
      fp = fopen(pChOutputYamlFile, "w");
 
@@ -181,7 +183,7 @@ int main (int argc, char *argv[])
           fprintf(fp, "\nsmsData:\n");
           for(i = iFirstFrame; i < iLastFrame; i++)
           {
-               GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
+               sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
                fprintf(fp,"\n  - frame    : %d \n", i);
                fprintf(fp,"    timetag  : %f \n", (float) i / pSmsHeader->iFrameRate);
                if(iFormat != 3)

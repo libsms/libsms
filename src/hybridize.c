@@ -44,8 +44,10 @@ static int InitializeHybrid (int sizeWave1, int sizeWave2, SMS_HybParams params)
     if ((pFWindow2 = (float *) calloc(sizeWave2, sizeof(float))) == NULL)
       return -1;
 
-    Hamming (sizeWave1, pFWindow1);
-    Hamming (sizeWave2, pFWindow2);
+//    Hamming (sizeWave1, pFWindow1);
+//    Hamming (sizeWave2, pFWindow2);
+    sms_getWindow(sizeWave1, pFWindow1, SMS_WIN_HAMMING);
+    sms_getWindow(sizeWave2, pFWindow2, SMS_WIN_HAMMING);
     sizeFft1 = (int) pow(2.0,
                  (double)(1+(floor(log((double)sizeWave1) / LOG2))));
     sizeFft2 = (int) pow(2.0, 
@@ -133,7 +135,7 @@ static int FilterMagEnv (float *pFMagEnv, float *pFMagEnvFilt, int sizeMag)
 	  sizeof(float) * sizeEnvBuffer);
    memcpy ((char *) (pFEnvBuffer+sizeEnvBuffer-sizeMag), (char *) pFMagEnv, 
 	  sizeof(float) * sizeMag);
-  FilterArray (pFEnvBuffer, sizeMag, sizeSmooth, pFMagEnvFilt);
+  sms_filterArray (pFEnvBuffer, sizeMag, sizeSmooth, pFMagEnvFilt);
   return 1;
 }
 
@@ -214,7 +216,7 @@ static int MultiplySpectra (float *pFMagEnv, float *pFMagSpectrum, int sizeMag,
  * SMS_HybParams params		control parameters
  *
  */
-void HybridizeMag (short *pIWaveform1, int sizeWave1, short *pIWaveform2, 
+void HybridizeMag (float *pIWaveform1, int sizeWave1, float *pIWaveform2, 
                    int sizeWave2, float *pFWaveform, SMS_HybParams params)
 {
 	int i;
@@ -241,15 +243,15 @@ void HybridizeMag (short *pIWaveform1, int sizeWave1, short *pIWaveform2,
 /*
  * function to hybridize two waveforms
  *
- * short *pIWaveform1		excitation waveform
+ * float *pIWaveform1		excitation waveform
  * int sizeWave1		    size of excitation waveform
- * short *pIWaveform2		hybridization waveform
+ * float *pIWaveform2		hybridization waveform
  * int sizeWave2		    size of hybridization waveform
  * float *pFWaveform		output waveform (hybridized)
  * SMS_HybParams params		control parameters
  *
  */
-int Hybridize (short *pIWaveform1, int sizeWave1, short *pIWaveform2, 
+int sms_hybridize (float *pIWaveform1, int sizeWave1, float *pIWaveform2, 
                int sizeWave2, float *pFWaveform, SMS_HybParams params)
 {
 	/* initialize static variables and arrays */
@@ -264,14 +266,14 @@ int Hybridize (short *pIWaveform1, int sizeWave1, short *pIWaveform2,
 		return (1);
 	}
 	/* compute the two spectra */
-	QuickSpectrum (pIWaveform1, pFWindow1, sizeWave1, pFMagSpectrum1, 
+	sms_quickSpectrum (pIWaveform1, pFWindow1, sizeWave1, pFMagSpectrum1, 
 	               pFPhaseSpectrum1, sizeFft1);
-	QuickSpectrum (pIWaveform2, pFWindow2, sizeWave2, pFMagSpectrum2, 
+	sms_quickSpectrum (pIWaveform2, pFWindow2, sizeWave2, pFMagSpectrum2, 
 	               pFPhaseSpectrum2, sizeFft2);
 
 	/* approximate the second spectrum by line segments and obtain a magnitude 
 	 * spectrum of size sizeMag1 */
-	SpectralApprox (pFMagSpectrum2, sizeMag2, sizeMag2, pFMagEnv, sizeMag1, 
+	sms_spectralApprox (pFMagSpectrum2, sizeMag2, sizeMag2, pFMagEnv, sizeMag1, 
 	                params.nCoefficients);
 
 	/* filter the smoothed spectrum */
@@ -282,7 +284,7 @@ int Hybridize (short *pIWaveform1, int sizeWave1, short *pIWaveform2,
 	                 sizeMag2, params);
 
 	/* perform the inverse FFT from the hybridized spectrum */
-	InverseQuickSpectrum (pFMagSpectrum1, pFPhaseSpectrum1, sizeFft1, 
+	sms_invQuickSpectrum (pFMagSpectrum1, pFPhaseSpectrum1, sizeFft1, 
 	                      pFWaveform, sizeWave1);
   return 1;
 }

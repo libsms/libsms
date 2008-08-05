@@ -27,7 +27,7 @@
  *
  * float fInput;   sound sample
  */
-float PreEmphasis (float fInput)
+float sms_preEmphasis (float fInput)
 {
 	static float fLastValue = 0;
 	float fOutput = 0;
@@ -42,7 +42,7 @@ float PreEmphasis (float fInput)
  *
  * float fInput;   sound input
  */
-float DeEmphasis (float fInput)
+float sms_deEmphasis (float fInput)
 {
 	static float fLastValue = 0;
 	float fOutput = 0;

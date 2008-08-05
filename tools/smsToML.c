@@ -38,7 +38,7 @@ void main (int argc, char *argv[])
 	if (argc != 3) 
 		quit(USAGE);
 
-	if((iError = GetSmsHeader (argv[1], &pSmsHeader, &pSmsFile)) < 0)
+	if((iError = sms_getHeader (argv[1], &pSmsHeader, &pSmsFile)) < 0)
 	{
 		if(iError == SMS_NOPEN)
 			quit("cannot open file");
@@ -51,7 +51,7 @@ void main (int argc, char *argv[])
 		quit("error");
 	}	    
     
-	AllocSmsRecord (pSmsHeader, &smsData);
+	sms_allocRecordH (pSmsHeader, &smsData);
 
 	fp = fopen(argv[2],"w");
 	namedata = (char *)strtok (argv[2],".");
@@ -77,7 +77,7 @@ void main (int argc, char *argv[])
 
 	for(i = 0; i < pSmsHeader->nFrames; i++)
 	{
-		GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
+		sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
 		fprintf(fp,"%s_amps(%d,:) = [", namedata, i+1);
 		for(j = 0; j < smsData.nTraj; j++)
 			fprintf(fp," %.2f", smsData.pFMagTraj[j]);
@@ -88,7 +88,7 @@ void main (int argc, char *argv[])
 	        namedata);
 	for(i = 0; i < pSmsHeader->nFrames; i++)
 	{
-		GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
+		sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
 		fprintf(fp,"%s_freqs(%d,:) = [", namedata, i+1);
 		for(j = 0; j < smsData.nTraj; j++)
 			fprintf(fp," %.2f", smsData.pFFreqTraj[j]);
@@ -102,7 +102,7 @@ void main (int argc, char *argv[])
 	            namedata);
 		for(i = 0; i < pSmsHeader->nFrames; i++)
 		{
-			GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
+			sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
 			fprintf(fp,"%s_phases(%d,:) = [", namedata, i+1);
 			for(j = 0; j < smsData.nTraj; j++)
 				fprintf(fp," %.2f", smsData.pFPhaTraj[j]);
@@ -115,7 +115,7 @@ void main (int argc, char *argv[])
 		        namedata, namedata);
 		for(i = 0; i < pSmsHeader->nFrames; i++)
 		{
-			GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
+			sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
 			fprintf(fp,"%s_stoccoeffs(%d,:) = [", namedata, i+1);
 			for(j = 0; j < smsData.nCoeff; j++)
 				fprintf(fp," %.4f", smsData.pFStocCoeff[j]);
@@ -125,7 +125,7 @@ void main (int argc, char *argv[])
 		        namedata);
 		for(i = 0; i < pSmsHeader->nFrames; i++)
 		{
-			GetSmsRecord (pSmsFile, pSmsHeader, i, &smsData);
+			sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
 			fprintf(fp,"%s_stocgain (%d) = %.4f ;\n", namedata, i+1, 
 				*(smsData.pFStocGain));
 		}  

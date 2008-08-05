@@ -29,7 +29,7 @@
  *  int size2		horizontal size of pFArray
  *  float *pFOutArray   output array of size size1
  */
-int FilterArray (float *pFArray, int size1, int size2, float *pFOutArray)
+int sms_filterArray (float *pFArray, int size1, int size2, float *pFOutArray)
 {
 	int i, j, iPoint, iFrame, size2_2 = size2-2, size2_1 = size2-1;
 	float *pFCurrentArray = pFArray + (size2_1) * size1, fVal, fWeighting, 
