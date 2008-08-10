@@ -167,7 +167,7 @@ int sms_detectPeaks (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag,
 	memset (pSpectralPeaks, 0, SMS_MAX_NPEAKS * sizeof(SMS_Peak));
   
 	/* find peaks */
-	iPeak = 0;
+	iPeak = 0; /*!< \todo redundant */
 	while ((iPeak < SMS_MAX_NPEAKS) &&
 	       (FindNextPeak(pFMagSpectrum, iHighestBin,
 	                     &iCurrentLoc, &fPeakMag, &fPeakLoc, pAnalParams)

@@ -32,6 +32,8 @@
 #include <sndfile.h>
 #include <fftw3.h>
 
+#define SMS_MAX_NPEAKS      200    /*!< \brief maximum number of peaks  */
+
 /*! \struct SMS_Header 
  *  \brief structure for the header of an SMS file 
  *  
@@ -57,7 +59,7 @@ typedef struct
 	float fAmplitude;      /*!< average amplitude of represented sound
                                 \todo currently unused, cleanup */
 	float fFrequency;      /*!< average fundamental frequency
-                                \todo currently unused, cleanup */
+                                \todo what good is this here? should be in SMS_Data */
 	int iOriginalSRate;    /*!< sampling rate of original sound */
 	int iBegSteadyState;   /*!< record number of begining of steady state
                                 \todo currently unused, cleanup */
@@ -103,6 +105,7 @@ typedef struct
 	int nCoeff;                  /*!< number of filter coefficients */
 } SMS_Data;
 
+
 /*! \struct SMS_SndBuffer
  * \brief buffer for sound data 
  * 
@@ -132,8 +135,115 @@ typedef struct
 	float fPhase;        /*!< phase of peak */
 } SMS_Peak;
 
+/*! \struct SMS_AnalFrame
+ *  \brief structure to hold an analysis frame
+ *
+ *  \todo details..
+ */
+typedef struct 
+{
+	int iFrameSample;         /*!< sample number of the sound file that 
+                               corresponds to the middle of the frame */
+	int iFrameSize;           /*!< number of samples used in the frame */
+	int iFrameNum;            /*!< frame number */
+	SMS_Peak pSpectralPeaks[SMS_MAX_NPEAKS];  /*!< spectral peaks found in frame
+                                                   \see SMS_Peak */
+	int nPeaks;               /*!< number of peaks found */
+	float fFundamental;       /*!< fundamental frequency in frame */
+	SMS_Data deterministic;   /*!< deterministic data \see SMS_Data */
+	int iStatus; /*!< status of frame enumerated by SMS_FRAME_STATUS
+                       \see SMS_FRAME_STATUS */
+} SMS_AnalFrame;
+
+/*! \struct SMS_AnalParams
+ * \brief structure with useful information for analysis functions
+ *
+ * \todo details
+ */
+typedef struct 
+{
+	int iDebugMode; /*!< debug codes enumerated by SMS_DBG \see SMS_DBG */
+	int iFormat;          /*!< analysis format code defined by SMS_Format \see SMS_Format */
+	int iFrameRate;        /*!< rate in Hz of data frames */
+	int iStochasticType;      /*!<  type of stochastic model defined by SMS_StocSynthType 
+                                                     \see SMS_StocSynthType */
+	int nStochasticCoeff;  /*!< number of stochastic coefficients per frame  */
+	float fLowestFundamental; /*!< lowest fundamental frequency in Hz */
+	float fHighestFundamental;/*!< highest fundamental frequency in Hz */
+	float fDefaultFundamental;/*!< default fundamental in Hz */
+	float fPeakContToGuide;   /*!< contribution of previous peak to current guide (between 0 and 1) */
+	float fFundContToGuide;   /*!< contribution of current fundamental to current guide (between 0 and 1) */
+	float fFreqDeviation;     /*!< maximum deviation from peak to peak */				     
+	int iSamplingRate;        /*! sampling rate of sound to be analyzed */
+	int iDefaultSizeWindow;   /*!< default size of analysis window in samples */
+	int sizeHop;              /*!< hop size of analysis window in samples */
+	float fSizeWindow;       /*!< size of analysis window in number of periods */
+	int nGuides;              /*!< number of guides used \todo explain */
+	int iCleanTraj;           /*!< whether or not to clean trajectories */
+	float fMinRefHarmMag;     /*!< minimum magnitude in dB for reference peak */
+	float fRefHarmMagDiffFromMax; /*!< maximum magnitude difference from reference peak to highest peak */
+	int iRefHarmonic;	       /*!< reference harmonic to use in the fundamental detection */
+	int iMinTrajLength;	       /*!< minimum length in samples of a given trajectory */
+	int iMaxSleepingTime;	   /*!< maximum sleeping time for a trajectory */
+	float fHighestFreq;        /*!< highest frequency to be searched */
+	float fMinPeakMag;         /*!< minimum magnitude in dB for a good peak */	
+	int iSoundType;            /*!< type of sound to be analyzed emumerated by SMS_SOUND_TYPE 
+                                                   \see SMS_SOUND_TYPE */	
+	int iAnalysisDirection;    /*!< analysis direction, direct or reverse */	
+	int iSizeSound;             /*!< total size of sound to be analyzed in samples */	 	
+	int iWindowType;            /*!< type of analysis window enumerated by SMS_WINDOWS 
+                                                       \see SMS_WINDOWS */			  	 			 
+        int iMaxDelayFrames;     /*!< maximum number of frames to delay before peak continuation */
+        SMS_Data prevFrame;   /*!< the previous analysis frame  */
+        SMS_SndBuffer soundBuffer;    /*!< samples to be analyzed */
+        SMS_SndBuffer synthBuffer; /*!< resynthesized samples needed to get the residual */
+        SMS_AnalFrame *pFrames;  /*!< \todo explain why AnalFrame is necessary here */
+        SMS_AnalFrame **ppFrames; /*!< \todo explain why this double pointer is necessary */
+        float fResidualPercentage; /*!< accumalitive residual percentage */
+#ifdef FFTW
+        fftwf_plan  fftPlan; /*!< plan for FFTW's fourier transform functions, floating point */
+        float *pWaveform; /*< array of samples to be passed to fftwf_execute 
+                           \todo why isn't the sound buffer above used here, why both? */
+        fftwf_complex *pSpectrum; /*< complex array of spectra produced by fftwf_execute */
+#endif
+} SMS_AnalParams;
+
+/*! \struct SMS_SynthParams
+ * \brief structure with useful information for synthesis functions
+ *
+ * \todo details
+ */
+typedef struct
+{
+	int iStochasticType;       /*!<  type of stochastic model defined by SMS_StocSynthType 
+                                                     \see SMS_StocSynthType */
+	int iSynthesisType;        /*!< type of synthesis to perform \see SMS_SynthType */
+        int iDetSynthType;         /*!< method for synthesizing deterministic component
+                                                 \see SMS_DetSynthType */
+	int iOriginalSRate;  /*!< samplerate of the sound model source \todo this should not be necessary, 
+                                             it is only used to create other parameters... should just use that param
+                                             here instead */
+	int iSamplingRate;         /*!< synthesis samplerate */
+	SMS_Data prevFrame; /*!< previous data frame, used for smooth interpolation between frames */
+	int sizeHop;                   /*!< number of samples to synthesis for each frame */
+        int origSizeHop;            /*!< original number of samples used to create each analysis frame */
+	float *pFDetWindow;    /*!< array to hold the window used for deterministic synthesis
+                                                \todo explain which window this is */
+        float *pFStocWindow; /*!< array to hold the window used for stochastic synthesis
+                                                \todo explain which window this is */
+        float fStocGain;            /*!< gain multiplied to the stachostic component */
+        float fTranspose;          /*!< frequency transposing value, based on an Equal Tempered scale */
+#ifdef FFTW
+        fftwf_plan  fftPlan;         /*!< plan for FFTW's inverse fourier transform functions, floating point */
+        fftwf_complex *pSpectrum; /*!< complex array of spectra used to create synthesis */
+        float *pWaveform;       /*!< synthesis samples produced by fftwf_execute */
+#else
+        float *realftOut; /*!< RTE_DEBUG : comparing realft and fftw \todo remove this */
+#endif
+} SMS_SynthParams;
+
+
 #define SMS_MIN_MAG     .3      /*!< \brief minimum magnitude to be searched */
-#define SMS_MAX_NPEAKS      200    /*!< \brief maximum number of peaks  */
                                     
 /*! \struct SMS_HarmCandidate
  * \brief structure to hold information about a harmonic candidate 
@@ -175,108 +285,6 @@ typedef struct
 	int iPeakChosen;    /*!< peak number chosen by the guide (was a short) */
 } SMS_Guide;
 
-/*! \struct SMS_AnalFrame
- *  \brief structure to hold an analysis frame
- *
- *  \todo details..
- */
-typedef struct 
-{
-	int iFrameSample;         /*!< sample number of the sound file that 
-                               corresponds to the middle of the frame */
-	int iFrameSize;           /*!< number of samples used in the frame */
-	int iFrameNum;            /*!< frame number */
-	SMS_Peak pSpectralPeaks[SMS_MAX_NPEAKS];  /*!< spectral peaks found in frame
-                                                   \see SMS_Peak */
-	int nPeaks;               /*!< number of peaks found */
-	float fFundamental;       /*!< fundamental frequency in frame */
-	SMS_Data deterministic;   /*!< deterministic data \see SMS_Data */
-	int iStatus; /*!< status of frame enumerated by SMS_FRAME_STATUS
-                       \see SMS_FRAME_STATUS */
-} SMS_AnalFrame;
-
-/*! \struct SMS_AnalParams
- * \brief structure with useful information for analysis functions
- *
- * \todo details
- */
-typedef struct 
-{
-	int iDebugMode; /*!< debug codes enumerated by SMS_DBG \see SMS_DBG */
-	int iFormat;          /*!< analysis format code defined by SMS_Format \see SMS_Format */
-	int iStochasticType;      /*!<  type of stochastic model defined by SMS_StocSynthType 
-                                                     \see SMS_StocSynthType */
-	float fLowestFundamental; /*!< lowest fundamental frequency in Hz */
-	float fHighestFundamental;/*!< highest fundamental frequency in Hz */
-	float fDefaultFundamental;/*!< default fundamental in Hz */
-	float fPeakContToGuide;   /*!< contribution of previous peak to current guide (between 0 and 1) */
-	float fFundContToGuide;   /*!< contribution of current fundamental to current guide (between 0 and 1) */
-	float fFreqDeviation;     /*!< maximum deviation from peak to peak */				     
-	int iSamplingRate;        /*! sampling rate of sound to be analyzed */
-	int iDefaultSizeWindow;   /*!< default size of analysis window in samples */
-	int sizeHop;              /*!< hop size of analysis window in samples */
-	float fSizeWindow;       /*!< size of analysis window in number of periods */
-	int nGuides;              /*!< number of guides used \todo explain */
-	int iCleanTraj;           /*!< whether or not to clean trajectories */
-	float fMinRefHarmMag;     /*!< minimum magnitude in dB for reference peak */
-	float fRefHarmMagDiffFromMax; /*!< maximum magnitude difference from reference peak to highest peak */
-	int iRefHarmonic;	       /*!< reference harmonic to use in the fundamental detection */
-	int iMinTrajLength;	       /*!< minimum length in samples of a given trajectory */
-	int iMaxSleepingTime;	   /*!< maximum sleeping time for a trajectory */
-	float fHighestFreq;        /*!< highest frequency to be searched */
-	float fMinPeakMag;         /*!< minimum magnitude in dB for a good peak */	
-	int iSoundType;            /*!< type of sound to be analyzed emumerated by SMS_SOUND_TYPE 
-                                                   \see SMS_SOUND_TYPE */	
-	int iAnalysisDirection;    /*!< analysis direction, direct or reverse */	
-	int iSizeSound;             /*!< total size of sound to be analyzed in samples */	 	
-	int iWindowType;            /*!< type of analysis window enumerated by SMS_WINDOWS 
-                                                       \see SMS_WINDOWS */			  	 			 
-        int iMaxDelayFrames;     /*!< maximum number of frames to delay before peak continuation */
-        SMS_Data prevFrame;   /*!< the previous analysis frame  */
-        SMS_SndBuffer soundBuffer; /*!< samples to be analyzed */
-        SMS_SndBuffer synthBuffer; /*!< resynthesized samples needed to get the residual */
-        SMS_AnalFrame *pFrames;  /*!< \todo explain why AnalFrame is necessary here */
-        SMS_AnalFrame **ppFrames; /*!< \todo explain why this double pointer is necessary */
-        float fResidualPercentage; /*!< accumalitive residual percentage */
-#ifdef FFTW
-        fftwf_plan  fftPlan; /*!< plan for FFTW's fourier transform functions, floating point */
-        float *pWaveform; /*< array of samples to be passed to fftwf_execute 
-                           \todo why isn't the sound buffer above used here, why both? */
-        fftwf_complex *pSpectrum; /*< complex array of spectra produced by fftwf_execute */
-#endif
-} SMS_AnalParams;
-
-/*! \struct SMS_SynthParams
- * \brief structure with useful information for synthesis functions
- *
- * \todo details
- */
-typedef struct
-{
-	int iStochasticType;       /*!<  type of stochastic model defined by SMS_StocSynthType 
-                                                     \see SMS_StocSynthType */
-	int iSynthesisType;        /*!< type of synthesis to perform \see SMS_SynthType */
-        int iDetSynthType;         /*!< method for synthesizing deterministic component
-                                                 \see SMS_DetSynthType */
-	int iOriginalSRate;  /*!< samplerate of the sound model source \todo this should not be necessary, 
-                                             it is only used to create other parameters... should just use that param
-                                             here instead */
-	int iSamplingRate;         /*!< synthesis samplerate */
-	SMS_Data prevFrame; /*!< previous data frame, used for smooth interpolation between frames */
-	int sizeHop;                   /*!< number of samples to synthesis for each frame */
-        int origSizeHop;            /*!< original number of samples used to create each analysis frame */
-	float *pFDetWindow;    /*!< array to hold the window used for deterministic synthesis
-                                                \todo explain which window this is */
-        float *pFStocWindow; /*!< array to hold the window used for stochastic synthesis
-                                                \todo explain which window this is */
-#ifdef FFTW
-        fftwf_plan  fftPlan;         /*!< plan for FFTW's inverse fourier transform functions, floating point */
-        fftwf_complex *pSpectrum; /*!< complex array of spectra used to create synthesis */
-        float *pWaveform;       /*!< synthesis samples produced by fftwf_execute */
-#else
-        float *realftOut; /*!< RTE_DEBUG : comparing realft and fftw \todo remove this */
-#endif
-} SMS_SynthParams;
 
 /*!  \brief analysis format
  *
@@ -498,7 +506,10 @@ int sms_init( void );
 
 int sms_free( void );  
 
-int sms_initAnalysis ( SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams);
+//int sms_initAnalysis ( SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams);
+int sms_initAnalysis (  SMS_AnalParams *pAnalParams);
+
+int sms_initAnalParams (SMS_AnalParams *pAnalParams);
 
 int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams );
 

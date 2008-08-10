@@ -206,8 +206,9 @@ static int StocSynthApprox (SMS_Data *pSmsData, float *pFBuffer,
         *(pSmsData->pFStocGain) = TO_MAG(*(pSmsData->pFStocGain));
 
         /* scale the coefficients to normal amplitude */
+        /*! \todo why is it also multiplied by 2? */
         for (i = 0; i < sizeSpec1; i++)
-                pSmsData->pFStocCoeff[i] *= 2 * *(pSmsData->pFStocGain);
+                pSmsData->pFStocCoeff[i] *= 2 * *(pSmsData->pFStocGain) ;
 
         sizeSpec1Used = sizeSpec1 * pSynthParams->iSamplingRate / 
                 pSynthParams->iOriginalSRate;
@@ -240,17 +241,16 @@ static int StocSynthApprox (SMS_Data *pSmsData, float *pFBuffer,
 
         fftwf_execute(pSynthParams->fftPlan);
 
+        /*! \todo why muliploed by .25? */
 	for (i = 0; i < sizeFft; i++)
 		pFBuffer[i] +=  pSynthParams->pWaveform[i] 
-                        * pSynthParams->pFStocWindow[i] * 0.25; //.5;
+                        * pSynthParams->pFStocWindow[i] * 0.25 * pSynthParams->fStocGain; //.5;
  
 #else        
         sms_invQuickSpectrumW (pFMagSpectrum, pFPhaseSpectrum, 
                                sizeFft, pFBuffer, sizeFft, 
                                pSynthParams->pFStocWindow);
 #endif
-
-
 
         free (pFMagSpectrum);
         free (pFPhaseSpectrum);

@@ -62,27 +62,36 @@ int main (int argc, char *argv[])
 		{
 			switch (*(argv[i]++)) 
 			{
-				case 't': if (sscanf(argv[i],"%d", 
-				              &iFormat) < 1)
-					printf("Invalid format");
+                        case 't': if (sscanf(argv[i],"%d", &iFormat) < 1)
+                                {
+                                        printf("Invalid format");
 					exit(1);
-				case 'i': if (sscanf(argv[i],"%f", 
-				              &fInitialTime) < 0)
-					printf("Invalid initialTime");
-					exit(1);
-				case 'e': if (sscanf(argv[i],"%f", 
-				              &fEndTime) < 0)
+                                }
+                                break;
+                        case 'i': if (sscanf(argv[i],"%f", &fInitialTime) < 0)
+                                {
+                                        printf("Invalid initialTime");
+                                        exit(1);
+                                }
+                                break;
+                        case 'e': if (sscanf(argv[i],"%f", &fEndTime) < 0)
+                                {
 					printf("Invalid EndTime");
 					exit(1);
-				case 'f': if (sscanf(argv[i],"%d", 
-				              &iFirstTraj) < 0)
+                                }
+                                break;
+                        case 'f': if (sscanf(argv[i],"%d", &iFirstTraj) < 0)
+                                {
 					printf("Invalid FirstTraj");
 					exit(1);
-				case 'l': if (sscanf(argv[i],"%d", 
-				              &iLastTraj) < 0)
+                                }
+                                break;
+                        case 'l': if (sscanf(argv[i],"%d", &iLastTraj) < 0)
+                                {
 					printf("Invalid LastTraj");
 					exit(1);
-
+                                }
+                                break;
                         default:   usage();
 			}
 		}

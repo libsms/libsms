@@ -16,7 +16,7 @@ typedef struct _smsanal
         t_float *synthBuf;
         t_float f;
 	FILE *pSmsFile; 
-        SYNTH_PARAMS synthParams;
+        SMS_SynthParams synthParams;
 //        t_smsBuffer smsBuf;
         t_outlet *outlet_ptr;
         t_atom a_ptr;
@@ -68,7 +68,7 @@ static void smsanal_open(t_smsanal *x, t_symbol *filename)
         if(x->nframes != 0)
         {
                 post("smsanal_open: re-initializing");
-                SmsFreeSynth(&x->synthParams);                
+                sms_freeSynth(&x->synthParams);                
 /*                 sms_freeRecord(&x->smsRecordL); */
 /*                 sms_freeRecord(&x->smsRecordR); */
 /*                 sms_freeRecord(&x->newSmsRecord); */
@@ -139,13 +139,13 @@ static void *smsanal_new(void)
         x->s_filename = NULL;
         x->nframes= 0;
 
-        x->synthParams.iSynthesisType = STYPE_ALL;
-        x->synthParams.iDetSynthType = DET_IFFT;
+        x->synthParams.iSynthesisType = SMS_STYPE_ALL;
+        x->synthParams.iDetSynthType = SMS_DET_IFFT;
         x->synthParams.sizeHop = x->synthBufPos = 512;
 
         x->synthParams.iSamplingRate = 44100; //should be updated once audio is turned on
         
-        SmsInit();
+        sms_init();
     
         x->synthBuf = (t_float *) calloc(x->synthParams.sizeHop, sizeof(t_float));
 
@@ -156,9 +156,10 @@ static void *smsanal_new(void)
 static void smsanal_free(t_smsanal *x)
 {
         int i;
+        sms_free();
 /*         if(x->smsBuf.pSmsHeader != NULL)  */
 /*         { */
-/*                 //SmsFreeSynth(&x->synthParams); */
+/*                 //sms_freeSynth(&x->synthParams); */
 /*                 for( i = 0; i < x->nframes; i++) */
 /*                         sms_freeRecord(&x->smsBuf.pSmsData[i]); */
 /*         } */

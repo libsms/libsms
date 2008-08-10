@@ -30,7 +30,7 @@
  * @param pSWaveform	     pointer to input waveform data
  * @param sizeNewData	     the size of input data
  * @param pSmsData          pointer to output SMS data
- * @param pAanalParams   pointer to analysis parameters
+ * @param pAnalParams   pointer to analysis parameters
  * @param pINextSizeRead size of next data to read
  */
 int sms_analyze (short *pSWaveform, long sizeNewData, SMS_Data *pSmsData, 
@@ -276,7 +276,7 @@ void sms_computeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams,
 		        pAnalParams->ppFrames[iCurrentFrame]->iFrameNum);
 		/* print only the first 10 peaks */
 		for(i=0; i<10; i++)
-			fprintf(stdout, " %.0f[%.1f], ", 
+			fprintf(stdout, " %.2f[%.2f], ", 
 			        pAnalParams->ppFrames[iCurrentFrame]->pSpectralPeaks[i].fFreq,
 			        pAnalParams->ppFrames[iCurrentFrame]->pSpectralPeaks[i].fMag);
 		fprintf(stdout, "\n");
@@ -295,18 +295,3 @@ void sms_computeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams,
 		        pAnalParams->ppFrames[iCurrentFrame]->fFundamental);
 }
 
-/* shift the buffer of analysis frames to the left */
-/* void MoveFrames (SMS_AnalParams *pAnalParams) */
-/* { */
-/* //	extern short MaxDelayFrames; */
-/* //	extern SMS_AnalFrame **ppFrames; */
-/* 	int i; */
-/* 	SMS_AnalFrame *tmp; */
-  
-/* 	/\* shift the frame pointers *\/ */
-/* 	tmp = pAnalParams->ppFrames[0]; */
-/* 	for(i = 1; i < pAnalParams->iMaxDelayFrames; i++) */
-/* 		pAnalParams->ppFrames[i-1] = pAnalParams->ppFrames[i]; */
-  
-/* 	pAnalParams->ppFrames[pAnalParams->iMaxDelayFrames-1] = tmp; */
-/* } */

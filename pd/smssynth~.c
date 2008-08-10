@@ -15,15 +15,15 @@ typedef struct _smsbuf
         t_int ready;
 	FILE *pSmsFile; //does this need to be in the struct?
         char paramString[1024];
-        SMSHeader smsHeader;
-        SMS_DATA *smsData;
+        SMS_Header smsHeader;
+        SMS_Data *smsData;
 } t_smsbuf;
 
-void CopySmsHeader( SMSHeader *pFileHeader, SMSHeader *pBufHeader, char *paramString  )
+void CopySmsHeader( SMS_Header *pFileHeader, SMS_Header *pBufHeader, char *paramString  )
 {
         sms_initHeader (pBufHeader);
 
-        pBufHeader->nRecords = pFileHeader->nRecords;
+        pBufHeader->nFrames = pFileHeader->nFrames;
         pBufHeader->iFormat = pFileHeader->iFormat;
         pBufHeader->iFrameRate = pFileHeader->iFrameRate;
         pBufHeader->iStochasticType = pFileHeader->iStochasticType;
@@ -46,7 +46,7 @@ void CopySmsHeader( SMSHeader *pFileHeader, SMSHeader *pBufHeader, char *paramSt
  */
 static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
 {
-        SMSHeader *pSmsHeader;
+        SMS_Header *pSmsHeader;
         long iError;
         int i;
         t_symbol *fullname;
@@ -77,12 +77,12 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
         }
         //post("smsheader address: %p ", x->smsBuf.pSmsHeader);
 
-        /* allocate memory for nframes of SMS_DATA */
-        x->nframes = pSmsHeader->nRecords;
+        /* allocate memory for nframes of SMS_Data */
+        x->nframes = pSmsHeader->nFrames;
         if(0)post("nframes: %d ", x->nframes);
         /*Buffer the entire file in smsBuf.  For now, I'm doing this the simplest way possible.*/        
         // will this be faster with one malloc? try once everything is setup */
-        x->smsData = calloc(x->nframes, sizeof(SMS_DATA));
+        x->smsData = calloc(x->nframes, sizeof(SMS_Data));
         for( i = 0; i < x->nframes; i++ )
         {
                 sms_allocRecordH (pSmsHeader,  &x->smsData[i]);
@@ -92,7 +92,7 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
         /* copy header to buffer */
         CopySmsHeader( pSmsHeader, &x->smsHeader, x->paramString );
 
-//        post("nRecords: %d ", x->pSmsHeader->nRecords);//x->nframes);
+//        post("nFrames: %d ", x->pSmsHeader->nFrames);//x->nframes);
         x->ready = 1;
         post("sms file buffered: %s ", filename->s_name );
         return;
@@ -101,27 +101,27 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
 static void smsbuf_info(t_smsbuf *x)
 {
         post("sms file : %s ", x->filename->s_name );
-        post("original file length: %f seconds ", (float)  x->smsHeader.nRecords /
+        post("original file length: %f seconds ", (float)  x->smsHeader.nFrames /
              x->smsHeader.iFrameRate);
         post("__header contents__");
-        post("Number of Frames: %d", x->smsHeader.nRecords);
+        post("Number of Frames: %d", x->smsHeader.nFrames);
 	post("Frame rate (Hz) = %d", x->smsHeader.iFrameRate);
 	post("Number of trajectories = %d", x->smsHeader.nTrajectories);
 	post("Number of stochastic coefficients = %d",
     	   x->smsHeader.nStochasticCoeff);
-        if(x->smsHeader.iFormat == FORMAT_HARMONIC) 
+        if(x->smsHeader.iFormat == SMS_FORMAT_H) 
                 post("Format = harmonic");
-        else if(x->smsHeader.iFormat == FORMAT_INHARMONIC) 
+        else if(x->smsHeader.iFormat == SMS_FORMAT_IH) 
                 post("Format = inharmonic");
-        else if(x->smsHeader.iFormat == FORMAT_HARMONIC_WITH_PHASE)
+        else if(x->smsHeader.iFormat == SMS_FORMAT_HP)
                 post("Format = harmonic with phase");
-        else if(x->smsHeader.iFormat == FORMAT_INHARMONIC_WITH_PHASE)
+        else if(x->smsHeader.iFormat == SMS_FORMAT_IHP)
                 post("Format = inharmonic with phase");
-	if(x->smsHeader.iStochasticType == STOC_WAVEFORM) post("Stochastic type = waveform");
-	else if(x->smsHeader.iStochasticType == STOC_IFFT) post("Stochastic type = IFFT");
-	else if(x->smsHeader.iStochasticType == STOC_APPROX)
+	if(x->smsHeader.iStochasticType == SMS_STOC_WAVE) post("Stochastic type = waveform");
+	else if(x->smsHeader.iStochasticType == SMS_STOC_IFFT) post("Stochastic type = IFFT");
+	else if(x->smsHeader.iStochasticType == SMS_STOC_APPROX)
                 post("Stochastic type = line segment magnitude spectrum approximation ");
-	else if(x->smsHeader.iStochasticType == STOC_NONE) post("Stochastic type = none");
+	else if(x->smsHeader.iStochasticType == SMS_STOC_NONE) post("Stochastic type = none");
 	post("Original sampling rate = %d", x->smsHeader.iOriginalSRate);  
 
 	if (x->smsHeader.nTextCharacters > 0)
@@ -145,7 +145,7 @@ static void *smsbuf_new(t_symbol *bufname)
         x->bufname = bufname;
         post("bufname: %s", bufname->s_name);
 
-        SmsInit();
+        sms_init();
     
         return (x);
 }
@@ -153,6 +153,8 @@ static void *smsbuf_new(t_symbol *bufname)
 static void smsbuf_free(t_smsbuf *x)
 {
         int i;
+        sms_free();
+
 //        if(x->pSmsHeader != NULL) //shouldn't need this, if nframes = 0 nothing will happen
         {
                 for( i = 0; i < x->nframes; i++)
@@ -183,10 +185,10 @@ typedef struct _smssynth
         t_int i_frame, i_frameSource, synthBufPos;
         t_float *synthBuf;
         t_float f;
-        SYNTH_PARAMS synthParams;
-        SMSHeader *pSmsHeader;
-        SMS_DATA *pSmsData;
-        SMS_DATA interpolatedRecord;
+        SMS_SynthParams synthParams;
+        SMS_Header *pSmsHeader;
+        SMS_Data *pSmsData;
+        SMS_Data interpolatedRecord;
 } t_smssynth;
 
 static void smssynth_read(t_smssynth *x, t_symbol *bufname)
@@ -226,12 +228,12 @@ static void smssynth_read(t_smssynth *x, t_symbol *bufname)
         if(x->pSmsHeader != NULL)
         {
                 post("smssynth_open: re-initializing");
-                SmsFreeSynth(&x->synthParams);                
+                sms_freeSynth(&x->synthParams);                
                 sms_freeRecord(&x->interpolatedRecord);
         }
         x->pSmsHeader = &smsbuf->smsHeader;
         x->pSmsData = smsbuf->smsData;
-        SmsInitSynth( x->pSmsHeader, &x->synthParams );
+        sms_initSynth( x->pSmsHeader, &x->synthParams );
         
 	/* setup for interpolated synthesis from buffer */
         // I guess I am always ignoring phase information for now..
@@ -239,7 +241,7 @@ static void smssynth_read(t_smssynth *x, t_symbol *bufname)
 	                   x->pSmsHeader->nStochasticCoeff, 0,
                            x->synthParams.origSizeHop, x->pSmsHeader->iStochasticType);
 
-        post("nrecords: %d", x->pSmsHeader->nRecords);
+        post("nrecords: %d", x->pSmsHeader->nFrames);
 }
 
 static t_int *smssynth_perform(t_int *w)
@@ -255,18 +257,18 @@ static t_int *smssynth_perform(t_int *w)
         {
                 if(x->synthBufPos >= x->synthParams.sizeHop)
                 {
-                        if(x->f >= x->pSmsHeader->nRecords)
-                                x->f = x->pSmsHeader->nRecords -1;
+                        if(x->f >= x->pSmsHeader->nFrames)
+                                x->f = x->pSmsHeader->nFrames -1;
                         if(x->f < 0) x->f = 0;
                 
-                        iLeftRecord = MIN (x->pSmsHeader->nRecords - 1, floor (x->f)); 
-                        iRightRecord = (iLeftRecord < x->pSmsHeader->nRecords - 2)
+                        iLeftRecord = MIN (x->pSmsHeader->nFrames - 1, floor (x->f)); 
+                        iRightRecord = (iLeftRecord < x->pSmsHeader->nFrames - 2)
                                 ? (1+ iLeftRecord) : iLeftRecord;
 
                         sms_interpolateRecords (&x->pSmsData[iLeftRecord], &x->pSmsData[iRightRecord],
                                                &x->interpolatedRecord, x->f - iLeftRecord);
                 
-                        SmsSynthesis (&x->interpolatedRecord, x->synthBuf, &x->synthParams);
+                        sms_synthesize (&x->interpolatedRecord, x->synthBuf, &x->synthParams);
                         x->synthBufPos = 0;
                 }
                 //check when blocksize is larger than hopsize... will probably crash
@@ -303,21 +305,21 @@ static void smssynth_info(t_smssynth *x)
 
         post("__arguments__");
         post("samplingrate: %d  ", x->synthParams.iSamplingRate);
-        if(x->synthParams.iSynthesisType == STYPE_ALL) 
+        if(x->synthParams.iSynthesisType == SMS_STYPE_ALL) 
                 post("synthesis type: all ");
-        else if(x->synthParams.iSynthesisType == STYPE_DET) 
+        else if(x->synthParams.iSynthesisType == SMS_STYPE_DET) 
                 post("synthesis type: deterministic only ");
-        else if(x->synthParams.iSynthesisType == STYPE_STOC) 
+        else if(x->synthParams.iSynthesisType == SMS_STYPE_STOC) 
                 post("synthesis type: stochastic only ");
-        if(x->synthParams.iDetSynthType == DET_IFFT) 
+        if(x->synthParams.iDetSynthType == SMS_DET_IFFT) 
                 post("deteministic synthesis method: ifft ");
-        else if(x->synthParams.iDetSynthType == DET_OSC) 
+        else if(x->synthParams.iDetSynthType == SMS_DET_SIN) 
                 post("deteministic synthesis method: oscillator bank ");
         post("sizeHop: %d ", x->synthParams.sizeHop);
         post("__header info__");
         post("fOriginalSRate: %d, iFrameRate: %d, origSizeHop: %d",
              x->pSmsHeader->iOriginalSRate, x->pSmsHeader->iFrameRate, x->synthParams.origSizeHop);
-        post("original file length: %f seconds ", (float)  x->pSmsHeader->nRecords *
+        post("original file length: %f seconds ", (float)  x->pSmsHeader->nFrames *
              x->synthParams.origSizeHop / x->pSmsHeader->iOriginalSRate );
 
 
@@ -341,13 +343,13 @@ static void *smssynth_new(t_symbol *bufname)
         x->pSmsHeader = NULL;
         x->i_frameSource = SOURCE_FLOAT;
 
-        x->synthParams.iSynthesisType = STYPE_ALL;
-        x->synthParams.iDetSynthType = DET_IFFT;
+        x->synthParams.iSynthesisType = SMS_STYPE_ALL;
+        x->synthParams.iDetSynthType = SMS_DET_IFFT;
         x->synthParams.sizeHop = x->synthBufPos = 512;
 
         x->synthParams.iSamplingRate = 44100; //should be updated once audio is turned on
         
-        SmsInit();
+        sms_init();
     
         x->synthBuf = (t_float *) calloc(x->synthParams.sizeHop, sizeof(t_float));
         
@@ -358,11 +360,12 @@ static void smssynth_free(t_smssynth *x)
 {
         if(x->pSmsHeader != NULL) 
         {
-                SmsFreeSynth(&x->synthParams);
+                sms_freeSynth(&x->synthParams);
 //                sms_freeRecord(&x->smsRecordL);
 //                sms_freeRecord(&x->smsRecordR);
                 sms_freeRecord(&x->interpolatedRecord);
         }
+        sms_free();
 }
 void smssynth_tilde_setup(void)
 {

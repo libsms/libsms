@@ -328,6 +328,11 @@ static int FillAnalParams (ARGUMENTS arguments, SMS_AnalParams *pAnalParams,
 	pAnalParams->fHighestFreq = arguments.fHighestFreq;
 	pAnalParams->fMinPeakMag = arguments.fMinPeakMag;
 	pAnalParams->iStochasticType = arguments.iStochasticType;  
+	if(arguments.iStochasticType != SMS_STOC_APPROX)
+		pAnalParams->nStochasticCoeff = 0;
+        else
+                pAnalParams->nStochasticCoeff = arguments.nStochasticCoeff;
+
 	pAnalParams->fLowestFundamental = arguments.fLowestFund;
 	pAnalParams->fHighestFundamental = arguments.fHighestFund;
 	pAnalParams->fDefaultFundamental = arguments.fDefaultFund;
@@ -417,7 +422,8 @@ int main (int argc, char *argv[])
 	if (analParams.iDebugMode == SMS_DBG_RESIDUAL)
 		sms_createResSF (&analParams);
         sms_init();
-        sms_initAnalysis (&smsHeader, &analParams);
+        //sms_initAnalysis (&smsHeader, &analParams);
+        sms_initAnalysis (&analParams);
 
         /* allocate output SMS record */
 	sms_allocRecordH (&smsHeader, &smsData);

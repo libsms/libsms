@@ -57,11 +57,7 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
         {
                 sms_getWindow (sizeWindow, sms_window_spec, pAnalParams->iWindowType);
                 
-/*                 fftwf_free(pSynthParams->pSpectrum); */
-/*                 fftwf_free(pSynthParams->pWaveform); */
-/*                 pAnalParams->pWaveform = fftwf_malloc(sizeof(float) * SMS_MAX_WINDOW); */
-/*                 pAnalParams->pSpectrum = fftwf_malloc(sizeof(fftwf_complex) * (SMS_MAX_WINDOW / 2 + 1)); */
-
+                // is this the right size fft?
                 if((pAnalParams->fftPlan =  fftwf_plan_dft_r2c_1d( sizeFft, pAnalParams->pWaveform,
                                                                    pAnalParams->pSpectrum, FFTW_ESTIMATE)) == NULL)
 
@@ -72,24 +68,40 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
         }
 	iOldSizeWindow = sizeWindow;
 
-//        printf("sizeWindow: %d, windows: %d, sizeFft: %d \n", sizeWindow, SMS_OVERLAP_FACTOR, sizeFft);
+        //printf("sizeWindow: %d, windows: %d, sizeFft: %d \n", sizeWindow, SMS_OVERLAP_FACTOR, sizeFft);
 
         memset(pAnalParams->pWaveform, 0, sizeFft * sizeof(float));
-        memset(pAnalParams->pWaveform, 0, (sizeFft/2 + 1) * sizeof(float));
+        memset(pAnalParams->pSpectrum, 0, (sizeMag + 1) * sizeof(fftwf_complex));
 
+/*         printf(" sizeWindow: %d, iMiddleWindow: %d, sizeFft: %d, sizeMag: %d \n", sizeWindow, iMiddleWindow, */
+/*                sizeFft, sizeMag ); */
 
 	/* apply window to waveform and center window around 0 */
+        // removed 1 offset when writing windowed waveform
 	iOffset = sizeFft - (iMiddleWindow - 1);
 	for (i=0; i<iMiddleWindow-1; i++)
-		pAnalParams->pWaveform[1+(iOffset + i)] =  sms_window_spec[i] * pFWaveform[i];
+		pAnalParams->pWaveform[iOffset + i] =  sms_window_spec[i] * pFWaveform[i];
 	iOffset = iMiddleWindow - 1;
 	for (i=0; i<iMiddleWindow; i++)
-		pAnalParams->pWaveform[1+i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i];
+		pAnalParams->pWaveform[i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i];
+
+        /****** RTE DEBUG *********/
+/*         printf("\nBEFORE fftw::::::::::::: \n"); */
+/*         for(i = 0; i < sizeFft; i++) */
+/*                 printf("[%d]%f, ", i, pAnalParams->pWaveform[i]); */
+        /***************************/
   
         fftwf_execute(pAnalParams->fftPlan);
 
+        /****** RTE DEBUG *********/
+/*         printf("\nAFTER fftw::::::::::::: \n"); */
+/*         for(i = 0; i < sizeMag+1; i++) */
+/*                 printf("[%d](%f, %f),  ", i, pAnalParams->pSpectrum[i][0], */
+/*                        pAnalParams->pSpectrum[i][1]); */
+        /***************************/
+
 	/* convert from rectangular to polar coordinates */
-	for (i = 0; i < sizeMag; i++) /* this doesn't account for Nyquit component yet */
+	for (i = 1; i < sizeMag; i++) 
 	{
 		fReal = pAnalParams->pSpectrum[i][0];
 		fImag = pAnalParams->pSpectrum[i][1];
@@ -100,8 +112,13 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 			pFPhaseSpectrum[i] = atan2 (-fImag, fReal);
 		}
 	}
+        /*rte: DC and Nyquist combine to make pFMagSpectrum[0]? */
+        fReal = pAnalParams->pSpectrum[0][0];
+        fImag = pAnalParams->pSpectrum[sizeMag][0];
+        pFMagSpectrum[0] = TO_DB (sqrt (fReal * fReal + fImag * fImag));
+        pFPhaseSpectrum[0] = atan2(-fImag, fReal);
 
-#else        
+#else /* using realft() */        
 	if (iOldSizeWindow != sizeWindow) 
         {
                 sms_getWindow (sizeWindow, sms_window_spec, pAnalParams->iWindowType);
@@ -123,8 +140,17 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 	for (i=0; i<iMiddleWindow; i++)
 		pFBuffer[1+i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i];
   
-
+        /****** RTE DEBUG *********/
+/*         printf("\nBEFORE realft::::::::::::: \n"); */
+/*         for(i = 0; i < sizeFft+1; i++) */
+/*                 printf("[%d]%f, ", i, pFBuffer[i]); */
+        /***************************/
 	realft (pFBuffer, sizeMag, 1);
+        /****** RTE DEBUG *********/
+/*         printf("\nAFTER realft::::::::::::: \n"); */
+/*         for(i = 0; i < sizeFft+1; i++) */
+/*                 printf("[%d]%f, ", i, pFBuffer[i]); */
+        /***************************/
   
 	/* convert from rectangular to polar coordinates */
 	for (i = 0; i < sizeMag; i++)

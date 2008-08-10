@@ -50,7 +50,8 @@ int sms_free( void )
  * SMS_AnalParams analParams;    analysis paramaters
  *
  */
-int sms_initAnalysis ( SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams)
+//int sms_initAnalysis ( SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams)
+int sms_initAnalysis ( SMS_AnalParams *pAnalParams)
 {
 
         SMS_SndBuffer *pSynthBuf = &pAnalParams->synthBuffer;
@@ -60,7 +61,7 @@ int sms_initAnalysis ( SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams)
 	int i;
 
         sms_allocRecord (&pAnalParams->prevFrame, pAnalParams->nGuides, 
-                           pSmsHeader->nStochasticCoeff, 1, pAnalParams->sizeHop, pAnalParams->iStochasticType);
+                           pAnalParams->nStochasticCoeff, 1, pAnalParams->sizeHop, pAnalParams->iStochasticType);
   
 	/* sound buffer */
 	if ((pAnalParams->soundBuffer.pFBuffer = (float *) calloc(sizeBuffer, sizeof(float)))
@@ -116,17 +117,6 @@ int sms_initAnalysis ( SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams)
         pAnalParams->pWaveform = fftwf_malloc(sizeof(float) * SMS_MAX_WINDOW);
         pAnalParams->pSpectrum = fftwf_malloc(sizeof(fftwf_complex) * (SMS_MAX_WINDOW / 2 + 1));
 #endif
-
-/*         if((pAnalParams->fftPlan =  fftwf_plan_dft_r2c_1d( sizeFFT, pAnalParams->pWaveform, */
-/*                                                            pAnalParams->pSpectrum, FFTW_ESTIMATE)) == NULL) */
-
-/*         { */
-/*                 printf("sms_initAnalysis: could not make fftw plan \n"); */
-/*                 return -1; */
-/*         } */
-
-//        fftwf_print_plan(pAnalParams->fftPlan);
-
 
 	return (1);
 }
@@ -202,6 +192,36 @@ int sms_freeSynth( SMS_SynthParams *pSynthParams )
         return 1;
 }
 
+/* give default values to an SMS_AnalParams struct */
+ int sms_initAnalParams (SMS_AnalParams *pAnalParams)
+{
+	pAnalParams->iDebugMode = 0;
+	pAnalParams->iFormat = SMS_FORMAT_H;
+	pAnalParams->iSoundType = SMS_SOUND_TYPE_MELODY;
+	pAnalParams->iAnalysisDirection = SMS_DIR_FWD;
+	pAnalParams->fSizeWindow = 3.5;
+	pAnalParams->iWindowType = SMS_WIN_BH_70;
+	pAnalParams->iFrameRate = 400;
+	pAnalParams->fHighestFreq = 12000.;
+	pAnalParams->fMinPeakMag = 0;
+	pAnalParams->fFreqDeviation = .45;
+	pAnalParams->iRefHarmonic = 1;
+	pAnalParams->fMinRefHarmMag = 30;
+	pAnalParams->fRefHarmMagDiffFromMax = 30;
+	pAnalParams->fDefaultFundamental = 100;
+	pAnalParams->fLowestFundamental = 50;
+	pAnalParams->fHighestFundamental = 1000;
+	pAnalParams->nGuides = 100;
+	//pAnalParams->nTrajectories = 60;
+	pAnalParams->fPeakContToGuide = .4;
+	pAnalParams->fFundContToGuide = .5;
+	pAnalParams->iCleanTraj = 1;
+	pAnalParams->iMinTrajLength = 40; /*!< depends on iFrameRate normally */
+	pAnalParams->iMaxSleepingTime = 40; /*!< depends on iFrameRate normally */
+	pAnalParams->iStochasticType =SMS_STOC_APPROX;
+	pAnalParams->nStochasticCoeff = 32;
+	return (1);
+}
 
 /* fill the sound buffer
  *
