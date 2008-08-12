@@ -184,7 +184,7 @@ typedef struct _smssynth
         t_symbol *bufname;
         t_int i_frame, i_frameSource, synthBufPos;
         t_float *synthBuf;
-        t_float f;
+        t_float f, transpose, stocgain;
         SMS_SynthParams synthParams;
         SMS_Header *pSmsHeader;
         SMS_Data *pSmsData;
@@ -285,18 +285,18 @@ static void smssynth_sizehop(t_smssynth *x, t_float *fSizeHop)
         post("TODO: set sizeHop and re-init");
 }
 
-static void smssynth_source(t_smssynth *x, t_float f_source)
+static void smssynth_transpose(t_smssynth *x, t_float f)
 {
-        if(f_source > .0001)
-        {
-                x->i_frameSource = SOURCE_SIGNAL;
-                post("smssynth_source: frame source set to signal");
-        }
-        else
-        {
-                x->i_frameSource = SOURCE_FLOAT;
-                post("smssynth_source: frame source set to float");
-        }
+/*         x->transpose = f; */
+        x->synthParams.fTranspose = TEMPERED_TO_FREQ( f );
+        post("transpose: %f", x->synthParams.fTranspose);
+}
+
+static void smssynth_stocgain(t_smssynth *x, t_float f)
+{
+/*         x->stocgain = f; */
+        x->synthParams.fStocGain = f;
+        post("stocgain: %f", x->synthParams.fStocGain);
 }
 
 
@@ -341,7 +341,6 @@ static void *smssynth_new(t_symbol *bufname)
         x->bufname = bufname;
 
         x->pSmsHeader = NULL;
-        x->i_frameSource = SOURCE_FLOAT;
 
         x->synthParams.iSynthesisType = SMS_STYPE_ALL;
         x->synthParams.iDetSynthType = SMS_DET_IFFT;
@@ -361,8 +360,6 @@ static void smssynth_free(t_smssynth *x)
         if(x->pSmsHeader != NULL) 
         {
                 sms_freeSynth(&x->synthParams);
-//                sms_freeRecord(&x->smsRecordL);
-//                sms_freeRecord(&x->smsRecordR);
                 sms_freeRecord(&x->interpolatedRecord);
         }
         sms_free();
@@ -376,6 +373,7 @@ void smssynth_tilde_setup(void)
         class_addmethod(smssynth_class, (t_method)smssynth_read, gensym("read"), A_DEFSYM, 0);
         class_addmethod(smssynth_class, (t_method)smssynth_info, gensym("info"),  0);
         class_addmethod(smssynth_class, (t_method)smssynth_sizehop, gensym("sizeHop"), A_DEFFLOAT, 0);
-        class_addmethod(smssynth_class, (t_method)smssynth_source, gensym("source"), A_DEFFLOAT, 0);
+        class_addmethod(smssynth_class, (t_method)smssynth_transpose, gensym("transpose"), A_DEFFLOAT, 0);
+        class_addmethod(smssynth_class, (t_method)smssynth_stocgain, gensym("stocgain"), A_DEFFLOAT, 0);
         
 }
