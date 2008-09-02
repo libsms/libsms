@@ -100,7 +100,7 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
 
         if(fullname == NULL)
         {
-                pd_error(x, "smsbuf_open: cannot find file: %s", filename->s_name);
+                error("smsbuf_open: cannot find file: %s", filename->s_name);
                 return;
         }
         else post("file: %s", fullname->s_name);
@@ -115,7 +115,7 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
         if ((iError = sms_getHeader (fullname->s_name, &pSmsHeader, &x->pSmsFile)) < 0)
 //        if ((iError = sms_getHeader (fullname->s_name, &pHeader, &x->pSmsFile)) < 0)
 	{
-                pd_error(x, "smsbuf_open: %s", sms_errorString(iError));
+                error("smsbuf_open: %s", sms_errorString(iError));
                 return;
         }
         //post("smsheader address: %p ", x->smsBuf.pSmsHeader);
@@ -142,6 +142,33 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
         return;
 }
 
+static void smsbuf_save(t_smsbuf *x, t_symbol *filename)
+{
+        if(!x->ready)
+        {
+                error("smsbuf_save: buffer is not ready");
+                return;
+        }
+        
+        int i;
+        int iError = 0;
+        FILE *pOutputSmsFile;
+        //todo: make local write possible (to current directory) - is it by default with fopen?
+        /* open file for writing */
+        iError = sms_writeHeader(filename->s_name, &x->smsHeader, &pOutputSmsFile);
+        if(iError < 0) 
+        {
+                error("smsbuf_save: %s", sms_errorString(iError));
+                return;
+        }
+        /* write the frames */
+        for(i = 0; i < x->nframes; i++)
+                sms_writeRecord (pOutputSmsFile, &x->smsHeader, &x->smsData[i]);
+
+        /* save and close file */
+        sms_writeFile (pOutputSmsFile, &x->smsHeader);
+        post("smsbuf: wrote %d frames from buffer %s to file %s ", x->nframes, x->bufname->s_name, filename->s_name);
+}
 static void smsbuf_info(t_smsbuf *x)
 {
         if(x->ready)
@@ -236,6 +263,7 @@ void smsbuf_setup(void)
         smsbuf_class = class_new(gensym("smsbuf"), (t_newmethod)smsbuf_new, 
                                        (t_method)smsbuf_free, sizeof(t_smsbuf), 0, A_DEFSYM, 0);
         class_addmethod(smsbuf_class, (t_method)smsbuf_open, gensym("open"), A_DEFSYM, 0);
+        class_addmethod(smsbuf_class, (t_method)smsbuf_save, gensym("save"), A_DEFSYM, 0);
         class_addmethod(smsbuf_class, (t_method)smsbuf_info, gensym("info"),  0);
         class_addmethod(smsbuf_class, (t_method)smsbuf_printframe, gensym("printframe"), A_DEFFLOAT, 0);
 }
@@ -251,7 +279,7 @@ typedef struct _smsanal
         t_symbol *filename;
         t_smsbuf *smsbuf;
         SMS_AnalParams anal_params;
-        int nTrajectories;
+        int ntrajectories;
         int verbose;
         float    *wavetable;	
         int      wavetablesize;
@@ -261,12 +289,6 @@ static void smsanal_sizehop(t_smsanal *x, t_float fSizeHop)
 {
         //what is minimum hopsize?
         post("TODO: set sizeHop and re-init");
-}
-
-static void smsanal_debug(t_smsanal *x, t_float debugMode)
-{
-        if(x->verbose) post("debug mode: %d. TODO: say what this is debugging", (int) debugMode);
-        x->anal_params.iDebugMode = debugMode;
 }
 
 static void smsanal_buffer(t_smsanal *x, t_symbol *bufname)
@@ -356,7 +378,7 @@ static void smsanal_sf(t_smsanal *x, t_symbol *filename)
            will be written to file (by smsbuf) */
 	sms_fillHeader (&x->smsbuf->smsHeader, x->smsbuf->nframes,
                         &x->anal_params, SoundHeader.iSamplingRate, 
-                         x->nTrajectories);
+                         x->ntrajectories);
 
         sprintf (x->smsbuf->param_string,
                  "created by [smsanal] with parameters: format %d, soundType %d, "
@@ -375,7 +397,7 @@ static void smsanal_sf(t_smsanal *x, t_symbol *filename)
                  x->anal_params.fRefHarmMagDiffFromMax,  
                  x->anal_params.fDefaultFundamental, x->anal_params.fLowestFundamental,
                  x->anal_params.fHighestFundamental, x->anal_params.nGuides,
-                 x->nTrajectories, x->anal_params.fFreqDeviation, 
+                 x->ntrajectories, x->anal_params.fFreqDeviation, 
                  x->anal_params.fPeakContToGuide, x->anal_params.fFundContToGuide,
                  x->anal_params.iCleanTraj, x->anal_params.iMinTrajLength,
                  x->anal_params.iMaxSleepingTime,  x->anal_params.iStochasticType,
@@ -528,7 +550,7 @@ static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
            will be written to file (by smsbuf) */
 	sms_fillHeader (&x->smsbuf->smsHeader, x->smsbuf->nframes,
                         &x->anal_params, x->anal_params.iSamplingRate, 
-                         x->nTrajectories);
+                         x->ntrajectories);
 
         sprintf (x->smsbuf->param_string,
                  "created by [smsanal] with parameters: format %d, soundType %d, "
@@ -547,7 +569,7 @@ static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
                  x->anal_params.fRefHarmMagDiffFromMax,  
                  x->anal_params.fDefaultFundamental, x->anal_params.fLowestFundamental,
                  x->anal_params.fHighestFundamental, x->anal_params.nGuides,
-                 x->nTrajectories, x->anal_params.fFreqDeviation, 
+                 x->ntrajectories, x->anal_params.fFreqDeviation, 
                  x->anal_params.fPeakContToGuide, x->anal_params.fFundContToGuide,
                  x->anal_params.iCleanTraj, x->anal_params.iMinTrajLength,
                  x->anal_params.iMaxSleepingTime,  x->anal_params.iStochasticType,
@@ -588,23 +610,11 @@ static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
                                sizeNewData = x->wavetablesize - iSample;
                }
 		/* get one frame of sound */
-/* 		if (sms_getSound (&SoundHeader, pSoundData, sizeNewData, iSample) < 0) */
-/* 		{ */
-/* 			error("smsanal_sf: could not read sound record %d\n", iRecord); */
-/* 			break; */
-/* 		} */
-
-		/* perform analysis of one frame of sound */
-/* 		iStatus = sms_analyze (pSoundData, sizeNewData, &x->smsbuf->smsData[iRecord],  */
-/* 		                       &x->anal_params, &iNextSizeRead); */
-
                /*until sms_analyze will act on floating point data, the sound chunk has to be converted to 16-bit integer
                  shorts */
                for(i = 0; i < sizeNewData; i++)
-               {
                        pSoundData[i] = (short) (x->wavetable[iSample + i] * FLOAT_TO_SHORT);
-                       printf("[%d] %d, ", i, pSoundData[i]);
-               }
+
                iStatus = sms_analyze (pSoundData, sizeNewData, &x->smsbuf->smsData[iRecord], 
 		                       &x->anal_params, &iNextSizeRead);
                 
@@ -634,6 +644,403 @@ static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
 
 }
 
+/* all the analysis parameters */
+static void smsanal_debug(t_smsanal *x, t_float debugMode)
+{
+        //int dm = (int) debugMode;
+        switch ((int)debugMode)
+        {
+        case SMS_DBG_NONE: post("debug mode: disabled");
+                break;
+        case SMS_DBG_INIT: post("debug mode: initialization functions");
+                break;
+        case SMS_DBG_PEAK_DET: post("debug mode: peak detection function");
+                break;
+        case SMS_DBG_HARM_DET: post("debug mode: harmonic detection function");
+                break;
+        case SMS_DBG_PEAK_CONT: post("debug mode: peak continuation function");
+                break;
+        case SMS_DBG_CLEAN_TRAJ: post("debug mode: clean trajectories function");
+                break;
+        case SMS_DBG_SINE_SYNTH: post("debug mode: sine synthesis function");
+                break;
+        case SMS_DBG_STOC_ANAL: post("debug mode: stochastic analysis function");
+                break;
+        case SMS_DBG_STOC_SYNTH: post("debug mode: stochastic synthesis function");
+                break;
+        case SMS_DBG_SMS_ANAL: post("debug mode: top level analysis function");
+                break;
+        case SMS_DBG_ALL: post("debug mode: everything");
+                break;
+        case SMS_DBG_RESIDUAL: post("debug mode: write residual to file");
+                break;
+        case SMS_DBG_SYNC: post("debug mode: write original, synthesis and residual to a text file ");
+                break;
+        default: return;
+        }
+        x->anal_params.iDebugMode = debugMode;
+}
+
+static void smsanal_format(t_smsanal *x, t_float f)
+{
+        int i = (int) f;
+        if(i < 0 || i > 3) 
+        {
+                error("smsanal_format: has to be 0-3");
+                return;
+        }
+        x->anal_params.iFormat = (int) f;
+        if(x->verbose)
+        {
+                switch(x->anal_params.iFormat)
+                {
+                case SMS_FORMAT_H: post("smsanal: format set to harmonic");
+                        break;
+                case SMS_FORMAT_IH: post("smsanal: format set to inharmonic");
+                        break;
+                case SMS_FORMAT_HP: post("smsanal: format set to harmonic with phase");
+                        break;
+                case SMS_FORMAT_IHP: post("smsanal: format set to inharmonic with phase");
+                        break;
+                default: break;
+                }
+        }
+}
+
+static void smsanal_soundtype(t_smsanal *x, t_float f)
+{
+        int i = (int) f;
+        if(i < 0 || i > 1) 
+        {
+                error("smsanal_soundtype: has to be 0 or 1");
+                return;
+        }
+        x->anal_params.iSoundType = i;
+        if(x->verbose)
+        {
+                switch(x->anal_params.iSoundType)
+                {
+                case SMS_SOUND_TYPE_MELODY:
+                        post("smsanal: soundtype set to melody");
+                        break;
+                case SMS_SOUND_TYPE_NOTE:
+                        post("smsanal: soundtype set to single note");
+                        break;
+                default: break;
+                }
+        }
+}
+
+static void smsanal_direction(t_smsanal *x, t_float f)
+{
+        int i = (int) f;
+        if(i < 0 || i > 1) 
+        {
+                error("smsanal_direction: has to be 0 or 1");
+                return;
+        }
+        x->anal_params.iAnalysisDirection = i;
+        if(x->verbose)
+        {
+                switch(i)
+                {
+                case SMS_DIR_FWD:
+                        post("smsanal: direction set to foward (left to right)");
+                        break;
+                case SMS_DIR_REV:
+                        post("smsanal: direction set to reverse (right to left)");
+                        break;
+                default: break;
+                }
+        }
+}
+
+static void smsanal_windowsize(t_smsanal *x, t_float f)
+{
+        if(f < 1) 
+        {
+                error("smsanal_windowsize: cannot be less than 1 period");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the window size to %0.2f periods", f);
+       x->anal_params.fSizeWindow = f;
+}
+
+static void smsanal_windowtype(t_smsanal *x, t_float f)
+{
+        int i = (int) f;
+        if(i < 0 || i > 4)
+        {
+                error("smsanal_windowtype: invalid value for window type");
+                return;
+        }
+        x->anal_params.iWindowType = i;
+        if(x->verbose)
+        {
+                switch(i)
+                {
+                case SMS_WIN_HAMMING:
+                        post("smsanal: window type set to hamming");
+                        break;
+                case SMS_WIN_BH_62:
+                        post("smsanal: window type set to blackman-harris, 62dB cutoff");
+                        break;
+                case SMS_WIN_BH_70:
+                        post("smsanal: window type set to blackman-harris, 70dB cutoff");
+                        break;
+                case SMS_WIN_BH_74:
+                        post("smsanal: window type set to blackman-harris, 74dB cutoff");
+                        break;
+                case SMS_WIN_BH_92:
+                        post("smsanal: window type set to blackman-harris, 92dB cutoff");
+                        break;
+                default: return;
+                }
+        }
+}
+
+static void smsanal_framerate(t_smsanal *x, t_float f)
+{
+        int i = (int) f;
+        if(i < 1) 
+        {
+                error("smsanal_framerate: cannot be less than 1 hz");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the framerate to %d hz", i);
+        x->anal_params.iFrameRate = i;
+}
+
+static void smsanal_highestfreq(t_smsanal *x, t_float f)
+{
+        if(f < 0) 
+        {
+                error("smsanal_highestfreq: invalid frequency");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the highest frequency to %0.2f periods", f);
+        x->anal_params.fHighestFreq = f;
+}
+
+static void smsanal_minpeakmag(t_smsanal *x, t_float f)
+{
+        if(f < 0) 
+        {
+                error("smsanal_minpeakmag: invalid minimum peak magnitude");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the minimum peak magnitude to %0.2f periods", f);
+        x->anal_params.fMinPeakMag = f;
+}
+
+static void smsanal_refharmonic(t_smsanal *x, t_float f)
+{
+        int i = (int) f;
+        if(i < 1) 
+        {
+                post("smsanal_refharmonic: cannot be less than 1");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the reference harmonic to %d ", i);
+        x->anal_params.iRefHarmonic = i;
+}
+
+static void smsanal_minrefharmmag(t_smsanal *x, t_float f)
+{
+        if(f < 0) 
+        {
+                error("smsanal_minrefharmmag: invalid minimum fundamental magnitude");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the minimum fundamental magnitude to %0.2f dB", f);
+        x->anal_params.fMinRefHarmMag = f;
+}
+
+static void smsanal_refharmdifffrommax(t_smsanal *x, t_float f)
+{
+        if(f < 0) 
+        {
+                error("smsanal_refharmdifffrommax: Invalid maximum fundamental magnitude difference from maximum peak");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the minimum fundamental magnitude to %0.2f dB", f);
+        x->anal_params.fRefHarmMagDiffFromMax = f;
+}
+
+static void smsanal_defaultfund(t_smsanal *x, t_float f)
+{
+        if(f < 1) 
+        {
+                post("smsanal_defaultfund: cannot be less than 1");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the default fundamental to %0.2f ", f);
+        x->anal_params.fDefaultFundamental = f;
+}
+
+static void smsanal_lowestfund(t_smsanal *x, t_float f)
+{
+        if(f < 1) 
+        {
+                error("smsanal_lowestfund: cannot be less than 1");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the lowest fundamental to %0.2f ", f);
+        x->anal_params.fLowestFundamental = f;
+}
+
+static void smsanal_highestfund(t_smsanal *x, t_float f)
+{
+        if(f < 1) 
+        {
+                error("smsanal_defaultfund: cannot be less than 1");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the highest fundamental to %0.2f ", f);
+        x->anal_params.fHighestFundamental = f;
+}
+
+static void smsanal_nguides(t_smsanal *x, t_float f)
+{
+        int i = (int) f;
+        if(i < 1) 
+        {
+                post("smsanal_nguides: cannot be less than 1");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the number of guides to %d ", i);
+        x->anal_params.nGuides = i;
+}
+
+static void smsanal_ntrajectories(t_smsanal *x, t_float f)
+{
+        int i = (int) f;
+        if(i < 1) 
+        {
+                error("smsanal_ntrajectories: cannot be less than 1");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the number of trajectories to %d ", i);
+        x->ntrajectories = i;
+}
+
+static void smsanal_freqdeviation(t_smsanal *x, t_float f)
+{
+        if(f < 0) 
+        {
+                error("smsanal_freqdeviation: cannot be less than 0");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the frequency deviation to %0.2f ", f);
+        x->anal_params.fFreqDeviation = f;
+}
+
+static void smsanal_peakcontribution(t_smsanal *x, t_float f)
+{
+        if(f < 0) 
+        {
+                error("smsanal_peakcontribution: cannot be less than 0");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the peak contribution to guide to %0.2f ", f);
+        x->anal_params.fPeakContToGuide = f;
+}
+
+static void smsanal_fundcontribution(t_smsanal *x, t_float f)
+{
+        if(f < 0) 
+        {
+                error("smsanal_fundcontribution: cannot be less than 0");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the fundamental contribution to guide to %0.2f ", f);
+        x->anal_params.fFundContToGuide = f;
+}
+
+static void smsanal_cleantraj(t_smsanal *x, t_float f)
+{
+        int i = (int) f;
+        if(i < 0 || i > 1) 
+        {
+                error("smsanal_cleantraj: has to be 0 or 1");
+                return;
+        }
+        if(x->verbose)
+        {
+                if(i) post("smsanal: clean trajectories is on");
+                else post("smsanal: clean trajectories is off");
+        }
+        x->anal_params.iCleanTraj = i;
+}
+
+static void smsanal_mintrajlength(t_smsanal *x, t_float f)
+{
+        int i = (int) f;
+        if(i < 1) 
+        {
+                error("smsanal_mintrajlength: cannot be less than 1");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the minimum trajectory length to %d ", i);
+        x->anal_params.iMinTrajLength = i;
+}
+
+static void smsanal_maxsleepingtime(t_smsanal *x, t_float f)
+{
+        int i = (int) f;
+        if(i < 1) 
+        {
+                error("smsanal_maxsleepingtime: cannot be less than 1");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the maximum sleeping time to %d ", i);
+        x->anal_params.iMaxSleepingTime = i;
+}
+
+static void smsanal_stochastictype(t_smsanal *x, t_float f)
+{
+        int i = (int) f;
+        if(i < 0 || i > 3)
+        {
+                error("smsanal_stochastictype: has to be between 0 - 3");
+                return;
+        }
+        x->anal_params.iStochasticType = i;
+        if(x->verbose)
+        {
+                switch(i)
+                {
+                case SMS_STOC_WAVE:
+                        post("smsanal: stochastic type set to waveform");
+                        break;
+                case SMS_STOC_IFFT:
+                        post("smsanal: stochastic type set to inverse-FFT (not currently used)");
+                        x->anal_params.iStochasticType = 2;
+                        break;
+                case SMS_STOC_APPROX:
+                        post("smsanal: stochastic type set to spectrum approximation");
+                        break;
+                case SMS_STOC_NONE:
+                        post("smsanal: stochastic analysis disabled");
+                        break;
+                default: return;
+                }
+        }
+}
+
+static void smsanal_ncoefficients(t_smsanal *x, t_float f)
+{
+        int i = (int) f;
+        if(i < 1) 
+        {
+                error("smsanal_ncoefficients: cannot be less than 1");
+                return;
+        }
+        if(x->verbose) post("smsanal: set the maximum sleeping time to %d ", i);
+        x->anal_params.nStochasticCoeff = i;
+}
+
+/* creator function */
 static void *smsanal_new(t_symbol *s, int argcount, t_atom *argvec)
 {
         t_smsanal *x = (t_smsanal *)pd_new(smsanal_class);
@@ -641,7 +1048,7 @@ static void *smsanal_new(t_symbol *s, int argcount, t_atom *argvec)
         int i;
 
         x->canvas = canvas_getcurrent();
-        x->nTrajectories = 30;
+        x->ntrajectories = 30;
         x->smsbuf = NULL;
         x->verbose = 1;
 
@@ -671,7 +1078,38 @@ void smsanal_setup(void)
         class_addmethod(smsanal_class, (t_method)smsanal_sf, gensym("soundfile"), A_DEFSYM, 0);
         class_addmethod(smsanal_class, (t_method)smsanal_array, gensym("array"), A_DEFSYM, A_DEFFLOAT, 0);
         class_addmethod(smsanal_class, (t_method)smsanal_sizehop, gensym("sizehop"), A_DEFFLOAT, 0);
+        /* analysis parameters */
         class_addmethod(smsanal_class, (t_method)smsanal_debug, gensym("debug"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_format, gensym("format"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_soundtype, gensym("soundtype"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_direction, gensym("direction"), A_DEFFLOAT, 0);
+        /* stft parameters */
+        class_addmethod(smsanal_class, (t_method)smsanal_windowsize, gensym("windowsize"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_windowtype, gensym("windowtype"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_framerate, gensym("framerate"), A_DEFFLOAT, 0);
+        /* peak detection parameters -- need to update .pd file from here down */
+        class_addmethod(smsanal_class, (t_method)smsanal_highestfreq, gensym("highestfreq"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_minpeakmag, gensym("minpeakmag"), A_DEFFLOAT, 0);
+        /* harmonic detection parameters */
+        class_addmethod(smsanal_class, (t_method)smsanal_refharmonic, gensym("refharmonic"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_minrefharmmag, gensym("minrefharmmag"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_refharmdifffrommax, gensym("refharmdifffrommax"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_defaultfund, gensym("defaultfund"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_lowestfund, gensym("lowestfund"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_highestfund, gensym("highestfund"), A_DEFFLOAT, 0);
+        /* peak continuation parameters */
+        class_addmethod(smsanal_class, (t_method)smsanal_nguides, gensym("nguides"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_ntrajectories, gensym("ntrajectories"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_freqdeviation, gensym("freqdeviation"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_peakcontribution, gensym("peakcontribution"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_fundcontribution, gensym("fundcontribution"), A_DEFFLOAT, 0);
+        /* trajectory cleaning parameters */
+        class_addmethod(smsanal_class, (t_method)smsanal_cleantraj, gensym("cleantraj"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_mintrajlength, gensym("mintrajlength"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_maxsleepingtime, gensym("maxsleepingtime"), A_DEFFLOAT, 0);
+        /* stochastic analysis parameters */
+        class_addmethod(smsanal_class, (t_method)smsanal_stochastictype, gensym("stochastictype"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_ncoefficients, gensym("ncoefficients"), A_DEFFLOAT, 0);
 }
 
 /* ------------------------ smssynth~ ----------------------------- */
@@ -832,7 +1270,7 @@ static void smssynth_info(t_smssynth *x)
 
 static void smssynth_dsp(t_smssynth *x, t_signal **sp)
 {
-        x->synthParams.iSamplingRate =  sp[0]->s_sr;//todo: check if changed and recompute
+        x->synthParams.iSamplingRate =  sp[0]->s_sr;
         //need x and 2 vectors (in/out), and lastly the vector size:
         dsp_add(smssynth_perform, 4, x,  sp[0]->s_vec, sp[1]->s_vec, sp[0]->s_n);
 }
