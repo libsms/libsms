@@ -68,11 +68,6 @@ SMS Library Work Log
       - good samples: 44 ?
       - then, discontinuities (+infinite?) :
 ** TODO [#A] Doxygen documentation
-   - at the same time, rename functions to be coherent:
-       - structs get SMS_CamelCase
-       - functions get sms_camelCase 
-       - #defines get SMS_UPPER_CASE
-        - ?? should they be enums instead?
 ** TODO [#B] convert from short to floating point data
    - will need this for pd anyway
    - everything is computed in float point, so why range from 0-16000   then?
@@ -138,16 +133,22 @@ SMS Library Work Log
 ** prototype: [smsSynthFile~]
 *** TODO crashes if you open a file when dsp is on
 ** [smsbuf]
-*** TODO [#A] loads an sms file into a buffer
+*** DONE [#A] loads an sms file into a buffer
 **** a header/data should live 
 **** data is an array of sms records
 **** what else needs to be buffered?
        - timetags? frametag     
-*** TODO [#C] stores the buffer to sms file
+*** DONE [#C] stores the buffer to sms file
 ** [smsanal]
-*** TODO [#A] reads a pd array and analyzes it
+*** TODO do analysis in audio chain
+    - this should stop the big crunch by slowing the analysis down
 *** TODO [#C] resamples the data to be a desired framerate
+*** DONE reads a pd array and analyzes it
+   - also can analyze from file
+*** DONE add analysis parameter classes (lots of them)
 ** [smssynth]
-*** TODO [#A] has access to an [smsbuf] by symbol name
-*** TODO [#A] synthesizes the [smsbuf]
+*** TODO re-init the synthesizer when samplerate changes
+    - actually, probably is not necessary -- check
+*** DONE [#A] has access to an [smsbuf] by symbol name
+*** DONE [#A] synthesizes the [smsbuf]
 ** [smsedit]
