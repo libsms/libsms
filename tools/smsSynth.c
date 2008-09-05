@@ -25,6 +25,7 @@
  */
 #include "sms.h"
 
+
 void usage (void)
 {
     fprintf (stderr, "\n"
@@ -33,11 +34,13 @@ void usage (void)
              "Options:\n"
              "      -v     print out verbose information\n"
              "      -r     sampling rate of output sound (default is original)\n"
-             "      -s     synthesis type (1: all, 2: deterministic only , 3: stochastic only)\n"
+             "      -s     synthesis type (0: all (default), 1: deterministic only , 2: stochastic only)\n"
              "      -d     method of deterministic synthesis type (1: IFFT, 2: oscillator bank)\n"
              "      -h     sizeHop (default 128) 128 <= sizeHop <= 8092, rounded to a power of 2 \n"
              "      -t     time factor (default 1): positive value to multiply by overall time \n"
              "      -g     stochastic gain (default 1): positive value to multiply into stochastic gain \n"
+             "      -x     transpose factor (default 1): value based on the Equal Tempered Scale to\n"
+             "             transpose the frequency \n"
              "\n"
              "synthesize an analysis (.sms) file made with smsAnal."
              "output file format is 32bit floating-point AIFF."
@@ -57,15 +60,16 @@ int main (int argc, char *argv[])
 	long iError, iSample, i, nSamples, iLeftRecord, iRightRecord;
         int verboseMode = 0;
         float fRecordLoc; /* exact sms frame location, used to interpolate newSmsRecord */
-        float fFsRatio,  fLocIncr, stocGain; 
+        float fFsRatio,  fLocIncr;
         int  detSynthType, synthType, sizeHop, iSamplingRate; /*  argument holders */
         float timeFactor = 1.0;
+        float fTranspose = 0.0;
+	float stocGain = 1.0;
 	SMS_SynthParams synthParams;
 	synthParams.iSynthesisType = SMS_STYPE_ALL;
         synthParams.iDetSynthType = SMS_DET_IFFT;
 	synthParams.sizeHop = SMS_MIN_SIZE_FRAME;
 	synthParams.iSamplingRate = 44100;
-	synthParams.fStocGain = 1.0;
 
 	if (argc > 3) 
 	{
@@ -116,7 +120,8 @@ int main (int argc, char *argv[])
 						printf("error: invalid stochastic gain");
                                                 exit(1);
                                         }
-                                        synthParams.fStocGain = stocGain;
+                                        break;
+                                case 'x':  sscanf(argv[i],"%f",&fTranspose) ;
                                         break;
                                 case 'v': verboseMode = 1;
                                         break;
@@ -149,6 +154,8 @@ int main (int argc, char *argv[])
                 else if(synthParams.iDetSynthType == SMS_DET_SIN) printf("oscillator bank ");
                 printf("\nsizeHop: %d \n", synthParams.sizeHop);
                 printf("time factor: %f \n", timeFactor);
+                printf("stochastic gain factor: %f \n", synthParams.fStocGain);
+                printf("frequency transpose factor: %f \n", synthParams.fTranspose);
                 printf("__header info__\n");
                 printf("fOriginalSRate: %d, iFrameRate: %d, origSizeHop: %d\n", 
                        pSmsHeader->iOriginalSRate, pSmsHeader->iFrameRate, synthParams.origSizeHop);
@@ -173,9 +180,13 @@ int main (int argc, char *argv[])
                 exit(0);
         }
 
-#ifdef FFTW
+        #ifdef FFTW
         printf("## using fftw3 ##  \n");
-#endif
+        #endif
+
+         /* set modifiers */
+        synthParams.fTranspose = TEMPERED_TO_FREQ( fTranspose );
+        synthParams.fStocGain = stocGain;
 
 	iSample = 0;
         /* number of samples is a factor of the ratio of samplerates */

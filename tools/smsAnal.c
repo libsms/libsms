@@ -421,22 +421,19 @@ int main (int argc, char *argv[])
 		sms_createDebugFile (&analParams);
 	if (analParams.iDebugMode == SMS_DBG_RESIDUAL)
 		sms_createResSF (&analParams);
+
         sms_init();
-        //sms_initAnalysis (&smsHeader, &analParams);
         sms_initAnalysis (&analParams);
 
         /* allocate output SMS record */
 	sms_allocRecordH (&smsHeader, &smsData);
 
 	/* perform analysis */
-	//ComputeSms (&SoundHeader, &smsHeader, pOutputSmsFile, &analParams);
-    
-	iNextSizeRead = (analParams.iDefaultSizeWindow + 1) / 2.0;
+	iNextSizeRead = (analParams.iDefaultSizeWindow + 1) * 0.5;
 
 	if (analParams.iAnalysisDirection == SMS_DIR_REV)
 		iSample = SoundHeader.nSamples;
 
-	/* loop for analysis */
 	while(iDoAnalysis > 0)
 	{
 
