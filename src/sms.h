@@ -194,6 +194,7 @@ typedef struct
 	int iWindowType;            /*!< type of analysis window enumerated by SMS_WINDOWS 
                                                        \see SMS_WINDOWS */			  	 			 
         int iMaxDelayFrames;     /*!< maximum number of frames to delay before peak continuation */
+        /*! below is all data storage that needs to travel with the analysis */
         SMS_Data prevFrame;   /*!< the previous analysis frame  */
         SMS_SndBuffer soundBuffer;    /*!< samples to be analyzed */
         SMS_SndBuffer synthBuffer; /*!< resynthesized samples needed to get the residual */
@@ -232,7 +233,7 @@ typedef struct
         float *pFStocWindow; /*!< array to hold the window used for stochastic synthesis
                                                 \todo explain which window this is */
         float fStocGain;            /*!< gain multiplied to the stachostic component */
-        float fTranspose;          /*!< frequency transposing value, based on an Equal Tempered scale */
+        float fTranspose;          /*!< frequency transposing value multiplied by each frequency */
 #ifdef FFTW
         fftwf_plan  fftPlan;         /*!< plan for FFTW's inverse fourier transform functions, floating point */
         fftwf_complex *pSpectrum; /*!< complex array of spectra used to create synthesis */
@@ -381,20 +382,20 @@ enum SMS_ERRORS
  */
 enum SMS_DBG
 {
-        SMS_DBG_NONE,                    /*!< no debugging */
-        SMS_DBG_INIT,                       /*!< debug initialitzation functions */
-        SMS_DBG_PEAK_DET,	          /*!< debug peak detection function */
-        SMS_DBG_HARM_DET,	  /*!< debug harmonic detection function */
-        SMS_DBG_PEAK_CONT,        /*!< debug peak continuation function */
-        SMS_DBG_CLEAN_TRAJ,	  /*!< debug clean trajectories function */
-        SMS_DBG_SINE_SYNTH,	  /*!< debug sine synthesis function */
-        SMS_DBG_STOC_ANAL,        /*!< debug stochastic analysis function */
-        SMS_DBG_STOC_SYNTH,      /*!< debug stochastic synthesis function */
-        SMS_DBG_SMS_ANAL,          /*!< debug top level analysis function */
-        SMS_DBG_ALL,                       /*!< debug everything */
-        SMS_DBG_RESIDUAL,            /*!< write residual to file */
-        SMS_DBG_SYNC,                    /*!< write original, synthesis and residual 
-                                                                to a text file */
+        SMS_DBG_NONE,                    /*!< 0, no debugging */
+        SMS_DBG_INIT,                       /*!< 1, initialitzation functions */
+        SMS_DBG_PEAK_DET,	          /*!< 2, peak detection function */
+        SMS_DBG_HARM_DET,	  /*!< 3, harmonic detection function */
+        SMS_DBG_PEAK_CONT,        /*!< 4, peak continuation function */
+        SMS_DBG_CLEAN_TRAJ,	  /*!< 5, clean trajectories function */
+        SMS_DBG_SINE_SYNTH,	  /*!< 6, sine synthesis function */
+        SMS_DBG_STOC_ANAL,        /*!< 7, stochastic analysis function */
+        SMS_DBG_STOC_SYNTH,      /*!< 8, stochastic synthesis function */
+        SMS_DBG_SMS_ANAL,          /*!< 9, top level analysis function */
+        SMS_DBG_ALL,                       /*!< 10, everything */
+        SMS_DBG_RESIDUAL,            /*!< 11, write residual to file */
+        SMS_DBG_SYNC,                    /*!< 12, write original, synthesis and residual 
+                                                                 to a text file */
  };
 
 #define SMS_MAX_WINDOW 8190    /*!< \brief maximum size for analysis window */
@@ -426,12 +427,12 @@ enum SMS_DIRECTION
 enum SMS_WINDOWS
 {
         SMS_WIN_HAMMING,     /*!< hamming */ 		
-        SMS_WIN_HANNING,      /*!< hanning */ 		
-        SMS_WIN_IFFT,               /*!< combination \todo reference docs */ 		
         SMS_WIN_BH_62,            /*!< blackman-harris, 62dB cutoff */ 		
         SMS_WIN_BH_70,            /*!< blackman-harris, 70dB cutoff */ 	
         SMS_WIN_BH_74,            /*!< blackman-harris, 74dB cutoff */ 
-        SMS_WIN_BH_92             /*!< blackman-harris, 92dB cutoff */ 
+        SMS_WIN_BH_92,             /*!< blackman-harris, 92dB cutoff */ 
+        SMS_WIN_HANNING,      /*!< hanning */ 		
+        SMS_WIN_IFFT              /*!< combination \todo reference docs */ 		
 };
 
 /*    re-analyze and clean trajectories */
@@ -485,6 +486,8 @@ extern float *sms_window_spec;
 #define TO_DB(x)    	((x > SMS_MIN_MAG) ? 20 * log10(x/SMS_MIN_MAG) : 0)
 #define TO_MAG(x)     ((x <= 0) ? 0 : SMS_MIN_MAG * pow(10.0, x/20.0))
 
+#define TEMPERED_TO_FREQ( x ) (powf(1.0594630943592953, x)) /*!< \todo doc */
+
 #ifndef MAX
 /*! \brief returns the maximum of a and b */
 #define MAX(a,b)	((a) > (b) ? (a) : (b))
@@ -494,7 +497,9 @@ extern float *sms_window_spec;
 #define MIN(a,b)	((a) < (b) ? (a) : (b))
 #endif
 
-#define SHORT_TO_FLOAT ( 2.0f / pow(2.0,16)) /*!< \todo should not be necessary, if all shorts are removed */
+#define SHORT_TO_FLOAT ( 2.0f / pow(2.0,16)) /*!< \todo remove once all shorts are removed */
+/*! \} */
+#define FLOAT_TO_SHORT (pow(2.0,16) / 2.0f) /*!< \todo remove once all shorts are removed */
 /*! \} */
 
 /* function declarations */ 
@@ -611,6 +616,11 @@ int sms_initHeader (SMS_Header *pSmsHeader);
 
 int sms_getHeader (char *pChFileName, SMS_Header **ppSmsHeader,
                   	FILE **ppInputFile);
+
+int sms_fillHeader (SMS_Header *pSmsHeader, 
+                          int nFrames, SMS_AnalParams *pAnalParams,
+                    int iOriginalSRate, int nTrajectories);
+
 
 int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader, 
                     FILE **ppOutSmsFile);

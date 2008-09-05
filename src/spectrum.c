@@ -68,8 +68,6 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
         }
 	iOldSizeWindow = sizeWindow;
 
-        //printf("sizeWindow: %d, windows: %d, sizeFft: %d \n", sizeWindow, SMS_OVERLAP_FACTOR, sizeFft);
-
         memset(pAnalParams->pWaveform, 0, sizeFft * sizeof(float));
         memset(pAnalParams->pSpectrum, 0, (sizeMag + 1) * sizeof(fftwf_complex));
 
@@ -130,6 +128,9 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 	/* allocate buffer */    
 	if ((pFBuffer = (float *) calloc(sizeFft+1, sizeof(float))) == NULL)
 		return -1;
+
+/*         printf(" sizeWindow: %d, iMiddleWindow: %d, sizeFft: %d, sizeMag: %d \n", sizeWindow, iMiddleWindow, */
+/*                sizeFft, sizeMag ); */
   
   
 	/* apply window to waveform and center window around 0 */

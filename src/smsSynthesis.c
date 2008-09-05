@@ -49,7 +49,7 @@ static int SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
         for (i = 0; i < nTraj; i++)
         {
                 if (((fMag = pSmsData->pFMagTraj[i]) > 0) &&
-                    ((fFreq = pSmsData->pFFreqTraj[i]) < iHalfSamplingRate))
+                    ((fFreq = (pSmsData->pFFreqTraj[i]) * pSynthParams->fTranspose) < iHalfSamplingRate))
                 {
                         if (pSynthParams->prevFrame.pFMagTraj[i] <= 0)
                         {
@@ -118,7 +118,7 @@ static int SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
         for (i = 0; i < nTraj; i++)
         {
                 if (((fMag = pSmsData->pFMagTraj[i]) > 0) &&
-                    ((fFreq = pSmsData->pFFreqTraj[i]) < iHalfSamplingRate))
+                    ((fFreq = (pSmsData->pFFreqTraj[i]) * pSynthParams->fTranspose) < iHalfSamplingRate))
                 {
                         if (pSynthParams->prevFrame.pFMagTraj[i] <= 0)
                         {
@@ -247,6 +247,11 @@ static int StocSynthApprox (SMS_Data *pSmsData, float *pFBuffer,
                         * pSynthParams->pFStocWindow[i] * 0.25 * pSynthParams->fStocGain; //.5;
  
 #else        
+        
+        /* adjust gain */
+        for( i = 1; i < sizeSpec2; i++)
+                pFMagSpectrum[i] *= pSynthParams->fStocGain;
+
         sms_invQuickSpectrumW (pFMagSpectrum, pFPhaseSpectrum, 
                                sizeFft, pFBuffer, sizeFft, 
                                pSynthParams->pFStocWindow);

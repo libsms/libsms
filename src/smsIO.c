@@ -54,7 +54,29 @@ int sms_initHeader (SMS_Header *pSmsHeader)
 	pSmsHeader->pChTextCharacters = NULL;    
 	return (1);
 }
- 
+
+int sms_fillHeader (SMS_Header *pSmsHeader, 
+                          int nFrames, SMS_AnalParams *pAnalParams,
+                    int iOriginalSRate, int nTrajectories)
+{
+
+        sms_initHeader (pSmsHeader);
+
+        pSmsHeader->nFrames = nFrames;
+        pSmsHeader->iFormat = pAnalParams->iFormat;
+        pSmsHeader->iFrameRate = pAnalParams->iFrameRate;
+        pSmsHeader->iStochasticType = pAnalParams->iStochasticType;
+        pSmsHeader->nTrajectories = nTrajectories;
+	if(pAnalParams->iStochasticType != SMS_STOC_APPROX)
+		pSmsHeader->nStochasticCoeff = 0;
+        else
+                pSmsHeader->nStochasticCoeff = pAnalParams->nStochasticCoeff;
+        pSmsHeader->iOriginalSRate = iOriginalSRate;
+        pSmsHeader->iRecordBSize = sms_recordSizeB(pSmsHeader);
+
+        return (1);
+}
+
 /* initialize an SMS data record
  *
  * SMS_Data *pSmsRecord;	pointer to a frame of SMS data
@@ -219,18 +241,6 @@ int sms_writeRecord (FILE *pSmsFile, SMS_Header *pSmsHeader,
  */
 int sms_recordSizeB (SMS_Header *pSmsHeader)
 {
-/* 	int iSize = 0, nGain = 1, nComp = 2; */
-    
-/* 	if (pSmsHeader->iStochasticType == SMS_STOC_NONE) */
-/* 		nGain = 0; */
-    
-/* 	if (pSmsHeader->iFormat == SMS_FORMAT_HP || */
-/* 	    pSmsHeader->iFormat == SMS_FORMAT_IHP) */
-/* 		nComp = 3; */
-     
-/* 	iSize = sizeof (float) * (nComp * pSmsHeader->nTrajectories +  */
-/* 		pSmsHeader->nStochasticCoeff + nGain); */
-
 	int iSize, nDet;
   
 	if (pSmsHeader->iFormat == SMS_FORMAT_H ||
@@ -242,7 +252,6 @@ int sms_recordSizeB (SMS_Header *pSmsHeader)
 
 	if (pSmsHeader->iStochasticType == SMS_STOC_WAVE)
         {       //numSamples
-//                iSize += sizeof(float) * iHopSize;
                 iSize +=sizeof(float) * ( (int)(pSmsHeader->iOriginalSRate / 
                                                 (float) pSmsHeader->iFrameRate));
         }
