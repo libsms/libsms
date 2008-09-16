@@ -3,6 +3,7 @@
 #include <string.h>
 
 t_class *smspd_class;
+int canvas_dspstate;
 
 typedef struct smspd 
 {
@@ -28,7 +29,7 @@ void smspd_setup(void)
         smssynth_tilde_setup();
         //smsedit_setup();
 
-        post("smspd external library - July 20, 2008");
+        post("smspd external library - September 16, 2008");
 }
 
 
@@ -252,7 +253,6 @@ static void smsbuf_free(t_smsbuf *x)
         {
                 for( i = 0; i < x->nframes; i++)
                         sms_freeRecord(&x->smsData[i]);
-
                 free(x->smsData);
         }
 
@@ -275,6 +275,7 @@ static t_class *smsanal_class;
 typedef struct _smsanal
 {
         t_object x_obj; 
+        t_float f; /* dummy for signal inlet */
         t_canvas *canvas;
         t_symbol *filename;
         t_smsbuf *smsbuf;
@@ -478,6 +479,10 @@ static void smsanal_sf(t_smsanal *x, t_symbol *filename)
 
 static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
 {
+        post("cansvas_dspstate: %d", canvas_dspstate);
+        return;
+
+
         if(!x->smsbuf)
         {
                 error("smsanal_sf: set the buffer pointer before analysis");
@@ -1040,6 +1045,21 @@ static void smsanal_ncoefficients(t_smsanal *x, t_float f)
         x->anal_params.nStochasticCoeff = i;
 }
 
+static t_int *smsanal_perform(t_int *w)
+{
+        t_smsanal *x = (t_smsanal *)(w[1]);
+        t_sample *in = (t_float *)(w[2]);
+
+        int n = (int)(w[3]);
+        return(w+4);
+}
+
+/* dsp indicator */
+static void smsanal_dsp(t_smsanal *x, t_signal **sp)
+{
+        dsp_add(smsanal_perform, 3, x, sp[0]->s_vec, sp[0]->s_n);
+}
+
 /* creator function */
 static void *smsanal_new(t_symbol *s, int argcount, t_atom *argvec)
 {
@@ -1073,6 +1093,9 @@ void smsanal_setup(void)
 {
         smsanal_class = class_new(gensym("smsanal"), (t_newmethod)smsanal_new, 
                                        (t_method)smsanal_free, sizeof(t_smsanal), 0, A_GIMME, 0);
+
+        CLASS_MAINSIGNALIN(smsanal_class, t_smsanal, f);
+        class_addmethod(smsanal_class, (t_method)smsanal_dsp, gensym("dsp"), 0);
 
         class_addmethod(smsanal_class, (t_method)smsanal_buffer, gensym("buffer"), A_DEFSYM, 0);
         class_addmethod(smsanal_class, (t_method)smsanal_sf, gensym("soundfile"), A_DEFSYM, 0);
@@ -1126,7 +1149,8 @@ typedef struct _smssynth
         t_symbol *bufname;
         t_int i_frame, i_frameSource, synthBufPos;
         t_float *synthBuf;
-        t_float f, transpose, stocgain;
+        t_float f; /* dummy for signal inlet */
+        t_float transpose, stocgain;
         SMS_SynthParams synthParams;
         t_smsbuf *smsbuf;
         SMS_Data interpolatedRecord;
@@ -1182,7 +1206,8 @@ static void smssynth_buffer(t_smssynth *x, t_symbol *bufname)
 
         post("smssynth_buffer: %d frames", x->smsbuf->smsHeader.nFrames);
 }
-
+/* the signal in is not currently used, but is there to possibly control the synthesis by signal rate
+ * I don't yet know if it will do any good and have yet to do any extensive testing */
 static t_int *smssynth_perform(t_int *w)
 {
         t_smssynth *x = (t_smssynth *)(w[1]);
@@ -1194,8 +1219,6 @@ static t_int *smssynth_perform(t_int *w)
         {
                 float f;
                 int i, iLeftRecord, iRightRecord;
-                //SMS_Header *pSmsHeader = x->;
-                //SMS_Data *pSmsData;
                 int nFrames = x->smsbuf->smsHeader.nFrames;
                 if(x->synthBufPos >= x->synthParams.sizeHop)
                 {
