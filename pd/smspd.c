@@ -1,5 +1,6 @@
 #include "sms.h"
 #include "smspd.h"
+#include <pthread.h>
 #include <string.h>
 
 t_class *smspd_class;
@@ -270,6 +271,9 @@ void smsbuf_setup(void)
 
 /* ------------------------ smsanal ----------------------------- */
 
+#define ANALYSIS_FROM_FILE 0
+#define ANALYSIS_FROM_ARRAY 1
+
 static t_class *smsanal_class;
 
 typedef struct _smsanal
@@ -281,9 +285,18 @@ typedef struct _smsanal
         t_smsbuf *smsbuf;
         SMS_AnalParams anal_params;
         int ntrajectories;
+        int iDoAnalysis;
+        int iStatus;
+        int iSample;
+        int iNextSizeRead;
         int verbose;
+        int analysisType; /* 0 for file, 1 for array */
+        int iRecord;
+        t_outlet *outlet_iRecord;
         float    *wavetable;	
-        int      wavetablesize;
+        int      nSamples;
+	short pSoundData[SMS_MAX_WINDOW]; //todo: change to float
+	SMS_SndHeader soundHeader;
 } t_smsanal;
 
 static void smsanal_sizehop(t_smsanal *x, t_float fSizeHop)
@@ -306,12 +319,73 @@ static void smsanal_buffer(t_smsanal *x, t_symbol *bufname)
         else post("smsanal is using buffer: %s", bufname->s_name);
 
 }
-/* open function:
- * 1. get fullname in a system independant manner
- * 2. read file header
- * 3. initialize the synthesizer based on header/synth params
- * 4. because we are synthesizing from file, allocate space for sms frames
- */
+
+void *smsanal_childthread(void *zz)
+{
+        t_smsanal *x = zz;
+        int i;
+        int sizeNewData = 0;
+        /* loop for analysis */
+        while(x->iDoAnalysis > 0)
+        {
+                //post("analyzing frame %d", iRecord);
+                if (x->anal_params.iAnalysisDirection == SMS_DIR_REV)
+                {
+                        if ((x->iSample - x->iNextSizeRead) >= 0)
+                                sizeNewData = x->iNextSizeRead;
+                        else
+                                sizeNewData = x->iSample;
+                        x->iSample -= sizeNewData;
+                }
+                else
+                {
+                        x->iSample += sizeNewData;
+                        if((x->iSample + x->iNextSizeRead) < x->nSamples)
+                                sizeNewData = x->iNextSizeRead;
+                        else
+                                sizeNewData = x->nSamples - x->iSample;
+                }
+		/* get one frame of sound */
+                if(x->analysisType == ANALYSIS_FROM_FILE)
+                {
+                        if (sms_getSound (&x->soundHeader, x->pSoundData, sizeNewData, x->iSample) < 0)
+                        {
+                                error("smsanal_sf: could not read sound record %d\n", x->iRecord);
+                                pthread_exit(NULL);
+                                break; //return
+                        }
+                }
+                else
+                {
+                        /*until sms_analyze will act on floating point data, the sound chunk has to be converted to 16-bit integer
+                          shorts */
+                        for(i = 0; i < sizeNewData; i++)
+                                x->pSoundData[i] = (short) (x->wavetable[x->iSample + i] * FLOAT_TO_SHORT);
+                }
+		/* perform analysis of one frame of sound */
+		x->iStatus = sms_analyze (x->pSoundData, sizeNewData, &x->smsbuf->smsData[x->iRecord], 
+                                          &x->anal_params, &x->iNextSizeRead);
+                
+
+		/* if there is an output SMS record, write it */
+		if (x->iStatus == 1)
+		{
+                        outlet_float(x->outlet_iRecord, (float)++x->iRecord);
+		}
+		else if (x->iStatus == -1) /* done */
+		{
+			x->iDoAnalysis = 0;
+			x->smsbuf->smsHeader.nFrames = x->iRecord;
+		}
+
+	}
+       post(" smsanal: analyzed %d frames from soundfile.", x->iRecord);
+       x->smsbuf->smsHeader.fResidualPerc = x->anal_params.fResidualPercentage / x->iRecord;
+       x->smsbuf->ready = 1;
+
+        pthread_exit(NULL);
+}
+
 static void smsanal_sf(t_smsanal *x, t_symbol *filename)
 {
         if(!x->smsbuf)
@@ -331,8 +405,7 @@ static void smsanal_sf(t_smsanal *x, t_symbol *filename)
         int sizeNextRead = 0;
         long iError;
         t_symbol *fullname;
-	short pSoundData[SMS_MAX_WINDOW]; //todo: change to float
-	SMS_SndHeader SoundHeader;
+        pthread_t childthread;
 
         x->filename = gensym(filename->s_name);
         fullname = getFullPathName(filename, x->canvas);
@@ -355,20 +428,21 @@ static void smsanal_sf(t_smsanal *x, t_symbol *filename)
         }
 
 	/* open input sound */
-	sms_openSF (fullname->s_name , &SoundHeader);
+	sms_openSF (fullname->s_name , &x->soundHeader);
+        x->nSamples = x->soundHeader.nSamples;
 
-        x->anal_params.iSamplingRate = SoundHeader.iSamplingRate;
+        x->anal_params.iSamplingRate = x->soundHeader.iSamplingRate;
         x->anal_params.iDefaultSizeWindow = 
                 (int)((x->anal_params.iSamplingRate / x->anal_params.fDefaultFundamental) 
                       * x->anal_params.fSizeWindow / 2) * 2 + 1;
         /* define the hopsize for each record */
-	x->anal_params.sizeHop = (int)(SoundHeader.iSamplingRate / 
+	x->anal_params.sizeHop = (int)(x->soundHeader.iSamplingRate / 
 	                (float) x->anal_params.iFrameRate);
 
         /* define how many records*/
-	x->smsbuf->nframes = 3 + SoundHeader.nSamples / 
+	x->smsbuf->nframes = 3 + x->soundHeader.nSamples / 
                 (float) x->anal_params.sizeHop;
-        x->anal_params.iSizeSound = SoundHeader.nSamples;
+        x->anal_params.iSizeSound = x->soundHeader.nSamples;
         if(x->verbose)
         {
                 post("smsanal: set default size window to %d", x->anal_params.iDefaultSizeWindow);
@@ -378,7 +452,7 @@ static void smsanal_sf(t_smsanal *x, t_symbol *filename)
         /* need to supply sms header information for incase the analysis 
            will be written to file (by smsbuf) */
 	sms_fillHeader (&x->smsbuf->smsHeader, x->smsbuf->nframes,
-                        &x->anal_params, SoundHeader.iSamplingRate, 
+                        &x->anal_params, x->soundHeader.iSamplingRate, 
                          x->ntrajectories);
 
         sprintf (x->smsbuf->param_string,
@@ -415,73 +489,26 @@ static void smsanal_sf(t_smsanal *x, t_symbol *filename)
         for( i = 0; i < x->smsbuf->nframes; i++ )
                 sms_allocRecordH (&x->smsbuf->smsHeader,  &x->smsbuf->smsData[i]);
 
-        x->smsbuf->allocated = 1;
+        x->smsbuf->allocated = 1; // ?? why is this necessary again?
 
-       iNextSizeRead = (x->anal_params.iDefaultSizeWindow + 1) * 0.5;
+       x->iNextSizeRead = (x->anal_params.iDefaultSizeWindow + 1) * 0.5;
        
        if (x->anal_params.iAnalysisDirection == SMS_DIR_REV)
-               iSample = x->anal_params.iSizeSound;
-       
-       /* loop for analysis */
-       while(iDoAnalysis > 0)
-       {
-               //post("analyzing frame %d", iRecord);
-               if (x->anal_params.iAnalysisDirection == SMS_DIR_REV)
-               {
-                       if ((iSample - iNextSizeRead) >= 0)
-                               sizeNewData = iNextSizeRead;
-                       else
-                               sizeNewData = iSample;
-                       iSample -= sizeNewData;
-               }
-               else
-               {
-                       iSample += sizeNewData;
-                       if((iSample + iNextSizeRead) < SoundHeader.nSamples)
-                               sizeNewData = iNextSizeRead;
-                       else
-                               sizeNewData = SoundHeader.nSamples - iSample;
-               }
-		/* get one frame of sound */
-		if (sms_getSound (&SoundHeader, pSoundData, sizeNewData, iSample) < 0)
-		{
-			error("smsanal_sf: could not read sound record %d\n", iRecord);
-			break;
-		}
-		/* perform analysis of one frame of sound */
-		iStatus = sms_analyze (pSoundData, sizeNewData, &x->smsbuf->smsData[iRecord], 
-		                       &x->anal_params, &iNextSizeRead);
-                
+               x->iSample = x->anal_params.iSizeSound;
+       else   x->iSample = 0;
+       x->analysisType = ANALYSIS_FROM_FILE;
+       x->iRecord = 0;
+       x->iStatus = 0;
+       x->iDoAnalysis = 1;
+       //smsanal_loop(x);
+       pthread_create(&childthread, 0, smsanal_childthread, (void *)x);
 
-		/* if there is an output SMS record, write it */
-		if (iStatus == 1)
-		{
-			//sms_writeRecord (pOutputSmsFile, &smsHeader, &smsData);
-			if(0)//todo: add verbose flag
-                        {
-                                if (iRecord % 10 == 0)
-                                        post("%.2f ", iRecord / (float) x->smsbuf->smsHeader.iFrameRate);
-                        }
-			iRecord++;
-		}
-		else if (iStatus == -1) /* done */
-		{
-			iDoAnalysis = 0;
-			x->smsbuf->smsHeader.nFrames = iRecord;
-		}
-
-	}
-       post(" smsanal: analyzed %d frames from soundfile.", iRecord);
-       x->smsbuf->smsHeader.fResidualPerc = x->anal_params.fResidualPercentage / iRecord;
-       x->smsbuf->ready = 1;
        return;
 }
 
 static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
 {
-        post("cansvas_dspstate: %d", canvas_dspstate);
-        return;
-
+        //post("cansvas_dspstate: %d", canvas_dspstate);
 
         if(!x->smsbuf)
         {
@@ -490,7 +517,7 @@ static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
         }
         x->smsbuf->ready = 0;
 
-        long iNextSizeRead = 0;
+        int iNextSizeRead = 0;
         int i;
         int iDoAnalysis = 1;
         int iSample = 0;
@@ -502,6 +529,7 @@ static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
         t_garray *a;
 	short pSoundData[SMS_MAX_WINDOW];
 	SMS_SndHeader SoundHeader;
+        pthread_t childthread;
 
         if(x->smsbuf->nframes != 0)
         {
@@ -517,13 +545,13 @@ static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
                 pd_error(x, "%s: no such array", arrayname->s_name);
                 return;
         }
-        else if (!garray_getfloatarray(a, &x->wavetablesize, &x->wavetable))
+        else if (!garray_getfloatarray(a, &x->nSamples, &x->wavetable))
         {
                 pd_error(x, "%s: bad template for tabread", arrayname->s_name);
                 return;
         }
         else if(x->verbose) //table exists
-                post("wavetablesize: %d, samplerate: %d", x->wavetablesize, (int) samplerate );
+                post("wavetablesize: %d, samplerate: %d", x->nSamples, (int) samplerate );
 
         if(!x->smsbuf)
         {
@@ -540,9 +568,9 @@ static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
 	x->anal_params.sizeHop = x->anal_params.iSamplingRate / x->anal_params.iFrameRate;
 
         /* define how many records*/
-	x->smsbuf->nframes = 3 + x->wavetablesize / 
+	x->smsbuf->nframes = 3 + x->nSamples / 
                 (float) x->anal_params.sizeHop;
-        x->anal_params.iSizeSound = x->wavetablesize;
+        x->anal_params.iSizeSound = x->nSamples;
         if(x->verbose)
         {
                 post("smsanal: set default size window to %d", x->anal_params.iDefaultSizeWindow);
@@ -589,62 +617,18 @@ static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
         for( i = 0; i < x->smsbuf->nframes; i++ )
                 sms_allocRecordH (&x->smsbuf->smsHeader,  &x->smsbuf->smsData[i]);
 
-       iNextSizeRead = (x->anal_params.iDefaultSizeWindow + 1) * 0.5;
+        x->iNextSizeRead = (x->anal_params.iDefaultSizeWindow + 1) * 0.5;
        
        if (x->anal_params.iAnalysisDirection == SMS_DIR_REV)
-               iSample = x->anal_params.iSizeSound;
+               x->iSample = x->anal_params.iSizeSound;
+       else   x->iSample = 0;
+       x->analysisType = ANALYSIS_FROM_ARRAY;
+       x->iRecord = 0;
+       x->iStatus = 0;
+       x->iDoAnalysis = 1;
+       //smsanal_loop(x);
+       pthread_create(&childthread, 0, smsanal_childthread, (void *)x);
 
-       /* loop for analysis */
-       while(iDoAnalysis > 0)
-       {
-               //post("analyzing frame %d", iRecord);
-               if (x->anal_params.iAnalysisDirection == SMS_DIR_REV)
-               {
-                       if ((iSample - iNextSizeRead) >= 0)
-                               sizeNewData = iNextSizeRead;
-                       else
-                               sizeNewData = iSample;
-                       iSample -= sizeNewData;
-               }
-               else
-               {
-                       iSample += sizeNewData;
-                       if((iSample + iNextSizeRead) < x->wavetablesize)
-                               sizeNewData = iNextSizeRead;
-                       else
-                               sizeNewData = x->wavetablesize - iSample;
-               }
-		/* get one frame of sound */
-               /*until sms_analyze will act on floating point data, the sound chunk has to be converted to 16-bit integer
-                 shorts */
-               for(i = 0; i < sizeNewData; i++)
-                       pSoundData[i] = (short) (x->wavetable[iSample + i] * FLOAT_TO_SHORT);
-
-               iStatus = sms_analyze (pSoundData, sizeNewData, &x->smsbuf->smsData[iRecord], 
-		                       &x->anal_params, &iNextSizeRead);
-                
-
-		/* if there is an output SMS record, write it */
-		if (iStatus == 1)
-		{
-			//sms_writeRecord (pOutputSmsFile, &smsHeader, &smsData);
-			if(0)//todo: add verbose flag
-                        {
-                                if (iRecord % 10 == 0)
-                                        post("%.2f ", iRecord / (float) x->smsbuf->smsHeader.iFrameRate);
-                        }
-			iRecord++;
-		}
-		else if (iStatus == -1) /* done */
-		{
-			iDoAnalysis = 0;
-			x->smsbuf->smsHeader.nFrames = iRecord;
-		}
-
-	}
-       post(" smsanal: analyzed %d frames from soundfile.", iRecord);
-       x->smsbuf->smsHeader.fResidualPerc = x->anal_params.fResidualPercentage / iRecord;
-       x->smsbuf->ready = 1;
        return;
 
 }
@@ -1066,12 +1050,13 @@ static void *smsanal_new(t_symbol *s, int argcount, t_atom *argvec)
         t_smsanal *x = (t_smsanal *)pd_new(smsanal_class);
 
         int i;
+        x->outlet_iRecord = outlet_new(&x->x_obj,  gensym("float"));
 
         x->canvas = canvas_getcurrent();
         x->ntrajectories = 30;
         x->smsbuf = NULL;
         x->verbose = 1;
-
+  
         sms_initAnalParams (&x->anal_params);
 
         for (i = 0; i < argcount; i++)

@@ -19,7 +19,7 @@ else:
     
 sms_srcpath = '../src'
 
-sms_libs =  ['m', 'sndfile', 'sms', 'fftw3f']
+sms_libs =  ['m', 'sndfile', 'sms', 'fftw3f', 'pthread']
 
 env = Environment( ENV = os.environ, CCFLAGS = sms_cflags , CPPPATH = sms_srcpath, CPPDEFINES= 'PD')
 env.Append( LIBPATH = sms_srcpath, LIBS = sms_libs )
