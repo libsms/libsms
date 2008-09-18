@@ -374,7 +374,8 @@ int main (int argc, char *argv[])
 
 	char *pChInputSoundFile = NULL, *pChOutputSmsFile = NULL;
 	int iHopSize, nFrames;
-	long iStatus = 0, iSample = 0, iNextSizeRead = 0, sizeNewData = 0;
+	long iStatus = 0, iSample = 0, sizeNewData = 0;
+        int iNextSizeRead = 0;
 	short iDoAnalysis = 1, iRecord = 0;
 
 	/* initialize arguments */

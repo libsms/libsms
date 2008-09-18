@@ -34,14 +34,14 @@
  * @param pINextSizeRead size of next data to read
  */
 int sms_analyze (short *pSWaveform, long sizeNewData, SMS_Data *pSmsData, 
-                 SMS_AnalParams *pAnalParams, long *pINextSizeRead)
+                 SMS_AnalParams *pAnalParams, int *pINextSizeRead)
 {    
 
 //        SMS_SndBuffer *pSynthBuf = &analParams.synthBuffer;
 	static int sizeWindow = 0;      /* size of current analysis window */ //RTE ?: shouldn't this just be initilalized outside?
 
 	int iCurrentFrame = pAnalParams->iMaxDelayFrames - 1;  /* frame # of current frame */
-	int i, iExtraSamples;              /* samples used for next analysis frame */
+	int i, iError, iExtraSamples;              /* samples used for next analysis frame */
 	float fRefFundamental = 0;   /* reference fundamental for current frame */
         SMS_AnalFrame *pTmpAnalFrame;
 
@@ -65,7 +65,8 @@ int sms_analyze (short *pSWaveform, long sizeNewData, SMS_Data *pSmsData,
 
 
 	/* initialize the current frame */
-	sms_initFrame (iCurrentFrame, pAnalParams, sizeWindow);
+	iError = sms_initFrame (iCurrentFrame, pAnalParams, sizeWindow);
+        if(iError != SMS_OK) return (-1);
   
 	/* if right data in the sound buffer do analysis */
 	if (pAnalParams->ppFrames[iCurrentFrame]->iStatus == SMS_FRAME_READY)
@@ -295,3 +296,63 @@ void sms_computeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams,
 		        pAnalParams->ppFrames[iCurrentFrame]->fFundamental);
 }
 
+/* re-analyze the previous frames if necessary  
+ *
+ * int iCurrentFrame;             current frame number
+ * SMS_AnalParams analParams;           analysis parameters
+ * \todo move to smsAnalysis.c
+ */
+int sms_reAnalyze (int iCurrentFrame, SMS_AnalParams *pAnalParams)
+{
+//	extern SMS_AnalFrame **ppFrames;
+	float fAvgDeviation = sms_fundDeviation(pAnalParams, iCurrentFrame),
+		fFund, fLastFund, fDev;
+	int iNewFrameSize, i,
+		iFirstFrame = iCurrentFrame - SMS_MIN_GOOD_FRAMES;
+
+	if (pAnalParams->iDebugMode == SMS_DBG_SMS_ANAL || 
+	    pAnalParams->iDebugMode == SMS_DBG_ALL)
+		fprintf(stdout, "Frame %d reAnalyze: Freq. deviation %f\n", 
+		       pAnalParams->ppFrames[iCurrentFrame]->iFrameNum, fAvgDeviation);
+  
+	if (fAvgDeviation == -1)
+		return (-1);
+  
+	/* if the last SMS_MIN_GOOD_FRAMES are stable look before them */
+	/*  and recompute the frames that are not stable           */
+	if (fAvgDeviation <= SMS_MAX_DEVIATION)
+		for (i = 0; i < SMS_ANAL_DELAY; i++)
+		{
+			if (pAnalParams->ppFrames[iFirstFrame - i]->iFrameNum <= 0 ||
+			    pAnalParams->ppFrames[iFirstFrame - i]->iStatus == SMS_FRAME_RECOMPUTED)
+				return(-1);
+			fFund = pAnalParams->ppFrames[iFirstFrame - i]->fFundamental;
+			fLastFund = pAnalParams->ppFrames[iFirstFrame - i + 1]->fFundamental;
+			fDev = fabs (fFund - fLastFund) / fLastFund;
+			iNewFrameSize = ((pAnalParams->iSamplingRate / fLastFund) *
+				pAnalParams->fSizeWindow/2) * 2 + 1;
+	
+			if (fFund <= 0 || fDev > .2 ||
+			    fabs ((double)(pAnalParams->ppFrames[iFirstFrame - i]->iFrameSize - 
+			          iNewFrameSize)) / 
+			    iNewFrameSize >= .2)
+			{
+				pAnalParams->ppFrames[iFirstFrame - i]->iFrameSize = iNewFrameSize;
+				pAnalParams->ppFrames[iFirstFrame - i]->iStatus = SMS_FRAME_READY;
+	    
+				if (pAnalParams->iDebugMode == SMS_DBG_SMS_ANAL || 
+				    pAnalParams->iDebugMode == SMS_DBG_ALL)
+					fprintf(stdout, "re-analyzing frame %d\n", 
+					        pAnalParams->ppFrames[iFirstFrame - i]->iFrameNum);
+	    
+				/* recompute frame */
+				sms_computeFrame (iFirstFrame - i, pAnalParams, fLastFund);
+				pAnalParams->ppFrames[iFirstFrame - i]->iStatus = SMS_FRAME_RECOMPUTED;
+	    
+				if (fabs(pAnalParams->ppFrames[iFirstFrame - i]->fFundamental - fLastFund) / 
+				    fLastFund >= .2)
+				return(-1);
+			}
+		}
+	return (1);
+}

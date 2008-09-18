@@ -187,3 +187,33 @@ int sms_writeResSF ()
     return 1;		  
 }
 
+/* fill the sound buffer
+ *
+ * short *pSWaveform           input data
+ * int sizeNewData             size of input data
+ * int sizeHop                 analysis hop size
+ */
+void sms_fillSndBuffer (short *pSWaveform, long sizeNewData, SMS_AnalParams *pAnalParams)
+{
+//	extern SMS_SndBuffer soundBuffer;
+	int i;
+  
+	/* leave space for new data */
+	memcpy ( pAnalParams->soundBuffer.pFBuffer,  pAnalParams->soundBuffer.pFBuffer+sizeNewData, 
+                 sizeof(float) * (pAnalParams->soundBuffer.sizeBuffer - sizeNewData));
+  
+	pAnalParams->soundBuffer.iFirstGood = 
+		MAX (0, pAnalParams->soundBuffer.iFirstGood - sizeNewData);
+	pAnalParams->soundBuffer.iMarker += sizeNewData;   
+  
+	/* put the new data in, and do some pre-emphasis */
+	if (pAnalParams->iAnalysisDirection == SMS_DIR_REV)
+		for (i=0; i<sizeNewData; i++)
+			pAnalParams->soundBuffer.pFBuffer[pAnalParams->soundBuffer.sizeBuffer - sizeNewData + i] = 
+				sms_preEmphasis((float) pSWaveform[sizeNewData - (1+ i)]);
+	else
+		for (i=0; i<sizeNewData; i++)
+			pAnalParams->soundBuffer.pFBuffer[pAnalParams->soundBuffer.sizeBuffer - sizeNewData + i] = 
+				sms_preEmphasis((float) pSWaveform[i]);
+}
+

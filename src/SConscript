@@ -6,12 +6,12 @@ Import('*')
 lib_prefix = prefix+'/lib'
 env.Alias('install', lib_prefix);
  
-sms_sources = Split(' sineSynth.c sinTab.c variousFunctions.c \
+sms_sources = Split(' sineSynth.c sinTab.c sms.c \
 		peakDetection.c harmDetection.c peakContinuation.c \
 		spectrum.c realft.c covLatticeHarm.c windows.c \
 		stocAnalysis.c smsIO.c filters.c fixTrajectories.c \
 		smsSynthesis.c smsAnalysis.c spectralApprox.c \
-		getResidual.c interpolateArrays.c filterArray.c \
+		getResidual.c interpolateArrays.c \
 		sincTab.c soundIO.c hybridize.c')
 
 lib = env.Library( 'libsms', sms_sources )

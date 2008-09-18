@@ -373,7 +373,8 @@ enum SMS_ERRORS
         SMS_NSMS ,        /*!< not a SMS file */
         SMS_MALLOC,    /*!< couldn't allocate memory */
         SMS_RDERR,        /*!< read error */
-        SMS_WRERR	      /*!< write error */
+        SMS_WRERR,       /*!< write error */
+        SMS_FFTWERR   /*!< FFTW error */
 };
 
 /*! \brief debug modes 
@@ -505,28 +506,25 @@ extern float *sms_window_spec;
 /* function declarations */ 
 
 int sms_analyze (short *pSWaveform, long sizeNewData, SMS_Data *pSmsRecord,
-                 SMS_AnalParams *pAnalParams, long *pINextSizeRead);
+                 SMS_AnalParams *pAnalParams, int *pINextSizeRead);
 
 int sms_init( void );  
 
-int sms_free( void );  
+void sms_free( void );  
 
-//int sms_initAnalysis ( SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams);
 int sms_initAnalysis (  SMS_AnalParams *pAnalParams);
 
-int sms_initAnalParams (SMS_AnalParams *pAnalParams);
+void sms_initAnalParams (SMS_AnalParams *pAnalParams);
 
 int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams );
 
-int sms_freeAnalysis (SMS_AnalParams *pAnalParams);
+void sms_freeAnalysis (SMS_AnalParams *pAnalParams);
 
-int sms_freeSynth( SMS_SynthParams *pSynthParams );
+void sms_freeSynth( SMS_SynthParams *pSynthParams );
 
 void sms_fillSndBuffer (short *pSWaveform, long sizeNewData, SMS_AnalParams *pAnalParams);
 
-//void moveFrames();
-
-void sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
+int sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
                       int sizeWindow);
 		     
 void sms_computeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
@@ -685,10 +683,10 @@ int sms_writeResSF ();
 
 int sms_createDebugFile (SMS_AnalParams *pAnalParams);
 
-int sms_writeDebugData (float *pFBuffer1, float *pFBuffer2, 
+void sms_writeDebugData (float *pFBuffer1, float *pFBuffer2, 
                              float *pFBuffer3, int sizeBuffer);
 
-int sms_writeDebugFile ();
+void sms_writeDebugFile ();
 
 /***********************************************************************************/
 /************ things for hybrid program that are not currently used **********************/
@@ -712,7 +710,7 @@ typedef struct
 int sms_hybridize (float *pIWaveform1, int sizeWave1, float *pIWaveform2, 
                int sizeWave2, float *pFWaveform, SMS_HybParams params);
 
-int sms_filterArray (float *pFArray, int size1, int size2, float *pFOutArray);
+void sms_filterArray (float *pFArray, int size1, int size2, float *pFOutArray);
 
 //int freeBuffers ();
 

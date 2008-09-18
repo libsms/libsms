@@ -3,6 +3,14 @@
 
 import os, sys
 
+# ::::::::::::::: Help :::::::::::::::::::
+Help("""
+---- libsms pre-release ----
+The following building commands are available:
+'scons' to build the libary
+'scons doxygen' to build html documentation in ./doc/html'
+""")
+
 # ::::::::::::::: Command-line options :::::::::::::::::::
 opts = Options()
 opts.AddOptions(
@@ -15,6 +23,13 @@ env = Environment( ENV = os.environ, options = opts, CCFLAGS='-Wall ')
 #env = Environment( CCFLAGS='-Wall ',
  #                  LIBPATH = ['/usr/local/lib', '/usr/lib'])
 
+# default action is to build
+#commands = COMMAND_LINE_TARGETS or 'build'
+
+if 'doxygen' in COMMAND_LINE_TARGETS:
+        os.system('cd ./doc && doxygen Doxyfile')
+        Exit(1)
+        
 Help(opts.GenerateHelpText(env))
 
 #print 'LIBPATH: ', env.Dump('LIBPATH')

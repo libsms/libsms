@@ -2,6 +2,9 @@
 SMS Library Work Log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 * Present Issues (todonow)
+** [#A] in smspd externals, crashes when entire patch is closed (deallocation problem)
+** [#A] try to seperate pd external source files
+      - try with glob pointer
 ** [#B] plot stochastic coefficients at different rates to see if they are the same for diff sr
 ** [#B] ways to fix the stoc_ big crunch in the beginning:
 *** something to do with sin/sinc tables or SinePhasSynth?

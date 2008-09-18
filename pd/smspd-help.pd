@@ -45,15 +45,15 @@
 #X msg 30 149 array audiobuf 28800;
 #X msg 30 168 verbose 0;
 #X msg 29 122 soundfile ../test/audio/flugel.wav;
-#N canvas 871 58 450 900 analysis_params 1;
+#N canvas 871 58 450 900 analysis_params 0;
 #X msg 39 49 debug \$1;
 #X obj 39 1065 outlet;
 #X obj 39 33 hradio 13 1 0 13 empty empty empty 0 -8 0 10 -262144 -1
--1 3;
+-1 0;
 #X obj 52 113 hradio 13 1 0 2 empty empty empty 0 -8 0 10 -262144 -1
 -1 0;
 #X obj 46 73 hradio 13 1 0 4 empty empty empty 0 -8 0 10 -262144 -1
--1 2;
+-1 0;
 #X msg 46 89 format \$1;
 #X msg 52 129 soundtype \$1;
 #X obj 57 152 hradio 13 1 0 2 empty empty empty 0 -8 0 10 -262144 -1
@@ -156,6 +156,29 @@
 #X connect 50 0 32 0;
 #X restore 39 196 pd analysis_params;
 #X msg 287 79 save test.sms;
+#N canvas 0 0 450 300 test 0;
+#X obj 178 187 env~;
+#X obj 131 146 *~;
+#X obj 116 116 osc~ 5;
+#X obj 176 116 osc~ 2;
+#X obj 183 253 outlet;
+#X obj 277 178 outlet;
+#X obj 282 101 r pd;
+#X obj 282 132 route dsp;
+#X connect 0 0 4 0;
+#X connect 1 0 0 0;
+#X connect 2 0 1 0;
+#X connect 3 0 1 1;
+#X connect 6 0 7 0;
+#X connect 7 0 5 0;
+#X restore 408 52 pd test;
+#X floatatom 408 76 5 0 0 0 - - -;
+#X obj 330 156 switch~;
+#X obj 330 127 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+1;
+#X obj 451 77 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+1;
+#X floatatom 8 257 5 0 0 0 - - -;
 #X connect 2 0 6 0;
 #X connect 2 0 6 1;
 #X connect 2 0 8 0;
@@ -170,6 +193,7 @@
 #X connect 13 0 16 0;
 #X connect 14 0 13 0;
 #X connect 15 0 14 0;
+#X connect 16 0 33 0;
 #X connect 17 0 2 0;
 #X connect 18 0 17 0;
 #X connect 19 0 18 0;
@@ -180,3 +204,6 @@
 #X connect 25 0 16 0;
 #X connect 26 0 16 0;
 #X connect 27 0 1 0;
+#X connect 28 0 29 0;
+#X connect 28 1 32 0;
+#X connect 31 0 30 0;
