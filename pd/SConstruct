@@ -6,7 +6,8 @@
 import os
 
 #can't seem to keep the externals in seperate files and still get them to see the buffer..
-smspd_sources =  Split(' smspd.c ' )
+#smspd_sources =  Split(' smspd.c ' )
+smspd_sources =  Split(' smspd.c smsanal.c smssynth~.c' )
 
 debug_mode = ARGUMENTS.get('debug',0 )
 
