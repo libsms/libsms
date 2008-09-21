@@ -18,22 +18,27 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
+/*! \file getResidual.c
+ * \brief main get_residual function, along with helper filter functions
+ */
+
 #include "sms.h"
 
-// RTE DEBUG //////////////////
+//////// RTE DEBUG /////////////
 char *fn0 = "blarg0.txt";
 FILE *f0;
 char *fn1 = "blarg1.txt";
 FILE *f1;
-///////////////////////////////////
+/////////////////////////////////////////
 
-/* function to implement a pole-zero filter
- * the returned value is the  filtered sample
+/*! \brief  function to implement a pole-zero filter
  * 
- * float *pFa;        numerator coefficients
- * float *pFb;        denominator coefficients
- * int nCoeff;        number of coefficients
- * float fInput;      input sample
+ * \param pFa        pointer to numerator coefficients
+ * \param pFb        pointer to denominator coefficients
+ * \param nCoeff    number of coefficients
+ * \param fInput     input sample
+ * \param pD          pointer to filter coefficients \todo I'm not sure what a better description of this value is (was undocumented)
+ * \return value is the  filtered sample 
  */
 static float ZeroPoleFilter (float *pFa, float *pFb, int nCoeff, float fInput,
                              float *pD)
@@ -66,12 +71,16 @@ static float ZeroPoleFilter (float *pFa, float *pFb, int nCoeff, float fInput,
 */
 
 
-/* function to filter a waveform with a high-pass filter with cutoff
- *  at 1500 Hz  
+/*! \brief function to filter a waveform with a high-pass filter
  * 
- * float *pFResidual;        residual signal
- * int sizeResidual;         size of signal
- * int iSamplingRate;      sampling rate of signal                                                    
+ *  cutoff =1500 Hz  
+ * 
+ * \todo this filter only works on sample rates up to 48k?
+ *
+ * \param pFResidual          pointer to residual signal
+ * \param sizeResidual        size of signal
+ * \param iSamplingRate      sampling rate of signal                                                    
+ * \param pD          pointer to filter coefficients
  */
 static void FilterResidual (float *pFResidual, int sizeResidual, 
                              int iSamplingRate, float *pD)
@@ -113,15 +122,14 @@ static void FilterResidual (float *pFResidual, int sizeResidual,
 	}
 }
 
-/* get the residual waveform
- * return 0 if no representation, 1 if got a representation
+/*! \brief get the residual waveform
  *
- * float *pFSynthesis;       deterministic component
- * float *pFOriginal;        original waveform
- * float *pFResidual;        output residual waveform
- * int sizeWindow;           size of buffer
- * SMS_Data *pSmsData;       pointer to output SMS data
- * SMS_AnalParams *pAnalParams;   analysis parameters
+ * \param pFSynthesis       pointer to deterministic component
+ * \param pFOriginal          pointer to original waveform
+ * \param pFResidual        pointer to output residual waveform
+ * \param sizeWindow       size of buffer
+ * \param pAnalParams    pointer to analysis parameters
+ * \return 0 if no representation, 1 if got a representation
  */
 int sms_residual (float *pFSynthesis, float *pFOriginal,  
                  float *pFResidual, int sizeWindow, SMS_AnalParams *pAnalParams)

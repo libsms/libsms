@@ -473,7 +473,7 @@ extern float *sms_tab_sinc; /*!< global table to hold a sinc function */
 extern float *sms_window_spec;
 
 
-/*! \defgroup Math_Macros 
+/*! \defgroup math_macros Math Macros 
  *  \brief mathematical operations and values needed for functions within
  *   this library 
  * \{
@@ -499,12 +499,10 @@ extern float *sms_window_spec;
 #endif
 
 #define SHORT_TO_FLOAT ( 2.0f / pow(2.0,16)) /*!< \todo remove once all shorts are removed */
-/*! \} */
 #define FLOAT_TO_SHORT (pow(2.0,16) / 2.0f) /*!< \todo remove once all shorts are removed */
 /*! \} */
 
 /* function declarations */ 
-
 int sms_analyze (short *pSWaveform, long sizeNewData, SMS_Data *pSmsRecord,
                  SMS_AnalParams *pAnalParams, int *pINextSizeRead);
 
@@ -532,22 +530,12 @@ void sms_computeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams,
 
 void sms_getWindow (int sizeWindow, float *pFWindow, int iWindowType);
 
-//void BlackmanHarris (int sizeWindow, float *pFWindow);
-
-//void Hamming (int sizeWindow, float *pFWindow);
-
-//void Hanning (int sizeWindow, float *pFWindow);
-
-//void IFFTwindow (int sizeWindow, float *pFWindow);
-
  int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum, 
               float *pFPhaseSpectrum, SMS_AnalParams *pAnalParams);
 
-// int QuickSpectrum (short *pIWaveform, float *pFWindow, int sizeWindow, 
-//                    float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft);
-
 int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow, 
-                    float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft);
+                       float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft, 
+                       SMS_AnalParams *pAnalParams);
 
 int sms_invQuickSpectrum (float *pFMagSpectrum, float *pFPhaseSpectrum, 
                            int sizeFft, float *pFWaveform, int sizeWave);
@@ -572,17 +560,13 @@ int sms_detectPeaks (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag,
 void sms_harmDetection (SMS_AnalFrame *pFrame, float fRefFundamental,
                     SMS_AnalParams *pAnalParams);
 
-//void GenPeakContinuation (int iFrame, SMS_AnalParams *pAnalParams);
-
-//int DeleteCandidate (SMS_ContCandidate *pCandidate, int nCand, int iBestPeak);
-
 int sms_peakContinuation (int iFrame, SMS_AnalParams *pAnalParams);
 
 float sms_preEmphasis (float fInput);
 
 float sms_deEmphasis (float fInput);
 
-int sms_cleanTrajectories (int iCurrentFrame, SMS_AnalParams *pAnalParams);
+void sms_cleanTrajectories (int iCurrentFrame, SMS_AnalParams *pAnalParams);
 
 void sms_scaleDet (float *pFSynthBuffer, float *pFOriginalBuffer,
                          float *pFMagTraj, SMS_AnalParams *pAnalParams, int nTraj);
@@ -606,10 +590,6 @@ int sms_sineSynthFrame (SMS_Data *pSmsRecord, float *pFBuffer,
                     int sizeBuffer, SMS_Data *pLastFrame,
                     int iSamplingRate);
 
-//long random ();
-
-//int quit (char *pChText);
-
 int sms_initHeader (SMS_Header *pSmsHeader);
 
 int sms_getHeader (char *pChFileName, SMS_Header **ppSmsHeader,
@@ -618,7 +598,6 @@ int sms_getHeader (char *pChFileName, SMS_Header **ppSmsHeader,
 int sms_fillHeader (SMS_Header *pSmsHeader, 
                           int nFrames, SMS_AnalParams *pAnalParams,
                     int iOriginalSRate, int nTrajectories);
-
 
 int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader, 
                     FILE **ppOutSmsFile);
@@ -647,8 +626,6 @@ int sms_copyRecord (SMS_Data *pCopySmsRecord, SMS_Data *pOriginalSmsRecord);
 int sms_recordSizeB (SMS_Header *pSmsHeader);
 
 const char* sms_errorString( int iError);
-
-//void MoveFrames (SMS_AnalParams *pAnalParams);
 
 int sms_residual (float *pFSynthesis, float *pFOriginal,  
                  float *pFResidual, int sizeWindow, SMS_AnalParams *pAnalParams);
@@ -691,11 +668,10 @@ void sms_writeDebugFile ();
 /***********************************************************************************/
 /************ things for hybrid program that are not currently used **********************/
 /* (this is because they were utilized with the MusicKit package that is out of date now) */
-//#define MAX_BUFF 1000000
 
 /*! \struct SMS_HybParams
  * \brief structure for hybrid program 
- * \todo find out wha this is, hah 
+ * \todo detailed documentation
  */
 typedef struct
 {
@@ -711,20 +687,6 @@ int sms_hybridize (float *pIWaveform1, int sizeWave1, float *pIWaveform2,
                int sizeWave2, float *pFWaveform, SMS_HybParams params);
 
 void sms_filterArray (float *pFArray, int size1, int size2, float *pFOutArray);
-
-//int freeBuffers ();
-
-// int InterpolateArrays (float *pFArray1, int sizeArray1, float *pFArray2,
-//                        int sizeArray2, float *pFArrayOut, int sizeArrayOut,
-//                        float fInterpFactor);
-
-/**** functions that were used in sms_stocAnalysisIIR that may not be necessary  any more *******/
-
-void Covariance (float *pFSig, int nSig, int nStage, float *pFPhi, int nMax);
-
-void CovLatticeHarm (float *pFPhi, int nMax, int m, float *pFPredCoeff, 
-                     float *pFReflexCoeff, float *pFError, float *pFScr);
-
 
 #endif /* _SMS_H */
 

@@ -18,25 +18,30 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
+/*! \file harmDetection.c
+ * \brief Detection of a given harmonic
+ */
+
 #include "sms.h"
 
-#define N_FUND_HARM      6 /* number of harmonics to use for fundamental 
+#define N_FUND_HARM      6 /*!< number of harmonics to use for fundamental 
                               detection */
-#define N_HARM_PEAKS     4 /* number of peaks to check as possible ref 
+#define N_HARM_PEAKS     4 /*!< number of peaks to check as possible ref 
                               harmonics */
-#define FREQ_DEV_THRES  .07 /* threshold for deviation from perfect 
+#define FREQ_DEV_THRES  .07 /*!< threshold for deviation from perfect 
                                harmonics */
-#define MAG_PERC_THRES   .6 /* threshold for magnitude of harmonics
+#define MAG_PERC_THRES   .6 /*!< threshold for magnitude of harmonics
                                with respect to the total magnitude */
-#define HARM_RATIO_THRES .8 /* threshold for percentage of harmonics found */
+#define HARM_RATIO_THRES .8 /*!< threshold for percentage of harmonics found */
 
-/* get closest peak to a given harmonic of the possible fundamental
- *    return the number of the closest peak or -1 if not found  
+/*! \brief get closest peak to a given harmonic of the possible fundamental
  *  
- * int iPeakCandidate     peak number of possible fundamental
- * int nHarm              number of harmonic
- * SMS_Peak *pSpectralPeaks   all the peaks
- * int *pICurrentPeak     last peak taken
+ * \param iPeakCandidate     peak number of possible fundamental
+ * \param nHarm              number of harmonic
+ * \param pSpectralPeaks   pointer to all the peaks
+ * \param pICurrentPeak     pointer to the last peak taken
+ * \param pAnalParams    pointer to analysis parameters
+ * \return the number of the closest peak or -1 if not found  
  */
 static int GetClosestPeak (int iPeakCandidate, int nHarm, SMS_Peak *pSpectralPeaks,
                            int *pICurrentPeak, SMS_AnalParams *pAnalParams)
@@ -68,13 +73,17 @@ static int GetClosestPeak (int iPeakCandidate, int nHarm, SMS_Peak *pSpectralPea
 	return (iBestPeak);
 }
 
-/* check if peak is larger enough to be considered a fundamental
- *     without any further testing or too small to be considered
+/*! \brief checks if peak is substantial
  *
- * return 1 if big peak   -1 if too small , otherwise return 0 
- * float fRefHarmMag      magnitude of possible fundamental
- * SMS_Peak *pSpectralPeaks   all the peaks
- * int nCand              number of existing candidates
+ *  check if peak is larger enough to be considered a fundamental
+ *  without any further testing or too small to be considered
+ *
+
+ * \param fRefHarmMag      magnitude of possible fundamental
+ * \param pSpectralPeaks   all the peaks
+ * \param nCand              number of existing candidates
+ * \param pAnalParams    pointer to analysis parameters
+ * \return 1 if big peak, -1 if too small , otherwise return 0 
  */
 static int ComparePeak (float fRefHarmMag, SMS_Peak *pSpectralPeaks, int nCand, 
                         SMS_AnalParams *pAnalParams)
@@ -109,12 +118,12 @@ static int ComparePeak (float fRefHarmMag, SMS_Peak *pSpectralPeaks, int nCand,
 }
 
 
-/* check if the current peak is a harmonic of one of the candidates
- *   return 1 if it is a harmonic, 0 if it is not    
+/*! \brief check if the current peak is a harmonic of one of the candidates
  *               
- * float fFundFreq;      frequency of peak to be tested
- * SMS_HarmCandidate *pCHarmonic;  all candidates accepted
- * int nCand;                location of las candidate
+ * \param fFundFreq          frequency of peak to be tested
+ * \param pCHarmonic       all candidates accepted
+ * \param nCand                location of las candidate
+ * \return 1 if it is a harmonic, 0 if it is not    
  */
 int CheckIfHarmonic (float fFundFreq, SMS_HarmCandidate *pCHarmonic, int nCand)
 {
@@ -132,17 +141,17 @@ int CheckIfHarmonic (float fFundFreq, SMS_HarmCandidate *pCHarmonic, int nCand)
 }
 
 
-/* consider a peak as a possible candidate and give it a weight value, 
- * return -1 if not good enough for a candidate, return 0 if reached
+/*! \brief consider a peak as a possible candidate and give it a weight value, 
+ *
+ * \param iPeak                iPeak number to be considered
+ * \param pSpectralPeaks     all the peaks
+ * \param pCHarmonic  all the candidates
+ * \param nCand                 candidate number that is to be filled
+ * \param pAnalParams    analysis parameters
+ * \param fRefFundamental     previous fundamental
+ * \return -1 if not good enough for a candidate, return 0 if reached
  * the top frequency boundary, return -2 if stop checking because it 
  * found a really good one, return 1 if the peak is a good candidate 
- *
- * int iPeak;                iPeak number to be considered
- * SMS_Peak *pSpectralPeaks;     all the peaks
- * FUND_CANDIDATE *pCFundamental;  all the candidates
- * int nCand;                 candidate number that is to be filled
- * SMS_AnalParams *pAnalParams;    analysis parameters
- * float fRefFundamental;     previous fundamental
  */
 int GoodCandidate (int iPeak, SMS_Peak *pSpectralPeaks, SMS_HarmCandidate *pCHarmonic,
                    int nCand, SMS_AnalParams *pAnalParams, float fRefFundamental)
@@ -246,11 +255,13 @@ int GoodCandidate (int iPeak, SMS_Peak *pSpectralPeaks, SMS_HarmCandidate *pCHar
 	return (1);
 }
 
-/* choose the best fundamental out of all the candidates
- * SMS_HarmCandidate *pCFundamental;      array of candidates
- * SMS_AnalParams *pAnalParams;             analysis parameters
- * int nGoodPeaks;                     number of candiates
- * float fPrevFund;                    reference fundamental
+/*! \brief  choose the best fundamental out of all the candidates
+ *
+ * \param pCHarmonic               array of candidates
+ * \param pAnalParams             analysis parameters
+ * \param nGoodPeaks              number of candiates
+ * \param fPrevFund                   reference fundamental
+ * \return the integer number of the best candidate
  */
 static int GetBestCandidate (SMS_HarmCandidate *pCHarmonic, 
                              SMS_AnalParams *pAnalParams,
@@ -304,11 +315,14 @@ static int GetBestCandidate (SMS_HarmCandidate *pCHarmonic,
 	return (iBestCandidate);
 }
 
-/* find a given harmonic peak from a set of spectral peaks,     
+/*! \brief  main harmonic detection function
+ *
+ * find a given harmonic peak from a set of spectral peaks,     
  * put the frequency of the fundamental in the current frame
- * SMS_AnalFrame *pFrame;              current frame
- * float fRefFundamental;           frequency of previous frame
- * SMS_AnalParams *pAnalParams;          analysis parameters
+ *
+ * \param pFrame                     pointer to current frame
+ * \param fRefFundamental       frequency of previous frame
+ * \param pAnalParams           pointer to analysis parameters
  */
 void sms_harmDetection (SMS_AnalFrame *pFrame, float fRefFundamental,
                     SMS_AnalParams *pAnalParams)

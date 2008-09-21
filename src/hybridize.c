@@ -18,6 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
+/*! \file hybridize.c
+ * \brief todo
+ */
+
 #include "sms.h"
 
 static float *pFWindow1 = NULL, *pFWindow2 = NULL;
@@ -28,15 +32,13 @@ static float *pFMagSpectrum1, *pFMagSpectrum2, *pFPhaseSpectrum1,
 #ifndef ENV_THRESHOLD
 #define ENV_THRESHOLD     .01
 #endif
-/* 
- * initialize static arrays 
- *
- * int sizeWave1        size of waveform 1
- * int sizeWave2        size of waveform 2
- * SMS_HybParams params    parameters for hybridization
- *
- */
 
+/*! \brief initialize static arrays 
+ *
+ * \brief sizeWave1        size of waveform 1
+ * \brief sizeWave2        size of waveform 2
+ * \brief params    parameters for hybridization
+ */
 static int InitializeHybrid (int sizeWave1, int sizeWave2, SMS_HybParams params)
 {
     if ((pFWindow1 = (float *) calloc(sizeWave1, sizeof(float))) == NULL)
@@ -44,8 +46,6 @@ static int InitializeHybrid (int sizeWave1, int sizeWave2, SMS_HybParams params)
     if ((pFWindow2 = (float *) calloc(sizeWave2, sizeof(float))) == NULL)
       return -1;
 
-//    Hamming (sizeWave1, pFWindow1);
-//    Hamming (sizeWave2, pFWindow2);
     sms_getWindow(sizeWave1, pFWindow1, SMS_WIN_HAMMING);
     sms_getWindow(sizeWave2, pFWindow2, SMS_WIN_HAMMING);
     sizeFft1 = (int) pow(2.0,
@@ -78,8 +78,8 @@ static int InitializeHybrid (int sizeWave1, int sizeWave2, SMS_HybParams params)
     return 1;
 }
 
-/* 
- * free buffers
+ 
+/*! \brief free buffers
  */
 int freeBuffers ()
 {
@@ -101,10 +101,8 @@ int freeBuffers ()
 	return 1;
 }
 
-/* 
- *  Compress-Expand a given spectral envelope 
+/*! \brief Compress-Expand a given spectral envelope 
  */
-
 static int CompExp(float *pFEnv, float *pFSpec, float *pFWeight, int sizeSpec)
 {
   float *pFEnd = pFSpec + sizeSpec;		
@@ -241,6 +239,52 @@ void HybridizeMag (float *pIWaveform1, int sizeWave1, float *pIWaveform2,
 }
 
 /*
+ * function to interpolate two arrays, the output is an array in between the
+ *  two input ones
+ *
+ * moved from interpolateArrays.c, because it doesn't seem to be useful
+ * in anything but hybridizing routines.
+ *
+ * float *pFArray1       pointer to first array
+ * int sizeArray1        size of first array
+ * float *pFArray2       pointer to second array
+ * int sizeArray2        size of second array
+ * float *pFArrayOut     pointer to output array
+ * int sizeArrayOut      size of output array
+ * float fInterpFactor   interpolation factor
+ */
+int InterpolateArrays (float *pFArray1, int sizeArray1, float *pFArray2,
+                       int sizeArray2, float *pFArrayOut, int sizeArrayOut,
+                       float fInterpFactor)
+{
+  int i;
+  float *pFArrayOne, *pFArrayTwo;
+
+  if ((pFArrayOne = (float *) calloc (sizeArrayOut, sizeof(float))) 
+       == NULL)
+     return -1;
+  if ((pFArrayTwo = (float *) calloc (sizeArrayOut, sizeof(float))) 
+       == NULL)
+     return -1;
+
+  /* make the two array of sizeArrayOut */
+  sms_spectralApprox (pFArray1, sizeArray1, sizeArray1, pFArrayOne, sizeArrayOut,
+		  sizeArray1);
+  sms_spectralApprox (pFArray2, sizeArray2, sizeArray2, pFArrayTwo, sizeArrayOut,
+		  sizeArray2);
+
+  /* interpolate the two arrays */
+  for (i = 0; i < sizeArrayOut; i++)
+    pFArrayOut[i] = pFArrayOne[i] + fInterpFactor * 
+			(pFArrayTwo[i] - pFArrayOne[i]);
+
+  free (pFArrayOne);
+  free (pFArrayTwo);
+  return 1;
+
+}
+
+/*
  * function to hybridize two waveforms
  *
  * float *pIWaveform1		excitation waveform
@@ -266,10 +310,12 @@ int sms_hybridize (float *pIWaveform1, int sizeWave1, float *pIWaveform2,
 		return (1);
 	}
 	/* compute the two spectra */
-	sms_quickSpectrum (pIWaveform1, pFWindow1, sizeWave1, pFMagSpectrum1, 
-	               pFPhaseSpectrum1, sizeFft1);
-	sms_quickSpectrum (pIWaveform2, pFWindow2, sizeWave2, pFMagSpectrum2, 
-	               pFPhaseSpectrum2, sizeFft2);
+        /*! \todo make seperate fft algorithm, with it's own plan for hybridize method 
+         (this is because there is no SMS_AnalParams here */
+/* 	sms_quickSpectrum (pIWaveform1, pFWindow1, sizeWave1, pFMagSpectrum1,  */
+/* 	               pFPhaseSpectrum1, sizeFft1); */
+/* 	sms_quickSpectrum (pIWaveform2, pFWindow2, sizeWave2, pFMagSpectrum2,  */
+/* 	               pFPhaseSpectrum2, sizeFft2); */
 
 	/* approximate the second spectrum by line segments and obtain a magnitude 
 	 * spectrum of size sizeMag1 */

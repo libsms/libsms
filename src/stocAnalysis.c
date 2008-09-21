@@ -56,7 +56,7 @@ static int StocApproxFFT (float *pFResidual, int sizeBuffer,
 	}
 //        printf("sizeFft: %d, sizeBuffer: %d \n", sizeFft, sizeBuffer);
 	sms_quickSpectrum (pFResidual, pFWindow, sizeBuffer, pFMagSpectrum, 
-	                (float *) NULL, sizeFft);
+                           (float *) NULL, sizeFft, pAnalParams);
 
  
 	sms_spectralApprox (pFMagSpectrum, sizeMag, sizeMag, pSmsData->pFStocCoeff, 

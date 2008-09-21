@@ -18,17 +18,20 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
+/*! \file fixTrajectories.c
+ * \brief functions for making smoothly evolving trajectories (partial frequencies)
+ * 
+ * Tries to fix gaps and short trajectories
+ */
+
 #include "sms.h"
 
-//extern SMS_AnalFrame **ppFrames;
-
-/* function to fill a gap in a given trajectory 
+/*! \brief fill a gap in a given trajectory 
  *
- * int iCurrentFrame;      currrent frame number 
- * int iTraj;              trajectory to be filled
- * int *pIState;           state of trajectories
- * SMS_AnalParams *pAnalParams; analysis parameters
- *
+ * \param iCurrentFrame      currrent frame number 
+ * \param iTraj                      trajectory to be filled
+ * \param pIState                 pointer to the state of trajectories
+ * \param pAnalParams       pointer to analysis parameters
  */
 static void FillGap (int iCurrentFrame, int iTraj, int *pIState, 
                      SMS_AnalParams *pAnalParams)
@@ -41,8 +44,7 @@ static void FillGap (int iCurrentFrame, int iTraj, int *pIState,
 	if(iCurrentFrame - iLastFrame < 0)
 		return;
   
-	/* if firstMag is 0 it means that there is no Gap, just the begining */
-	/*   of a trajectory                                                 */
+	/* if firstMag is 0 it means that there is no Gap, just the begining of a trajectory */
 	if (pAnalParams->ppFrames[iCurrentFrame - 
 	    iLastFrame]->deterministic.pFMagTraj[iTraj] == 0)
 	{
@@ -108,13 +110,14 @@ static void FillGap (int iCurrentFrame, int iTraj, int *pIState,
 }
 
 
-/* function to delete a short trajectory 
+/*! \brief delete a short trajectory 
  *
- * int iCurrentFrame;    current frame
- * int iTraj;            trajectory to be deleted
- * int *pIState;         state of trajectories
- * SMS_AnalParams *pAnalParams; analysis parameters
+ * this function is not exported to sms.h
  *
+ * \param iCurrentFrame    current frame
+ * \param iTraj                    trajectory to be deleted
+ * \param pIState               pointer to the state of trajectories
+ * \param pAnalParams     pointer to analysis parameters
  */
 static void DeleteShortTraj (int iCurrentFrame, int iTraj, int *pIState,
                              SMS_AnalParams *pAnalParams)
@@ -143,13 +146,12 @@ static void DeleteShortTraj (int iCurrentFrame, int iTraj, int *pIState,
 	pIState[iTraj] = -pAnalParams->iMaxSleepingTime;
 }
 
-/* function to fill gaps and delete short trajectories 
+/*! \brief fill gaps and delete short trajectories 
  *
- * int iCurrentFrame;     current frame number
- * SMS_AnalParams *pAnalParams analysis parameters
- *
+ * \param iCurrentFrame     current frame number
+ * \param pAnalParams      pointer to analysis parameters
  */
-int sms_cleanTrajectories (int iCurrentFrame, SMS_AnalParams *pAnalParams)
+void sms_cleanTrajectories (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 {
 	int iTraj, iLength, iFrame;
 	static int *pIState = NULL;
@@ -183,10 +185,13 @@ int sms_cleanTrajectories (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 		}
 		if (pAnalParams->iDebugMode == SMS_DBG_CLEAN_TRAJ || 
 		    pAnalParams->iDebugMode == SMS_DBG_ALL)
+                {
 			fprintf(stdout, "cleanTraj: frame %d to frame %d deleted\n",
 			        pAnalParams->ppFrames[iCurrentFrame-iLength]->iFrameNum, 
 			        pAnalParams->ppFrames[iCurrentFrame-1]->iFrameNum);
-		return (1);
+                }
+
+		return;
 	}
   
 	/* check every partial individually */
@@ -211,17 +216,16 @@ int sms_cleanTrajectories (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 				pIState[iTraj] = (pIState[iTraj]>0) ? -1 : pIState[iTraj]-1;
 		}
 	}
-	return (1);
+	return;
 }
 
-/* scale deterministic magnitude if synthesis is larger than original 
+/*! \brief scale deterministic magnitude if synthesis is larger than original 
  *
- * float *pFSynthBuffer;      synthesis buffer
- * float *pFOriginalBuffer;   original sound
- * float *pFMagTraj;          magnitudes to be scaled
- * int sizeHop;               size of buffer
- * int nTraj;                    number of trajectories
- *
+ * \param pFSynthBuffer      synthesis buffer
+ * \param pFOriginalBuffer   original sound
+ * \param pFMagTraj          magnitudes to be scaled
+ * \param pAnalParams      pointer to analysis parameters
+ * \param nTraj                    number of trajectories
  */
 void  sms_scaleDet (float *pFSynthBuffer, float *pFOriginalBuffer, 
                           float *pFMagTraj, SMS_AnalParams *pAnalParams, int nTraj)

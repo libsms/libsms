@@ -50,8 +50,7 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 
   
 #ifdef FFTW
-
-
+        //printf("\n sms_spectrum sizeWindow: %d", sizeWindow);
 	/* compute window when necessary */
 	if (iOldSizeWindow != sizeWindow) 
         {
@@ -68,9 +67,9 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
         }
 	iOldSizeWindow = sizeWindow;
 
+        /*! \todo why is this memset necessary if the waveform is overwritten below? */
         memset(pAnalParams->pWaveform, 0, sizeFft * sizeof(float));
-        memset(pAnalParams->pSpectrum, 0, (sizeMag + 1) * sizeof(fftwf_complex));
-
+        
 /*         printf(" sizeWindow: %d, iMiddleWindow: %d, sizeFft: %d, sizeMag: %d \n", sizeWindow, iMiddleWindow, */
 /*                sizeFft, sizeMag ); */
 
@@ -107,14 +106,23 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 		if (fReal != 0 || fImag != 0)
 		{
 			pFMagSpectrum[i] = TO_DB (sqrt (fReal * fReal + fImag * fImag));
-			pFPhaseSpectrum[i] = atan2 (-fImag, fReal);
+                        // the phase spectrum is inverted!
+			//pFPhaseSpectrum[i] = atan2 (-fImag, fReal);
+			pFPhaseSpectrum[i] = -atan2 (-fImag, fReal);
 		}
 	}
-        /*rte: DC and Nyquist combine to make pFMagSpectrum[0]? */
+        /*DC and Nyquist  */
         fReal = pAnalParams->pSpectrum[0][0];
         fImag = pAnalParams->pSpectrum[sizeMag][0];
         pFMagSpectrum[0] = TO_DB (sqrt (fReal * fReal + fImag * fImag));
         pFPhaseSpectrum[0] = atan2(-fImag, fReal);
+
+        /****** RTE DEBUG *********/
+/*         printf("\nfftw::::::::::::: \n"); */
+/*         for(i = 0; i < sizeMag; i++) */
+/*                 printf("[%d](%f, %f),  ", i, pFMagSpectrum[i], */
+/*                        pFPhaseSpectrum[i]); */
+        /***************************/
 
 #else /* using realft() */        
 	if (iOldSizeWindow != sizeWindow) 
@@ -155,10 +163,10 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
   
 	/* convert from rectangular to polar coordinates */
 	for (i = 0; i < sizeMag; i++)
-	{
-		it2 = i << 1;
-		fReal = pFBuffer[it2+1];
-		fImag = pFBuffer[it2+2];
+	{ //skips pFBuffer[0] because it is always 0 with realft
+		it2 = i << 1; //even numbers 0-N
+		fReal = pFBuffer[it2+1]; //odd numbers 1->N+1
+		fImag = pFBuffer[it2+2]; //even numbers 2->N+2
       
 		if (fReal != 0 || fImag != 0)
 		{
@@ -166,58 +174,17 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 			pFPhaseSpectrum[i] = atan2 (-fImag, fReal);
 		}
 	}
+        /****** RTE DEBUG *********/
+/*         printf("\nrealft::::::::::::: \n"); */
+/*         for(i = 0; i < sizeMag; i++) */
+/*                 printf("[%d](%f, %f),  ", i, pFMagSpectrum[i], */
+/*                        pFPhaseSpectrum[i]); */
+        /***************************/
 	free (pFBuffer);
 #endif/*FFTW*/
         
 	return (sizeMag);
 }
-
-/* 
- * function to compute a complex spectrum from a waveform 
- * returns the size of the complex spectrum
- *              
- * short *pIWaveform;	   pointer to input waveform
- * float pFWindow;	   pointer to analysis window 
- * int sizeWindow;	   size of analysis window
- * float *pFMagSpectrum;   pointer to output spectrum 
- * float *pFPhaseSpectrum; pointer to output spectrum
- * int sizeFft;		   size of FFT 
- */
-/* int QuickSpectrum (short *pIWaveform, float *pFWindow, int sizeWindow,  */
-/*                    float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft) */
-/* { */
-/* 	int sizeMag = sizeFft >> 1, i, it2; */
-/* 	float *pFBuffer, fReal, fImag; */
-  
-/* 	/\* allocate buffer *\/     */
-/* 	if ((pFBuffer = (float *) calloc(sizeFft+1, sizeof(float))) == NULL) */
-/* 		return -1; */
-    
-/* 	/\* apply window to waveform *\/ */
-/* 	for (i = 0; i < sizeWindow; i++) */
-/* 		pFBuffer[i] =  pFWindow[i] * pIWaveform[i]; */
-  
-/* 	/\* compute real FFT *\/ */
-/* 	realft (pFBuffer-1, sizeMag, 1); */
-  
-/* 	/\* convert from rectangular to polar coordinates *\/ */
-/* 	for (i = 0; i < sizeMag; i++) */
-/* 	{ */
-/* 		it2 = i << 1; */
-/* 		fReal = pFBuffer[it2]; */
-/* 		fImag = pFBuffer[it2+1]; */
-      
-/* 		if (fReal != 0 || fImag != 0) */
-/* 		{ */
-/* 			pFMagSpectrum[i] = sqrt(fReal * fReal + fImag * fImag); */
-/* 			if (pFPhaseSpectrum) */
-/* 				pFPhaseSpectrum[i] = atan2(fImag, fReal); */
-/* 		} */
-/* 	} */
-/* 	free(pFBuffer); */
-  
-/* 	return (sizeMag); */
-/* } */
 
 /* 
  * function to compute a complex spectrum from a waveform 
@@ -231,11 +198,53 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
  * int sizeFft;		   size of FFT 
  */
 int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow, 
-                    float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft)
+                       float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft, SMS_AnalParams *pAnalParams)
 {
-	int sizeMag = sizeFft >> 1, i, it2;
-	float *pFBuffer, fReal, fImag;
+	int sizeMag = sizeFft >> 1, i;
+	float fReal, fImag;
+
+#ifdef FFTW
+        /*! \todo same as todo in sms_spectrum */
+        memset(pAnalParams->pWaveform, 0, sizeFft * sizeof(float));
+        //memset(pAnalParams->pSpectrum, 0, (sizeMag + 1) * sizeof(fftwf_complex));
+        //printf("    sms_quickSpectrum sizeWindow: %d", sizeWindow);
+	/* apply window to waveform */
+        /*! \todo FIX THIS.. it is making a new plan every time this functino is called, no good 
+         ... and still not working right */
+        pAnalParams->fftPlan =  fftwf_plan_dft_r2c_1d( sizeFft, pAnalParams->pWaveform,
+                                                       pAnalParams->pSpectrum, FFTW_ESTIMATE);
+
+
+	for (i = 0; i < sizeWindow; i++)
+                pAnalParams->pWaveform[i] =  pFWindow[i] * pFWaveform[i];
+
+        fftwf_execute(pAnalParams->fftPlan);
+
+	/*convert from rectangular to polar coordinates*/
+	for (i = 1; i < sizeMag; i++)
+	{
+		fReal = pAnalParams->pSpectrum[i][0];
+		fImag = pAnalParams->pSpectrum[i][1];
+      
+		if (fReal != 0 || fImag != 0)
+		{
+			pFMagSpectrum[i] = sqrt (fReal * fReal + fImag * fImag);
+                        /* \todo this should be in another loop, and only checked once */
+			if(pFPhaseSpectrum)
+                                pFPhaseSpectrum[i] = atan2 (fImag, fReal); /*should be negative like above? */
+		}
+	}
+        /*DC and Nyquist  */
+        fReal = pAnalParams->pSpectrum[0][0];
+        fImag = pAnalParams->pSpectrum[sizeMag][0];
+        pFMagSpectrum[0] = sqrt (fReal * fReal + fImag * fImag);
+        if (pFPhaseSpectrum)
+                pFPhaseSpectrum[0] = atan2(fImag, fReal);
+
+#else /* using realft */
   
+        int it2;
+        float *pFBuffer;
 	/* allocate buffer */    
 	if ((pFBuffer = (float *) calloc(sizeFft+1, sizeof(float))) == NULL)
 		return -1;
@@ -262,6 +271,7 @@ int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow,
 		}
 	}
 	free(pFBuffer);
+#endif /* FFTW */
   
 	return (sizeMag);
 }
