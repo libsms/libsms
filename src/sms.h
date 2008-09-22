@@ -21,6 +21,20 @@
 /*! \file sms.h
  * \brief header file to be included in all SMS application
  */
+/*! \mainpage libsms
+ *
+ * libsms in an open source C library that implements SMS techniques for the analysis,
+ * transformation and synthesis of musical sounds based on a sinusoidal plus residual model.
+ * It is derived from the original code of Xavier Serra, as part of his PhD thesis.  You can read
+ * about this and many things related to SMS at the sms homepage:
+ * http://mtg.upf.edu/technologies/sms/
+ *
+ * Since Janurary 2009, the code Serra wrote, originally for NextStep, has undergone changes to make
+ * it useful on modern day platforms.  The goal of this library is to be usable in real-time audio
+ * applications for performing high-fidelity synthesis of sound models. It should work on most 
+ * platforms available, although Linux is the only one tested so far. 
+          - Richard Thomas Eakin
+ */
 #ifndef _SMS_H
 #define _SMS_H
 
@@ -154,7 +168,8 @@ typedef struct
 	int iStatus; /*!< status of frame enumerated by SMS_FRAME_STATUS
                        \see SMS_FRAME_STATUS */
 } SMS_AnalFrame;
-/*! \struct SMS_AnalParams
+
+/*! \struct SMS_Fourier
  * \brief structure for fast fourier transform via FFTW
  *
  */

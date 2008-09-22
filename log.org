@@ -53,8 +53,26 @@ SMS Library Work Log
         - defined in variousFuntions for now, as SmsInit() is always called.
 ** DONE SmsInit() should be a global init before anything
 * Phase 1: Refactoring libsms for usage in real-time and release
-** TODO [#A] - switch to FFTW3f for fft's
-*** TODO Spectrum
+** TODO [#A] Doxygen documentation
+** TODO [#B] convert from short to floating point data
+   - will need this for pd anyway
+   - everything is computed in float point, so why range from 0-16000   then?
+   - [X] temp fix by making a const multiplier SHORT_TO_FLOAT
+** TODO [#C] make example python scripts
+** TODO [#C] make soundfile output format variable
+** TODO [#C] optimizing
+   - [ ] change fabs() to fabsf() if they don't need to be doubles
+   - [ ] same with floorf
+   - [ ] store magnitudes in RMS instead of db
+   - [ ] currently uses random() from stdlib.
+          - could there be a better/faster version?
+          - should the random number be filtered?
+** DONE [#C] move smsMod's stochostic gain adjusting to smsSynth
+   - should stocGain be available for all stoc types?
+** DONE [#B] make sure pFStocGain is always set
+     - zero if no stoc component, 1 if wave, or val if StocSpectrum
+** DONE [#A] - switch to FFTW3f for fft's
+*** DONE Spectrum
     - deterministic seems to be handled correctly.. or is it?
     - not stochastic
        - PeakDetection is producing different results
@@ -69,26 +87,6 @@ SMS Library Work Log
       - 9 samples of zero
       - good samples: 44 ?
       - then, discontinuities (+infinite?) :
-** TODO [#A] Doxygen documentation
-*** TODO main documentation that explains coding trends
-** TODO [#B] convert from short to floating point data
-   - will need this for pd anyway
-   - everything is computed in float point, so why range from 0-16000   then?
-   - [X] temp fix by making a const multiplier SHORT_TO_FLOAT
-** TODO [#B] make sure pFStocGain is always set
-     - zero if no stoc component, 1 if wave, or val if StocSpectrum
-** TODO [#C] make example python scripts
-** TODO [#C] make soundfile output format variable
-** TODO [#C] move smsMod's stochostic gain adjusting to smsSynth
-   - should stocGain be available for all stoc types?
-
-** TODO [#C] optimizing
-   - [ ] change fabs() to fabsf() if they don't need to be doubles
-   - [ ] same with floorf
-   - [ ] store magnitudes in RMS instead of db
-   - [ ] currently uses random() from stdlib.
-          - could there be a better/faster version?
-          - should the random number be filtered?
 ** DONE [#A] switch build scripts to scons
    - [X] get env. exporting/importing fixed
    - [ ] add install/uninstall functionality

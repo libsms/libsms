@@ -209,10 +209,6 @@ int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow,
         //memset(pFourierParams->pSpectrum, 0, (sizeMag + 1) * sizeof(fftwf_complex));
         //printf("    sms_quickSpectrum sizeWindow: %d", sizeWindow);
 	/* apply window to waveform */
-        /*! \todo FIX THIS.. it is making a new plan every time this functino is called, no good 
-         ... and still not working right */
-        pFourierParams->plan =  fftwf_plan_dft_r2c_1d( sizeFft, pFourierParams->pWaveform,
-                                                       pFourierParams->pSpectrum, FFTW_ESTIMATE);
 
 
 	for (i = 0; i < sizeWindow; i++)
@@ -276,7 +272,6 @@ int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow,
 	return (sizeMag);
 }
 
-
 /*
  * function to perform the inverse FFT
  * float *pFMagSpectrum        input magnitude spectrum
@@ -315,7 +310,8 @@ int sms_invQuickSpectrum (float *pFMagSpectrum, float *pFPhaseSpectrum,
 	return (sizeMag);
 }
  
-/*
+/*! \brief function for a quick inverse spectrum, windowed
+ * \todo remove along with realft
  * function to perform the inverse FFT, windowing the output
  * float *pFMagSpectrum        input magnitude spectrum
  * float *pFPhaseSpectrum      input phase spectrum
