@@ -35,7 +35,7 @@ float  *sms_tab_sine, *sms_tab_sinc;
  *
  * Currently, just generating the sine and sinc tables.
  * This is necessary before both analysis and synthesis.
- *
+ * \todo why return something here?
  */
 int sms_init( void )
 {
@@ -56,6 +56,9 @@ void sms_free( void )
         sms_clearSinc();
 
 	if(sms_window_spec) free(sms_window_spec);
+
+        //fftwf_cleanup();
+
 }
 
 /*! \brief initialize analysis data structure's arrays
@@ -128,8 +131,8 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams)
         /* allocate memory for FFT */
 
 #ifdef FFTW
-        pAnalParams->pWaveform = fftwf_malloc(sizeof(float) * SMS_MAX_WINDOW);
-        pAnalParams->pSpectrum = fftwf_malloc(sizeof(fftwf_complex) * (SMS_MAX_WINDOW / 2 + 1));
+        pAnalParams->fftw.pWaveform = fftwf_malloc(sizeof(float) * SMS_MAX_WINDOW);
+        pAnalParams->fftw.pSpectrum = fftwf_malloc(sizeof(fftwf_complex) * (SMS_MAX_WINDOW / 2 + 1));
 #endif
 
 	return (SMS_OK);
@@ -174,20 +177,19 @@ int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
 		(float *) calloc(sizeHop * 2, sizeof(float));
         sms_getWindow( sizeHop * 2, pSynthParams->pFDetWindow, SMS_WIN_IFFT );
 
-
         /* allocate memory for analysis data - size of original hopsize */
 	sms_allocRecord (&pSynthParams->prevFrame, pSmsHeader->nTrajectories, 
-	                   1 + pSmsHeader->nStochasticCoeff, 1,
-                           pSynthParams->origSizeHop, pSmsHeader->iStochasticType);
+                         1 + pSmsHeader->nStochasticCoeff, 1,
+                         pSynthParams->origSizeHop, pSmsHeader->iStochasticType);
 
         /* allocate memory for FFT - big enough for output buffer (new hopsize)*/
         int sizeFft = sizeHop << 1;
 #ifdef FFTW
-        pSynthParams->pSpectrum =  fftwf_malloc(sizeof(fftwf_complex) * (sizeFft / 2 + 1));
-        pSynthParams->pWaveform = fftwf_malloc(sizeof(float) * sizeFft);
-        if((pSynthParams->fftPlan =
-            fftwf_plan_dft_c2r_1d( sizeFft, pSynthParams->pSpectrum,
-                                   pSynthParams->pWaveform, FFTW_ESTIMATE)) == NULL)
+        pSynthParams->fftw.pSpectrum =  fftwf_malloc(sizeof(fftwf_complex) * (sizeFft / 2 + 1));
+        pSynthParams->fftw.pWaveform = fftwf_malloc(sizeof(float) * sizeFft);
+        if((pSynthParams->fftw.plan =
+            fftwf_plan_dft_c2r_1d( sizeFft, pSynthParams->fftw.pSpectrum,
+                                   pSynthParams->fftw.pWaveform, FFTW_ESTIMATE)) == NULL)
         {
                 printf("sms_initSynth: could not make fftw plan \n");
                 return (SMS_FFTWERR);
@@ -224,9 +226,9 @@ void sms_freeAnalysis( SMS_AnalParams *pAnalParams )
         free(pAnalParams->ppFrames);
 
 #ifdef FFTW
-        fftwf_free(pAnalParams->pWaveform);
-        fftwf_free(pAnalParams->pSpectrum);
-        fftwf_destroy_plan(pAnalParams->fftPlan);
+        fftwf_free(pAnalParams->fftw.pWaveform);
+        fftwf_free(pAnalParams->fftw.pSpectrum);
+        fftwf_destroy_plan(pAnalParams->fftw.plan);
 #endif
 }
 
@@ -244,9 +246,9 @@ void sms_freeSynth( SMS_SynthParams *pSynthParams )
         sms_freeRecord(&pSynthParams->prevFrame);
 
 #ifdef FFTW
-        fftwf_free(pSynthParams->pSpectrum);
-        fftwf_free(pSynthParams->pWaveform);
-	fftwf_destroy_plan(pSynthParams->fftPlan);
+        fftwf_free(pSynthParams->fftw.pSpectrum);
+        fftwf_free(pSynthParams->fftw.pWaveform);
+	fftwf_destroy_plan(pSynthParams->fftw.plan);
 #else
         free (pSynthParams->realftOut);
 #endif

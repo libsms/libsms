@@ -1203,6 +1203,7 @@ INCLUDED_BY_GRAPH      = YES
 # So in most cases it will be better to enable call graphs for selected 
 # functions only using the \callgraph command.
 
+# RTE: set to YES for final releases
 CALL_GRAPH             = YES
 
 # If the CALLER_GRAPH, SOURCE_BROWSER and HAVE_DOT tags are set to YES then doxygen will 

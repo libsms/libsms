@@ -57,8 +57,8 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
                 sms_getWindow (sizeWindow, sms_window_spec, pAnalParams->iWindowType);
                 
                 // is this the right size fft?
-                if((pAnalParams->fftPlan =  fftwf_plan_dft_r2c_1d( sizeFft, pAnalParams->pWaveform,
-                                                                   pAnalParams->pSpectrum, FFTW_ESTIMATE)) == NULL)
+                if((pAnalParams->fftw.plan =  fftwf_plan_dft_r2c_1d( sizeFft, pAnalParams->fftw.pWaveform,
+                                                                   pAnalParams->fftw.pSpectrum, FFTW_ESTIMATE)) == NULL)
 
                 {
                         printf("Spectrum: could not make fftw plan of size: %d \n", sizeFft);
@@ -68,7 +68,7 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 	iOldSizeWindow = sizeWindow;
 
         /*! \todo why is this memset necessary if the waveform is overwritten below? */
-        memset(pAnalParams->pWaveform, 0, sizeFft * sizeof(float));
+        memset(pAnalParams->fftw.pWaveform, 0, sizeFft * sizeof(float));
         
 /*         printf(" sizeWindow: %d, iMiddleWindow: %d, sizeFft: %d, sizeMag: %d \n", sizeWindow, iMiddleWindow, */
 /*                sizeFft, sizeMag ); */
@@ -77,31 +77,31 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
         // removed 1 offset when writing windowed waveform
 	iOffset = sizeFft - (iMiddleWindow - 1);
 	for (i=0; i<iMiddleWindow-1; i++)
-		pAnalParams->pWaveform[iOffset + i] =  sms_window_spec[i] * pFWaveform[i];
+		pAnalParams->fftw.pWaveform[iOffset + i] =  sms_window_spec[i] * pFWaveform[i];
 	iOffset = iMiddleWindow - 1;
 	for (i=0; i<iMiddleWindow; i++)
-		pAnalParams->pWaveform[i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i];
+		pAnalParams->fftw.pWaveform[i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i];
 
         /****** RTE DEBUG *********/
 /*         printf("\nBEFORE fftw::::::::::::: \n"); */
 /*         for(i = 0; i < sizeFft; i++) */
-/*                 printf("[%d]%f, ", i, pAnalParams->pWaveform[i]); */
+/*                 printf("[%d]%f, ", i, pAnalParams->fftw.pWaveform[i]); */
         /***************************/
   
-        fftwf_execute(pAnalParams->fftPlan);
+        fftwf_execute(pAnalParams->fftw.plan);
 
         /****** RTE DEBUG *********/
 /*         printf("\nAFTER fftw::::::::::::: \n"); */
 /*         for(i = 0; i < sizeMag+1; i++) */
-/*                 printf("[%d](%f, %f),  ", i, pAnalParams->pSpectrum[i][0], */
-/*                        pAnalParams->pSpectrum[i][1]); */
+/*                 printf("[%d](%f, %f),  ", i, pAnalParams->fftw.pSpectrum[i][0], */
+/*                        pAnalParams->fftw.pSpectrum[i][1]); */
         /***************************/
 
 	/* convert from rectangular to polar coordinates */
 	for (i = 1; i < sizeMag; i++) 
 	{
-		fReal = pAnalParams->pSpectrum[i][0];
-		fImag = pAnalParams->pSpectrum[i][1];
+		fReal = pAnalParams->fftw.pSpectrum[i][0];
+		fImag = pAnalParams->fftw.pSpectrum[i][1];
       
 		if (fReal != 0 || fImag != 0)
 		{
@@ -112,8 +112,8 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 		}
 	}
         /*DC and Nyquist  */
-        fReal = pAnalParams->pSpectrum[0][0];
-        fImag = pAnalParams->pSpectrum[sizeMag][0];
+        fReal = pAnalParams->fftw.pSpectrum[0][0];
+        fImag = pAnalParams->fftw.pSpectrum[sizeMag][0];
         pFMagSpectrum[0] = TO_DB (sqrt (fReal * fReal + fImag * fImag));
         pFPhaseSpectrum[0] = atan2(-fImag, fReal);
 
@@ -198,33 +198,33 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
  * int sizeFft;		   size of FFT 
  */
 int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow, 
-                       float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft, SMS_AnalParams *pAnalParams)
+                       float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft, SMS_Fourier *pFourierParams)
 {
 	int sizeMag = sizeFft >> 1, i;
 	float fReal, fImag;
 
 #ifdef FFTW
         /*! \todo same as todo in sms_spectrum */
-        memset(pAnalParams->pWaveform, 0, sizeFft * sizeof(float));
-        //memset(pAnalParams->pSpectrum, 0, (sizeMag + 1) * sizeof(fftwf_complex));
+        memset(pFourierParams->pWaveform, 0, sizeFft * sizeof(float));
+        //memset(pFourierParams->pSpectrum, 0, (sizeMag + 1) * sizeof(fftwf_complex));
         //printf("    sms_quickSpectrum sizeWindow: %d", sizeWindow);
 	/* apply window to waveform */
         /*! \todo FIX THIS.. it is making a new plan every time this functino is called, no good 
          ... and still not working right */
-        pAnalParams->fftPlan =  fftwf_plan_dft_r2c_1d( sizeFft, pAnalParams->pWaveform,
-                                                       pAnalParams->pSpectrum, FFTW_ESTIMATE);
+        pFourierParams->plan =  fftwf_plan_dft_r2c_1d( sizeFft, pFourierParams->pWaveform,
+                                                       pFourierParams->pSpectrum, FFTW_ESTIMATE);
 
 
 	for (i = 0; i < sizeWindow; i++)
-                pAnalParams->pWaveform[i] =  pFWindow[i] * pFWaveform[i];
+                pFourierParams->pWaveform[i] =  pFWindow[i] * pFWaveform[i];
 
-        fftwf_execute(pAnalParams->fftPlan);
+        fftwf_execute(pFourierParams->plan);
 
 	/*convert from rectangular to polar coordinates*/
 	for (i = 1; i < sizeMag; i++)
 	{
-		fReal = pAnalParams->pSpectrum[i][0];
-		fImag = pAnalParams->pSpectrum[i][1];
+		fReal = pFourierParams->pSpectrum[i][0];
+		fImag = pFourierParams->pSpectrum[i][1];
       
 		if (fReal != 0 || fImag != 0)
 		{
@@ -235,8 +235,8 @@ int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow,
 		}
 	}
         /*DC and Nyquist  */
-        fReal = pAnalParams->pSpectrum[0][0];
-        fImag = pAnalParams->pSpectrum[sizeMag][0];
+        fReal = pFourierParams->pSpectrum[0][0];
+        fImag = pFourierParams->pSpectrum[sizeMag][0];
         pFMagSpectrum[0] = sqrt (fReal * fReal + fImag * fImag);
         if (pFPhaseSpectrum)
                 pFPhaseSpectrum[0] = atan2(fImag, fReal);

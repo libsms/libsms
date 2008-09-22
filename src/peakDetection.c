@@ -18,17 +18,22 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
+/*! \file peakDetection.c
+ * \brief peak detection algorithm and functions
+ */
+
 #include "sms.h"
 
-/* function used for the parabolic interpolation of the spectral peaks
- * it performs the interpolation in a log scale                       
- * stores the location in pFDiffFromMax and returns the peak height 
+/*! \brief function used for the parabolic interpolation of the spectral peaks
  *
- * float fMaxVal;        value of max bin 
- * float fLeftBinVal;    value for left bin
- * float fRightBinVal;   value for right bin
- * float *pFDiffFromMax; location of the tip as the difference from the
- *                         top bin 
+ * it performs the interpolation in a log scale and
+ * stores the location in pFDiffFromMax and
+ *
+ * \param fMaxVal        value of max bin 
+ * \param fLeftBinVal    value for left bin
+ * \param fRightBinVal   value for right bin
+ * \param pFDiffFromMax location of the tip as the difference from the top bin 
+ *  \return the peak height 
  */
 static float PeakInterpolation (float fMaxVal, float fLeftBinVal, 
                                 float fRightBinVal, float *pFDiffFromMax)
@@ -41,15 +46,17 @@ static float PeakInterpolation (float fMaxVal, float fLeftBinVal,
 	                  *pFDiffFromMax));
 }
 
-/* function to detect the next local maximum in the spectrum
- * store the value in pFMaxVal and returns the bin 
- * location of the maximum 
+/*! \brief detect the next local maximum in the spectrum
+ *
+ * stores the value in pFMaxVal 
  *                                      
- * float *pFMagSpectrum;   magnitude spectrum 
- * int iHighBinBound;      highest bin to search
- * int *pICurrentLoc;      current bin location
- * float *pFMaxVal;        value of the maximum found
- */
+ * \param pFMagSpectrum   magnitude spectrum 
+ * \param iHighBinBound      highest bin to search
+ * \param pICurrentLoc      current bin location
+ * \param pFMaxVal        value of the maximum found
+ * \param pAnalParams	        analysis parameters
+ * \return the bin location of the maximum  
+*/
 static int FindNextMax (float *pFMagSpectrum, int iHighBinBound, 
                         int *pICurrentLoc, float *pFMaxVal, 
                         SMS_AnalParams *pAnalParams)
@@ -79,13 +86,15 @@ static int FindNextMax (float *pFMagSpectrum, int iHighBinBound,
 	return(iCurrentBin);
 }
 
-/* function to detect the next spectral peak, returns 1 if found, 0 if not  
+/*! \brief function to detect the next spectral peak 
  *                           
- * float *pFMagSpectrum;    magnitude spectrum 
- * int iHighBinBound;       highest bin to search
- * int *pICurrentLoc;       current bin location
- * float *pFPeakMag;        magnitude value of peak
- * float *pFPeakLoc;        location of peak
+ * \param pFMagSpectrum    magnitude spectrum 
+ * \param iHighBinBound       highest bin to search
+ * \param pICurrentLoc       current bin location
+ * \param pFPeakMag        magnitude value of peak
+ * \param pFPeakLoc        location of peak
+ * \param pAnalParams	        analysis parameters
+ * \return 1 if found, 0 if not  
  */
 static int FindNextPeak (float *pFMagSpectrum, int iHighBinBound, 
                          int *pICurrentLoc, float *pFPeakMag, float *pFPeakLoc,
@@ -116,11 +125,13 @@ static int FindNextPeak (float *pFMagSpectrum, int iHighBinBound,
 	return (0);
 }
 
-/* get the corresponding phase value for a given peak
+/*! \brief get the corresponding phase value for a given peak
+ *
  * performs linear interpolation for a more accurate phase
- *    returns the phase value                             
- * float *pAPhaSpectrum;     phase spectrum
- * float fPeakLoc;           location of peak
+
+ * \param pAPhaSpectrum     phase spectrum
+ * \param fPeakLoc                 location of peak
+ * \return the phase value                             
  */
 static float GetPhaseVal (float *pAPhaSpectrum, float fPeakLoc)
 {
@@ -139,19 +150,20 @@ static float GetPhaseVal (float *pAPhaSpectrum, float fPeakLoc)
 	return (fLeftPha + fFraction * (fRightPha - fLeftPha));
 }
 
-
-/* function to find the prominent spectral peaks on a dB spectrum
- * returns the number of peaks found
+/*! \brief find the prominent spectral peaks
+ * 
+ * uses a dB spectrum
  *
- * float *pFMagSpectrum;     pointer to power spectrum
- * float *pAPhaSpectrum;     pointer to phase spectrum
- * int sizeMag;              size of magnitude spectrum
- * SMS_Peak *pSpectralPeaks;	 pointer to array of peaks
- * int iSamplingRate;      sampling rate of sound
+ * \param pFMagSpectrum     pointer to power spectrum
+ * \param pAPhaSpectrum     pointer to phase spectrum
+ * \param sizeMag              size of magnitude spectrum
+ * \param sizeWindow              size of window
+ * \param pSpectralPeaks	 pointer to array of peaks
+ * \param pAnalParams      analysis parameters
+ * \return the number of peaks found
  */
 int sms_detectPeaks (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag, 
-                   int sizeWindow, SMS_Peak *pSpectralPeaks, 
-                   SMS_AnalParams *pAnalParams)
+                   SMS_Peak *pSpectralPeaks, SMS_AnalParams *pAnalParams)
 {
 	int iPeak = 0;		/* index for spectral search */
 	int sizeFft = sizeMag * 2;

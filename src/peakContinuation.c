@@ -18,22 +18,28 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
+/*! \file peakContinuation.c
+ * \brief peak continuation algorithm and functions
+ */
+
 #include "sms.h"
 
-/* diferent status of guide */
+/*! diferent status of guide */
 #define GUIDE_BEG -2
 #define GUIDE_DEAD -1
 #define GUIDE_ACTIVE 0
 
-#define MAX_CONT_CANDIDATES 5  /* maximum number of peak continuation
+#define MAX_CONT_CANDIDATES 5  /*!< maximum number of peak continuation
                                   candidates */
 
-/* function to get the next closest peak from a guide
- * float fGuideFreq;		guide's frequency
- * float *pFFreqDistance;	distance of last best peak from guide
- * SMS_Peak *pSpectralPeaks;	array of peaks
- * SMS_AnalParams *pAnalParams;	analysis parameters
- * float fFreqDev;		maximum deviation from guide
+/*! \brief function to get the next closest peak from a guide
+ *
+ * \param fGuideFreq		guide's frequency
+ * \param pFFreqDistance	distance of last best peak from guide
+ * \param pSpectralPeaks	array of peaks
+ * \param pAnalParams	        analysis parameters
+ * \param fFreqDev		        maximum deviation from guide
+ * \return peak number or -1 if nothing is good
  */
 static int GetNextClosestPeak (float fGuideFreq, float *pFFreqDistance, 
                                SMS_Peak *pSpectralPeaks, SMS_AnalParams *pAnalParams,
@@ -115,12 +121,12 @@ static int GetNextClosestPeak (float fGuideFreq, float *pFFreqDistance,
 	return (iChosenPeak);
 }	
 
-/* choose the best candidate out of all, returns the peak number of 
- * the best candidate
+/*! \brief choose the best candidate out of all
  *
- * SMS_ContCandidate *pCandidate;  pointer to all the continuation candidates
- * int nCandidates;             number of candidates
- * float fFreqDev;              maximum frequency deviation allowed
+ * \param pCandidate         pointer to all the continuation candidates
+ * \param nCandidates       number of candidates
+ * \param fFreqDev             maximum frequency deviation allowed
+ * \return the peak number of the best candidate
  */
 static int ChooseBestCand (SMS_ContCandidate *pCandidate, int nCandidates, 
                            float fFreqDev)
@@ -160,10 +166,12 @@ static int ChooseBestCand (SMS_ContCandidate *pCandidate, int nCandidates,
 	return(pCandidate[iBestCand].iPeak);
 }
 
-/* check for one guide that has choosen iBestPeak
- * int iBestPeak;		choosen peak for a guide
- * SMS_Guide *pGuides;		array of guides
- * int nGuides;			total number of guides
+/*! \brief check for one guide that has choosen iBestPeak
+ *
+ * \param iBestPeak	choosen peak for a guide
+ * \param pGuides		array of guides
+ * \param nGuides		total number of guides
+ * \return number of guide that chose the peak, or -1 if none
  */
 static int CheckForConflict (int iBestPeak, SMS_Guide *pGuides, int nGuides)
 {
@@ -176,11 +184,13 @@ static int CheckForConflict (int iBestPeak, SMS_Guide *pGuides, int nGuides)
 	return -1;
 }
 
-/* chose the best of the two guides for the conflicting peak 
- * int iConflictingGuide;	conflicting guide number
- * int iGuide;			guide number
- * SMS_Guide *pGuides;		array of guides
- * SMS_Peak *pSpectralPeaks;	array of peaks
+/*! \brief chose the best of the two guides for the conflicting peak 
+ *
+ * \param iConflictingGuide	conflicting guide number
+ * \param iGuide			guide number
+ * \param pGuides		        array of guides
+ * \param pSpectralPeaks	array of peaks
+ * \return number of guide
  */
 static int BestGuide (int iConflictingGuide, int iGuide, SMS_Guide *pGuides,
                       SMS_Peak *pSpectralPeaks)
@@ -197,12 +207,13 @@ static int BestGuide (int iConflictingGuide, int iGuide, SMS_Guide *pGuides,
 		return (iGuide);
 }
 
-/* function to find the best continuation peak for a given guide
- *	returns the peak number
- * SMS_Guide *pGuideVal;		guide attributes
- * SMS_Peak *pSpectralPeaks;	peak values at the current frame
- * SMS_AnalParams *pAnalParams;	analysis parameters
- * float fFreqDev;              frequency deviation allowed
+/*! \brief function to find the best continuation peak for a given guide
+ * \param pGuides		guide attributes
+ * \param iGuide		number of guide
+ * \param pSpectralPeaks	peak values at the current frame
+ * \param pAnalParams	        analysis parameters
+ * \param fFreqDev                  frequency deviation allowed
+ * \return the peak number
  */
 static int GetBestPeak (SMS_Guide *pGuides, int iGuide, SMS_Peak *pSpectralPeaks, 
                         SMS_AnalParams *pAnalParams, float fFreqDev)
@@ -278,9 +289,10 @@ static int GetBestPeak (SMS_Guide *pGuides, int iGuide, SMS_Peak *pSpectralPeaks
 	return (iBestPeak);
 }
 
-/* function to get the next maximum peak
- * SMS_Peak *pSpectralPeaks;	array of peaks
- * float *pFCurrentMax;		last peak maximum
+/*! \brief function to get the next maximum (magnitude) peak
+ * \param pSpectralPeaks	array of peaks
+ * \param pFCurrentMax		last peak maximum
+ * \return the number of the maximum peak
  */
 static int GetNextMax (SMS_Peak *pSpectralPeaks, float *pFCurrentMax)
 {
@@ -304,12 +316,14 @@ static int GetNextMax (SMS_Peak *pSpectralPeaks, float *pFCurrentMax)
 	return (iMaxPeak);
 }
 
-/* function to get a good starting peak for a trajectory
- * int iGuide;      		current guide
- * SMS_Guide *pGuides;  		array of guides
- * int nGuides;			total number of guides
- * SMS_Peak *pSpectralPeaks;	array of peaks
- * float *pFCurrentMax;		current peak maximum
+/*! \brief function to get a good starting peak for a trajectory
+ *
+ * \param iGuide      		current guide
+ * \param pGuides  		array of guides
+ * \param nGuides			total number of guides
+ * \param pSpectralPeaks	array of peaks
+ * \param pFCurrentMax		current peak maximum
+ * \return \todo should this return something?
  */
 static int GetStartingPeak (int iGuide, SMS_Guide *pGuides, int nGuides,
                             SMS_Peak *pSpectralPeaks, float *pFCurrentMax)
@@ -319,6 +333,7 @@ static int GetStartingPeak (int iGuide, SMS_Guide *pGuides, int nGuides,
   
 	while (peakNotFound == 1 && *pFCurrentMax > 0)
 	{
+                /* \todo I don't think this ever returns -1, but check */
 		if ((iPeak = GetNextMax (pSpectralPeaks, pFCurrentMax)) < 0)
 			return (-1);
   
@@ -333,11 +348,13 @@ static int GetStartingPeak (int iGuide, SMS_Guide *pGuides, int nGuides,
 	return (1);
 }
 
-/* function to advance the guides through the next frame
- * the output is the freq., mag., and phase trajectories
+/*! \brief  function to advance the guides through the next frame
  *
- * int iFrame;	 current frame number
- * SMS_AnalParams *pAnalParams; analysis parameters
+ * the output is the frequency, magnitude, and phase trajectories
+ *
+ * \param iFrame	 current frame number
+ * \param pAnalParams analysis parameters
+ * \return error code \see SMS_ERRORS
  */
 int sms_peakContinuation (int iFrame, SMS_AnalParams *pAnalParams)
 {
@@ -350,7 +367,7 @@ int sms_peakContinuation (int iFrame, SMS_AnalParams *pAnalParams)
 	{
 		if ((pGuides = (SMS_Guide *) calloc(pAnalParams->nGuides, sizeof(SMS_Guide))) 
 		   == NULL)
-			return -1;
+			return (SMS_MALLOC);
 		if (pAnalParams->iFormat == SMS_FORMAT_H ||
 		    pAnalParams->iFormat == SMS_FORMAT_HP)
 		for (iGuide = 0; iGuide < pAnalParams->nGuides; iGuide++)
@@ -471,5 +488,5 @@ int sms_peakContinuation (int iFrame, SMS_AnalParams *pAnalParams)
 			pGuides[iGuide].iPeakChosen = -1;
 		}
 	}
-	return 1;
+        return(SMS_OK);
 }

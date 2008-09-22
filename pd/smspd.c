@@ -291,6 +291,7 @@ static void smsbuf_free(t_smsbuf *x)
 
         pd_unbind(&x->x_obj.ob_pd, x->bufname);
 }
+
 void smsbuf_setup(void)
 {
         smsbuf_class = class_new(gensym("smsbuf"), (t_newmethod)smsbuf_new, 

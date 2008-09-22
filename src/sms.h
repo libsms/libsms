@@ -154,6 +154,17 @@ typedef struct
 	int iStatus; /*!< status of frame enumerated by SMS_FRAME_STATUS
                        \see SMS_FRAME_STATUS */
 } SMS_AnalFrame;
+/*! \struct SMS_AnalParams
+ * \brief structure for fast fourier transform via FFTW
+ *
+ */
+typedef struct
+{
+        float *pWaveform; /*!< array of samples */
+        fftwf_complex *pSpectrum; /*!< complex array of spectra */
+        fftwf_plan plan; /*!< plan for FFTW's fourier transform functions, floating point */
+        int flags; /*!< planner flags bitwise OR'ed together */ 
+} SMS_Fourier;
 
 /*! \struct SMS_AnalParams
  * \brief structure with useful information for analysis functions
@@ -201,11 +212,14 @@ typedef struct
         SMS_AnalFrame *pFrames;  /*!< \todo explain why AnalFrame is necessary here */
         SMS_AnalFrame **ppFrames; /*!< \todo explain why this double pointer is necessary */
         float fResidualPercentage; /*!< accumalitive residual percentage */
+// #ifdef FFTW
+//         fftwf_plan  fftPlan; /*!< plan for FFTW's fourier transform functions, floating point */
+//         float *pWaveform; /*< array of samples to be passed to fftwf_execute 
+//                            \todo why isn't the sound buffer above used here, why both? */
+//         fftwf_complex *pSpectrum; /*< complex array of spectra produced by fftwf_execute */
+// #endif
 #ifdef FFTW
-        fftwf_plan  fftPlan; /*!< plan for FFTW's fourier transform functions, floating point */
-        float *pWaveform; /*< array of samples to be passed to fftwf_execute 
-                           \todo why isn't the sound buffer above used here, why both? */
-        fftwf_complex *pSpectrum; /*< complex array of spectra produced by fftwf_execute */
+        SMS_Fourier fftw; /*!< structure of data used by the FFTW library (floating point) */
 #endif
 } SMS_AnalParams;
 
@@ -234,10 +248,13 @@ typedef struct
                                                 \todo explain which window this is */
         float fStocGain;            /*!< gain multiplied to the stachostic component */
         float fTranspose;          /*!< frequency transposing value multiplied by each frequency */
+// #ifdef FFTW
+//         fftwf_plan  fftPlan;         /*!< plan for FFTW's inverse fourier transform functions, floating point */
+//         fftwf_complex *pSpectrum; /*!< complex array of spectra used to create synthesis */
+//         float *pWaveform;       /*!< synthesis samples produced by fftwf_execute */
+// #else
 #ifdef FFTW
-        fftwf_plan  fftPlan;         /*!< plan for FFTW's inverse fourier transform functions, floating point */
-        fftwf_complex *pSpectrum; /*!< complex array of spectra used to create synthesis */
-        float *pWaveform;       /*!< synthesis samples produced by fftwf_execute */
+        SMS_Fourier fftw; /*!< structure of data used by the FFTW library (floating point) */
 #else
         float *realftOut; /*!< RTE_DEBUG : comparing realft and fftw \todo remove this */
 #endif
@@ -535,7 +552,7 @@ void sms_getWindow (int sizeWindow, float *pFWindow, int iWindowType);
 
 int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow, 
                        float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft, 
-                       SMS_AnalParams *pAnalParams);
+                       SMS_Fourier *pFourierParams);
 
 int sms_invQuickSpectrum (float *pFMagSpectrum, float *pFPhaseSpectrum, 
                            int sizeFft, float *pFWaveform, int sizeWave);
@@ -554,8 +571,7 @@ float sms_fundDeviation (SMS_AnalParams *pAnalParams, int iCurrentFrame);
 int sms_reAnalyze (int iCurrentFrame, SMS_AnalParams *pAnalParams);
 
 int sms_detectPeaks (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag, 
-                   int sizeWindow, SMS_Peak *pSpectralPeaks, 
-                   SMS_AnalParams *pAnalParams);
+                   SMS_Peak *pSpectralPeaks, SMS_AnalParams *pAnalParams);
 
 void sms_harmDetection (SMS_AnalFrame *pFrame, float fRefFundamental,
                     SMS_AnalParams *pAnalParams);

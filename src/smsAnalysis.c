@@ -261,7 +261,7 @@ void sms_computeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams,
 	/* find the prominent peaks */
 	pAnalParams->ppFrames[iCurrentFrame]->nPeaks = 
 		sms_detectPeaks (pFMagSpectrum, pFPhaSpectrum, sizeMag, 
-		               pAnalParams->ppFrames[iCurrentFrame]->iFrameSize,
+                                 //     pAnalParams->ppFrames[iCurrentFrame]->iFrameSize,
 		               pAnalParams->ppFrames[iCurrentFrame]->pSpectralPeaks,
 		               pAnalParams);
 

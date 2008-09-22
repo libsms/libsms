@@ -3,8 +3,7 @@ SMS Library Work Log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 * Present Issues (todonow)
 ** [#A] in smspd externals, crashes when entire patch is closed (deallocation problem)
-** [#A] try to seperate pd external source files
-      - try with glob pointer
+** TODO add SMS-OLD to svn/tags
 ** [#B] plot stochastic coefficients at different rates to see if they are the same for diff sr
 ** [#B] ways to fix the stoc_ big crunch in the beginning:
 *** something to do with sin/sinc tables or SinePhasSynth?
@@ -71,6 +70,7 @@ SMS Library Work Log
       - good samples: 44 ?
       - then, discontinuities (+infinite?) :
 ** TODO [#A] Doxygen documentation
+*** TODO main documentation that explains coding trends
 ** TODO [#B] convert from short to floating point data
    - will need this for pd anyway
    - everything is computed in float point, so why range from 0-16000   then?

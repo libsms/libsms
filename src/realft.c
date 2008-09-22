@@ -76,7 +76,7 @@ void realft(float *data, int n, int isign)
 	float c1=0.5,c2,h1r,h1i,h2r,h2i;
 	double wr,wi,wpr,wpi,wtemp,theta;
 
-/*         printf("HI!  "); */
+        //printf("HI!  ");
 
 	theta=3.141592653589793/(double) n;
 	if (isign == 1) {

@@ -43,8 +43,8 @@ static int SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
 #ifdef FFTW
 
         // fftw buffers need to memset after the first frame
-        memset (pSynthParams->pSpectrum, 0, (sizeMag + 1) * sizeof(fftwf_complex));
-//        memset (pSynthParams->pWaveform, 0, sizeFft * sizeof(float));
+        memset (pSynthParams->fftw.pSpectrum, 0, (sizeMag + 1) * sizeof(fftwf_complex));
+//        memset (pSynthParams->fftw.pWaveform, 0, sizeFft * sizeof(float));
 
         for (i = 0; i < nTraj; i++)
         {
@@ -73,30 +73,30 @@ static int SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                                 fNewMag = fMag * sms_sinc (fIndex);
                                 if (l > 0 && l < sizeMag)
                                 {
-                                        pSynthParams->pSpectrum[l][0] += fNewMag * fCos;
-                                        pSynthParams->pSpectrum[l][1] += fNewMag * fSin;
+                                        pSynthParams->fftw.pSpectrum[l][0] += fNewMag * fCos;
+                                        pSynthParams->fftw.pSpectrum[l][1] += fNewMag * fSin;
                                 }
                                 else if (l == 0) /* DC component - purely real*/
                                 {
-                                        /*pSynthParams->pSpectrum[l][1] += 2 * fNewMag * fSin;*/
-                                        pSynthParams->pSpectrum[l][0] += 2 * fNewMag * fCos;
+                                        /*pSynthParams->fftw.pSpectrum[l][1] += 2 * fNewMag * fSin;*/
+                                        pSynthParams->fftw.pSpectrum[l][0] += 2 * fNewMag * fCos;
                                 }
                                 else if (l < 0)
                                 {
                                         b = abs(l);
-                                        pSynthParams->pSpectrum[b][0] -= fNewMag * fCos; /* minus? */
-                                        pSynthParams->pSpectrum[b][1] += fNewMag * fSin;
+                                        pSynthParams->fftw.pSpectrum[b][0] -= fNewMag * fCos; /* minus? */
+                                        pSynthParams->fftw.pSpectrum[b][1] += fNewMag * fSin;
                                 }
                                 else if (l > sizeMag)
                                 {
                                         b = sizeMag - (l - sizeMag);
-                                        pSynthParams->pSpectrum[b][0] -= fNewMag * fCos; /* minus again..? */
-                                        pSynthParams->pSpectrum[b][1] += fNewMag * fSin;
+                                        pSynthParams->fftw.pSpectrum[b][0] -= fNewMag * fCos; /* minus again..? */
+                                        pSynthParams->fftw.pSpectrum[b][1] += fNewMag * fSin;
                                 }
                                 else if (l == sizeMag) /* Nyquist Component - purely real*/
                                 {
-                                        /*pSynthParams->pSpectrum[l][1] += 2 * fNewMag * fSin;*/
-                                        pSynthParams->pSpectrum[l][0] += 2 * fNewMag * fCos;
+                                        /*pSynthParams->fftw.pSpectrum[l][1] += 2 * fNewMag * fSin;*/
+                                        pSynthParams->fftw.pSpectrum[l][0] += 2 * fNewMag * fCos;
                                 }
                         }
                 }
@@ -105,12 +105,12 @@ static int SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                 pSynthParams->prevFrame.pFFreqTraj[i] = fFreq;
         }
 
-        fftwf_execute(pSynthParams->fftPlan);
+        fftwf_execute(pSynthParams->fftw.plan);
 
         for(i = 0, k = sizeMag; i < sizeMag; i++, k++)
-                pFBuffer[i] += pSynthParams->pWaveform[k] * pSynthParams->pFDetWindow[i] * 0.5;
+                pFBuffer[i] += pSynthParams->fftw.pWaveform[k] * pSynthParams->pFDetWindow[i] * 0.5;
         for(i= sizeMag, k = 0; i < sizeFft; i++, k++)
-                pFBuffer[i] +=  pSynthParams->pWaveform[k] * pSynthParams->pFDetWindow[i] * 0.5;
+                pFBuffer[i] +=  pSynthParams->fftw.pWaveform[k] * pSynthParams->pFDetWindow[i] * 0.5;
 
 #else //using realft
 
@@ -223,27 +223,27 @@ static int StocSynthApprox (SMS_Data *pSmsData, float *pFBuffer,
                 pFPhaseSpectrum[i] =  TWO_PI * ((random() - HALF_MAX) * one_over_half_max);
 
 #ifdef FFTW
-        memset (pSynthParams->pSpectrum, 0, (sizeSpec2 + 1) * sizeof(fftwf_complex));
+        memset (pSynthParams->fftw.pSpectrum, 0, (sizeSpec2 + 1) * sizeof(fftwf_complex));
 
         float fPower;
         /* covert from polar to complex */
-        pSynthParams->pSpectrum[0][0] = pFMagSpectrum[0] * cos (pFPhaseSpectrum[0]);
+        pSynthParams->fftw.pSpectrum[0][0] = pFMagSpectrum[0] * cos (pFPhaseSpectrum[0]);
 //      Nyquist component isn't generated above..
-//        pSynthParams->pSpectrum[sizeSpec2][0] = 
+//        pSynthParams->fftw.pSpectrum[sizeSpec2][0] = 
 //                pFmagSpectrum[sizeSpec2] * cos (pFPhaseSpectrum[sizeSpec20]);
      
         for (i = 1; i< sizeSpec2; i++)
 	{
 		fPower = pFMagSpectrum[i];
-		pSynthParams->pSpectrum[i][0] =  fPower * cos (pFPhaseSpectrum[i]);   //real
-		pSynthParams->pSpectrum[i][1] = fPower * sin (pFPhaseSpectrum[i]); //imaginary
+		pSynthParams->fftw.pSpectrum[i][0] =  fPower * cos (pFPhaseSpectrum[i]);   //real
+		pSynthParams->fftw.pSpectrum[i][1] = fPower * sin (pFPhaseSpectrum[i]); //imaginary
 	}    
 
-        fftwf_execute(pSynthParams->fftPlan);
+        fftwf_execute(pSynthParams->fftw.plan);
 
         /*! \todo why muliploed by .25? */
 	for (i = 0; i < sizeFft; i++)
-		pFBuffer[i] +=  pSynthParams->pWaveform[i] 
+		pFBuffer[i] +=  pSynthParams->fftw.pWaveform[i] 
                         * pSynthParams->pFStocWindow[i] * 0.25 * pSynthParams->fStocGain; //.5;
  
 #else        
