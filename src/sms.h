@@ -515,9 +515,13 @@ extern float *sms_window_spec;
 #define PI_2 1.57079632679489661923        /*< pi / 2 */
 #define HALF_MAX 1073741823.5  /*!< half the max of a 32-bit word */
 #define LOG2 0.69314718 /*!< \todo write this in mathematical terms */
+#define LOG10 2.302585092994
 
-#define TO_DB(x)    	((x > SMS_MIN_MAG) ? 20 * log10(x/SMS_MIN_MAG) : 0)
-#define TO_MAG(x)     ((x <= 0) ? 0 : SMS_MIN_MAG * pow(10.0, x/20.0))
+// #define TO_DB(x)    	((x > SMS_MIN_MAG) ? 20 * log10(x/SMS_MIN_MAG) : 0)
+// #define TO_MAG(x)     ((x <= 0) ? 0 : SMS_MIN_MAG * pow(10.0, x/20.0))
+float TO_DB(float x);
+
+float TO_MAG(float x);
 
 #define TEMPERED_TO_FREQ( x ) (powf(1.0594630943592953, x)) /*!< \todo doc */
 
@@ -535,7 +539,7 @@ extern float *sms_window_spec;
 /*! \} */
 
 /* function declarations */ 
-int sms_analyze (short *pSWaveform, long sizeNewData, SMS_Data *pSmsRecord,
+int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsRecord,
                  SMS_AnalParams *pAnalParams, int *pINextSizeRead);
 
 int sms_init( void );  
@@ -552,7 +556,7 @@ void sms_freeAnalysis (SMS_AnalParams *pAnalParams);
 
 void sms_freeSynth( SMS_SynthParams *pSynthParams );
 
-void sms_fillSndBuffer (short *pSWaveform, long sizeNewData, SMS_AnalParams *pAnalParams);
+void sms_fillSndBuffer (float *pWaveform, long sizeNewData, SMS_AnalParams *pAnalParams);
 
 int sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
                       int sizeWindow);
@@ -669,7 +673,7 @@ int sms_interpolateRecords (SMS_Data *pSmsRecord1, SMS_Data *pSmsRecord2,
 
 int sms_openSF (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader);
 
-int sms_getSound (SMS_SndHeader *pSoundHeader, short *pSoundData, long sizeSound,
+int sms_getSound (SMS_SndHeader *pSoundHeader, float *pSoundData, long sizeSound,
                   long offset);
 
 int sms_createSF (SMS_SynthParams synthParams, char *pChOutputSoundFile);

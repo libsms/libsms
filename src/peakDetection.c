@@ -157,7 +157,6 @@ static float GetPhaseVal (float *pAPhaSpectrum, float fPeakLoc)
  * \param pFMagSpectrum     pointer to power spectrum
  * \param pAPhaSpectrum     pointer to phase spectrum
  * \param sizeMag              size of magnitude spectrum
- * \param sizeWindow              size of window
  * \param pSpectralPeaks	 pointer to array of peaks
  * \param pAnalParams      analysis parameters
  * \return the number of peaks found

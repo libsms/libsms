@@ -61,11 +61,11 @@ int sms_openSF (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader)
 /* get a chunk of sound from input file 
  *
  * SMS_SndHeader *pSoundHeader;       sound header information
- * short *pSoundData;             buffer for samples read
+ * float *pSoundData;             buffer for samples read
  * short sizeSound;               number of samples read
  *
  */
-int sms_getSound (SMS_SndHeader *pSoundHeader, short *pSoundData, long sizeSound,
+int sms_getSound (SMS_SndHeader *pSoundHeader, float *pSoundData, long sizeSound,
                   long offset) 
 {
 	long nSamples;
@@ -76,14 +76,28 @@ int sms_getSound (SMS_SndHeader *pSoundHeader, short *pSoundData, long sizeSound
 		         offset);
 		return (-1);
 	}
-	if ((nSamples = (long) sf_readf_short( pSNDStream, pSoundData, sizeSound ))
+	if ((nSamples = (long) sf_readf_float( pSNDStream, pSoundData, sizeSound ))
 	    != sizeSound)
 	{
 	    fprintf (stderr,"sms_getSound: could not read %ld samples, it read %ld\n", 
 			 sizeSound, nSamples);
 	    return (-1);
 	}
+/*         ///// RTE DEBUG */
+/*         int i; */
+/*         static float max = 0.; */
         
+/*         //printf("\nsms_getSound: size %d \n", (int) sizeSound); */
+/*         for( i = 0; i < (int) sizeSound; i++) */
+/*         { */
+/*                 //printf("[%d] %f, ", i, pSoundData[i]); */
+/*                 if(pSoundData[i] < max) */
+/*                 { */
+/*                         max = pSoundData[i]; */
+/*                         printf("\n New Min: %f", max); */
+/*                 } */
+/*         }  */
+/*         ///////////////////////////////// */
 	return (1);
 }
 
@@ -189,13 +203,12 @@ int sms_writeResSF ()
 
 /* fill the sound buffer
  *
- * short *pSWaveform           input data
+ * float *pWaveform           input data
  * int sizeNewData             size of input data
  * int sizeHop                 analysis hop size
  */
-void sms_fillSndBuffer (short *pSWaveform, long sizeNewData, SMS_AnalParams *pAnalParams)
+void sms_fillSndBuffer (float *pWaveform, long sizeNewData, SMS_AnalParams *pAnalParams)
 {
-//	extern SMS_SndBuffer soundBuffer;
 	int i;
   
 	/* leave space for new data */
@@ -210,10 +223,25 @@ void sms_fillSndBuffer (short *pSWaveform, long sizeNewData, SMS_AnalParams *pAn
 	if (pAnalParams->iAnalysisDirection == SMS_DIR_REV)
 		for (i=0; i<sizeNewData; i++)
 			pAnalParams->soundBuffer.pFBuffer[pAnalParams->soundBuffer.sizeBuffer - sizeNewData + i] = 
-				sms_preEmphasis((float) pSWaveform[sizeNewData - (1+ i)]);
+				sms_preEmphasis( pWaveform[sizeNewData - (1+ i)]);
 	else
 		for (i=0; i<sizeNewData; i++)
 			pAnalParams->soundBuffer.pFBuffer[pAnalParams->soundBuffer.sizeBuffer - sizeNewData + i] = 
-				sms_preEmphasis((float) pSWaveform[i]);
+				sms_preEmphasis(pWaveform[i]);
+/*         ///// RTE DEBUG */
+/*         static float max = 0.; */
+        
+/*         //printf("\nsms_getSound: size %d \n", (int) sizeSound); */
+/*         for( i = 0; i < (int) sizeNewData; i++) */
+/*         { */
+/*                 //printf("[%d] %f, ", i, pSoundData[i]); */
+/*                 if(pAnalParams->soundBuffer.pFBuffer[i] < max) */
+/*                 { */
+/*                         max = pAnalParams->soundBuffer.pFBuffer[i]; */
+/*                         printf("\n New Min: %f", max); */
+/*                 } */
+/*         }  */
+/*         ///////////////////////////////// */
+
 }
 

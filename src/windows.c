@@ -93,20 +93,31 @@ void BlackmanHarris70 (int sizeWindow, float *pFWindow)
 	/* for 3 term -70.83 */
 	float a0 = .42323, a1 = .49755, a2 = .07922;
 	double fConst = TWO_PI / sizeWindow;
+
+// RTE DEBUG ///////////////////////////////////////
+        FILE *dd;
+        dd = fopen("debug.txt", "w");
+        static float max = 0.;
   
 	/* compute window */
 	for(i = 0; i < sizeWindow; i++) 
 	{
 		fSum += pFWindow[i] = a0 - a1 * cos(fConst * i) +
 			a2 * cos(fConst * 2 * i);
+                fprintf(dd, "%f ", pFWindow[i]);
 	}
 
-	/* I do not know why I now need this factor of two */
-	fSum = fSum / 2;
+        fclose(dd);
+
+
+/* 	/\* I do not know why I now need this factor of two *\/ */
+/* 	fSum = fSum / 2; */
   
-	/* scale function */
-	for (i = 0; i < sizeWindow; i++)
-		pFWindow[i] = pFWindow[i] / fSum;
+/* 	/\* scale function *\/ */
+/* 	for (i = 0; i < sizeWindow; i++) */
+/*         { */
+/* 		pFWindow[i] = pFWindow[i] / fSum; */
+/*         } */
 }
 
 /* function to create a backmanHarris window

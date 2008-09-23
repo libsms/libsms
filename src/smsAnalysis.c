@@ -27,17 +27,15 @@
  *
  * The input is a section of the sound, the output is the SMS data
  *
- * @param pSWaveform	     pointer to input waveform data
+ * @param pWaveform	     pointer to input waveform data
  * @param sizeNewData	     the size of input data
  * @param pSmsData          pointer to output SMS data
  * @param pAnalParams   pointer to analysis parameters
  * @param pINextSizeRead size of next data to read
  */
-int sms_analyze (short *pSWaveform, long sizeNewData, SMS_Data *pSmsData, 
+int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData, 
                  SMS_AnalParams *pAnalParams, int *pINextSizeRead)
 {    
-
-//        SMS_SndBuffer *pSynthBuf = &analParams.synthBuffer;
 	static int sizeWindow = 0;      /* size of current analysis window */ //RTE ?: shouldn't this just be initilalized outside?
 
 	int iCurrentFrame = pAnalParams->iMaxDelayFrames - 1;  /* frame # of current frame */
@@ -54,7 +52,7 @@ int sms_analyze (short *pSWaveform, long sizeNewData, SMS_Data *pSmsData,
   
 	/* fill the input sound buffer and perform pre-emphasis */
 	if (sizeNewData > 0)
-		sms_fillSndBuffer (pSWaveform, sizeNewData, pAnalParams);
+		sms_fillSndBuffer (pWaveform, sizeNewData, pAnalParams);
     
 	/* move analysis data one frame back */
 	//MoveFrames (pAnalParams);
@@ -241,9 +239,6 @@ int sms_analyze (short *pSWaveform, long sizeNewData, SMS_Data *pSmsData,
 void sms_computeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
                    float fRefFundamental)
 {
-//	extern SMS_SndBuffer soundBuffer;
-//	extern SMS_AnalFrame **ppFrames;
-
 	static float pFMagSpectrum[SMS_MAX_SPEC];
 	static float pFPhaSpectrum[SMS_MAX_SPEC];
 	int sizeMag, i;

@@ -480,3 +480,25 @@ void sms_writeDebugFile ()
 {
 	fclose (pDebug);
 }
+
+float TO_DB( float x)
+{
+    if (x <= 0) return (0);
+    else
+    {
+        float val = 100 + 20./LOG10 * log(x);
+        return (val < 0 ? 0 : val);
+    }
+}
+
+float TO_MAG( float x)
+{
+    if (x <= 0)
+        return(0);
+    else
+    {
+        if (x > 485)
+            x = 485;
+    }
+    return (exp((LOG10 * 0.05) * (x-100.)));
+}
