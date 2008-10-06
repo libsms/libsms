@@ -19,7 +19,7 @@
  * 
  */
 /*! \file hybridize.c
- * \brief todo
+ * \brief not yet functional... todo after original release
  */
 
 #include "sms.h"
@@ -79,7 +79,7 @@ static int InitializeHybrid (int sizeWave1, int sizeWave2, SMS_HybParams params)
 }
 
  
-/*! \brief free buffers
+/* free buffers
  */
 int freeBuffers ()
 {
@@ -101,7 +101,7 @@ int freeBuffers ()
 	return 1;
 }
 
-/*! \brief Compress-Expand a given spectral envelope 
+/*Compress-Expand a given spectral envelope 
  */
 static int CompExp(float *pFEnv, float *pFSpec, float *pFWeight, int sizeSpec)
 {
@@ -123,8 +123,7 @@ static int CompExp(float *pFEnv, float *pFSpec, float *pFWeight, int sizeSpec)
 }
 
 
-/*
- * filter each magnitude in a spectrum by the surounding magnitudes 
+/* filter each magnitude in a spectrum by the surounding magnitudes 
  */ 
 static int FilterMagEnv (float *pFMagEnv, float *pFMagEnvFilt, int sizeMag)
 {
@@ -137,10 +136,9 @@ static int FilterMagEnv (float *pFMagEnv, float *pFMagEnvFilt, int sizeMag)
   return 1;
 }
 
-/* 
- * multiply spectral envelope of one sound with magnitude spectrum of the other 
+/* multiply spectral envelope of one sound with magnitude spectrum of the other 
  *
- * float *pFMagEnv		envelope from hybridizing sound
+ * pFMagEnv		envelope from hybridizing sound
  * float *pFMagSpectrum		magnitude spectrum of excitation sound
  * int sizeMag			size of magnitude spectrum
  * SMS_HybParams params		control parameters

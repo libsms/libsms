@@ -255,6 +255,6 @@ void  sms_scaleDet (float *pFSynthBuffer, float *pFOriginalBuffer,
 		for (iTraj = 0; iTraj < nTraj; iTraj++)
 			if (pFMagTraj[iTraj] > 0)
 				pFMagTraj[iTraj] = 
-					TO_DB (TO_MAG (pFMagTraj[iTraj]) * fCosScaleFactor);
+					sms_magToDB (sms_dBToMag (pFMagTraj[iTraj]) * fCosScaleFactor);
 	}
 }

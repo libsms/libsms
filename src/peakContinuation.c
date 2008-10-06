@@ -296,7 +296,9 @@ static int GetBestPeak (SMS_Guide *pGuides, int iGuide, SMS_Peak *pSpectralPeaks
  */
 static int GetNextMax (SMS_Peak *pSpectralPeaks, float *pFCurrentMax)
 {
-	float fPeakMag, fMaxMag = SMS_MIN_MAG;
+	float fPeakMag;
+//        float fMaxMag = SMS_MIN_MAG;
+        float fMaxMag = 0.;
 	int iPeak, iMaxPeak = -1;
   
 	for (iPeak = 0; iPeak < SMS_MAX_NPEAKS; iPeak++)

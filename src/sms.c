@@ -24,7 +24,6 @@
 
 #include "sms.h"
 
-
 char *pChDebugFile = "debug.txt"; /*!< debug text file */
 FILE *pDebug; /*!< pointer to debug file */
 
@@ -39,8 +38,17 @@ float  *sms_tab_sine, *sms_tab_sinc;
  */
 int sms_init( void )
 {
-	if (sms_tab_sine == NULL) sms_prepSine (2046); //try 4096
-	if (sms_tab_sinc == NULL) sms_prepSinc (4096);
+	if (sms_tab_sine == NULL)
+        {
+                sms_prepSine (2046); //try 4096
+                sms_prepSinc (4096);
+
+#ifdef FFTW
+        printf("libsms: using FFTW routines\n");
+#else
+        printf("libsms: using realft routines\n");
+#endif
+        }
 
         return (1);
 }
@@ -80,7 +88,7 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams)
 	int i;
 
         sms_allocRecord (&pAnalParams->prevFrame, pAnalParams->nGuides, 
-                           pAnalParams->nStochasticCoeff, 1, pAnalParams->sizeHop, pAnalParams->iStochasticType);
+                           pAnalParams->nStochasticCoeff, 1, pAnalParams->iStochasticType);
   
 	/* sound buffer */
 	if ((pSoundBuf->pFBuffer = (float *) calloc(sizeBuffer, sizeof(float)))
@@ -131,6 +139,7 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams)
         /* allocate memory for FFT */
 
 #ifdef FFTW
+/*         pAnalParams->fftw.pWaveform = fftwf_malloc(sizeof(float) * 2*(SMS_MAX_WINDOW/2 + 1)); */
         pAnalParams->fftw.pWaveform = fftwf_malloc(sizeof(float) * SMS_MAX_WINDOW);
         pAnalParams->fftw.pSpectrum = fftwf_malloc(sizeof(fftwf_complex) * (SMS_MAX_WINDOW / 2 + 1));
 #endif
@@ -179,19 +188,28 @@ int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
 
         /* allocate memory for analysis data - size of original hopsize */
 	sms_allocRecord (&pSynthParams->prevFrame, pSmsHeader->nTrajectories, 
-                         1 + pSmsHeader->nStochasticCoeff, 1,
-                         pSynthParams->origSizeHop, pSmsHeader->iStochasticType);
+                         1 + pSmsHeader->nStochasticCoeff, 1, pSmsHeader->iStochasticType);
 
         /* allocate memory for FFT - big enough for output buffer (new hopsize)*/
         int sizeFft = sizeHop << 1;
 #ifdef FFTW
-        pSynthParams->fftw.pSpectrum =  fftwf_malloc(sizeof(fftwf_complex) * (sizeFft / 2 + 1));
-        pSynthParams->fftw.pWaveform = fftwf_malloc(sizeof(float) * sizeFft);
+        if((pSynthParams->fftw.pSpectrum =  fftwf_malloc(sizeof(fftwf_complex) * (sizeFft / 2 + 1)))
+           == NULL)
+        {
+                printf("\n sms_initSynth: could not allocate spectrum array for fftw \n");
+                return (SMS_FFTWERR);
+        }
+        if((pSynthParams->fftw.pWaveform = fftwf_malloc(sizeof(float) * sizeFft))
+           == NULL)
+        {
+                printf("\n sms_initSynth: could not allocate waveform array for fftw \n");
+                return (SMS_FFTWERR);
+        }
         if((pSynthParams->fftw.plan =
             fftwf_plan_dft_c2r_1d( sizeFft, pSynthParams->fftw.pSpectrum,
                                    pSynthParams->fftw.pWaveform, FFTW_ESTIMATE)) == NULL)
         {
-                printf("sms_initSynth: could not make fftw plan \n");
+                printf("\n sms_initSynth: could not make fftw plan \n");
                 return (SMS_FFTWERR);
         }
 #else        
@@ -199,7 +217,7 @@ int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
         pSynthParams->realftOut = (float *) calloc(sizeFft+1, sizeof(float));
 #endif
 
-        return 0;
+        return (SMS_OK);
 }
 
 /*! \brief free analysis data
@@ -237,18 +255,21 @@ void sms_freeAnalysis( SMS_AnalParams *pAnalParams )
  * frees all the memory allocated to an SMS_SynthParams by
  * sms_initSynthesis
  *
+ * \todo is there a way to make sure the plan has been made
+ * already? as it is, it crashes if this is called without one
  * \param pSynthParams    pointer to synthesis data structure
  */
 void sms_freeSynth( SMS_SynthParams *pSynthParams )
 {
+        //printf("\n sms_freeSynth \n");
         free(pSynthParams->pFStocWindow);        
         free(pSynthParams->pFDetWindow);
         sms_freeRecord(&pSynthParams->prevFrame);
 
 #ifdef FFTW
+        fftwf_destroy_plan(pSynthParams->fftw.plan);
         fftwf_free(pSynthParams->fftw.pSpectrum);
         fftwf_free(pSynthParams->fftw.pWaveform);
-	fftwf_destroy_plan(pSynthParams->fftw.plan);
 #else
         free (pSynthParams->realftOut);
 #endif
@@ -314,6 +335,7 @@ void sms_initAnalParams (SMS_AnalParams *pAnalParams)
  * \param iCurrentFrame            frame number of current frame in buffer
  * \param pAnalParams             analysis parameters
  * \param sizeWindow               size of analysis window 
+ * \return -1 on error
  */
 int sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
                       int sizeWindow)
@@ -348,7 +370,7 @@ int sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams,
 	if (pAnalParams->soundBuffer.iMarker >
 	         pAnalParams->ppFrames[iCurrentFrame]->iFrameSample - (sizeWindow+1)/2)
 	{
-		fprintf(stderr, "sms_initFrame error: runoff on the sound buffer\n");
+		printf("sms_initFrame error: runoff on the sound buffer\n");
 		return(-1);
 	} 
 
@@ -481,7 +503,12 @@ void sms_writeDebugFile ()
 	fclose (pDebug);
 }
 
-float TO_DB( float x)
+/*! \brief convert from magnitude to decibel
+ *
+ * \param x      magnitude (0-1)
+ * \return         decibel (0-100)
+ */
+float sms_magToDB( float x)
 {
     if (x <= 0) return (0);
     else
@@ -491,7 +518,12 @@ float TO_DB( float x)
     }
 }
 
-float TO_MAG( float x)
+/*! \brief convert from decibel to magnitude
+ *
+ * \param x     decibel (0-100)
+ * \return        magnitude (0-1)
+ */
+float sms_dBToMag( float x)
 {
     if (x <= 0)
         return(0);
@@ -501,4 +533,29 @@ float TO_MAG( float x)
             x = 485;
     }
     return (exp((LOG10 * 0.05) * (x-100.)));
+}
+
+/*! \brief get a string containing information about the error code 
+ *
+ * \param iError error code \see SMS_ERRORS
+ * \return  pointer to a char string
+ */
+const char* sms_errorString(int iError)
+{
+        switch(iError)
+        {
+        case SMS_NOPEN: return ("cannot open input file");
+                break;
+        case SMS_NSMS: return ("input file not an SMS file");
+                break;
+        case SMS_MALLOC: return ("cannot allocate memory for input file");
+                break;
+        case SMS_RDERR: return ("read error in input file");
+                break;
+        case SMS_WRERR: return ("cannot write output file");
+                break;
+        case SMS_SNDERR: return ("problem with libsndfile");
+                break;
+        default: return ("error undefined"); 
+        }
 }

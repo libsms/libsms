@@ -18,21 +18,25 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
+/*! \file spectrum.c
+ * \brief functions to convert between frequency (spectrum) and time (wavefrom) domain
+ */
 #include "sms.h"
 
 /*! \brief overlap factor, or the number of analysis windows that fit in one FFT */
 #define SMS_OVERLAP_FACTOR 2  
 
+/*! \brief pointer to the window array for sms_spectrum */
 float *sms_window_spec;
 
-/* 
- * function to compute a complex spectrum from a waveform 
- * returns the size of the complex spectrum
+/*! \brief compute a complex spectrum from a waveform 
  *              
- * float *pFWaveform;	   pointer to input waveform 
- * int sizeWindow;	           size of analysis window
- * float *pFMagSpectrum;   pointer to output magnitude spectrum 
- * float *pFPhaseSpectrum; pointer to output phase spectrum 
+ * \param pFWaveform	           pointer to input waveform 
+ * \param sizeWindow	           size of analysis window
+ * \param pFMagSpectrum        pointer to output magnitude spectrum 
+ * \param pFPhaseSpectrum     pointer to output phase spectrum 
+ * \param pAnalParams             pointer to structure of analysis parameters
+ * \return the size of the complex spectrum, or -1 if failure
  * \todo document the differences between the different spectrums
  */
 int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum, 
@@ -47,34 +51,33 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
         int i, iOffset;
         float fReal, fImag;
 	static int iOldSizeWindow = 0;
-
   
 #ifdef FFTW
-        //printf("\n sms_spectrum sizeWindow: %d", sizeWindow);
-	/* compute window when necessary */
+        static int fftwPlanned = 0;
+
+	/* compute window when necessary and re-plan fftw*/
 	if (iOldSizeWindow != sizeWindow) 
-        {
+        {       
                 sms_getWindow (sizeWindow, sms_window_spec, pAnalParams->iWindowType);
-                
-                // is this the right size fft?
+
+                if(fftwPlanned)
+                        fftwf_destroy_plan(pAnalParams->fftw.plan);
+
                 if((pAnalParams->fftw.plan =  fftwf_plan_dft_r2c_1d( sizeFft, pAnalParams->fftw.pWaveform,
                                                                    pAnalParams->fftw.pSpectrum, FFTW_ESTIMATE)) == NULL)
 
                 {
                         printf("Spectrum: could not make fftw plan of size: %d \n", sizeFft);
-                        exit(1);
+                        return(-1); 
                 }
+                fftwPlanned = 1;
         }
 	iOldSizeWindow = sizeWindow;
 
         /*! \todo why is this memset necessary if the waveform is overwritten below? */
         memset(pAnalParams->fftw.pWaveform, 0, sizeFft * sizeof(float));
-        
-/*         printf(" sizeWindow: %d, iMiddleWindow: %d, sizeFft: %d, sizeMag: %d \n", sizeWindow, iMiddleWindow, */
-/*                sizeFft, sizeMag ); */
 
 	/* apply window to waveform and center window around 0 */
-        // removed 1 offset when writing windowed waveform
 	iOffset = sizeFft - (iMiddleWindow - 1);
 	for (i=0; i<iMiddleWindow-1; i++)
 		pAnalParams->fftw.pWaveform[iOffset + i] =  sms_window_spec[i] * pFWaveform[i];
@@ -82,20 +85,7 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 	for (i=0; i<iMiddleWindow; i++)
 		pAnalParams->fftw.pWaveform[i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i];
 
-        /****** RTE DEBUG *********/
-/*         printf("\nBEFORE fftw::::::::::::: \n"); */
-/*         for(i = 0; i < sizeFft; i++) */
-/*                 printf("[%d]%f, ", i, pAnalParams->fftw.pWaveform[i]); */
-        /***************************/
-  
         fftwf_execute(pAnalParams->fftw.plan);
-
-        /****** RTE DEBUG *********/
-/*         printf("\nAFTER fftw::::::::::::: \n"); */
-/*         for(i = 0; i < sizeMag+1; i++) */
-/*                 printf("[%d](%f, %f),  ", i, pAnalParams->fftw.pSpectrum[i][0], */
-/*                        pAnalParams->fftw.pSpectrum[i][1]); */
-        /***************************/
 
 	/* convert from rectangular to polar coordinates */
 	for (i = 1; i < sizeMag; i++) 
@@ -105,24 +95,17 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
       
 		if (fReal != 0 || fImag != 0)
 		{
-			pFMagSpectrum[i] = TO_DB (sqrt (fReal * fReal + fImag * fImag));
-                        // the phase spectrum is inverted!
-			//pFPhaseSpectrum[i] = atan2 (-fImag, fReal);
+			pFMagSpectrum[i] = sms_magToDB (sqrt (fReal * fReal + fImag * fImag));
+                        /* \todo the phase spectrum is inverted! find out why.. */
+			/*pFPhaseSpectrum[i] = atan2 (-fImag, fReal); */
 			pFPhaseSpectrum[i] = -atan2 (-fImag, fReal);
 		}
 	}
-        /*DC and Nyquist  */
+        /*DC and Nyquist  \todo might not be necessary? */
         fReal = pAnalParams->fftw.pSpectrum[0][0];
         fImag = pAnalParams->fftw.pSpectrum[sizeMag][0];
-        pFMagSpectrum[0] = TO_DB (sqrt (fReal * fReal + fImag * fImag));
+        pFMagSpectrum[0] = sms_magToDB (sqrt (fReal * fReal + fImag * fImag));
         pFPhaseSpectrum[0] = atan2(-fImag, fReal);
-
-        /****** RTE DEBUG *********/
-/*         printf("\nfftw::::::::::::: \n"); */
-/*         for(i = 0; i < sizeMag; i++) */
-/*                 printf("[%d](%f, %f),  ", i, pFMagSpectrum[i], */
-/*                        pFPhaseSpectrum[i]); */
-        /***************************/
 
 #else /* using realft() */        
 	if (iOldSizeWindow != sizeWindow) 
@@ -137,10 +120,6 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 	if ((pFBuffer = (float *) calloc(sizeFft+1, sizeof(float))) == NULL)
 		return -1;
 
-/*         printf(" sizeWindow: %d, iMiddleWindow: %d, sizeFft: %d, sizeMag: %d \n", sizeWindow, iMiddleWindow, */
-/*                sizeFft, sizeMag ); */
-  
-  
 	/* apply window to waveform and center window around 0 */
 	iOffset = sizeFft - (iMiddleWindow - 1);
 	for (i=0; i<iMiddleWindow-1; i++)
@@ -149,53 +128,37 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 	for (i=0; i<iMiddleWindow; i++)
 		pFBuffer[1+i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i];
   
-        /****** RTE DEBUG *********/
-/*         printf("\nBEFORE realft::::::::::::: \n"); */
-/*         for(i = 0; i < sizeFft+1; i++) */
-/*                 printf("[%d]%f, ", i, pFBuffer[i]); */
-        /***************************/
 	realft (pFBuffer, sizeMag, 1);
-        /****** RTE DEBUG *********/
-/*         printf("\nAFTER realft::::::::::::: \n"); */
-/*         for(i = 0; i < sizeFft+1; i++) */
-/*                 printf("[%d]%f, ", i, pFBuffer[i]); */
-        /***************************/
   
 	/* convert from rectangular to polar coordinates */
 	for (i = 0; i < sizeMag; i++)
-	{ //skips pFBuffer[0] because it is always 0 with realft
+	{ /*skips pFBuffer[0] because it is always 0 with realft */
 		it2 = i << 1; //even numbers 0-N
-		fReal = pFBuffer[it2+1]; //odd numbers 1->N+1
-		fImag = pFBuffer[it2+2]; //even numbers 2->N+2
+		fReal = pFBuffer[it2+1]; /*odd numbers 1->N+1 */
+		fImag = pFBuffer[it2+2]; /*even numbers 2->N+2 */
       
 		if (fReal != 0 || fImag != 0)
 		{
-			pFMagSpectrum[i] = TO_DB (sqrt (fReal * fReal + fImag * fImag));
+			pFMagSpectrum[i] = sms_magToDB (sqrt (fReal * fReal + fImag * fImag));
 			pFPhaseSpectrum[i] = atan2 (-fImag, fReal);
 		}
 	}
-        /****** RTE DEBUG *********/
-/*         printf("\nrealft::::::::::::: \n"); */
-/*         for(i = 0; i < sizeMag; i++) */
-/*                 printf("[%d](%f, %f),  ", i, pFMagSpectrum[i], */
-/*                        pFPhaseSpectrum[i]); */
-        /***************************/
 	free (pFBuffer);
 #endif/*FFTW*/
         
 	return (sizeMag);
 }
 
-/* 
- * function to compute a complex spectrum from a waveform 
- * returns the size of the complex spectrum
+/*! \brief compute a complex spectrum from a waveform 
  *              
- * float *pFWaveform;	   pointer to input waveform
- * float pFWindow;	   pointer to analysis window 
- * int sizeWindow;	   size of analysis window
- * float *pFMagSpectrum;   pointer to output spectrum 
- * float *pFPhaseSpectrum; pointer to output spectrum
- * int sizeFft;		   size of FFT 
+ * \param pFWaveform	       pointer to input waveform
+ * \param pFWindow	       pointer to analysis window 
+ * \param sizeWindow	       size of analysis window
+ * \param pFMagSpectrum     pointer to output spectrum 
+ * \param pFPhaseSpectrum  pointer to output spectrum
+ * \param sizeFft		       size of FFT 
+ * \param pFourierParams          pointer to structure of arrays and plan for FFTW
+ * \return the size of the complex spectrum
  */
 int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow, 
                        float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft, SMS_Fourier *pFourierParams)
@@ -206,11 +169,8 @@ int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow,
 #ifdef FFTW
         /*! \todo same as todo in sms_spectrum */
         memset(pFourierParams->pWaveform, 0, sizeFft * sizeof(float));
-        //memset(pFourierParams->pSpectrum, 0, (sizeMag + 1) * sizeof(fftwf_complex));
-        //printf("    sms_quickSpectrum sizeWindow: %d", sizeWindow);
+
 	/* apply window to waveform */
-
-
 	for (i = 0; i < sizeWindow; i++)
                 pFourierParams->pWaveform[i] =  pFWindow[i] * pFWaveform[i];
 
@@ -225,7 +185,7 @@ int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow,
 		if (fReal != 0 || fImag != 0)
 		{
 			pFMagSpectrum[i] = sqrt (fReal * fReal + fImag * fImag);
-                        /* \todo this should be in another loop, and only checked once */
+                        /* \todo this should be checked out of the for loop.., only once */
 			if(pFPhaseSpectrum)
                                 pFPhaseSpectrum[i] = atan2 (fImag, fReal); /*should be negative like above? */
 		}
@@ -272,7 +232,7 @@ int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow,
 	return (sizeMag);
 }
 
-/*
+/*! \todo fix for alternative fft along with hybridize..
  * function to perform the inverse FFT
  * float *pFMagSpectrum        input magnitude spectrum
  * float *pFPhaseSpectrum      input phase spectrum
@@ -311,7 +271,7 @@ int sms_invQuickSpectrum (float *pFMagSpectrum, float *pFPhaseSpectrum,
 }
  
 /*! \brief function for a quick inverse spectrum, windowed
- * \todo remove along with realft
+ * \todo move fftwf_execture into here
  * function to perform the inverse FFT, windowing the output
  * float *pFMagSpectrum        input magnitude spectrum
  * float *pFPhaseSpectrum      input phase spectrum

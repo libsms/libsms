@@ -227,7 +227,7 @@ int sms_residual (float *pFSynthesis, float *pFOriginal,
 
 		if (pAnalParams->iDebugMode == SMS_DBG_RESIDUAL)
 		{
-			sms_createResSF( pAnalParams );
+			sms_createResSF( pAnalParams->iSamplingRate );
 			sms_writeResSound (pFResidual+sizeWindow/2, sizeWindow/2);
 		}
 		/* filter residual with a high pass filter (it solves some problems) */
@@ -242,7 +242,7 @@ int sms_residual (float *pFSynthesis, float *pFOriginal,
 
 	if (pAnalParams->iDebugMode == SMS_DBG_RESIDUAL)
 	{
-		sms_createResSF( pAnalParams );
+		sms_createResSF( pAnalParams->iSamplingRate );
 		sms_writeResSound (pFResidual+sizeWindow/2, sizeWindow/2);
 	}
 	return (0);

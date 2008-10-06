@@ -34,6 +34,9 @@
  * applications for performing high-fidelity synthesis of sound models. It should work on most 
  * platforms available, although Linux is the only one tested so far. 
           - Richard Thomas Eakin
+ *
+ * \todo explain about coding style used in this library
+ *
  */
 #ifndef _SMS_H
 #define _SMS_H
@@ -112,8 +115,8 @@ typedef struct
 	float *pFMagTraj;       /*!< magnitude of sinusoids */
 	float *pFPhaTraj;        /*!< phase of sinusoids */
 	int nTraj;                     /*!< number of sinusoids */
-        float *pFStocWave;   /*!< sampled waveform (if stoc type = wave) */
-        int nSamples;             /*!< number of samples in StocWave */
+        //float *pFStocWave;   /*!< sampled waveform (if stoc type = wave) */
+        //int nSamples;             /*!< number of samples in StocWave */
 	float *pFStocGain;     /*!< gain of stochastic component */
 	float *pFStocCoeff;    /*!< filter coefficients for stochastic component */
 	int nCoeff;                  /*!< number of filter coefficients */
@@ -269,14 +272,15 @@ typedef struct
 //         float *pWaveform;       /*!< synthesis samples produced by fftwf_execute */
 // #else
 #ifdef FFTW
+        //fftwf_complex *pSpectrum; /*< complex array of spectra produced by fftwf_execute */
         SMS_Fourier fftw; /*!< structure of data used by the FFTW library (floating point) */
 #else
         float *realftOut; /*!< RTE_DEBUG : comparing realft and fftw \todo remove this */
 #endif
 } SMS_SynthParams;
 
-
-#define SMS_MIN_MAG     .3      /*!< \brief minimum magnitude to be searched */
+//#define SMS_MIN_MAG     .3      /*!< \brief minimum magnitude to be searched */
+#define SMS_MIN_MAG     .01      /*!< \brief minimum magnitude to be searched */
                                     
 /*! \struct SMS_HarmCandidate
  * \brief structure to hold information about a harmonic candidate 
@@ -385,15 +389,13 @@ enum SMS_DetSynthType
  * determistic component; once that is achieved, the stochastic component
  * will be much better as well.
  *  
- * \todo review the various options for stochastic synthesis and determine
- * which ones should stay
+ * \todo update docs
  */
 enum SMS_StocSynthType
 {
-        SMS_STOC_WAVE,            /*!< waveform samples */
-        SMS_STOC_IFFT,               /*!< inverse FFT (not used) */
-        SMS_STOC_APPROX,        /*!< spectral approximation */
-        SMS_STOC_NONE              /*!< no stochastistic component */
+        SMS_STOC_NONE,              /*!< 0, no stochastistic component */
+        SMS_STOC_APPROX,        /*!< 1, Inverse FFT, magnitude approximation and generated phases */
+        SMS_STOC_IFFT               /*!< 2, inverse FFT, interpolated spectrum (not used) */
 };
 
 
@@ -406,7 +408,8 @@ enum SMS_ERRORS
         SMS_MALLOC,    /*!< couldn't allocate memory */
         SMS_RDERR,        /*!< read error */
         SMS_WRERR,       /*!< write error */
-        SMS_FFTWERR   /*!< FFTW error */
+        SMS_FFTWERR,   /*!< FFTW error */
+        SMS_SNDERR        /*!< sound IO error */
 };
 
 /*! \brief debug modes 
@@ -517,11 +520,8 @@ extern float *sms_window_spec;
 #define LOG2 0.69314718 /*!< \todo write this in mathematical terms */
 #define LOG10 2.302585092994
 
-// #define TO_DB(x)    	((x > SMS_MIN_MAG) ? 20 * log10(x/SMS_MIN_MAG) : 0)
-// #define TO_MAG(x)     ((x <= 0) ? 0 : SMS_MIN_MAG * pow(10.0, x/20.0))
-float TO_DB(float x);
-
-float TO_MAG(float x);
+float sms_magToDB(float x);
+float sms_dBToMag(float x);
 
 #define TEMPERED_TO_FREQ( x ) (powf(1.0594630943592953, x)) /*!< \todo doc */
 
@@ -533,9 +533,6 @@ float TO_MAG(float x);
 /*! \brief returns the minimum of a and b */
 #define MIN(a,b)	((a) < (b) ? (a) : (b))
 #endif
-
-#define SHORT_TO_FLOAT ( 2.0f / pow(2.0,16)) /*!< \todo remove once all shorts are removed */
-#define FLOAT_TO_SHORT (pow(2.0,16) / 2.0f) /*!< \todo remove once all shorts are removed */
 /*! \} */
 
 /* function declarations */ 
@@ -561,9 +558,6 @@ void sms_fillSndBuffer (float *pWaveform, long sizeNewData, SMS_AnalParams *pAna
 int sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
                       int sizeWindow);
 		     
-void sms_computeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
-                   float fRefFundamental);
-
 void sms_getWindow (int sizeWindow, float *pFWindow, int iWindowType);
 
  int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum, 
@@ -587,7 +581,6 @@ int sms_sizeNextWindow (int iCurrentFrame, SMS_AnalParams *pAnalParams);
 
 float sms_fundDeviation (SMS_AnalParams *pAnalParams, int iCurrentFrame);
 
-int sms_reAnalyze (int iCurrentFrame, SMS_AnalParams *pAnalParams);
 
 int sms_detectPeaks (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag, 
                    SMS_Peak *pSpectralPeaks, SMS_AnalParams *pAnalParams);
@@ -621,16 +614,16 @@ float sms_sinc (float fTheta);
 int sms_synthesize (SMS_Data *pSmsRecord, float*pFSynthesis, 
                   SMS_SynthParams *pSynthParams);
                 
-int sms_sineSynthFrame (SMS_Data *pSmsRecord, float *pFBuffer, 
+void sms_sineSynthFrame (SMS_Data *pSmsRecord, float *pFBuffer, 
                     int sizeBuffer, SMS_Data *pLastFrame,
                     int iSamplingRate);
 
-int sms_initHeader (SMS_Header *pSmsHeader);
+void sms_initHeader (SMS_Header *pSmsHeader);
 
 int sms_getHeader (char *pChFileName, SMS_Header **ppSmsHeader,
                   	FILE **ppInputFile);
 
-int sms_fillHeader (SMS_Header *pSmsHeader, 
+void sms_fillHeader (SMS_Header *pSmsHeader, 
                           int nFrames, SMS_AnalParams *pAnalParams,
                     int iOriginalSRate, int nTrajectories);
 
@@ -642,7 +635,7 @@ int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader);
 void sms_initRecord (SMS_Data *pSmsRecord);
 
 int sms_allocRecord (SMS_Data *pSmsRecord, int nTraj, int nCoeff, 
-                       int iPhase, int sizeHop, int stochType);
+                       int iPhase, int stochType);
 
 int sms_allocRecordH (SMS_Header *pSmsHeader, SMS_Data *pSmsRecord);
 
@@ -656,7 +649,7 @@ void sms_freeRecord (SMS_Data *pSmsRecord);
 
 void sms_clearRecord (SMS_Data *pSmsRecord);
 
-int sms_copyRecord (SMS_Data *pCopySmsRecord, SMS_Data *pOriginalSmsRecord);
+void sms_copyRecord (SMS_Data *pCopySmsRecord, SMS_Data *pOriginalSmsRecord);
 
 int sms_recordSizeB (SMS_Header *pSmsHeader);
 
@@ -668,7 +661,7 @@ int sms_residual (float *pFSynthesis, float *pFOriginal,
 int sms_stocAnalysis (float *pFResidual, int sizeWindow, 
                   SMS_Data *pSmsRecord, SMS_AnalParams *pAnalParams);
 
-int sms_interpolateRecords (SMS_Data *pSmsRecord1, SMS_Data *pSmsRecord2,
+void sms_interpolateRecords (SMS_Data *pSmsRecord1, SMS_Data *pSmsRecord2,
                            SMS_Data *pSmsRecordOut, float fInterpFactor);
 
 int sms_openSF (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader);
@@ -676,22 +669,22 @@ int sms_openSF (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader);
 int sms_getSound (SMS_SndHeader *pSoundHeader, float *pSoundData, long sizeSound,
                   long offset);
 
-int sms_createSF (SMS_SynthParams synthParams, char *pChOutputSoundFile);
+int sms_createSF (char *pChOutputSoundFile, int iSamplingRate, int iType);
 
-int sms_writeSound (float *pFBuffer, int sizeBuffer);
+void sms_writeSound (float *pFBuffer, int sizeBuffer);
 
-int sms_writeSF ();
+void sms_writeSF ();
 
 /*! \todo remove realft() once fftw is completely implemented */
 void realft (float *data, int n, int isign); /* \todo remove me */
 
 /***********************************************************************************/
 /************* debug functions: ******************************************************/
-int sms_createResSF (SMS_AnalParams *pAnalParams);
+int sms_createResSF (int iSamplingRate);
 
 int sms_writeResSound (float *pFBuffer, int sizeBuffer);
 
-int sms_writeResSF ();
+void sms_writeResSF ();
 
 int sms_createDebugFile (SMS_AnalParams *pAnalParams);
 

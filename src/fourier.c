@@ -18,6 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
+/* \file fourier.c 
+ * \brief routines for different Fast Fourier Transform Algorithms
+ */
+
 #include "sms.h"
 
 #define SWAP(a,b) tempr=(a);(a)=(b);(b)=tempr

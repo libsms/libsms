@@ -18,19 +18,24 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
+/*! \file spectralApprox.c
+ * \brief line segment approximation of a magnitude spectrum
+ */
 #include "sms.h"
 
-/* 
- * approximate a magnitude spectrum by first downsampling using local maxima
- * and then upsampling using linear interpolation
- * the output spectrum doesn't have to be the same size as the input one
+/*! \brief approximate a magnitude spectrum
+ * First downsampling using local maxima and then upsampling using linear 
+ * interpolation. The output spectrum doesn't have to be the same size as 
+ * the input one.
  *
- * float *pFSpec1     magnitude spectrum to approximate
- * int sizeSec1       size of input spectrum
- * int sizeSpec1Used  size of the spectrum to use
- * float *pFSpec2     output envelope
- * int sizeSpec2      size of output envelope
- * int nCoefficients  number of coefficients to use in approximation
+ * \param pFSpec1     magnitude spectrum to approximate
+ * \param sizeSpec1       size of input spectrum
+ * \param sizeSpec1Used  size of the spectrum to use
+ * \param pFSpec2     output envelope
+ * \param sizeSpec2      size of output envelope
+ * \param nCoefficients  number of coefficients to use in approximation
+ * \return error code \see SMS_ERRORS (or -1 if the algorithm just messes up, 
+               it will print an error of its own.
  */
 int sms_spectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
                     float *pFSpec2, int sizeSpec2, int nCoefficients)
@@ -44,11 +49,11 @@ int sms_spectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 	{
 		for (i = 0; i < sizeSpec2; i++)
 			pFSpec2[i] = 1;
-		return 1;
+		return(SMS_OK);
 	}
 
 	if ((pFEnvelope = (float *) calloc(nCoefficients, sizeof(float))) == NULL)
-		return -1;
+		return(SMS_MALLOC);
  
 	/* calculate the hop size */
 	if (sizeSpec1 != sizeSpec1Used)
@@ -88,9 +93,7 @@ int sms_spectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 	else
 	{
 		free (pFEnvelope);
-
 		printf ("SpectralApprox: sizeSpec1 has too many nCoefficients\n");
-
 		return -1;
 	}
 
@@ -142,5 +145,5 @@ int sms_spectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 		return -1;
 	}
 	free (pFEnvelope);
-	return 1;
+	return (SMS_OK);
 }

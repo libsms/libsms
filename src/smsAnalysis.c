@@ -18,20 +18,146 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
+/*! \file smsAnalysis.c
+ * \brief main sms analysis routine
+ * 
+ * the analysis routine here calls all necessary functions to perform the complete
+ * SMS analysis, once the desired analysis parameters are set in SMS_AnalParams. 
+ */
 #include "sms.h"
 
 /*! \brief  maximum size for magnitude spectrum */
 #define SMS_MAX_SPEC 8192  
 
-/*! \brief Function to perform the SMS analysis on a single frame 
+/*! \brief compute spectrum, find peaks, and fundamental of given frame
+ *
+ * This is the main core of analysis calls
+ * \todo write a clearer description of why this is seperated
+ *
+ * \param iCurrentFrame          frame number to be computed
+ * \param pAnalParams     structure of analysis parameters
+ * \param fRefFundamental      reference fundamental 
+ */
+static void AnalyzeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
+                   float fRefFundamental)
+{
+	static float pFMagSpectrum[SMS_MAX_SPEC];
+	static float pFPhaSpectrum[SMS_MAX_SPEC];
+	int sizeMag, i;
+	int iSoundLoc = pAnalParams->ppFrames[iCurrentFrame]->iFrameSample - 
+		((pAnalParams->ppFrames[iCurrentFrame]->iFrameSize + 1) >> 1) + 1;
+	float *pFData = 
+		&(pAnalParams->soundBuffer.pFBuffer[iSoundLoc - pAnalParams->soundBuffer.iMarker]);
+  
+	/* compute the magnitude and phase spectra */
+	sizeMag = sms_spectrum(pFData, pAnalParams->ppFrames[iCurrentFrame]->iFrameSize,
+	                   pFMagSpectrum, pFPhaSpectrum, pAnalParams);
+
+	/* find the prominent peaks */
+	pAnalParams->ppFrames[iCurrentFrame]->nPeaks = 
+		sms_detectPeaks (pFMagSpectrum, pFPhaSpectrum, sizeMag, 
+                                 pAnalParams->ppFrames[iCurrentFrame]->pSpectralPeaks,
+                                 pAnalParams);
+
+	if (pAnalParams->iDebugMode == SMS_DBG_PEAK_DET || 
+	    pAnalParams->iDebugMode == SMS_DBG_ALL)
+	{
+		fprintf(stdout, "Frame %d peaks: ", 
+		        pAnalParams->ppFrames[iCurrentFrame]->iFrameNum);
+		/* print only the first 10 peaks */
+		for(i=0; i<10; i++)
+			fprintf(stdout, " %.2f[%.2f], ", 
+			        pAnalParams->ppFrames[iCurrentFrame]->pSpectralPeaks[i].fFreq,
+			        pAnalParams->ppFrames[iCurrentFrame]->pSpectralPeaks[i].fMag);
+		fprintf(stdout, "\n");
+	}
+  
+	/* find a reference harmonic */
+	if (pAnalParams->ppFrames[iCurrentFrame]->nPeaks > 0 && 
+	    (pAnalParams->iFormat == SMS_FORMAT_H ||
+	    pAnalParams->iFormat == SMS_FORMAT_HP))
+		sms_harmDetection (pAnalParams->ppFrames[iCurrentFrame], fRefFundamental, pAnalParams);
+  
+	if (pAnalParams->iDebugMode == SMS_DBG_HARM_DET || 
+	    pAnalParams->iDebugMode == SMS_DBG_ALL)
+		fprintf(stdout, "Frame %d: fundamental %f\n", 
+		        pAnalParams->ppFrames[iCurrentFrame]->iFrameNum,
+		        pAnalParams->ppFrames[iCurrentFrame]->fFundamental);
+}
+
+/*! \brief re-analyze the previous frames if necessary  
+ *
+ * \todo explain when this is necessary 
+ *
+ * \param iCurrentFrame             current frame number
+ * \param pAnalParams              structure with analysis parameters
+ * \return 1 if frames are good, -1 if analysis is necessary
+ * \todo is the return value info correct? Why isn't it used in sms_analyze?
+ */
+static int ReAnalyzeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams)
+{
+        float fFund, fLastFund, fDev;
+	int iNewFrameSize, i;
+	float fAvgDeviation = sms_fundDeviation(pAnalParams, iCurrentFrame);
+        int iFirstFrame = iCurrentFrame - SMS_MIN_GOOD_FRAMES;
+
+	if (pAnalParams->iDebugMode == SMS_DBG_SMS_ANAL || 
+	    pAnalParams->iDebugMode == SMS_DBG_ALL)
+		fprintf(stdout, "Frame %d reAnalyze: Freq. deviation %f\n", 
+		       pAnalParams->ppFrames[iCurrentFrame]->iFrameNum, fAvgDeviation);
+  
+	if (fAvgDeviation == -1)
+		return (-1);
+  
+	/* if the last SMS_MIN_GOOD_FRAMES are stable look before them */
+	/*  and recompute the frames that are not stable */
+	if (fAvgDeviation <= SMS_MAX_DEVIATION)
+		for (i = 0; i < SMS_ANAL_DELAY; i++)
+		{
+			if (pAnalParams->ppFrames[iFirstFrame - i]->iFrameNum <= 0 ||
+			    pAnalParams->ppFrames[iFirstFrame - i]->iStatus == SMS_FRAME_RECOMPUTED)
+				return(-1);
+			fFund = pAnalParams->ppFrames[iFirstFrame - i]->fFundamental;
+			fLastFund = pAnalParams->ppFrames[iFirstFrame - i + 1]->fFundamental;
+			fDev = fabs (fFund - fLastFund) / fLastFund;
+			iNewFrameSize = ((pAnalParams->iSamplingRate / fLastFund) *
+				pAnalParams->fSizeWindow/2) * 2 + 1;
+	
+			if (fFund <= 0 || fDev > .2 ||
+			    fabs ((double)(pAnalParams->ppFrames[iFirstFrame - i]->iFrameSize - 
+			          iNewFrameSize)) / 
+			    iNewFrameSize >= .2)
+			{
+				pAnalParams->ppFrames[iFirstFrame - i]->iFrameSize = iNewFrameSize;
+				pAnalParams->ppFrames[iFirstFrame - i]->iStatus = SMS_FRAME_READY;
+	    
+				if (pAnalParams->iDebugMode == SMS_DBG_SMS_ANAL || 
+				    pAnalParams->iDebugMode == SMS_DBG_ALL)
+					fprintf(stdout, "re-analyzing frame %d\n", 
+					        pAnalParams->ppFrames[iFirstFrame - i]->iFrameNum);
+	    
+				/* recompute frame */
+				AnalyzeFrame (iFirstFrame - i, pAnalParams, fLastFund);
+				pAnalParams->ppFrames[iFirstFrame - i]->iStatus = SMS_FRAME_RECOMPUTED;
+	    
+				if (fabs(pAnalParams->ppFrames[iFirstFrame - i]->fFundamental - fLastFund) / 
+				    fLastFund >= .2)
+				return(-1);
+			}
+		}
+	return (1);
+}
+
+/*! \brief main function to perform the SMS analysis on a single frame 
  *
  * The input is a section of the sound, the output is the SMS data
  *
- * @param pWaveform	     pointer to input waveform data
- * @param sizeNewData	     the size of input data
- * @param pSmsData          pointer to output SMS data
- * @param pAnalParams   pointer to analysis parameters
- * @param pINextSizeRead size of next data to read
+ * \param pWaveform	     pointer to input waveform data
+ * \param sizeNewData	     the size of input data
+ * \param pSmsData          pointer to output SMS data
+ * \param pAnalParams   pointer to analysis parameters
+ * \param pINextSizeRead size of next data to read
+ * \return \todo sort out return meanings
  */
 int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData, 
                  SMS_AnalParams *pAnalParams, int *pINextSizeRead)
@@ -55,7 +181,6 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
 		sms_fillSndBuffer (pWaveform, sizeNewData, pAnalParams);
     
 	/* move analysis data one frame back */
-	//MoveFrames (pAnalParams);
 	pTmpAnalFrame = pAnalParams->ppFrames[0];
 	for(i = 1; i < pAnalParams->iMaxDelayFrames; i++)
 		pAnalParams->ppFrames[i-1] = pAnalParams->ppFrames[i];
@@ -86,10 +211,10 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
 			fRefFundamental = pAnalParams->ppFrames[iCurrentFrame - 1]->fFundamental;
 		else
 			fRefFundamental = 0;
-      
+
 		/* compute spectrum, find peaks, and find fundamental of frame */
-		sms_computeFrame (iCurrentFrame, pAnalParams, fRefFundamental);
-      
+		AnalyzeFrame (iCurrentFrame, pAnalParams, fRefFundamental);
+
 		/* set the size of the next analysis window */
 		if (pAnalParams->ppFrames[iCurrentFrame]->fFundamental > 0 &&
 		    pAnalParams->iSoundType != SMS_SOUND_TYPE_NOTE)
@@ -102,7 +227,9 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
 		*pINextSizeRead = MAX (0, (sizeWindow+1)/2 - iExtraSamples);
 
 		/* check again the previous frames and recompute if necessary */
-		sms_reAnalyze (iCurrentFrame, pAnalParams);
+                /*! \todo when deviation is really off, this function returns -1, yet it 
+                  isn't used.. is it being recomputed ?? */
+		ReAnalyzeFrame (iCurrentFrame, pAnalParams);
 	}
   
 	/* incorporate the peaks into the corresponding trajectories */
@@ -159,30 +286,13 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
                                 printf("sms_analyze: error allocating memory for pFResidual \n");
                                 return -1;
                         }
+
 			/* obtain residual sound from original and synthesized sounds */
 			sms_residual (pAnalParams->synthBuffer.pFBuffer, pFData, pFResidual, sizeData, 
 			             pAnalParams);
                          
-                        //::::::::::::::::::::: RTE_DEBUG::::::::::::::::::
-/*                          int i; */
-/*                         printf("\n:::::::::: pFData (before  sms_stocAnalysis):  sizeHop: %d, sizeData: %d, frame# %d ::::::::::::\n", */
-/*                                pAnalParams->sizeHop, sizeData, pAnalParams->ppFrames[iCurrentFrame]->iFrameNum ); */
-/*                         for(i = 0; i < pAnalParams->sizeHop; i++) */
-/*                                 printf("%f  ", pFResidual[i]); */
-/* //                                printf("%d  ", (short) pFData[i]); */
-/*                         printf("\n"); */
-                        //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
                         /* approximate residual */
 			sms_stocAnalysis (pFResidual, sizeData, pSmsData, pAnalParams);
-                        
-                        //::::::::::::::::::::: RTE_DEBUG::::::::::::::::::
-
-/*                         printf("\n:::::0000000000000::::: smsAnalysis: AFTER StochAnalysis::::::::::::::::::::\n"); */
-/*                         for(i = 0; i < pAnalParams->sizeHop; i++) */
-/*                                 printf("%.3f ", pSmsData->pFStocWave[i]); */
-/* 			printf("\n"); */
-                        //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
                         
 			/* get sharper transitions in deterministic representation */
 			sms_scaleDet (pAnalParams->synthBuffer.pFBuffer, pFData, 
@@ -197,11 +307,9 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
 	else if (pAnalParams->ppFrames[0]->iStatus != SMS_FRAME_EMPTY &&
 	         pAnalParams->ppFrames[0]->iStatus != SMS_FRAME_END)
 		pAnalParams->ppFrames[0]->iStatus = SMS_FRAME_DONE;
-
 	/* get the result */
 	if (pAnalParams->ppFrames[0]->iStatus == SMS_FRAME_EMPTY)
         {
-//                printf("returning SMS_FRAME_EMPTY \n");
 		return (0);
         }
 	/* return analysis data */
@@ -224,130 +332,9 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
 		return (-1);
 	else
 	{
-		fprintf (stderr, "error: wrong status of frame\n");
-		exit (1);
+		printf ("sms_analyze error: wrong status of frame\n");
+		//exit (1);
+                return(-1);
 	}
-	return (1);
-}
-
-/* compute spectrum, find peaks, and fundamental of given frame
- *
- * int iCurrentFrame          frame number to be computed
- * SMS_AnalParams analParams     analysis parameters
- * float fRefFundamental      reference fundamental 
- */
-void sms_computeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
-                   float fRefFundamental)
-{
-	static float pFMagSpectrum[SMS_MAX_SPEC];
-	static float pFPhaSpectrum[SMS_MAX_SPEC];
-	int sizeMag, i;
-	int iSoundLoc = pAnalParams->ppFrames[iCurrentFrame]->iFrameSample - 
-		((pAnalParams->ppFrames[iCurrentFrame]->iFrameSize + 1) >> 1) + 1;
-	float *pFData = 
-		&(pAnalParams->soundBuffer.pFBuffer[iSoundLoc - pAnalParams->soundBuffer.iMarker]);
-  
-	/* compute the magnitude and phase spectra */
-	sizeMag = sms_spectrum(pFData, pAnalParams->ppFrames[iCurrentFrame]->iFrameSize,
-	                   pFMagSpectrum, pFPhaSpectrum, pAnalParams);
-
-
-
-	/* find the prominent peaks */
-	pAnalParams->ppFrames[iCurrentFrame]->nPeaks = 
-		sms_detectPeaks (pFMagSpectrum, pFPhaSpectrum, sizeMag, 
-                                 //     pAnalParams->ppFrames[iCurrentFrame]->iFrameSize,
-		               pAnalParams->ppFrames[iCurrentFrame]->pSpectralPeaks,
-		               pAnalParams);
-
-        /// RTE DEBUG //////////////
-//        printf(" # %d , nPeaks: %d \n",iCurrentFrame, pAnalParams->ppFrames[iCurrentFrame]->nPeaks);
-        ///////////////////////////////////////
-
-   
-	if (pAnalParams->iDebugMode == SMS_DBG_PEAK_DET || 
-	    pAnalParams->iDebugMode == SMS_DBG_ALL)
-	{
-		fprintf(stdout, "Frame %d peaks: ", 
-		        pAnalParams->ppFrames[iCurrentFrame]->iFrameNum);
-		/* print only the first 10 peaks */
-		for(i=0; i<10; i++)
-			fprintf(stdout, " %.2f[%.2f], ", 
-			        pAnalParams->ppFrames[iCurrentFrame]->pSpectralPeaks[i].fFreq,
-			        pAnalParams->ppFrames[iCurrentFrame]->pSpectralPeaks[i].fMag);
-		fprintf(stdout, "\n");
-	}
-  
-	/* find a reference harmonic */
-	if (pAnalParams->ppFrames[iCurrentFrame]->nPeaks > 0 && 
-	    (pAnalParams->iFormat == SMS_FORMAT_H ||
-	    pAnalParams->iFormat == SMS_FORMAT_HP))
-		sms_harmDetection (pAnalParams->ppFrames[iCurrentFrame], fRefFundamental, pAnalParams);
-  
-	if (pAnalParams->iDebugMode == SMS_DBG_HARM_DET || 
-	    pAnalParams->iDebugMode == SMS_DBG_ALL)
-		fprintf(stdout, "Frame %d: fundamental %f\n", 
-		        pAnalParams->ppFrames[iCurrentFrame]->iFrameNum,
-		        pAnalParams->ppFrames[iCurrentFrame]->fFundamental);
-}
-
-/* re-analyze the previous frames if necessary  
- *
- * int iCurrentFrame;             current frame number
- * SMS_AnalParams analParams;           analysis parameters
- * \todo move to smsAnalysis.c
- */
-int sms_reAnalyze (int iCurrentFrame, SMS_AnalParams *pAnalParams)
-{
-//	extern SMS_AnalFrame **ppFrames;
-	float fAvgDeviation = sms_fundDeviation(pAnalParams, iCurrentFrame),
-		fFund, fLastFund, fDev;
-	int iNewFrameSize, i,
-		iFirstFrame = iCurrentFrame - SMS_MIN_GOOD_FRAMES;
-
-	if (pAnalParams->iDebugMode == SMS_DBG_SMS_ANAL || 
-	    pAnalParams->iDebugMode == SMS_DBG_ALL)
-		fprintf(stdout, "Frame %d reAnalyze: Freq. deviation %f\n", 
-		       pAnalParams->ppFrames[iCurrentFrame]->iFrameNum, fAvgDeviation);
-  
-	if (fAvgDeviation == -1)
-		return (-1);
-  
-	/* if the last SMS_MIN_GOOD_FRAMES are stable look before them */
-	/*  and recompute the frames that are not stable           */
-	if (fAvgDeviation <= SMS_MAX_DEVIATION)
-		for (i = 0; i < SMS_ANAL_DELAY; i++)
-		{
-			if (pAnalParams->ppFrames[iFirstFrame - i]->iFrameNum <= 0 ||
-			    pAnalParams->ppFrames[iFirstFrame - i]->iStatus == SMS_FRAME_RECOMPUTED)
-				return(-1);
-			fFund = pAnalParams->ppFrames[iFirstFrame - i]->fFundamental;
-			fLastFund = pAnalParams->ppFrames[iFirstFrame - i + 1]->fFundamental;
-			fDev = fabs (fFund - fLastFund) / fLastFund;
-			iNewFrameSize = ((pAnalParams->iSamplingRate / fLastFund) *
-				pAnalParams->fSizeWindow/2) * 2 + 1;
-	
-			if (fFund <= 0 || fDev > .2 ||
-			    fabs ((double)(pAnalParams->ppFrames[iFirstFrame - i]->iFrameSize - 
-			          iNewFrameSize)) / 
-			    iNewFrameSize >= .2)
-			{
-				pAnalParams->ppFrames[iFirstFrame - i]->iFrameSize = iNewFrameSize;
-				pAnalParams->ppFrames[iFirstFrame - i]->iStatus = SMS_FRAME_READY;
-	    
-				if (pAnalParams->iDebugMode == SMS_DBG_SMS_ANAL || 
-				    pAnalParams->iDebugMode == SMS_DBG_ALL)
-					fprintf(stdout, "re-analyzing frame %d\n", 
-					        pAnalParams->ppFrames[iFirstFrame - i]->iFrameNum);
-	    
-				/* recompute frame */
-				sms_computeFrame (iFirstFrame - i, pAnalParams, fLastFund);
-				pAnalParams->ppFrames[iFirstFrame - i]->iStatus = SMS_FRAME_RECOMPUTED;
-	    
-				if (fabs(pAnalParams->ppFrames[iFirstFrame - i]->fFundamental - fLastFund) / 
-				    fLastFund >= .2)
-				return(-1);
-			}
-		}
 	return (1);
 }

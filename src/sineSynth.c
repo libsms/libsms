@@ -18,55 +18,60 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
+/*! \file sineSynth.c
+ * \brief functions for synthesizing evolving sinusoids
+ */
+
 #include "sms.h"
 
-
-
-/* function to generate a sinusoid given two peaks, current and last
+/*! \brief generate a sinusoid given two peaks, current and last
+ *
  * it interpolation between phase values and magnitudes   
- * float fFreq;              current frequency
- * float fMag;               current magnitude
- * float fPhase;             current phase
- * SMS_Data                  values from last frame
- * float *pFWaveform;	     pointer to output waveform
- * int sizeBuffer;	     size of the synthesis buffer 
+ *
+ * \param fFreq                    current frequency
+ * \param fMag                    current magnitude
+ * \param fPhase                 current phase
+ * \param pLastFrame         stucture with values from last frame
+ * \param pFWaveform	    pointer to output waveform
+ * \param sizeBuffer	    size of the synthesis buffer 
+ * \param iTrack                  current track 
  */
 static void SinePhaSynth (float fFreq, float fMag, float fPhase,
                           SMS_Data *pLastFrame, float *pFWaveform, 
-                          int sizeBuffer, int iTraj)
+                          int sizeBuffer, int iTrack)
 {
   float  fMagIncr, fInstMag, fInstPhase, fTmp;
   int iM, i;
   float fAlpha, fBeta, fTmp1, fTmp2;
    
   /* if no mag in last frame copy freq from current and make phase */
-  if (pLastFrame->pFMagTraj[iTraj] <= 0)
+  if (pLastFrame->pFMagTraj[iTrack] <= 0)
   {
-    pLastFrame->pFFreqTraj[iTraj] = fFreq;
+    pLastFrame->pFFreqTraj[iTrack] = fFreq;
     fTmp = fPhase - (fFreq * sizeBuffer);
-    pLastFrame->pFPhaTraj[iTraj] = fTmp - floor(fTmp / TWO_PI) * TWO_PI;
+    pLastFrame->pFPhaTraj[iTrack] = fTmp - floor(fTmp / TWO_PI) * TWO_PI;
   }
   /* and the other way */
   else if (fMag <= 0)
   {
-    fFreq = pLastFrame->pFFreqTraj[iTraj];
-    fTmp = pLastFrame->pFPhaTraj[iTraj] + 
-            (pLastFrame->pFFreqTraj[iTraj] * sizeBuffer);
+    fFreq = pLastFrame->pFFreqTraj[iTrack];
+    fTmp = pLastFrame->pFPhaTraj[iTrack] + 
+            (pLastFrame->pFFreqTraj[iTrack] * sizeBuffer);
     fPhase = fTmp - floor(fTmp / TWO_PI) * TWO_PI;
   }
   
   /* caculate the instantaneous amplitude */
-  fMagIncr = (fMag - pLastFrame->pFMagTraj[iTraj]) / sizeBuffer;
-  fInstMag = pLastFrame->pFMagTraj[iTraj];
+  fMagIncr = (fMag - pLastFrame->pFMagTraj[iTrack]) / sizeBuffer;
+  fInstMag = pLastFrame->pFMagTraj[iTrack];
   
   /* create instantaneous phase from freq. and phase values */
-  fTmp1 = fFreq - pLastFrame->pFFreqTraj[iTraj];
-  fTmp2 = ((pLastFrame->pFPhaTraj[iTraj] + 
-		pLastFrame->pFFreqTraj[iTraj] * sizeBuffer - fPhase) +
+  fTmp1 = fFreq - pLastFrame->pFFreqTraj[iTrack];
+  fTmp2 = ((pLastFrame->pFPhaTraj[iTrack] + 
+		pLastFrame->pFFreqTraj[iTrack] * sizeBuffer - fPhase) +
 		fTmp1 * sizeBuffer / 2.0) / TWO_PI;
   iM = (int) (fTmp2 + .5);
-  fTmp2 = fPhase - pLastFrame->pFPhaTraj[iTraj] - 
-		pLastFrame->pFFreqTraj[iTraj] * sizeBuffer +
+  fTmp2 = fPhase - pLastFrame->pFPhaTraj[iTrack] - 
+		pLastFrame->pFFreqTraj[iTrack] * sizeBuffer +
 		TWO_PI * iM;
   fAlpha = (3.0 / (float)(sizeBuffer * sizeBuffer)) * 
     fTmp2 - fTmp1 / sizeBuffer;
@@ -76,54 +81,51 @@ static void SinePhaSynth (float fFreq, float fMag, float fPhase,
   for(i=0; i<sizeBuffer; i++)
   {
     fInstMag += fMagIncr;
-    fInstPhase = pLastFrame->pFPhaTraj[iTraj] + 
-			pLastFrame->pFFreqTraj[iTraj] * i + 
+    fInstPhase = pLastFrame->pFPhaTraj[iTrack] + 
+			pLastFrame->pFFreqTraj[iTrack] * i + 
 			fAlpha * i * i + fBeta * i * i * i;
 
-//why is sms_sine causing a seg fault here?
-    pFWaveform[i] += TO_MAG(fInstMag) * sms_sine(fInstPhase + PI_2);
-//    pFWaveform[i] += TO_MAG(fInstMag) * sin(fInstPhase + PI_2);
+    pFWaveform[i] += sms_dBToMag(fInstMag) * sms_sine(fInstPhase + PI_2);
   }
   /* save current values into buffer */
-  pLastFrame->pFFreqTraj[iTraj] = fFreq;
-  pLastFrame->pFMagTraj[iTraj] = fMag;
-  pLastFrame->pFPhaTraj[iTraj] = fPhase;
+  pLastFrame->pFFreqTraj[iTrack] = fFreq;
+  pLastFrame->pFMagTraj[iTrack] = fMag;
+  pLastFrame->pFPhaTraj[iTrack] = fPhase;
 }
 
-/*
- * function to generate a sinusoid given two frames, current and last
+/*! \brief generate a sinusoid given two frames, current and last
  * 
- * float fFreq;	         current frequency 
- * float fMag;              current magnitude  
- * SMS_Data *pLastFrame;   values from last frame 
- * float *pFBuffer;	 pointer to output waveform 
- * int sizeBuffer;		 size of the synthesis buffer 
- * int iTraj;               current trajectory 
+ * \param fFreq	         current frequency 
+ * \param fMag                 current magnitude  
+ * \param pLastFrame      stucture with values from last frame 
+ * \param pFBuffer	         pointer to output waveform 
+ * \param sizeBuffer	 size of the synthesis buffer 
+ * \param iTrack               current track 
  */
 static void SineSynth (float fFreq, float fMag, SMS_Data *pLastFrame,
-                       float *pFBuffer, int sizeBuffer, int iTraj)
+                       float *pFBuffer, int sizeBuffer, int iTrack)
 {
   float  fMagIncr, fInstMag, fFreqIncr, fInstPhase, fInstFreq;
   int i;
   
   /* if no mag in last frame copy freq from current */
-  if (pLastFrame->pFMagTraj[iTraj] <= 0)
+  if (pLastFrame->pFMagTraj[iTrack] <= 0)
   {
-    pLastFrame->pFFreqTraj[iTraj] = fFreq;
-    pLastFrame->pFPhaTraj[iTraj] = 
+    pLastFrame->pFFreqTraj[iTrack] = fFreq;
+    pLastFrame->pFPhaTraj[iTrack] = 
 			TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
   }
   /* and the other way */
   else if (fMag <= 0)
-    fFreq = pLastFrame->pFFreqTraj[iTraj];
+    fFreq = pLastFrame->pFFreqTraj[iTrack];
   
   /* calculate the instantaneous amplitude */
-  fMagIncr = (fMag - pLastFrame->pFMagTraj[iTraj]) / sizeBuffer;
-  fInstMag = pLastFrame->pFMagTraj[iTraj];
+  fMagIncr = (fMag - pLastFrame->pFMagTraj[iTrack]) / sizeBuffer;
+  fInstMag = pLastFrame->pFMagTraj[iTrack];
   /* calculate instantaneous frequency */
-  fFreqIncr = (fFreq - pLastFrame->pFFreqTraj[iTraj]) / sizeBuffer;
-  fInstFreq = pLastFrame->pFFreqTraj[iTraj];
-  fInstPhase = pLastFrame->pFPhaTraj[iTraj];
+  fFreqIncr = (fFreq - pLastFrame->pFFreqTraj[iTrack]) / sizeBuffer;
+  fInstFreq = pLastFrame->pFFreqTraj[iTrack];
+  fInstPhase = pLastFrame->pFPhaTraj[iTrack];
   
   /* generate all the samples */    
   for (i = 0; i < sizeBuffer; i++)
@@ -132,26 +134,25 @@ static void SineSynth (float fFreq, float fMag, SMS_Data *pLastFrame,
     fInstFreq += fFreqIncr;
     fInstPhase += fInstFreq;
       
-    pFBuffer[i] += TO_MAG (fInstMag) * sms_sine (fInstPhase);
+    pFBuffer[i] += sms_dBToMag (fInstMag) * sms_sine (fInstPhase);
   }
   
   /* save current values into last values */
-  pLastFrame->pFFreqTraj[iTraj] = fFreq;
-  pLastFrame->pFMagTraj[iTraj] = fMag;
-  pLastFrame->pFPhaTraj[iTraj] = fInstPhase - 
+  pLastFrame->pFFreqTraj[iTrack] = fFreq;
+  pLastFrame->pFMagTraj[iTrack] = fMag;
+  pLastFrame->pFPhaTraj[iTrack] = fInstPhase - 
 		floor(fInstPhase / TWO_PI) * TWO_PI;
 }
 
-/*
- * function to generate all the sinusoids for a given frame
+/*! \brief generate all the sinusoids for a given frame
  * 
- * SMS_Data *pSmsData;     SMS data for current frame 
- * int nTraj;     	   number of partial trajectories 
- * float *pFBuffer;	   pointer to output waveform 
- * int sizeBuffer;	   size of the synthesis buffer
- * SMS_Data *pLastFrame;  SMS data from last frame 
+ * \param pSmsData       SMS data for current frame 
+ * \param pFBuffer	       pointer to output waveform 
+ * \param sizeBuffer        size of the synthesis buffer
+ * \param pLastFrame    SMS data from last frame 
+ * \param iSamplingRate sampling rate to synthesize for
  */
-int sms_sineSynthFrame (SMS_Data *pSmsData, float *pFBuffer, 
+void sms_sineSynthFrame (SMS_Data *pSmsData, float *pFBuffer, 
                     int sizeBuffer, SMS_Data *pLastFrame, 
                     int iSamplingRate)
 {
@@ -159,11 +160,6 @@ int sms_sineSynthFrame (SMS_Data *pSmsData, float *pFBuffer,
 
         float fMag, fFreq;
         int i, nTraj = pSmsData->nTraj, iHalfSamplingRate = iSamplingRate >> 1;
-        
-        /// RTE DEBUG //////////////
-//        static int fc = 0;
-//        printf(" # %d :::::::::::\n",fc++);
-        ///////////////////////////////////////
 
         /* go through all the trajectories */    
         for (i = 0; i < nTraj; i++)
@@ -195,8 +191,5 @@ int sms_sineSynthFrame (SMS_Data *pSmsData, float *pFBuffer,
                                              pFBuffer, sizeBuffer, i);
                         }
                 }
-//                printf(" [%d] %f, ",i, pSmsData->pFPhaTraj[i]);
         }
-//        printf("\n");
-        return 1;
 }     
