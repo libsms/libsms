@@ -44,10 +44,14 @@ int sms_init( void )
                 sms_prepSinc (4096);
 
 #ifdef FFTW
-        printf("libsms: using FFTW routines\n");
+        printf("libsms: using FFTW fft routines\n");
 #else
-        printf("libsms: using realft routines\n");
-#endif
+#ifdef OOURA 
+        printf("libsms: using OOURA fft routines\n");
+#else
+        printf("libsms: using realft fft routines\n");
+#endif /* OOURA */
+#endif /* FFTW */
         }
 
         return (1);
@@ -139,9 +143,14 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams)
         /* allocate memory for FFT */
 
 #ifdef FFTW
-/*         pAnalParams->fftw.pWaveform = fftwf_malloc(sizeof(float) * 2*(SMS_MAX_WINDOW/2 + 1)); */
         pAnalParams->fftw.pWaveform = fftwf_malloc(sizeof(float) * SMS_MAX_WINDOW);
         pAnalParams->fftw.pSpectrum = fftwf_malloc(sizeof(fftwf_complex) * (SMS_MAX_WINDOW / 2 + 1));
+
+        /* arg... this crashes and my head isn't clear enough to see why.. */
+/*         if(sms_allocFourierForward( pAnalParams->fftw.pWaveform, pAnalParams->fftw.pSpectrum, */
+/*                                     SMS_MAX_WINDOW) != SMS_OK) */
+/*                 return(-1); */
+                
 #endif
 
 	return (SMS_OK);

@@ -42,6 +42,7 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                 fTmp, fNewMag,  fIndex;
         float fSamplingPeriod = 1.0 / pSynthParams->iSamplingRate;
 
+
 #ifdef FFTW
         memset (pSynthParams->fftw.pSpectrum, 0, (sizeMag + 1) * sizeof(fftwf_complex));
 
@@ -106,7 +107,7 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
         for(i= sizeMag, k = 0; i < sizeFft; i++, k++)
                 pFBuffer[i] +=  pSynthParams->fftw.pWaveform[k] * pSynthParams->pFDetWindow[i] * 0.5;
 
-#else //using realft
+#else //using realft (or OOURA)
 
         memset (pSynthParams->realftOut, 0, (sizeFft +1) * sizeof(float));
         for (i = 0; i < nTraj; i++)
@@ -166,14 +167,16 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                 pSynthParams->prevFrame.pFFreqTraj[i] = fFreq;
         }
 
-        realft (pSynthParams->realftOut-1, sizeMag, -1);
+        sms_fourier(sizeFft, pSynthParams->realftOut, -1);
 
         for(i = 0, k = sizeMag; i < sizeMag; i++, k++) 
                 pFBuffer[i] += pSynthParams->realftOut[k] * pSynthParams->pFDetWindow[i];
         for(i= sizeMag, k = 0; i < sizeFft; i++, k++) 
                 pFBuffer[i] +=  pSynthParams->realftOut[k] * pSynthParams->pFDetWindow[i];
 
-#endif // FFTW
+
+
+#endif /* FFTW */
 }
 
 /*! \brief synthesis of one frame of the stochastic component by apprimating phases
@@ -194,7 +197,7 @@ static int StocSynthApprox (SMS_Data *pSmsData, float *pFBuffer,
         int i, sizeSpec1Used;
         int sizeSpec1 = pSmsData->nCoeff;
         int sizeSpec2 = pSynthParams->sizeHop;
-        int sizeFft = pSynthParams->sizeHop << 1; // 50% overlap, so fft is 2x hop
+        int sizeFft = pSynthParams->sizeHop << 1; /* 50% overlap, so sizeFft is 2x sizeHop */
 
         /* if no gain or no coefficients return  */
         if (*(pSmsData->pFStocGain) <= 0)
@@ -253,6 +256,7 @@ static int StocSynthApprox (SMS_Data *pSmsData, float *pFBuffer,
         for( i = 1; i < sizeSpec2; i++)
                 pFMagSpectrum[i] *= pSynthParams->fStocGain;
 
+
         sms_invQuickSpectrumW (pFMagSpectrum, pFPhaseSpectrum, 
                                sizeFft, pFBuffer, sizeFft, 
                                pSynthParams->pFStocWindow);
@@ -286,6 +290,23 @@ int sms_synthesize (SMS_Data *pSmsData, float *pFSynthesis,
         memcpy ( pFBuffer, (float *)(pFBuffer+sizeHop), 
                 sizeof(float) * sizeHop);
         memset (pFBuffer+sizeHop, 0, sizeof(float) * sizeHop);
+
+        // RTE DEBUG //////////////////
+/*         static int frame = 0; */
+/*         static float max = 0; */
+/*         int sizeFft = pSynthParams->sizeHop << 1; /\* 50% overlap, so sizeFft is 2x sizeHop *\/ */
+/*         printf("~~FRAME #%d:  \n", frame++); */
+/*         for(i = 0; i < sizeFft; i++) */
+/*         { */
+/*                 //printf("%f, ", pFBuffer[i]); */
+/*                 if(pFBuffer[i] > max) */
+/*                 { */
+/*                         max = pFBuffer[i]; */
+/*                         printf("new max: %f  -- ", max); */
+/*                 }; */
+/*         } */
+/*         printf("\n"); */
+        /////////////////////////////
         
         /* decide which combo of synthesis methods to use */
         if(pSynthParams->iSynthesisType == SMS_STYPE_ALL)
@@ -303,9 +324,8 @@ int sms_synthesize (SMS_Data *pSmsData, float *pFSynthesis,
                         else /*pSynthParams->iDetSynthType == SMS_DET_SIN*/
                         {
                                 sms_sineSynthFrame (pSmsData, pFBuffer, pSynthParams->sizeHop,
-                                                &(pSynthParams->prevFrame), pSynthParams->iSamplingRate);
+                                                    &(pSynthParams->prevFrame), pSynthParams->iSamplingRate);
                         }
-
                         StocSynthApprox (pSmsData, pFBuffer, pSynthParams);
                 }
 
@@ -321,7 +341,7 @@ int sms_synthesize (SMS_Data *pSmsData, float *pFSynthesis,
                 }
         }
         else /* pSynthParams->iSynthesisType == SMS_STYPE_STOC */
-                        StocSynthApprox(pSmsData, pFBuffer, pSynthParams);
+                StocSynthApprox(pSmsData, pFBuffer, pSynthParams);
 
      
         /* de-emphasize the sound and normalize*/

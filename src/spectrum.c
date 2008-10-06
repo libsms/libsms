@@ -117,32 +117,64 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
         int it2;
         float *pFBuffer;
 	/* allocate buffer */    
-	if ((pFBuffer = (float *) calloc(sizeFft+1, sizeof(float))) == NULL)
+
+
+	if ((pFBuffer = (float *) calloc(sizeFft, sizeof(float))) == NULL)
 		return -1;
 
 	/* apply window to waveform and center window around 0 */
 	iOffset = sizeFft - (iMiddleWindow - 1);
 	for (i=0; i<iMiddleWindow-1; i++)
-		pFBuffer[1+(iOffset + i)] =  sms_window_spec[i] * pFWaveform[i];
+		pFBuffer[iOffset + i] =  sms_window_spec[i] * pFWaveform[i];
 	iOffset = iMiddleWindow - 1;
 	for (i=0; i<iMiddleWindow; i++)
-		pFBuffer[1+i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i];
+		pFBuffer[i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i];
   
-	realft (pFBuffer, sizeMag, 1);
+	//realft (pFBuffer, sizeMag, 1);
+        sms_fourier(sizeFft, pFBuffer, 1);
   
 	/* convert from rectangular to polar coordinates */
 	for (i = 0; i < sizeMag; i++)
 	{ /*skips pFBuffer[0] because it is always 0 with realft */
 		it2 = i << 1; //even numbers 0-N
-		fReal = pFBuffer[it2+1]; /*odd numbers 1->N+1 */
-		fImag = pFBuffer[it2+2]; /*even numbers 2->N+2 */
+		fReal = pFBuffer[it2]; /*odd numbers 1->N+1 */
+		fImag = pFBuffer[it2+1]; /*even numbers 2->N+2 */
       
-		if (fReal != 0 || fImag != 0)
+		if (fReal != 0 || fImag != 0) /*!< \todo is this necessary or even helping? */
 		{
 			pFMagSpectrum[i] = sms_magToDB (sqrt (fReal * fReal + fImag * fImag));
 			pFPhaseSpectrum[i] = atan2 (-fImag, fReal);
 		}
 	}
+
+/* 	if ((pFBuffer = (float *) calloc(sizeFft+1, sizeof(float))) == NULL) */
+/* 		return -1; */
+
+/* 	/\* apply window to waveform and center window around 0 *\/ */
+/* 	iOffset = sizeFft - (iMiddleWindow - 1); */
+/* 	for (i=0; i<iMiddleWindow-1; i++) */
+/* 		pFBuffer[1+(iOffset + i)] =  sms_window_spec[i] * pFWaveform[i]; */
+/* 	iOffset = iMiddleWindow - 1; */
+/* 	for (i=0; i<iMiddleWindow; i++) */
+/* 		pFBuffer[1+i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i]; */
+  
+/* 	realft (pFBuffer, sizeMag, 1); */
+/*         //sms_fourier(sizeFft, pFBuffer, -1); */
+  
+/* 	/\* convert from rectangular to polar coordinates *\/ */
+/* 	for (i = 0; i < sizeMag; i++) */
+/* 	{ /\*skips pFBuffer[0] because it is always 0 with realft *\/ */
+/* 		it2 = i << 1; //even numbers 0-N */
+/* 		fReal = pFBuffer[it2+1]; /\*odd numbers 1->N+1 *\/ */
+/* 		fImag = pFBuffer[it2+2]; /\*even numbers 2->N+2 *\/ */
+      
+/* 		if (fReal != 0 || fImag != 0) */
+/* 		{ */
+/* 			pFMagSpectrum[i] = sms_magToDB (sqrt (fReal * fReal + fImag * fImag)); */
+/* 			pFPhaseSpectrum[i] = atan2 (-fImag, fReal); */
+/* 		} */
+/* 	} */
+
 	free (pFBuffer);
 #endif/*FFTW*/
         
@@ -161,26 +193,33 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
  * \return the size of the complex spectrum
  */
 int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow, 
-                       float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft, SMS_Fourier *pFourierParams)
+                       float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft)
 {
 	int sizeMag = sizeFft >> 1, i;
 	float fReal, fImag;
 
 #ifdef FFTW
         /*! \todo same as todo in sms_spectrum */
-        memset(pFourierParams->pWaveform, 0, sizeFft * sizeof(float));
+        static SMS_Fourier fftData;
+        /* \todo memory leak here.. */
+        fftData.pWaveform = fftwf_malloc(sizeof(float) * sizeFft);
+        fftData.pSpectrum = fftwf_malloc(sizeof(fftwf_complex) * (sizeFft / 2 + 1));
+        fftData.plan =  fftwf_plan_dft_r2c_1d( sizeFft, fftData.pWaveform,
+                                               fftData.pSpectrum, FFTW_ESTIMATE);
+
+        memset(fftData.pWaveform, 0, sizeFft * sizeof(float));
 
 	/* apply window to waveform */
 	for (i = 0; i < sizeWindow; i++)
-                pFourierParams->pWaveform[i] =  pFWindow[i] * pFWaveform[i];
+                fftData.pWaveform[i] =  pFWindow[i] * pFWaveform[i];
 
-        fftwf_execute(pFourierParams->plan);
+        fftwf_execute(fftData.plan);
 
 	/*convert from rectangular to polar coordinates*/
 	for (i = 1; i < sizeMag; i++)
 	{
-		fReal = pFourierParams->pSpectrum[i][0];
-		fImag = pFourierParams->pSpectrum[i][1];
+		fReal = fftData.pSpectrum[i][0];
+		fImag = fftData.pSpectrum[i][1];
       
 		if (fReal != 0 || fImag != 0)
 		{
@@ -191,8 +230,8 @@ int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow,
 		}
 	}
         /*DC and Nyquist  */
-        fReal = pFourierParams->pSpectrum[0][0];
-        fImag = pFourierParams->pSpectrum[sizeMag][0];
+        fReal = fftData.pSpectrum[0][0];
+        fImag = fftData.pSpectrum[sizeMag][0];
         pFMagSpectrum[0] = sqrt (fReal * fReal + fImag * fImag);
         if (pFPhaseSpectrum)
                 pFPhaseSpectrum[0] = atan2(fImag, fReal);
@@ -210,7 +249,8 @@ int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow,
                 pFBuffer[i] =  pFWindow[i] * pFWaveform[i];
   
 	/* compute real FFT */
-	realft (pFBuffer-1, sizeMag, 1);
+	//realft (pFBuffer-1, sizeMag, 1);
+        sms_fourier(sizeFft, pFBuffer, 1); 
   
 	/* convert from rectangular to polar coordinates */
 	for (i=0; i<sizeMag; i++)
@@ -259,7 +299,8 @@ int sms_invQuickSpectrum (float *pFMagSpectrum, float *pFPhaseSpectrum,
 		pFBuffer[it2+1] = fPower * sin (pFPhaseSpectrum[i]);
 	}
 	/* compute IFFT */
-	realft (pFBuffer-1, sizeMag, -1);
+	//realft (pFBuffer-1, sizeMag, -1);
+        sms_fourier(sizeFft, pFBuffer, -1); 
  
 	/* assume the output array has been taken care off */
 	for (i = 0; i < sizeWave; i++)
@@ -290,7 +331,7 @@ int sms_invQuickSpectrumW (float *pFMagSpectrum, float *pFPhaseSpectrum,
 	/* allocate buffer */    
 	if ((pFBuffer = (float *) calloc(sizeFft, sizeof(float))) == NULL)
 		return -1;
-   
+
 	/* convert from polar coordinates to rectangular  */
 	for (i = 0; i<sizeMag; i++)
 	{
@@ -300,12 +341,16 @@ int sms_invQuickSpectrumW (float *pFMagSpectrum, float *pFPhaseSpectrum,
 		pFBuffer[it2+1] = fPower * sin (pFPhaseSpectrum[i]);
 	}    
 	/* compute IFFT */
-	realft (pFBuffer-1, sizeMag, -1);
- 
-	/* assume the output array has been taken care off */
+        sms_fourier(sizeFft, pFBuffer, -1); 
+        //realft(pFBuffer-1, sizeMag, -1);
+
+ 	/* assume the output array has been taken care off */
+        /* \todo is a seperate pFBuffer necessary here?
+           it seems like multiplying the window into the waveform
+           would be fine, without pFBuffer */
 	for (i = 0; i < sizeWave; i++)
 		pFWaveform[i] +=  (pFBuffer[i] * pFWindow[i] * .5);
- 
+
 	free (pFBuffer);
   
 	return (sizeMag);

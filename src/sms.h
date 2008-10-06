@@ -51,6 +51,9 @@
 
 #define SMS_MAX_NPEAKS      200    /*!< \brief maximum number of peaks  */
 
+/*! \brief temporarily doing fft calculations in double presions (OOURA)*/
+//#define REAL double
+
 /*! \struct SMS_Header 
  *  \brief structure for the header of an SMS file 
  *  
@@ -172,6 +175,7 @@ typedef struct
                        \see SMS_FRAME_STATUS */
 } SMS_AnalFrame;
 
+#ifdef FFTW
 /*! \struct SMS_Fourier
  * \brief structure for fast fourier transform via FFTW
  *
@@ -183,6 +187,7 @@ typedef struct
         fftwf_plan plan; /*!< plan for FFTW's fourier transform functions, floating point */
         int flags; /*!< planner flags bitwise OR'ed together */ 
 } SMS_Fourier;
+#endif /* FFTW */
 
 /*! \struct SMS_AnalParams
  * \brief structure with useful information for analysis functions
@@ -266,13 +271,7 @@ typedef struct
                                                 \todo explain which window this is */
         float fStocGain;            /*!< gain multiplied to the stachostic component */
         float fTranspose;          /*!< frequency transposing value multiplied by each frequency */
-// #ifdef FFTW
-//         fftwf_plan  fftPlan;         /*!< plan for FFTW's inverse fourier transform functions, floating point */
-//         fftwf_complex *pSpectrum; /*!< complex array of spectra used to create synthesis */
-//         float *pWaveform;       /*!< synthesis samples produced by fftwf_execute */
-// #else
 #ifdef FFTW
-        //fftwf_complex *pSpectrum; /*< complex array of spectra produced by fftwf_execute */
         SMS_Fourier fftw; /*!< structure of data used by the FFTW library (floating point) */
 #else
         float *realftOut; /*!< RTE_DEBUG : comparing realft and fftw \todo remove this */
@@ -564,8 +563,7 @@ void sms_getWindow (int sizeWindow, float *pFWindow, int iWindowType);
               float *pFPhaseSpectrum, SMS_AnalParams *pAnalParams);
 
 int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow, 
-                       float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft, 
-                       SMS_Fourier *pFourierParams);
+                       float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft);
 
 int sms_invQuickSpectrum (float *pFMagSpectrum, float *pFPhaseSpectrum, 
                            int sizeFft, float *pFWaveform, int sizeWave);
@@ -677,6 +675,12 @@ void sms_writeSF ();
 
 /*! \todo remove realft() once fftw is completely implemented */
 void realft (float *data, int n, int isign); /* \todo remove me */
+
+#ifdef FFTW
+int sms_allocFourierForward( float *pWaveform, fftwf_complex *pSpectrum, int sizeFft);
+#endif
+
+void sms_fourier(   int sizeFft, float *pRealArray, int direction );
 
 /***********************************************************************************/
 /************* debug functions: ******************************************************/

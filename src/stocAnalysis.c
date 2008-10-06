@@ -42,7 +42,7 @@ int sms_stocAnalysis (float *pFResidual, int sizeBuffer,
         float  *pFMagSpectrum;
         float fMag = 0.0;
         static float *pFWindow = NULL;
-        static SMS_Fourier fftData;
+        //static SMS_Fourier fftData;
 
         /* allocate buffers */    
         if ((pFMagSpectrum = (float *) calloc(sizeMag, sizeof(float))) == NULL)
@@ -55,15 +55,15 @@ int sms_stocAnalysis (float *pFResidual, int sizeBuffer,
                 sms_getWindow(sizeBuffer, pFWindow, SMS_WIN_HAMMING);
 #ifdef FFTW
                 /* \todo memory leak here.. */
-                fftData.pWaveform = fftwf_malloc(sizeof(float) * sizeFft);
-                fftData.pSpectrum = fftwf_malloc(sizeof(fftwf_complex) * (sizeFft / 2 + 1));
-                fftData.plan =  fftwf_plan_dft_r2c_1d( sizeFft, fftData.pWaveform,
-                                                       fftData.pSpectrum, FFTW_ESTIMATE);
+/*                 fftData.pWaveform = fftwf_malloc(sizeof(float) * sizeFft); */
+/*                 fftData.pSpectrum = fftwf_malloc(sizeof(fftwf_complex) * (sizeFft / 2 + 1)); */
+/*                 fftData.plan =  fftwf_plan_dft_r2c_1d( sizeFft, fftData.pWaveform, */
+/*                                                        fftData.pSpectrum, FFTW_ESTIMATE); */
 #endif // FFTW
         }
 
         sms_quickSpectrum (pFResidual, pFWindow, sizeBuffer, pFMagSpectrum, 
-                           (float *) NULL, sizeFft, &fftData);
+                           (float *) NULL, sizeFft);
  
         sms_spectralApprox (pFMagSpectrum, sizeMag, sizeMag, pSmsData->pFStocCoeff, 
                             pSmsData->nCoeff, pSmsData->nCoeff);
