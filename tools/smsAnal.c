@@ -23,7 +23,7 @@
  *
  */
 #include "sms.h"
-#include "smsAnal.h"
+//#include "smsAnal.h"
 
 void usage (void)
 {
@@ -54,13 +54,13 @@ void usage (void)
              "      -h    highestFund (default 1000 hz)\n"
              " Peak Continuation parameters:\n"
              "      -n    nGuides (default 100)\n"
-             "      -p    nTrajectories (default 60)\n"
+             "      -p    nTracks (default 60)\n"
              "      -v    freqDeviation (default .45)\n"
              "      -t    peakContGuide (default .4)\n"
              "      -o    fundContToGuide (default .5)\n"
-             " Trajectory Cleaning parameters:\n"
-             "      -g    cleanTaj (default 1, yes)\n"
-             "      -a    minTrajLength (default .1 seconds)\n"
+             " Track Cleaning parameters:\n"
+             "      -g    cleanTrack (default 1, yes)\n"
+             "      -a    minTrackLength (default .1 seconds)\n"
              "      -v    maxSleepingTime (default .1 seconds)\n"
              " Stochastic Analysis parameters:\n"
              "      -e    stochasticType (default 1, approximated spectrum). 0=none \n"
@@ -69,6 +69,63 @@ void usage (void)
         exit(1);
 }
 
+/*! \brief command-line arguments for smsAnal program 
+ * \todo update comments
+ */
+
+typedef struct 
+{
+	int iDebugMode;	      /* 0 no debug,
+                         	 1 debug initialitzation functions,
+                           2 debug peak detection function,
+                           3 debug harmonic detection function,
+                           4 debug peak continuation function,
+                           5 debug clean tracks function,
+	                         6 debug sine synthesis function,
+	                         7 debug stochastic analysis function,
+	                         8 debug stochastic synthesis function,
+	                         9 debug top level analysis function,
+	                         10 debug everything 
+	                         11 write residual sound into file 
+							             12 write original, synthesis and residual
+							                to a text file */
+	float fWindowSize;    /* window size in number of periods */
+	int iFrameRate;	      /* number of frames per second */
+	float fFreqDeviation; /* maximum frequency deviation for peak 
+	                         continuation as a multiplicative factor */
+	float fLowestFund;    /* lowest posible fundamental */
+	float fHighestFund;   /* highest posible fundamental */
+	float fDefaultFund;   /* default fundamental */
+	float fPeakContToGuide; /* contribution of the continuation peak into
+	                           the value of the guide */
+	float fFundContToGuide; /* contribution of current fundamental to
+	                           current guide (between 0 and 1) */
+	int nGuides;	         /* number of guides to use */
+	int nTracks;	   /* number of tracks to use */
+	int nStochasticCoeff;  /* number of filter coefficients */
+	int iFormat;	         /* 1 for monophonic harmonic sounds, 
+	                          2 for others */
+	int iStochasticType;   /* 1 for IIR filter, 2 for line-segments,
+	                          3 for no stochastic analysis */
+	int iCleanTracks;        /* 1 if we want to clean tracks,
+	                          0 if not */
+	float fMinRefHarmMag;  /* minimum magnitude in dB of reference harmonic 
+	                          peak */
+	float fRefHarmMagDiffFromMax;/* maximum magnitude difference 
+	                                from reference harmonic peak to the maximum
+	                                magnitude peak */
+	int iRefHarmonic;	      /* reference harmonic to use in the harmonic 
+	                           detection */	
+	float fMinTrackLength;   /* minimum length of track in seconds */
+	float fMaxSleepingTime; /* maximum sleeping time for the tracks
+	                           in seconds */		
+	float fHighestFreq;     /* highest frequency to be searched */
+	float fMinPeakMag;      /* minimum magnitude in dB for a good peak */	
+	int iSoundType;         /* type of sound to be analyzed */		
+	int iAnalysisDirection;    /* analysis direction, direct or reverse */
+	int iWindowType;        /* type of analysis window */		 				  	 			 
+	 				  	 
+} ARGUMENTS;
 
 /* function to initialize the input command  arguments
  * 
@@ -94,11 +151,11 @@ static int InitArguments (ARGUMENTS *pArguments)
 	pArguments->fLowestFund = 50;
 	pArguments->fHighestFund = 1000;
 	pArguments->nGuides = 100;
-	pArguments->nTrajectories = 60;
+	pArguments->nTracks = 60;
 	pArguments->fPeakContToGuide = .4;
 	pArguments->fFundContToGuide = .5;
 	pArguments->iCleanTracks = 1;
-	pArguments->fMinTrajLength = .1;
+	pArguments->fMinTrackLength = .1;
 	pArguments->fMaxSleepingTime = .1;
 	pArguments->iStochasticType =SMS_STOC_APPROX;
 	pArguments->nStochasticCoeff = 32;
@@ -186,8 +243,8 @@ static int GetArguments (char *argv[], int argc, ARGUMENTS *pArguments)
 					printf("GetArguments: Invalid number of guides");
 					break;
 				case 'p': if (sscanf(argv[i],"%d", 
-				              &pArguments->nTrajectories) < 1) 
-					printf("GetArguments: Invalid number of trajectories");
+				              &pArguments->nTracks) < 1) 
+					printf("GetArguments: Invalid number of tracks");
 					break;
 				case 'v': if (sscanf(argv[i],"%f", 
 				              &pArguments->fFreqDeviation) < 0) 
@@ -203,11 +260,11 @@ static int GetArguments (char *argv[], int argc, ARGUMENTS *pArguments)
 					break;
 				case 'g': if (sscanf(argv[i],"%d", 
 				              &pArguments->iCleanTracks) < 0) 
-					printf("GetArguments: Invalid value for CleanTraj");
+					printf("GetArguments: Invalid value for CleanTracks");
 					break;
 				case 'a': if (sscanf(argv[i],"%f",
-				              &pArguments->fMinTrajLength) < 0) 
-					printf("GetArguments: Invalid minimum trajectory length");
+				              &pArguments->fMinTrackLength) < 0) 
+					printf("GetArguments: Invalid minimum track length");
 					break;
 				case 'b': if (sscanf(argv[i],"%f", 
 				              &pArguments->fMaxSleepingTime) < 0) 
@@ -264,7 +321,7 @@ static int FillSmsHeader (SMS_Header *pSmsHeader,
         pSmsHeader->iFormat = arguments.iFormat;
         pSmsHeader->iFrameRate = arguments.iFrameRate;
         pSmsHeader->iStochasticType = arguments.iStochasticType;
-        pSmsHeader->nTracks = arguments.nTrajectories;
+        pSmsHeader->nTracks = arguments.nTracks;
 	if(arguments.iStochasticType != SMS_STOC_APPROX)
 		pSmsHeader->nStochasticCoeff = 0;
         else
@@ -278,8 +335,8 @@ static int FillSmsHeader (SMS_Header *pSmsHeader,
                  " windowType %d, frameRate %d, highestFreq %.2f, minPeakMag %.2f,"
                  " refHarmonic %d, minRefHarmMag %.2f, refHarmMagDiffFromMax %.2f,"
                  " defaultFund %.2f, lowestFund %.2f, highestFund %.2f, nGuides %d,"
-                 " nTrajectories %d, freqDeviation %.2f, peakContToGuide %.2f,"
-                 " fundContToGuide %.2f, cleantTraj %d, minTrajLength %.2f,"
+                 " nTracks %d, freqDeviation %.2f, peakContToGuide %.2f,"
+                 " fundContToGuide %.2f, cleanTracks %d, minTrackLength %.2f,"
                  "maxSleepingTime %.2f, stochasticType %d, nStocCoeff %d\n", 	
                  arguments.iFormat, arguments.iSoundType,
                  arguments.iAnalysisDirection, arguments.fWindowSize, 
@@ -289,9 +346,9 @@ static int FillSmsHeader (SMS_Header *pSmsHeader,
                  arguments.fRefHarmMagDiffFromMax,  
                  arguments.fDefaultFund, arguments.fLowestFund,
                  arguments.fHighestFund, arguments.nGuides,
-                 arguments.nTrajectories, arguments.fFreqDeviation, 
+                 arguments.nTracks, arguments.fFreqDeviation, 
                  arguments.fPeakContToGuide, arguments.fFundContToGuide,
-                 arguments.iCleanTracks, arguments.fMinTrajLength,
+                 arguments.iCleanTracks, arguments.fMinTrackLength,
                  arguments.fMaxSleepingTime,  arguments.iStochasticType,
                  arguments.nStochasticCoeff);
        
@@ -339,17 +396,17 @@ static int FillAnalParams (ARGUMENTS arguments, SMS_AnalParams *pAnalParams,
 	pAnalParams->fPeakContToGuide = arguments.fPeakContToGuide;
 	pAnalParams->fFundContToGuide = arguments.fFundContToGuide;
 	pAnalParams->fFreqDeviation = arguments.fFreqDeviation;
-	pAnalParams->nGuides = MAX (arguments.nGuides, arguments.nTrajectories);
+	pAnalParams->nGuides = MAX (arguments.nGuides, arguments.nTracks);
 	pAnalParams->iCleanTracks = arguments.iCleanTracks;
 	pAnalParams->fMinRefHarmMag = arguments.fMinRefHarmMag;
 	pAnalParams->fRefHarmMagDiffFromMax = arguments.fRefHarmMagDiffFromMax;
 	pAnalParams->iRefHarmonic = arguments.iRefHarmonic;
-	pAnalParams->iMinTrajLength = 
-		arguments.fMinTrajLength * arguments.iFrameRate;
+	pAnalParams->iMinTrackLength = 
+		arguments.fMinTrackLength * arguments.iFrameRate;
 	pAnalParams->iMaxSleepingTime = 
 		arguments.fMaxSleepingTime * arguments.iFrameRate;
 	pAnalParams->iMaxDelayFrames = 
-		MAX(pAnalParams->iMinTrajLength, pAnalParams->iMaxSleepingTime) + 2 +
+		MAX(pAnalParams->iMinTrackLength, pAnalParams->iMaxSleepingTime) + 2 +
 			SMS_DELAY_FRAMES;
 	pAnalParams->fResidualPercentage = 0;
 

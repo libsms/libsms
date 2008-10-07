@@ -161,7 +161,7 @@ void sms_sineSynthFrame (SMS_Data *pSmsData, float *pFBuffer,
         int nTracks = pSmsData->nTracks;
         int iHalfSamplingRate = iSamplingRate >> 1;
 
-        /* go through all the trajectories */    
+        /* go through all the tracks */    
         for (i = 0; i < nTracks; i++)
         {
                 /* get magnitude */

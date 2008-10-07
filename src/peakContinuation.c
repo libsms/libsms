@@ -318,7 +318,7 @@ static int GetNextMax (SMS_Peak *pSpectralPeaks, float *pFCurrentMax)
 	return (iMaxPeak);
 }
 
-/*! \brief function to get a good starting peak for a trajectory
+/*! \brief function to get a good starting peak for a track
  *
  * \param iGuide      		current guide
  * \param pGuides  		array of guides
@@ -352,7 +352,7 @@ static int GetStartingPeak (int iGuide, SMS_Guide *pGuides, int nGuides,
 
 /*! \brief  function to advance the guides through the next frame
  *
- * the output is the frequency, magnitude, and phase trajectories
+ * the output is the frequency, magnitude, and phase tracks
  *
  * \param iFrame	 current frame number
  * \param pAnalParams analysis parameters
@@ -444,7 +444,7 @@ int sms_peakContinuation (int iFrame, SMS_AnalParams *pAnalParams)
 		}
 
 	/* save all the continuation values,
-	 * assume output trajectories are already clear */
+	 * assume output tracks are already clear */
 	for (iGuide = 0; iGuide < pAnalParams->nGuides; iGuide++)
 	{
 		if (pGuides[iGuide].iStatus == GUIDE_DEAD)

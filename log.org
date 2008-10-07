@@ -2,7 +2,7 @@
 SMS Library Work Log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 * Present Issues (todonow)
-** TODO fix pd externals
+** DONE fix pd externals
    - [ ] try with gdb and debug flags
    - [ ] move back to one file.. arg
 *** [#A]  crashes when entire patch is closed (deallocation problem)
@@ -15,10 +15,8 @@ SMS Library Work Log
    that the deviations is really off, yet nothing is using this return value
    - there are other return values of -1 as well, none used in sms_analyze
    - [ ] try manually setting the window size to the size that is settled upon
+*** [#B] related to stoc_ big crunch in the beginning?:
 ** [#B] plot stochastic coefficients at different rates to see if they are the same for diff sr
-** [#B] ways to fix the stoc_ big crunch in the beginning:
-*** something to do with sin/sinc tables or SinePhasSynth?
-*** first check if area is consistent throughout different samples.
 ** changing the framerate in smsAnal makes deterministic component empty. huh?
 *** Xavier suggests fund estimate is bad, so specify manually
 *** resample after analysis (delete 3 out of 4 frames, concatenate stoc_wave)
@@ -30,30 +28,28 @@ SMS Library Work Log
 ** DONE smsToYaml for importing into python
 * to clean:
 ** TODO make names consistent
-** TODO update docs for stocastic synthesis
-   - [ ] replace Traj/Trajectories with Tracks
+   - [X] replace Traj/Trajectories with Tracks
    - [ ] replace Record with Frame
+** TODO update docs for stocastic synthesis
 ** TODO why is iOriginalSRate necessary in SMS_Header?
    - it seems that if the synthesis is completely independent of 
    analysis, this shouldn't be.
    - [ ] is there a better way to achieve the same thing?
-** TODO research Hybridize functions, organize
+** TODO [#B] research Hybridize functions, organize
 *** was previously only used with the MK tool, which isn't available now
-** TODO why use smsHeader & analParams during analysis?
-   - synthesis uses it to copy necessary params over,
-      maybe anal will to?
 ** TODO check for memory leaks
    - [X] sine/sinc tables
    - [ ] stuff in SmsInitAnalysis
         - especially ANAL_FRAMES
 *** TODO run memory leak detector
 ** TODO static variables in smsAnalysis
+*** isn't a problem if the library is always statically compiled
    - ComputeFrame
    - Spectrum
    - GetResidual
    - static functions in peakDetection.c and peakContinuation.c
-** TODO organize files/functions
-** TODO update documentation of functions
+** DONE organize files/functions
+** DONE update documentation of functions
 ** DONE append sms_ to functions declared in sms.h
 ** DONE export functions in smsAnal to library
      - ARGUMENTS will only be for smsAnal, but an initAnalParams
@@ -71,13 +67,7 @@ SMS Library Work Log
 ** DONE SmsInit() should be a global init before anything
 * Phase 1: Refactoring libsms for usage in real-time and release
 ** TODO [#A] Doxygen documentation
-** TODO [#A] convert from short to floating point data
-   - will need this for pd anyway
-   - everything is computed in float point, so why range from 0-16000   then?
-   - [X] temp fix by making a const multiplier SHORT_TO_FLOAT
-   - [ ] RIGHT NOW... spectrum mag's seem good, but still no harmonics
 ** TODO [#C] make example python scripts
-** TODO [#C] make soundfile output format variable
 ** TODO [#C] optimizing
    - [ ] change fabs() to fabsf() if they don't need to be doubles
    - [ ] calloc's/malloc's done per function call
@@ -88,6 +78,10 @@ SMS Library Work Log
    - [ ] currently uses random() from stdlib.
           - could there be a better/faster version?
           - should the random number be filtered?
+** DONE [#C] make soundfile output format variable
+** DONE [#A] convert from short to floating point data
+   - will need this for pd anyway
+   - everything is computed in float point, so why range from 0-16000   then?
 ** DONE [#C] move smsMod's stochostic gain adjusting to smsSynth
    - should stocGain be available for all stoc types?
 ** DONE [#B] make sure pFStocGain is always set
@@ -153,7 +147,6 @@ SMS Library Work Log
           indepenent of synthesis blocksize       
 * Phase 2: building real-time pd externals for analysis/synthesis
 ** prototype: [smsSynthFile~]
-*** TODO crashes if you open a file when dsp is on
 ** [smsbuf]
 *** DONE [#A] loads an sms file into a buffer
 **** a header/data should live 

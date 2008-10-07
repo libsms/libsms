@@ -18,7 +18,7 @@ typedef struct _smsanal
         t_symbol *filename;
         t_smsbuf *smsbuf;
         SMS_AnalParams anal_params;
-        int ntrajectories;
+        int ntracks;
         int iDoAnalysis;
         int iStatus;
         int iSample;
@@ -190,7 +190,7 @@ static void smsanal_sf(t_smsanal *x, t_symbol *filename)
            will be written to file (by smsbuf) */
 	sms_fillHeader (&x->smsbuf->smsHeader, x->smsbuf->nframes,
                         &x->anal_params, x->soundHeader.iSamplingRate, 
-                         x->ntrajectories);
+                         x->ntracks);
 
         sprintf (x->smsbuf->param_string,
                  "created by [smsanal] with parameters: format %d, soundType %d, "
@@ -209,9 +209,9 @@ static void smsanal_sf(t_smsanal *x, t_symbol *filename)
                  x->anal_params.fRefHarmMagDiffFromMax,  
                  x->anal_params.fDefaultFundamental, x->anal_params.fLowestFundamental,
                  x->anal_params.fHighestFundamental, x->anal_params.nGuides,
-                 x->ntrajectories, x->anal_params.fFreqDeviation, 
+                 x->ntracks, x->anal_params.fFreqDeviation, 
                  x->anal_params.fPeakContToGuide, x->anal_params.fFundContToGuide,
-                 x->anal_params.iCleanTraj, x->anal_params.iMinTrajLength,
+                 x->anal_params.iCleanTracks, x->anal_params.iMinTrackLength,
                  x->anal_params.iMaxSleepingTime,  x->anal_params.iStochasticType,
                  x->anal_params.nStochasticCoeff);
        
@@ -318,7 +318,7 @@ static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
            will be written to file (by smsbuf) */
 	sms_fillHeader (&x->smsbuf->smsHeader, x->smsbuf->nframes,
                         &x->anal_params, x->anal_params.iSamplingRate, 
-                         x->ntrajectories);
+                         x->ntracks);
 
         sprintf (x->smsbuf->param_string,
                  "created by [smsanal] with parameters: format %d, soundType %d, "
@@ -337,9 +337,9 @@ static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
                  x->anal_params.fRefHarmMagDiffFromMax,  
                  x->anal_params.fDefaultFundamental, x->anal_params.fLowestFundamental,
                  x->anal_params.fHighestFundamental, x->anal_params.nGuides,
-                 x->ntrajectories, x->anal_params.fFreqDeviation, 
+                 x->ntracks, x->anal_params.fFreqDeviation, 
                  x->anal_params.fPeakContToGuide, x->anal_params.fFundContToGuide,
-                 x->anal_params.iCleanTraj, x->anal_params.iMinTrajLength,
+                 x->anal_params.iCleanTracks, x->anal_params.iMinTrackLength,
                  x->anal_params.iMaxSleepingTime,  x->anal_params.iStochasticType,
                  x->anal_params.nStochasticCoeff);
        
@@ -384,7 +384,7 @@ static void smsanal_debug(t_smsanal *x, t_float debugMode)
                 break;
         case SMS_DBG_PEAK_CONT: post("debug mode: peak continuation function");
                 break;
-        case SMS_DBG_CLEAN_TRAJ: post("debug mode: clean trajectories function");
+        case SMS_DBG_CLEAN_TRAJ: post("debug mode: clean tracks function");
                 break;
         case SMS_DBG_SINE_SYNTH: post("debug mode: sine synthesis function");
                 break;
@@ -636,16 +636,16 @@ static void smsanal_nguides(t_smsanal *x, t_float f)
         x->anal_params.nGuides = i;
 }
 
-static void smsanal_ntrajectories(t_smsanal *x, t_float f)
+static void smsanal_ntracks(t_smsanal *x, t_float f)
 {
         int i = (int) f;
         if(i < 1) 
         {
-                pd_error(x, "smsanal_ntrajectories: cannot be less than 1");
+                pd_error(x, "smsanal_ntracks: cannot be less than 1");
                 return;
         }
-        if(x->verbose) post("smsanal: set the number of trajectories to %d ", i);
-        x->ntrajectories = i;
+        if(x->verbose) post("smsanal: set the number of tracks to %d ", i);
+        x->ntracks = i;
 }
 
 static void smsanal_freqdeviation(t_smsanal *x, t_float f)
@@ -681,32 +681,32 @@ static void smsanal_fundcontribution(t_smsanal *x, t_float f)
         x->anal_params.fFundContToGuide = f;
 }
 
-static void smsanal_cleantraj(t_smsanal *x, t_float f)
+static void smsanal_cleantracks(t_smsanal *x, t_float f)
 {
         int i = (int) f;
         if(i < 0 || i > 1) 
         {
-                pd_error(x, "smsanal_cleantraj: has to be 0 or 1");
+                pd_error(x, "smsanal_cleantracks: has to be 0 or 1");
                 return;
         }
         if(x->verbose)
         {
-                if(i) post("smsanal: clean trajectories is on");
-                else post("smsanal: clean trajectories is off");
+                if(i) post("smsanal: clean tracks is on");
+                else post("smsanal: clean tracks is off");
         }
-        x->anal_params.iCleanTraj = i;
+        x->anal_params.iCleanTracks = i;
 }
 
-static void smsanal_mintrajlength(t_smsanal *x, t_float f)
+static void smsanal_mintracklength(t_smsanal *x, t_float f)
 {
         int i = (int) f;
         if(i < 1) 
         {
-                pd_error(x, "smsanal_mintrajlength: cannot be less than 1");
+                pd_error(x, "smsanal_mintracklength: cannot be less than 1");
                 return;
         }
-        if(x->verbose) post("smsanal: set the minimum trajectory length to %d ", i);
-        x->anal_params.iMinTrajLength = i;
+        if(x->verbose) post("smsanal: set the minimum track length to %d ", i);
+        x->anal_params.iMinTrackLength = i;
 }
 
 static void smsanal_maxsleepingtime(t_smsanal *x, t_float f)
@@ -785,7 +785,7 @@ static void *smsanal_new(t_symbol *s, int argcount, t_atom *argvec)
         x->outlet_iRecord = outlet_new(&x->x_obj,  gensym("float"));
 
         x->canvas = canvas_getcurrent();
-        x->ntrajectories = 30;
+        x->ntracks = 30;
         x->smsbuf = NULL;
         x->verbose = 1;
   
@@ -839,13 +839,13 @@ void smsanal_setup(void)
         class_addmethod(smsanal_class, (t_method)smsanal_highestfund, gensym("highestfund"), A_DEFFLOAT, 0);
         /* peak continuation parameters */
         class_addmethod(smsanal_class, (t_method)smsanal_nguides, gensym("nguides"), A_DEFFLOAT, 0);
-        class_addmethod(smsanal_class, (t_method)smsanal_ntrajectories, gensym("ntrajectories"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_ntracks, gensym("ntracks"), A_DEFFLOAT, 0);
         class_addmethod(smsanal_class, (t_method)smsanal_freqdeviation, gensym("freqdeviation"), A_DEFFLOAT, 0);
         class_addmethod(smsanal_class, (t_method)smsanal_peakcontribution, gensym("peakcontribution"), A_DEFFLOAT, 0);
         class_addmethod(smsanal_class, (t_method)smsanal_fundcontribution, gensym("fundcontribution"), A_DEFFLOAT, 0);
-        /* trajectory cleaning parameters */
-        class_addmethod(smsanal_class, (t_method)smsanal_cleantraj, gensym("cleantraj"), A_DEFFLOAT, 0);
-        class_addmethod(smsanal_class, (t_method)smsanal_mintrajlength, gensym("mintrajlength"), A_DEFFLOAT, 0);
+        /* track cleaning parameters */
+        class_addmethod(smsanal_class, (t_method)smsanal_cleantracks, gensym("cleantracks"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_mintracklength, gensym("mintracklength"), A_DEFFLOAT, 0);
         class_addmethod(smsanal_class, (t_method)smsanal_maxsleepingtime, gensym("maxsleepingtime"), A_DEFFLOAT, 0);
         /* stochastic analysis parameters */
         class_addmethod(smsanal_class, (t_method)smsanal_stochastictype, gensym("stochastictype"), A_DEFFLOAT, 0);

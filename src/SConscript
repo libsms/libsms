@@ -18,7 +18,7 @@ sms_sources = Split("""
 		getResidual.c 
                 spectralApprox.c 
 		spectrum.c 
-                fixTrajectories.c 
+                fixTracks.c 
                 fourier.c 
                 filters.c 
                 tables.c 

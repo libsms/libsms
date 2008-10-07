@@ -197,18 +197,18 @@ int main (int argc, char *argv[])
                     {	
                          for(j = iFirstTraj; j < iLastTraj; j++)
                          {
-                              if(smsData.pFMagTraj[j] > 0.00000001 )
+                              if(smsData.pFSinMag[j] > 0.00000001 )
                                    fprintf(fp, "       %-4d: [%12f, %12f]  \n", j,
-                                           smsData.pFFreqTraj[j], smsData.pFMagTraj[j]);
+                                           smsData.pFSinFreq[j], smsData.pFSinMag[j]);
                          }
                     }
                     else
                     {
                          for(j = iFirstTraj; j < iLastTraj; j++)
                          {
-                              if(smsData.pFMagTraj[j] > 0.00000001 )
+                              if(smsData.pFSinMag[j] > 0.00000001 )
                                    fprintf(fp,"        %-4d: [%12f, %12f, %12f]  \n", j,
-                                           smsData.pFFreqTraj[j], smsData.pFMagTraj[j], smsData.pFPhaTraj[j]);	
+                                           smsData.pFSinFreq[j], smsData.pFSinMag[j], smsData.pFSinPha[j]);	
                          }
                     }
                }

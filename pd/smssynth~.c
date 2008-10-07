@@ -99,7 +99,7 @@ static void smssynth_buffer(t_smssynth *x, t_symbol *bufname)
 
 	/* setup for interpolated synthesis from buffer */
         // I guess I am always ignoring phase information for now..
-	sms_allocRecord (&x->interpolatedRecord, x->smsbuf->smsHeader.nTrajectories,
+	sms_allocRecord (&x->interpolatedRecord, x->smsbuf->smsHeader.nTracks,
 	                   x->smsbuf->smsHeader.nStochasticCoeff, 0,
                            x->smsbuf->smsHeader.iStochasticType);
 

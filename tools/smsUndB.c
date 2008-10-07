@@ -47,7 +47,7 @@ int main (int ac, char *av[])
 	    for(i = 0; i < NRec; i++) 
                {
           	setSmsRecord (pSmsHeader, pData, &smsData);
-          	smsData.pFMagTraj[j] = TO_MAG(smsData.pFMagTraj[j]);
+          	smsData.pFSinMag[j] = TO_MAG(smsData.pFMagTraj[j]);
           	pData += pSmsHeader->iRecordBSize;
 	       }
 	   }
@@ -58,18 +58,18 @@ int main (int ac, char *av[])
 	    pData += pSmsHeader->iRecordBSize;
 	    freqsm1 = 0.0;
 	    setSmsRecord(pSmsHeader, pData, &smsData);
-	    freqs = smsData.pFFreqTraj[j];
+	    freqs = smsData.pFSinFreq[j];
 	    for(i = 0; i < NRec-2; i++) 
 	       {
           	pData += pSmsHeader->iRecordBSize;
           	setSmsRecord(pSmsHeader, pData, &smsData);
-          	freqsp1 = smsData.pFFreqTraj[j];
+          	freqsp1 = smsData.pFSinFreq[j];
           	printfreqs = freqs;
           	if (freqs<0.000001 && freqsm1>0.0) printfreqs = freqsm1;
           	if (freqs<0.000001 && freqsp1>0.0) printfreqs = freqsp1;
           	if (freqs<0.000001) 
-          	     smsData.pFFreqTraj[j] = .0;
-          	else smsData.pFFreqTraj[j] = printfreqs;
+          	     smsData.pFSinFreq[j] = .0;
+          	else smsData.pFSinFreq[j] = printfreqs;
           	freqsm1 = freqs;
           	freqs = freqsp1;			
                 }
@@ -80,7 +80,7 @@ int main (int ac, char *av[])
         setSmsRecord(pSmsHeader, pData, &smsData);
 	for(i = 0; i < NRec; i++) 
 	   {
-            freqs = smsData.pFFreqTraj[0];
+            freqs = smsData.pFSinFreq[0];
             Sum += freqs;
             if (freqs>0) counter++;
             pData += pSmsHeader->iRecordBSize;

@@ -38,12 +38,18 @@
  *
  * \par Info about the coding style used in this library:
  * - all functions used globally throughout the library are prepended with sms_ and are of the form
- *   sms_camelCase.  
+ *   sms_camelCase
  * - all data structures are prepended with SMS_ and are of the form SMS_CamelCase
  * - all global typedefs and defines are prepended with SMS_ and are capitalized
  * - there are various other static functions within the library that are not of this format, but are not
  *   meant to be used globally. Even still, there are some functions that are gobally defined that do
  *   not need to be.. but there are other fish to fry at the moment.
+ *
+ * \par Terminology Used:
+ * - tracks vs. trajectories: Throughout various implementations and writings on Spectral Modeling
+ *   Synthesis, these two terms are used interchangeably for the partial sinusoidal components of a
+ *   sound, or deterministic sinusoidal decompositinon.  In this code only the term 'track' is used for
+ *   clarity and universality.
  */
 
 #ifndef _SMS_H
@@ -55,7 +61,9 @@
 #include <memory.h>
 #include <strings.h>
 #include <sndfile.h>
+#ifdef FFTW
 #include <fftw3.h>
+#endif
 
 #define SMS_MAX_NPEAKS      200    /*!< \brief maximum number of peaks  */
 
@@ -623,7 +631,7 @@ int sms_getHeader (char *pChFileName, SMS_Header **ppSmsHeader,
 
 void sms_fillHeader (SMS_Header *pSmsHeader, 
                           int nFrames, SMS_AnalParams *pAnalParams,
-                    int iOriginalSRate, int nTrajectories);
+                    int iOriginalSRate, int nTracks);
 
 int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader, 
                     FILE **ppOutSmsFile);
@@ -632,7 +640,7 @@ int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader);
 
 void sms_initRecord (SMS_Data *pSmsRecord);
 
-int sms_allocRecord (SMS_Data *pSmsRecord, int nTraj, int nCoeff, 
+int sms_allocRecord (SMS_Data *pSmsRecord, int nTracks, int nCoeff, 
                        int iPhase, int stochType);
 
 int sms_allocRecordH (SMS_Header *pSmsHeader, SMS_Data *pSmsRecord);

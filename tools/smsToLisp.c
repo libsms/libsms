@@ -92,7 +92,7 @@ void main (int ac, char *av[])
 		for(i = 0; i < NRec; i++) 
 		{
 			sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
-			amps = TO_MAG (smsData.pFMagTraj[j]);
+			amps = TO_MAG (smsData.pFSinMag[j]);
 			fprintf (fp,"%f ", amps);
 		}
 		fprintf (fp,")))\n\n");
@@ -106,11 +106,11 @@ void main (int ac, char *av[])
 		Sum = 0;
 		freqsm1 = 0.0;
 		sms_getRecord(pSmsFile, pSmsHeader, i, &smsData);
-		freqs = smsData.pFFreqTraj[j];
+		freqs = smsData.pFSinFreq[j];
 		for(i = 0; i < NRec; i++) 
 		{
 			sms_getRecord(pSmsFile, pSmsHeader, i, &smsData);
-			freqsp1 = smsData.pFFreqTraj[j];
+			freqsp1 = smsData.pFSinFreq[j];
 			printfreqs = freqs;
 			if (freqs<0.000001 && freqsm1>0.0) printfreqs = freqsm1;
 			if (freqs<0.000001 && freqsp1>0.0) printfreqs = freqsp1;
@@ -140,7 +140,7 @@ void main (int ac, char *av[])
 			for (i = 0; i < NRec; i++) 
 			{
 				sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
-				phs = smsData.pFPhaTraj[j];
+				phs = smsData.pFSinPha[j];
 				fprintf (fp,"%f ", phs);
 			}
 			fprintf (fp,")))\n\n");

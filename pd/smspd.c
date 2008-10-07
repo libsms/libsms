@@ -3,7 +3,6 @@
 #include <string.h>
 
 static t_class *smspd_class;
-//t_class *smspd_class;
 
 typedef struct smspd 
 {
@@ -78,7 +77,7 @@ void CopySmsHeader( SMS_Header *pFileHeader, SMS_Header *pBufHeader, char *param
         pBufHeader->iFormat = pFileHeader->iFormat;
         pBufHeader->iFrameRate = pFileHeader->iFrameRate;
         pBufHeader->iStochasticType = pFileHeader->iStochasticType;
-        pBufHeader->nTrajectories = pFileHeader->nTrajectories;
+        pBufHeader->nTracks = pFileHeader->nTracks;
         pBufHeader->nStochasticCoeff = pFileHeader->nStochasticCoeff;
         pBufHeader->iOriginalSRate = pFileHeader->iOriginalSRate;
    
@@ -217,7 +216,7 @@ static void smsbuf_info(t_smsbuf *x)
                 post("__header contents__");
                 post("Number of Frames: %d", x->smsHeader.nFrames);
                 post("Frame rate (Hz) = %d", x->smsHeader.iFrameRate);
-                post("Number of trajectories = %d", x->smsHeader.nTrajectories);
+                post("Number of tracks = %d", x->smsHeader.nTracks);
                 post("Number of stochastic coefficients = %d",
                      x->smsHeader.nStochasticCoeff);
                 if(x->smsHeader.iFormat == SMS_FORMAT_H) 
@@ -250,10 +249,10 @@ static void smsbuf_printframe(t_smsbuf *x, float f)
         if(x->ready)
         {
                 post("----- smsbuf (%s):: frame: %d, timetag: %f -----", x->bufname->s_name, frame, f / x->smsHeader.iFrameRate);
-                for(i = 0; i < x->smsHeader.nTrajectories; i++)
-                                       if(x->smsData[frame].pFMagTraj[i] > 0.00000001 )
-                                               post("harmonic %d : %f[%f]", i, x->smsData[frame].pFFreqTraj[i],
-                                                    x->smsData[frame].pFMagTraj[i]);
+                for(i = 0; i < x->smsHeader.nTracks; i++)
+                                       if(x->smsData[frame].pFSinMag[i] > 0.00000001 )
+                                               post("harmonic %d : %f[%f]", i, x->smsData[frame].pFSinFreq[i],
+                                                    x->smsData[frame].pFSinMag[i]);
         }
         else post("smsbuf (%s) not ready", x->bufname->s_name);
 }

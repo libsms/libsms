@@ -232,7 +232,7 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
 		ReAnalyzeFrame (iCurrentFrame, pAnalParams);
 	}
   
-	/* incorporate the peaks into the corresponding trajectories */
+	/* incorporate the peaks into the corresponding tracks */
 	/* This is done after a SMS_DELAY_FRAMES delay  */
 	if (pAnalParams->ppFrames[iCurrentFrame - SMS_DELAY_FRAMES]->fFundamental > 0 ||
 	    ((pAnalParams->iFormat == SMS_FORMAT_IH ||
@@ -240,7 +240,7 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
 	     pAnalParams->ppFrames[iCurrentFrame - SMS_DELAY_FRAMES]->nPeaks > 0))
 		sms_peakContinuation (iCurrentFrame - SMS_DELAY_FRAMES, pAnalParams);
     
-	/* fill gaps and delete short trajectories */
+	/* fill gaps and delete short tracks */
 	if (pAnalParams->iCleanTracks > 0 &&
 	    pAnalParams->ppFrames[iCurrentFrame - SMS_DELAY_FRAMES]->iStatus != SMS_FRAME_EMPTY)
 		sms_cleanTracks (iCurrentFrame - SMS_DELAY_FRAMES, pAnalParams);

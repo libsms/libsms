@@ -75,12 +75,12 @@
 #X msg 122 585 lowestfund \$1;
 #X msg 126 625 highestfund \$1;
 #X msg 132 665 nguides \$1;
-#X msg 137 705 ntrajectories \$1;
+#X msg 137 705 ntracks \$1;
 #X msg 142 744 freqdeviation \$1;
 #X msg 146 782 peakcontribution \$1;
 #X msg 150 820 fundcontribution \$1;
-#X msg 154 857 cleantraj \$1;
-#X msg 160 895 mintrajlength \$1;
+#X msg 154 857 cleantracks \$1;
+#X msg 160 895 mintracklength \$1;
 #X msg 164 935 maxsleepingtime \$1;
 #X msg 164 975 stochastictype \$1;
 #X msg 165 1014 ncoefficients \$1;

@@ -18,7 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
-/*! \file fixTrajectories.c
+/*! \file fixTracks.c
  * \brief functions for making smoothly evolving tracks (partial frequencies)
  * 
  * Tries to fix gaps and short tracks

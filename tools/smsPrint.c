@@ -53,7 +53,7 @@ int main (int argc, char *argv[])
 	FILE *pSmsFile;
 	SMS_Data smsData;
 	int iError, i, j, iFormat = 1, iFirstFrame = 0, iLastFrame = -1, 
-		iFirstTraj = 0, iLastTraj = -1;
+		iFirstTrack = 0, iLastTrack = -1;
         float fInitialTime = 0, fEndTime = 0;
 
 	for (i=1; i<argc-1; i++) 
@@ -80,15 +80,15 @@ int main (int argc, char *argv[])
 					exit(1);
                                 }
                                 break;
-                        case 'f': if (sscanf(argv[i],"%d", &iFirstTraj) < 0)
+                        case 'f': if (sscanf(argv[i],"%d", &iFirstTrack) < 0)
                                 {
-					printf("Invalid FirstTraj");
+					printf("Invalid FirstTrack");
 					exit(1);
                                 }
                                 break;
-                        case 'l': if (sscanf(argv[i],"%d", &iLastTraj) < 0)
+                        case 'l': if (sscanf(argv[i],"%d", &iLastTrack) < 0)
                                 {
-					printf("Invalid LastTraj");
+					printf("Invalid LastTrack");
 					exit(1);
                                 }
                                 break;
@@ -110,7 +110,7 @@ int main (int argc, char *argv[])
 	printf("\nHEADER INFORMATION:\n");
 	printf("Number of records = %d\n", pSmsHeader->nFrames);
 	printf("Frame rate (Hz) = %d\n", pSmsHeader->iFrameRate);
-	printf("Number of trajectories = %d\n", pSmsHeader->nTracks);
+	printf("Number of tracks = %d\n", pSmsHeader->nTracks);
 	printf("Number of stochastic coefficients = %d\n",
     	   pSmsHeader->nStochasticCoeff);
         if(pSmsHeader->iFormat == 1) printf("Format = harmonic\n");
@@ -138,13 +138,13 @@ int main (int argc, char *argv[])
 	else
 		iLastFrame = pSmsHeader->nFrames; 
 
-	if (iFirstTraj > 0)
-		iFirstTraj = MIN (pSmsHeader->nTracks, iFirstTraj);
+	if (iFirstTrack > 0)
+		iFirstTrack = MIN (pSmsHeader->nTracks, iFirstTrack);
 
-	if (iLastTraj >= 0)
-		iLastTraj = MIN (pSmsHeader->nTracks, iLastTraj);
+	if (iLastTrack >= 0)
+		iLastTrack = MIN (pSmsHeader->nTracks, iLastTrack);
 	else
-		iLastTraj = pSmsHeader->nTracks;
+		iLastTrack = pSmsHeader->nTracks;
 
         if(iFormat != PRINT_HDR)
         {
@@ -158,14 +158,14 @@ int main (int argc, char *argv[])
                                         if((pSmsHeader->iFormat == SMS_FORMAT_H ||
                                             pSmsHeader->iFormat == SMS_FORMAT_IH))
                                         {
-                                                for(j = iFirstTraj; j < iLastTraj; j++)
-                                                        printf("%5.2f[%2.4f]  ", smsData.pFFreqTraj[j], smsData.pFMagTraj[j]);
+                                                for(j = iFirstTrack; j < iLastTrack; j++)
+                                                        printf("%5.2f[%2.4f]  ", smsData.pFSinFreq[j], smsData.pFSinMag[j]);
                                         }
                                         else 
                                         {
-                                                for(j = iFirstTraj; j < iLastTraj; j++)
-                                                        printf("%5.2f[%2.4f, %2.4f]  ", smsData.pFFreqTraj[j], 
-                                                               smsData.pFMagTraj[j], smsData.pFPhaTraj[j]);
+                                                for(j = iFirstTrack; j < iLastTrack; j++)
+                                                        printf("%5.2f[%2.4f, %2.4f]  ", smsData.pFSinFreq[j], 
+                                                               smsData.pFSinMag[j], smsData.pFSinPha[j]);
                                         }
                                 }
                                 if(iFormat != PRINT_DET && pSmsHeader->iStochasticType != SMS_STOC_NONE)

@@ -80,7 +80,7 @@ void main (int argc, char *argv[])
 		sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
 		fprintf(fp,"%s_amps(%d,:) = [", namedata, i+1);
 		for(j = 0; j < smsData.nTraj; j++)
-			fprintf(fp," %.2f", smsData.pFMagTraj[j]);
+			fprintf(fp," %.2f", smsData.pFSinMag[j]);
 		fprintf(fp," ];\n");
 	}
       
@@ -91,7 +91,7 @@ void main (int argc, char *argv[])
 		sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
 		fprintf(fp,"%s_freqs(%d,:) = [", namedata, i+1);
 		for(j = 0; j < smsData.nTraj; j++)
-			fprintf(fp," %.2f", smsData.pFFreqTraj[j]);
+			fprintf(fp," %.2f", smsData.pFSinFreq[j]);
 		fprintf(fp,"];\n");
 	}
       
@@ -105,7 +105,7 @@ void main (int argc, char *argv[])
 			sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
 			fprintf(fp,"%s_phases(%d,:) = [", namedata, i+1);
 			for(j = 0; j < smsData.nTraj; j++)
-				fprintf(fp," %.2f", smsData.pFPhaTraj[j]);
+				fprintf(fp," %.2f", smsData.pFSinPha[j]);
 			fprintf(fp," ];\n");
 		}
 	}

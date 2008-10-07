@@ -87,16 +87,18 @@ int sms_getSound (SMS_SndHeader *pSoundHeader, float *pSoundData, long sizeSound
  *
  * \param pChOutputSoundFile   name of output file
  * \param iSamplingRate  sampling rate of synthesis
- * \param iType output file format (0 is wav, 1 is aiff)
+ * \param iType output file format (0 is wav, 1 is aiff, or other is libsndfile specific)
  * \return error code \see SMS_SNDERR in SMS_ERRORS
  */
 int sms_createSF ( char *pChOutputSoundFile, int iSamplingRate, int iType)
 {
     memset (&sfOutputSoundHeader, 0, sizeof (sfOutputSoundHeader)) ;
    
-    if(iType)
+    if(iType == 1)
             sfOutputSoundHeader.format = SF_FORMAT_AIFF | SF_FORMAT_FLOAT;
-    else     sfOutputSoundHeader.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
+    else if(iType == 0)
+            sfOutputSoundHeader.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
+    else sfOutputSoundHeader.format = iType; /* untested.. */
     sfOutputSoundHeader.samplerate = iSamplingRate;
     sfOutputSoundHeader.channels = 1;
     
