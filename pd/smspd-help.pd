@@ -1,4 +1,4 @@
-#N canvas 619 114 471 525 10;
+#N canvas 748 407 471 525 10;
 #X obj 24 19 smspd;
 #X obj 123 83 smsbuf \$0-blarg;
 #X obj 156 309 smssynth~ \$0-blarg;
@@ -101,7 +101,7 @@
 -1 -1 0;
 #X floatatom 160 877 5 0 10 0 - - -;
 #X floatatom 164 916 5 0 0.5 0 - - -;
-#X obj 164 959 hradio 13 1 0 4 empty empty empty 0 -8 0 10 -262144
+#X obj 164 959 hradio 13 1 0 3 empty empty empty 0 -8 0 10 -262144
 -1 -1 0;
 #X floatatom 165 996 5 4 1028 0 - - -;
 #X connect 0 0 1 0;
@@ -165,17 +165,29 @@
 #X obj 277 178 outlet;
 #X obj 282 101 r pd;
 #X obj 282 132 route dsp;
+#X obj 325 234 samplerate~;
+#X obj 327 211 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
+-1 -1;
+#X obj 325 261 print samplerate;
 #X connect 0 0 4 0;
 #X connect 1 0 0 0;
 #X connect 2 0 1 0;
 #X connect 3 0 1 1;
 #X connect 6 0 7 0;
 #X connect 7 0 5 0;
+#X connect 8 0 10 0;
+#X connect 9 0 8 0;
 #X restore 408 52 pd test;
 #X floatatom 408 76 5 0 0 0 - - -;
 #X obj 451 77 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 1
 1;
 #X floatatom 8 257 5 0 0 0 - - -;
+#X obj 50 469 hsl 200 15 0 615 0 0 empty empty empty -2 -8 0 10 -262144
+-1 -1 0 1;
+#X msg 167 144 soundfile ../test/audio/piano.aiff;
+#X msg 325 201 synthtype \$1;
+#X obj 324 181 hradio 15 1 0 3 empty empty empty 0 -8 0 10 -262144
+-1 -1 1;
 #X connect 2 0 6 0;
 #X connect 2 0 6 1;
 #X connect 2 0 8 0;
@@ -203,3 +215,7 @@
 #X connect 27 0 1 0;
 #X connect 28 0 29 0;
 #X connect 28 1 30 0;
+#X connect 32 0 2 0;
+#X connect 33 0 16 0;
+#X connect 34 0 2 0;
+#X connect 35 0 34 0;

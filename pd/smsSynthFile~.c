@@ -64,9 +64,9 @@ typedef struct _smsSynthFile
         t_float *synthBuf;
         t_float f;
 	FILE *pSmsFile; 
-        SYNTH_PARAMS synthParams;
-        SMSHeader *pSmsHeader;
-        SMS_DATA smsRecordL, smsRecordR, newSmsRecord;
+        SMS_SynthParams synthParams;
+        SMS_Header *pSmsHeader;
+        SMS_Data smsRecordL, smsRecordR, newSmsRecord;
 } t_smsSynthFile;
 
 static t_int *smsSynthFile_perform(t_int *w)
@@ -82,12 +82,12 @@ static t_int *smsSynthFile_perform(t_int *w)
         {
                 if(x->synthBufPos >= x->synthParams.sizeHop)
                 {
-                        if(x->f >= x->pSmsHeader->nRecords)
-                                x->f = x->pSmsHeader->nRecords -1;
+                        if(x->f >= x->pSmsHeader->nFrames)
+                                x->f = x->pSmsHeader->nFrames -1;
                         if(x->f < 0) x->f = 0;
                 
-                        iLeftRecord = MIN (x->pSmsHeader->nRecords - 1, floor (x->f)); 
-                        iRightRecord = (iLeftRecord < x->pSmsHeader->nRecords - 2)
+                        iLeftRecord = MIN (x->pSmsHeader->nFrames - 1, floor (x->f)); 
+                        iRightRecord = (iLeftRecord < x->pSmsHeader->nFrames - 2)
                                 ? (1+ iLeftRecord) : iLeftRecord;
                 
                         sms_getRecord (x->pSmsFile, x->pSmsHeader, iLeftRecord, &x->smsRecordL);
@@ -95,7 +95,7 @@ static t_int *smsSynthFile_perform(t_int *w)
                         sms_interpolateRecords (&x->smsRecordL, &x->smsRecordR, &x->newSmsRecord,
                                                x->f - iLeftRecord);
                 
-                        SmsSynthesis (&x->newSmsRecord, x->synthBuf, &x->synthParams);
+                        sms_synthesize (&x->newSmsRecord, x->synthBuf, &x->synthParams);
                         x->synthBufPos = 0;
                 }
                 //check when blocksize is larger than hopsize... will probably crash
@@ -149,7 +149,7 @@ static void smsSynthFile_open(t_smsSynthFile *x, t_symbol *filename)
         if(x->pSmsHeader != NULL)
         {
                 post("smsSynthFile_open: re-initializing");
-                SmsFreeSynth(&x->synthParams);                
+                sms_freeSynth(&x->synthParams);                
                 sms_freeRecord(&x->smsRecordL);
                 sms_freeRecord(&x->smsRecordR);
                 sms_freeRecord(&x->newSmsRecord);
@@ -161,7 +161,7 @@ static void smsSynthFile_open(t_smsSynthFile *x, t_symbol *filename)
                 return;
         }
 
-        SmsInitSynth( x->pSmsHeader, &x->synthParams );
+        sms_initSynth( x->pSmsHeader, &x->synthParams );
         
 	/* setup for synthesis from file */
         /* needs 3 frame buffers: left, right, and interpolated */
@@ -170,7 +170,7 @@ static void smsSynthFile_open(t_smsSynthFile *x, t_symbol *filename)
         // I guess I am always ignoring phase information for now..
 	sms_allocRecord (&x->newSmsRecord, x->pSmsHeader->nTrajectories, 
 	                   x->pSmsHeader->nStochasticCoeff, 0,
-                           x->synthParams.origSizeHop, x->pSmsHeader->iStochasticType);
+                         x->pSmsHeader->iStochasticType);
 
         post("sms file initialized: %s ", filename->s_name );
 
@@ -182,21 +182,21 @@ static void smsSynthFile_info(t_smsSynthFile *x)
         post("sms file : %s ", x->s_filename->s_name );
         post("__arguments__");
         post("samplingrate: %d  ", x->synthParams.iSamplingRate);
-        if(x->synthParams.iSynthesisType == STYPE_ALL) 
-                post("synthesis type: all ");
-        else if(x->synthParams.iSynthesisType == STYPE_DET) 
-                post("synthesis type: deterministic only ");
-        else if(x->synthParams.iSynthesisType == STYPE_STOC) 
-                post("synthesis type: stochastic only ");
-        if(x->synthParams.iDetSynthType == DET_IFFT) 
-                post("deteministic synthesis method: ifft ");
-        else if(x->synthParams.iDetSynthType == DET_OSC) 
-                post("deteministic synthesis method: oscillator bank ");
+/*         if(x->synthParams.iSynthesisType == STYPE_ALL)  */
+/*                 post("synthesis type: all "); */
+/*         else if(x->synthParams.iSynthesisType == STYPE_DET)  */
+/*                 post("synthesis type: deterministic only "); */
+/*         else if(x->synthParams.iSynthesisType == STYPE_STOC)  */
+/*                 post("synthesis type: stochastic only "); */
+/*         if(x->synthParams.iDetSynthType == DET_IFFT)  */
+/*                 post("deteministic synthesis method: ifft "); */
+/*         else if(x->synthParams.iDetSynthType == DET_OSC)  */
+/*                 post("deteministic synthesis method: oscillator bank "); */
         post("sizeHop: %d ", x->synthParams.sizeHop);
         post("__header info__");
         post("fOriginalSRate: %d, iFrameRate: %d, origSizeHop: %d",
              x->pSmsHeader->iOriginalSRate, x->pSmsHeader->iFrameRate, x->synthParams.origSizeHop);
-        post("original file length: %f seconds ", (float)  x->pSmsHeader->nRecords *
+        post("original file length: %f seconds ", (float)  x->pSmsHeader->nFrames *
              x->synthParams.origSizeHop / x->pSmsHeader->iOriginalSRate );
 
 
@@ -219,13 +219,13 @@ static void *smsSynthFile_new(void)
         x->s_filename = NULL;
         x->i_frameSource = SOURCE_FLOAT;
 
-        x->synthParams.iSynthesisType = STYPE_ALL;
-        x->synthParams.iDetSynthType = DET_IFFT;
+        x->synthParams.iSynthesisType = SMS_STYPE_ALL;
+        x->synthParams.iDetSynthType = SMS_DET_IFFT;
         x->synthParams.sizeHop = x->synthBufPos = 512;
 
         x->synthParams.iSamplingRate = 44100; //should be updated once audio is turned on
         
-        SmsInit();
+        sms_init();
     
         x->synthBuf = (t_float *) calloc(x->synthParams.sizeHop, sizeof(t_float));
         
@@ -236,7 +236,7 @@ static void smsSynthFile_free(t_smsSynthFile *x)
 {
         if(x->pSmsHeader != NULL) 
         {
-                SmsFreeSynth(&x->synthParams);
+                sms_freeSynth(&x->synthParams);
                 sms_freeRecord(&x->smsRecordL);
                 sms_freeRecord(&x->smsRecordR);
                 sms_freeRecord(&x->newSmsRecord);

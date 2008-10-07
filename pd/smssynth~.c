@@ -21,6 +21,8 @@ typedef struct _smssynth
         SMS_SynthParams synthParams;
         t_smsbuf *smsbuf;
         SMS_Data interpolatedRecord;
+        t_int verbose;
+        t_int ready;
 } t_smssynth;
 
 static void smssynth_buffer(t_smssynth *x, t_symbol *bufname)
@@ -41,6 +43,16 @@ static void smssynth_buffer(t_smssynth *x, t_symbol *bufname)
                 post("new bufname: %s", bufname->s_name);
                 x->bufname = bufname;
         }
+
+        //check if a file has been opened, if so re-init
+        if(x->ready)
+        {
+                post("smssynth_open: re-initializing synth");
+                x->ready = 0;
+                sms_freeSynth(&x->synthParams);
+                sms_freeRecord(&x->interpolatedRecord);
+        }
+
         x->smsbuf =
         (t_smsbuf *)pd_findbyclass(x->bufname, smsbuf_class);
 
@@ -54,27 +66,47 @@ static void smssynth_buffer(t_smssynth *x, t_symbol *bufname)
                 pd_error(x, "smsbuf not ready");
                 return;
         }
-        else post("smsbuf IS REAAAAADDDDYY");
+        else if(x->verbose)
+                post("smssynth: [smsbuf %s] was successfully found ", x->bufname->s_name);
  
-        //check if a file has been opened, if so re-init
-        if(x->smsbuf->nframes != 0)
-        {
-                post("smssynth_open: re-initializing synth");
-                sms_freeSynth(&x->synthParams);              
-                sms_freeRecord(&x->interpolatedRecord);
-        }
+        post("(BEFORE) smssynth: %d frames in buffer (before sms_initSynth)", x->smsbuf->nframes);
+        post("smsbuf status: %d", x->smsbuf->ready);
+        post("iFrameRate:(#1) %d ", x->smsbuf->smsHeader.iFrameRate);
+
         sms_initSynth( &x->smsbuf->smsHeader, &x->synthParams );
-        
+
+        // why is nFrames here reading as zero after loading a file in smsbuf??
+        post("smssynth: %d frames in buffer (after sms_initSynth)", x->smsbuf->nframes);
+        post("smsbuf status: %d", x->smsbuf->ready);
+        post("iFrameRate:(#2) %d ", x->smsbuf->smsHeader.iFrameRate);
+
+        x->smsbuf =
+        (t_smsbuf *)pd_findbyclass(x->bufname, smsbuf_class);
+
+        if(!x->smsbuf)
+        {
+                pd_error(x, "smssynth~: %s was not found", x->bufname->s_name);
+                return;
+        }
+        if(!x->smsbuf->ready)
+        {
+                pd_error(x, "smsbuf not ready");
+                return;
+        }
+        else if(x->verbose)
+                post("smssynth: [smsbuf %s] was successfully found (again)", x->bufname->s_name);
+        post("iFrameRate(#3): %d ", x->smsbuf->smsHeader.iFrameRate);
+
 	/* setup for interpolated synthesis from buffer */
         // I guess I am always ignoring phase information for now..
-	sms_allocRecord (&x->interpolatedRecord, x->smsbuf->smsHeader.nTrajectories, 
+	sms_allocRecord (&x->interpolatedRecord, x->smsbuf->smsHeader.nTrajectories,
 	                   x->smsbuf->smsHeader.nStochasticCoeff, 0,
-                           x->synthParams.origSizeHop, x->smsbuf->smsHeader.iStochasticType);
+                           x->smsbuf->smsHeader.iStochasticType);
 
-        post("smssynth_buffer: %d frames", x->smsbuf->smsHeader.nFrames);
+        x->ready = 1;
 }
-/* the signal in is not currently used, but is there to possibly control the synthesis by signal rate
- * I don't yet know if it will do any good and have yet to do any extensive testing */
+
+/* the signal in is not currently used; is there a benifit to control the synthesis by signal rate? */
 static t_int *smssynth_perform(t_int *w)
 {
         t_smssynth *x = (t_smssynth *)(w[1]);
@@ -82,11 +114,12 @@ static t_int *smssynth_perform(t_int *w)
         t_sample *out = (t_float *)(w[3]);
         int n = (int)(w[4]);
         
-        if(x->smsbuf != NULL && x->smsbuf->ready)        
+        if(x->ready && x->smsbuf->ready)        
         {
                 float f;
                 int i, iLeftRecord, iRightRecord;
-                int nFrames = x->smsbuf->smsHeader.nFrames;
+                //int nFrames = x->smsbuf->smsHeader.nFrames;
+                int nFrames = x->smsbuf->nframes;
                 if(x->synthBufPos >= x->synthParams.sizeHop)
                 {
                         if(x->f >= nFrames)
@@ -121,14 +154,34 @@ static void smssynth_transpose(t_smssynth *x, t_float f)
 {
 /*         x->transpose = f; */
         x->synthParams.fTranspose = TEMPERED_TO_FREQ( f );
-        post("transpose: %f", x->synthParams.fTranspose);
+        if(x->verbose) post("transpose: %f", x->synthParams.fTranspose);
 }
 
 static void smssynth_stocgain(t_smssynth *x, t_float f)
 {
 /*         x->stocgain = f; */
         x->synthParams.fStocGain = f;
-        post("stocgain: %f", x->synthParams.fStocGain);
+        if(x->verbose) post("stochastic gain: %fx", x->synthParams.fStocGain);
+}
+
+static void smssynth_synthtype(t_smssynth *x, t_float f)
+{
+        x->synthParams.iSynthesisType = (int) f;
+        if(x->verbose)
+        {
+                switch (x->synthParams.iSynthesisType)
+                {
+                case SMS_STYPE_ALL:
+                        post("synthesis type: %d, all", x->synthParams.iSynthesisType);
+                        break;
+                case SMS_STYPE_DET:
+                        post("synthesis type: %d, only deterministic", x->synthParams.iSynthesisType);
+                        break;
+                case SMS_STYPE_STOC:
+                        post("synthesis type: %d, only stochastic", x->synthParams.iSynthesisType);
+                        break;
+                }
+        }
 }
 
 
@@ -171,8 +224,9 @@ static void *smssynth_new(t_symbol *bufname)
         outlet_new(&x->x_obj, gensym("signal"));
         
         x->bufname = bufname;
-
+        x->verbose = 1;
         x->smsbuf = NULL;
+        x->ready = 0;
 
         x->synthParams.iSynthesisType = SMS_STYPE_ALL;
         x->synthParams.iDetSynthType = SMS_DET_IFFT;
@@ -207,6 +261,7 @@ void smssynth_tilde_setup(void)
         class_addmethod(smssynth_class, (t_method)smssynth_sizehop, gensym("sizeHop"), A_DEFFLOAT, 0);
         class_addmethod(smssynth_class, (t_method)smssynth_transpose, gensym("transpose"), A_DEFFLOAT, 0);
         class_addmethod(smssynth_class, (t_method)smssynth_stocgain, gensym("stocgain"), A_DEFFLOAT, 0);
+        class_addmethod(smssynth_class, (t_method)smssynth_synthtype, gensym("synthtype"), A_DEFFLOAT, 0);
         
 }
 

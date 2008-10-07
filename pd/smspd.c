@@ -2,7 +2,8 @@
 #include "smspd.h"
 #include <string.h>
 
-t_class *smspd_class;
+static t_class *smspd_class;
+//t_class *smspd_class;
 
 typedef struct smspd 
 {
@@ -28,18 +29,19 @@ void smspd_setup(void)
         //smsedit_setup();
 
         post("smspd external library - September 16, 2008");
+
 }
 
 /* -_-_-_-_-_-_-_-_-_-_-helper functions -_-_-_-_-_-_-_-_-_-_- */
 
-//method for opening file in canvas directory.
-t_symbol* getFullPathName( t_symbol *infilename,  t_canvas *smsCanvas)
+/* method for opening file in canvas directory. */
+t_symbol* getFullPathName( t_symbol *infilename,  t_canvas *canvas)
 {
     char nameout[MAXPDSTRING], namebuf[MAXPDSTRING];
     char dirresult[MAXPDSTRING], *nameresult;
     char *dirname;
     char *sym = infilename->s_name;    
-    dirname = canvas_getdir(smsCanvas)->s_name;
+    dirname = canvas_getdir(canvas)->s_name;
 
     if((open_via_path(dirname, sym,"", dirresult, &nameresult, MAXPDSTRING, 0)) < 0) 
             return(NULL);
@@ -123,7 +125,8 @@ void smsbuf_alloc(t_smsbuf *x)
  */
 static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
 {
-        SMS_Header *pSmsHeader;
+        SMS_Header *pSmsHeader; /* is this necessary, or can I just copy the header
+                                   to my smsbuf with sms_getHeader? */
         long iError;
         int i;
         t_symbol *fullname;
@@ -146,7 +149,7 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
                         sms_freeRecord(&x->smsData[i]);
         }
 
-        if ((iError = sms_getHeader (fullname->s_name, &pSmsHeader, &x->pSmsFile)) < 0)
+        if ((iError = sms_getHeader (fullname->s_name, &pSmsHeader, &x->pSmsFile)) > 0)
 //        if ((iError = sms_getHeader (fullname->s_name, &pHeader, &x->pSmsFile)) < 0)
 	{
                 pd_error(x, "smsbuf_open: %s", sms_errorString(iError));
@@ -157,7 +160,7 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
 
         /* allocate memory for nframes of SMS_Data */
         x->nframes = pSmsHeader->nFrames;
-        if(0)post("nframes: %d ", x->nframes);
+        if(1)post("nframes: %d ", x->nframes);
         /*Buffer the entire file in smsBuf.  For now, I'm doing this the simplest way possible.*/        
         /* will this be faster with one malloc? try once everything is setup */
         x->smsData = calloc(x->nframes, sizeof(SMS_Data));
@@ -225,8 +228,7 @@ static void smsbuf_info(t_smsbuf *x)
                         post("Format = harmonic with phase");
                 else if(x->smsHeader.iFormat == SMS_FORMAT_IHP)
                         post("Format = inharmonic with phase");
-                if(x->smsHeader.iStochasticType == SMS_STOC_WAVE) post("Stochastic type = waveform");
-                else if(x->smsHeader.iStochasticType == SMS_STOC_IFFT) post("Stochastic type = IFFT");
+                if(x->smsHeader.iStochasticType == SMS_STOC_IFFT) post("Stochastic type = IFFT");
                 else if(x->smsHeader.iStochasticType == SMS_STOC_APPROX)
                         post("Stochastic type = line segment magnitude spectrum approximation ");
                 else if(x->smsHeader.iStochasticType == SMS_STOC_NONE) post("Stochastic type = none");

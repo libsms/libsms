@@ -9,7 +9,6 @@
 #define ANALYSIS_FROM_ARRAY 1
 
 static t_class *smsanal_class;
-//extern t_class *smsbuf_class;
 
 typedef struct _smsanal
 {
@@ -30,7 +29,7 @@ typedef struct _smsanal
         t_outlet *outlet_iRecord;
         float    *wavetable;	
         int      nSamples;
-	short pSoundData[SMS_MAX_WINDOW]; //todo: change to float
+	float pSoundData[SMS_MAX_WINDOW]; //todo: change to float
 	SMS_SndHeader soundHeader;
 } t_smsanal;
 
@@ -91,14 +90,11 @@ void *smsanal_childthread(void *zz)
                         }
                 }
                 else
-                {
-                        /*until sms_analyze will act on floating point data, the sound chunk has to be converted to 16-bit integer
-                          shorts */
-                        for(i = 0; i < sizeNewData; i++)
-                                x->pSoundData[i] = (short) (x->wavetable[x->iSample + i] * FLOAT_TO_SHORT);
-                }
+                        /* todo: try just giving the pointer to the sms_analyze buffer: *[i+sample] */
+                        for(i = 0; i < sizeNewData; i++)  x->pSoundData[i] = x->wavetable[x->iSample + i];
+
 		/* perform analysis of one frame of sound */
-		x->iStatus = sms_analyze (x->pSoundData, sizeNewData, &x->smsbuf->smsData[x->iRecord], 
+		x->iStatus = sms_analyze (x->pSoundData, sizeNewData, &x->smsbuf->smsData[x->iRecord],
                                           &x->anal_params, &x->iNextSizeRead);
                 
 
@@ -106,6 +102,7 @@ void *smsanal_childthread(void *zz)
 		if (x->iStatus == 1)
 		{
                         outlet_float(x->outlet_iRecord, (float)++x->iRecord);
+                        if(0) post(" %d", x->iRecord);
 		}
 		else if (x->iStatus == -1) /* done */
 		{
@@ -163,7 +160,12 @@ static void smsanal_sf(t_smsanal *x, t_symbol *filename)
         }
 
 	/* open input sound */
-	sms_openSF (fullname->s_name , &x->soundHeader);
+	iError = sms_openSF (fullname->s_name , &x->soundHeader);
+	if (iError != SMS_OK)
+	{
+                post("error in sms_openSF: %s", sms_errorString(iError));
+                return;
+	}	    
         x->nSamples = x->soundHeader.nSamples;
 
         x->anal_params.iSamplingRate = x->soundHeader.iSamplingRate;
@@ -235,7 +237,7 @@ static void smsanal_sf(t_smsanal *x, t_symbol *filename)
        x->iRecord = 0;
        x->iStatus = 0;
        x->iDoAnalysis = 1;
-       //smsanal_loop(x);
+
        pthread_create(&childthread, 0, smsanal_childthread, (void *)x);
 
        return;
@@ -243,8 +245,6 @@ static void smsanal_sf(t_smsanal *x, t_symbol *filename)
 
 static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
 {
-        //post("cansvas_dspstate: %d", canvas_dspstate);
-
         if(!x->smsbuf)
         {
                 pd_error(x, "smsanal_sf: set the buffer pointer before analysis");
@@ -734,18 +734,15 @@ static void smsanal_stochastictype(t_smsanal *x, t_float f)
         {
                 switch(i)
                 {
-                case SMS_STOC_WAVE:
-                        post("smsanal: stochastic type set to waveform");
-                        break;
-                case SMS_STOC_IFFT:
-                        post("smsanal: stochastic type set to inverse-FFT (not currently used)");
-                        x->anal_params.iStochasticType = 2;
+                case SMS_STOC_NONE:
+                        post("smsanal: stochastic analysis disabled");
                         break;
                 case SMS_STOC_APPROX:
                         post("smsanal: stochastic type set to spectrum approximation");
                         break;
-                case SMS_STOC_NONE:
-                        post("smsanal: stochastic analysis disabled");
+                case SMS_STOC_IFFT:
+                        post("smsanal: stochastic type set to inverse-FFT (not currently used)");
+                        x->anal_params.iStochasticType = 2;
                         break;
                 default: return;
                 }
