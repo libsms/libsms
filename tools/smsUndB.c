@@ -43,25 +43,25 @@ int main (int ac, char *av[])
 	for(j = 0; j < Ntrajet; j++) 
            {
 	    pData = (char *) pSmsHeader + pSmsHeader->iHeadBSize;
-	    pData += pSmsHeader->iRecordBSize;
+	    pData += pSmsHeader->iFrameBSize;
 	    for(i = 0; i < NRec; i++) 
                {
           	setSmsRecord (pSmsHeader, pData, &smsData);
           	smsData.pFSinMag[j] = TO_MAG(smsData.pFMagTraj[j]);
-          	pData += pSmsHeader->iRecordBSize;
+          	pData += pSmsHeader->iFrameBSize;
 	       }
 	   }
         
         for(j = 0; j < Ntrajet; j++) 
 	   {
 	    pData = (char *) pSmsHeader + pSmsHeader->iHeadBSize;
-	    pData += pSmsHeader->iRecordBSize;
+	    pData += pSmsHeader->iFrameBSize;
 	    freqsm1 = 0.0;
 	    setSmsRecord(pSmsHeader, pData, &smsData);
 	    freqs = smsData.pFSinFreq[j];
 	    for(i = 0; i < NRec-2; i++) 
 	       {
-          	pData += pSmsHeader->iRecordBSize;
+          	pData += pSmsHeader->iFrameBSize;
           	setSmsRecord(pSmsHeader, pData, &smsData);
           	freqsp1 = smsData.pFSinFreq[j];
           	printfreqs = freqs;
@@ -76,14 +76,14 @@ int main (int ac, char *av[])
            }
 	
 	pData = (char *) pSmsHeader + pSmsHeader->iHeadBSize;
-	pData += pSmsHeader->iRecordBSize;
+	pData += pSmsHeader->iFrameBSize;
         setSmsRecord(pSmsHeader, pData, &smsData);
 	for(i = 0; i < NRec; i++) 
 	   {
             freqs = smsData.pFSinFreq[0];
             Sum += freqs;
             if (freqs>0) counter++;
-            pData += pSmsHeader->iRecordBSize;
+            pData += pSmsHeader->iFrameBSize;
             setSmsRecord(pSmsHeader, pData, &smsData);
 	   }
 	pSmsHeader->fFrequency =  Sum / counter;

@@ -81,7 +81,7 @@ void CopySmsHeader( SMS_Header *pFileHeader, SMS_Header *pBufHeader, char *param
         pBufHeader->nStochasticCoeff = pFileHeader->nStochasticCoeff;
         pBufHeader->iOriginalSRate = pFileHeader->iOriginalSRate;
    
-        pBufHeader->iRecordBSize = sms_recordSizeB(pBufHeader);
+        pBufHeader->iFrameBSize = sms_recordSizeB(pBufHeader);
 
         pBufHeader->nTextCharacters = pFileHeader->nTextCharacters;
         strcpy(paramString, pFileHeader->pChTextCharacters);

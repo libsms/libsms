@@ -78,14 +78,14 @@
  *  
  *  The header also contains variable components for additional information
  *  that may be stored along with the analysis, such as descriptors or text.
- *  \todo describe descriptors better.
+ *  \todo describe descriptors better. find what variables are used for what
  */
 typedef struct 
 {
 	int iSmsMagic;         /*!< identification constant */
 	int iHeadBSize;        /*!< size in bytes of header */
-	int nFrames;	         /*!< number of data records */
-	int iRecordBSize;      /*!< size in bytes of each data frame */
+	int nFrames;	         /*!< number of data frames */
+	int iFrameBSize;      /*!< size in bytes of each data frame */
 	int iFormat;           /*!< type of data format 
                                  \todo reference enum */
 	int iFrameRate;        /*!< rate in Hz of data frames */

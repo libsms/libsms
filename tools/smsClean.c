@@ -131,7 +131,7 @@ int main (int argc, char *argv[])
 	float *pFFreq;
 	SMS_Data inSmsData, outSmsData;
 	int iError, *pIGoodRecords, *pITrajOrder, iRecord, iGoodTraj = 0, iTrack,
-		iRecordBSize, iHeadBSize, iDataBSize;
+		iFrameBSize, iHeadBSize, iDataBSize;
   
 	/* get user arguments */
 	if (argc != 3) usage();
@@ -177,12 +177,12 @@ int main (int argc, char *argv[])
 			pFFreq[iTrack] /= pIGoodRecords[iTrack];
 		}
 	
-	iRecordBSize = CalcRecordBSize (pInSmsHeader, iGoodTraj);
+	iFrameBSize = CalcRecordBSize (pInSmsHeader, iGoodTraj);
 	iHeadBSize = sizeof (SMS_Header);
-	iDataBSize = iRecordBSize * pInSmsHeader->nFrames;
+	iDataBSize = iFrameBSize * pInSmsHeader->nFrames;
 	
 	sms_initHeader (&OutSmsHeader);
-	OutSmsHeader.iRecordBSize = iRecordBSize;
+	OutSmsHeader.iFrameBSize = iFrameBSize;
 	OutSmsHeader.nFrames = pInSmsHeader->nFrames;
 	OutSmsHeader.iFormat = pInSmsHeader->iFormat;
 	OutSmsHeader.iFrameRate = pInSmsHeader->iFrameRate;

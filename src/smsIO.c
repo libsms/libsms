@@ -40,7 +40,7 @@ void sms_initHeader (SMS_Header *pSmsHeader)
 	pSmsHeader->iSmsMagic = SMS_MAGIC;
 	pSmsHeader->iHeadBSize =  sizeof(SMS_Header);
 	pSmsHeader->nFrames = 0;
-	pSmsHeader->iRecordBSize = 0;
+	pSmsHeader->iFrameBSize = 0;
 	pSmsHeader->iFormat = SMS_FORMAT_H;
 	pSmsHeader->iFrameRate = 0;
 	pSmsHeader->iStochasticType = SMS_STOC_APPROX;
@@ -87,7 +87,7 @@ void sms_fillHeader (SMS_Header *pSmsHeader,
         else
                 pSmsHeader->nStochasticCoeff = pAnalParams->nStochasticCoeff;
         pSmsHeader->iOriginalSRate = iOriginalSRate;
-        pSmsHeader->iRecordBSize = sms_recordSizeB(pSmsHeader);
+        pSmsHeader->iFrameBSize = sms_recordSizeB(pSmsHeader);
 }
 
 /*! \brief initialize an SMS data record
@@ -235,8 +235,8 @@ int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader)
 int sms_writeRecord (FILE *pSmsFile, SMS_Header *pSmsHeader, 
                     SMS_Data *pSmsRecord)
 {  
-	if (fwrite ((void *)pSmsRecord->pSmsData, 1, pSmsHeader->iRecordBSize, 
-	            pSmsFile) < pSmsHeader->iRecordBSize)
+	if (fwrite ((void *)pSmsRecord->pSmsData, 1, pSmsHeader->iFrameBSize, 
+	            pSmsFile) < pSmsHeader->iFrameBSize)
                 return(SMS_WRERR);
 	else return (SMS_OK);			
 }
@@ -281,7 +281,7 @@ int sms_recordSizeB (SMS_Header *pSmsHeader)
 int sms_getHeader (char *pChFileName, SMS_Header **ppSmsHeader,
                   FILE **ppSmsFile)
 {
-	int iHeadBSize, iRecordBSize, nFrames;
+	int iHeadBSize, iFrameBSize, nFrames;
 	int iMagicNumber;
     
 	/* open file for reading */
@@ -313,11 +313,11 @@ int sms_getHeader (char *pChFileName, SMS_Header **ppSmsHeader,
 		return (SMS_RDERR);
         
         /* read size of data Records */
-	if (fread ((void *) &iRecordBSize, (size_t) sizeof(int), (size_t)1, 
+	if (fread ((void *) &iFrameBSize, (size_t) sizeof(int), (size_t)1, 
 	           *ppSmsFile) < (size_t)1)
 		return (SMS_RDERR);
         
-	if (iRecordBSize <= 0)
+	if (iFrameBSize <= 0)
 		return (SMS_RDERR);
 
 	/* allocate memory for header */
@@ -361,16 +361,16 @@ int sms_getRecord (FILE *pSmsFile, SMS_Header *pSmsHeader, int iRecord,
                   SMS_Data *pSmsRecord)
 {    
 	if (fseek (pSmsFile, pSmsHeader->iHeadBSize + iRecord * 
-	                     pSmsHeader->iRecordBSize, SEEK_SET) < 0)
+	                     pSmsHeader->iFrameBSize, SEEK_SET) < 0)
 	{
 		printf ("sms_getRecord: could not seek to the sms record %d\n", 
 		         iRecord);
 		return (-1);
 	}
-	if ((pSmsHeader->iRecordBSize = 
+	if ((pSmsHeader->iFrameBSize = 
 	       fread ((void *)pSmsRecord->pSmsData, (size_t)1, 
-	              (size_t)pSmsHeader->iRecordBSize, pSmsFile))
-	    != pSmsHeader->iRecordBSize)
+	              (size_t)pSmsHeader->iFrameBSize, pSmsFile))
+	    != pSmsHeader->iFrameBSize)
 	{
 		printf ("sms_getRecord: could not read sms record %d\n", 
 		         iRecord);

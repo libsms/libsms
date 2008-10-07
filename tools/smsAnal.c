@@ -303,7 +303,7 @@ static int GetArguments (char *argv[], int argc, ARGUMENTS *pArguments)
 /* function to fill SMS header of the output file
  *
  * SMS_Header *pSmsHeader; 	pointer to SMS header
- * int iRecordBSize;		size in bytes of an output record
+ * int iFrameBSize;		size in bytes of an output record
  * int nFrames;		number of records in output file
  * ARGUMENTS arguments;		user arguments
  *
@@ -327,7 +327,7 @@ static int FillSmsHeader (SMS_Header *pSmsHeader,
         else
                 pSmsHeader->nStochasticCoeff = arguments.nStochasticCoeff;
         pSmsHeader->iOriginalSRate = iOriginalSRate;
-        pSmsHeader->iRecordBSize = sms_recordSizeB(pSmsHeader);
+        pSmsHeader->iFrameBSize = sms_recordSizeB(pSmsHeader);
 
         sprintf (pChTextString, 
                  "created by smsAnal with parameters: format %d, soundType %d, "
