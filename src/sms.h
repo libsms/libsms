@@ -543,7 +543,7 @@ float sms_dBToMag(float x);
 /*! \} */
 
 /* function declarations */ 
-int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsRecord,
+int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsFrame,
                  SMS_AnalParams *pAnalParams, int *pINextSizeRead);
 
 int sms_init( void );  
@@ -562,9 +562,6 @@ void sms_freeSynth( SMS_SynthParams *pSynthParams );
 
 void sms_fillSndBuffer (float *pWaveform, long sizeNewData, SMS_AnalParams *pAnalParams);
 
-int sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
-                      int sizeWindow);
-		     
 void sms_getWindow (int sizeWindow, float *pFWindow, int iWindowType);
 
  int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum, 
@@ -617,10 +614,10 @@ float sms_sine (float fTheta);
 
 float sms_sinc (float fTheta);
 
-int sms_synthesize (SMS_Data *pSmsRecord, float*pFSynthesis, 
+int sms_synthesize (SMS_Data *pSmsFrame, float*pFSynthesis, 
                   SMS_SynthParams *pSynthParams);
                 
-void sms_sineSynthFrame (SMS_Data *pSmsRecord, float *pFBuffer, 
+void sms_sineSynthFrame (SMS_Data *pSmsFrame, float *pFBuffer, 
                     int sizeBuffer, SMS_Data *pLastFrame,
                     int iSamplingRate);
 
@@ -638,24 +635,27 @@ int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader,
 
 int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader);
 
-void sms_initRecord (SMS_Data *pSmsRecord);
+//void sms_initFrame (SMS_Data *pSmsFrame);
 
-int sms_allocRecord (SMS_Data *pSmsRecord, int nTracks, int nCoeff, 
+int sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
+                      int sizeWindow);
+		     
+int sms_allocRecord (SMS_Data *pSmsFrame, int nTracks, int nCoeff, 
                        int iPhase, int stochType);
 
-int sms_allocRecordH (SMS_Header *pSmsHeader, SMS_Data *pSmsRecord);
+int sms_allocRecordH (SMS_Header *pSmsHeader, SMS_Data *pSmsFrame);
 
-int sms_getRecord (FILE *pInputFile, SMS_Header *pSmsHeader, int iRecord,
-                  SMS_Data *pSmsRecord);
+int sms_getRecord (FILE *pInputFile, SMS_Header *pSmsHeader, int iFrame,
+                  SMS_Data *pSmsFrame);
 
 int sms_writeRecord (FILE *pSmsFile, SMS_Header *pSmsHeader, 
-                    SMS_Data *pSmsRecord);
+                    SMS_Data *pSmsFrame);
 
-void sms_freeRecord (SMS_Data *pSmsRecord);
+void sms_freeRecord (SMS_Data *pSmsFrame);
 
-void sms_clearRecord (SMS_Data *pSmsRecord);
+void sms_clearRecord (SMS_Data *pSmsFrame);
 
-void sms_copyRecord (SMS_Data *pCopySmsRecord, SMS_Data *pOriginalSmsRecord);
+void sms_copyRecord (SMS_Data *pCopySmsFrame, SMS_Data *pOriginalSmsFrame);
 
 int sms_recordSizeB (SMS_Header *pSmsHeader);
 
@@ -665,10 +665,10 @@ int sms_residual (float *pFSynthesis, float *pFOriginal,
                  float *pFResidual, int sizeWindow, SMS_AnalParams *pAnalParams);
 
 int sms_stocAnalysis (float *pFResidual, int sizeWindow, 
-                  SMS_Data *pSmsRecord, SMS_AnalParams *pAnalParams);
+                  SMS_Data *pSmsFrame, SMS_AnalParams *pAnalParams);
 
-void sms_interpolateRecords (SMS_Data *pSmsRecord1, SMS_Data *pSmsRecord2,
-                           SMS_Data *pSmsRecordOut, float fInterpFactor);
+void sms_interpolateRecords (SMS_Data *pSmsFrame1, SMS_Data *pSmsFrame2,
+                           SMS_Data *pSmsFrameOut, float fInterpFactor);
 
 int sms_openSF (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader);
 

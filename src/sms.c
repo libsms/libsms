@@ -335,69 +335,6 @@ void sms_initAnalParams (SMS_AnalParams *pAnalParams)
 	pAnalParams->fResidualPercentage = 0;
 }
 
-/*! \brief initialize the current frame
- *
- * initializes arrays to zero and sets the correct sample position.
- * Special care is taken at the end the sample source (if there is
- * not enough samples for an entire frame.
- *
- * \param iCurrentFrame            frame number of current frame in buffer
- * \param pAnalParams             analysis parameters
- * \param sizeWindow               size of analysis window 
- * \return -1 on error
- */
-int sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
-                      int sizeWindow)
-{
-	/* clear deterministic data */
-	memset ((float *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinFreq, 0, 
-	        sizeof(float) * pAnalParams->nGuides);
-	memset ((float *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinMag, 0, 
-	        sizeof(float) * pAnalParams->nGuides);
-	memset ((float *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinPha, 0, 
-	        sizeof(float) * pAnalParams->nGuides);
-	/* clear peaks */
-	memset ((void *) pAnalParams->ppFrames[iCurrentFrame]->pSpectralPeaks, 0,
-	        sizeof (SMS_Peak) * SMS_MAX_NPEAKS);
-
-	pAnalParams->ppFrames[iCurrentFrame]->nPeaks = 0;
-	pAnalParams->ppFrames[iCurrentFrame]->fFundamental = 0;
-  
-	pAnalParams->ppFrames[iCurrentFrame]->iFrameNum =  
-		pAnalParams->ppFrames[iCurrentFrame - 1]->iFrameNum + 1;
-	pAnalParams->ppFrames[iCurrentFrame]->iFrameSize =  sizeWindow;
-  
-	/* if first frame set center of data around 0 */
-	if(pAnalParams->ppFrames[iCurrentFrame]->iFrameNum == 1)
-		pAnalParams->ppFrames[iCurrentFrame]->iFrameSample = 0;
-	/* increment center of data by sizeHop */
-	else
-		pAnalParams->ppFrames[iCurrentFrame]->iFrameSample = 
-			pAnalParams->ppFrames[iCurrentFrame-1]->iFrameSample + pAnalParams->sizeHop;
-  	 
-	/* check for error */
-	if (pAnalParams->soundBuffer.iMarker >
-	         pAnalParams->ppFrames[iCurrentFrame]->iFrameSample - (sizeWindow+1)/2)
-	{
-		printf("sms_initFrame error: runoff on the sound buffer\n");
-		return(-1);
-	} 
-
-	/* check for end of sound */
-	if ((pAnalParams->ppFrames[iCurrentFrame]->iFrameSample + (sizeWindow+1)/2) >=
-	    pAnalParams->iSizeSound)
-	{
-		pAnalParams->ppFrames[iCurrentFrame]->iFrameNum =  -1;
-		pAnalParams->ppFrames[iCurrentFrame]->iFrameSize =  0;
-		pAnalParams->ppFrames[iCurrentFrame]->iStatus =  SMS_FRAME_END;
-	}
-	else
-                /* good status, ready to start computing */
-		pAnalParams->ppFrames[iCurrentFrame]->iStatus = SMS_FRAME_READY;
-        return(SMS_OK);
-}
-
-
 /*! \brief set window size for next frame 
  *
  * adjusts the next window size to fit the currently detected fundamental 
