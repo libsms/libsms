@@ -220,7 +220,7 @@ void Hanning (int sizeWindow, float *pFWindow)
  * \see SMS_WINDOWS for the different window types available
  * \param sizeWindow   window size
  * \param pFWindow      window array
- * \param iWindowType the desired window type defined by SMS_WINDOWS 
+ * \param iWindowType the desired window type defined by #SMS_WINDOWS 
  */
 void sms_getWindow (int sizeWindow, float *pFWindow, int iWindowType)
 {

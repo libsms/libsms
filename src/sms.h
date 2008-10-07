@@ -33,10 +33,17 @@
  * it useful on modern day platforms.  The goal of this library is to be usable in real-time audio
  * applications for performing high-fidelity synthesis of sound models. It should work on most 
  * platforms available, although Linux is the only one tested so far. 
-          - Richard Thomas Eakin
+ *         - Richard Thomas Eakin - reakin@iua.upf.edu
+ *         - Xavier, do you want your email address here?
  *
- * \todo explain about coding style used in this library
- *
+ * \par Info about the coding style used in this library:
+ * - all functions used globally throughout the library are prepended with sms_ and are of the form
+ *   sms_camelCase.  
+ * - all data structures are prepended with SMS_ and are of the form SMS_CamelCase
+ * - all global typedefs and defines are prepended with SMS_ and are capitalized
+ * - there are various other static functions within the library that are not of this format, but are not
+ *   meant to be used globally. Even still, there are some functions that are gobally defined that do
+ *   not need to be.. but there are other fish to fry at the moment.
  */
 #ifndef _SMS_H
 #define _SMS_H
@@ -235,12 +242,6 @@ typedef struct
         SMS_AnalFrame *pFrames;  /*!< \todo explain why AnalFrame is necessary here */
         SMS_AnalFrame **ppFrames; /*!< \todo explain why this double pointer is necessary */
         float fResidualPercentage; /*!< accumalitive residual percentage */
-// #ifdef FFTW
-//         fftwf_plan  fftPlan; /*!< plan for FFTW's fourier transform functions, floating point */
-//         float *pWaveform; /*< array of samples to be passed to fftwf_execute 
-//                            \todo why isn't the sound buffer above used here, why both? */
-//         fftwf_complex *pSpectrum; /*< complex array of spectra produced by fftwf_execute */
-// #endif
 #ifdef FFTW
         SMS_Fourier fftw; /*!< structure of data used by the FFTW library (floating point) */
 #endif

@@ -189,7 +189,6 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
  * \param pFMagSpectrum     pointer to output spectrum 
  * \param pFPhaseSpectrum  pointer to output spectrum
  * \param sizeFft		       size of FFT 
- * \param pFourierParams          pointer to structure of arrays and plan for FFTW
  * \return the size of the complex spectrum
  */
 int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow, 
