@@ -44,7 +44,7 @@ ylabel('frequency (hertz)')
 print 'loading', yamlFilename, '... it may take a while...'
 smsFile = load(open(yamlFilename).read(), Loader=Loader)
 print '... done loading.'
-nRecords = smsFile['smsHeader']['nRecords']
+nFrames = smsFile['smsHeader']['nFrames']
 nTraj = smsFile['smsHeader']['nTrajectories']
 
 smsData = smsFile['smsData'] 
@@ -54,7 +54,7 @@ tracks = [0] *nTraj
 for i in range(nTraj): # loop for each harmonic
     time = 0; # use int index to check if it has been set (which would be positive)
     freq = 0;
-    for j in range(nRecords): # loop for all frames
+    for j in range(nFrames): # loop for all frames
         if smsData[j]['harmonics']: # make sure frame has harmonic data #TODO: check if necessary loop
             for num,traj in smsData[j]['harmonics'].iteritems(): #  build time and freq lists
                 if i == num:
@@ -74,7 +74,7 @@ for i in range(nTraj): # if traj has data, plot it
 # make an array of stocWave frames for one continuous waveform
 #if smsFile['smsHeader']['iStochasticType'] == 'waveform' :
 #    resWave = []
-#    for i in range(nRecords):
+#    for i in range(nFrames):
 #        resWave += smsData[i]['stocWave']
 
 #    Pxx, freq, bins, im = specgram(resWave, NFFT=2048, Fs= srate, noverlap=512)

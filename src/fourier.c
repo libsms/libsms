@@ -20,6 +20,8 @@
  */
 /*! \file fourier.c 
  * \brief routines for different Fast Fourier Transform Algorithms
+ *
+ * look at the very bottom of this file for the global fft call, sms_fourier()
  */
 
 #include "sms.h"
@@ -145,10 +147,10 @@ int sms_allocFourierForward( float *pWaveform, fftwf_complex *pSpectrum, int siz
 
 /* ============= Ooura ================================= */
 
-#ifdef OOURA
-/*!
--------- Real DFT / Inverse of Real DFT --------
-    [definition]
+//#ifdef OOURA
+
+/* -------- Real DFT / Inverse of Real DFT --------
+     [definition]
         <case1> RDFT
             R[k] = sum_j=0^n-1 a[j]*cos(2*pi*j*k/n), 0<=k<=n/2
             I[k] = sum_j=0^n-1 a[j]*sin(2*pi*j*k/n), 0<k<n/2
@@ -195,6 +197,11 @@ int sms_allocFourierForward( float *pWaveform, fftwf_complex *pSpectrum, int siz
             }
         .
 */
+/* ! \brief OOURA Real / Inverse DFT algoriithm
+ *
+ * The source code contains documentation from
+ * the original author \todo finish correctly citing
+ */
 void rdft(int n, int isgn, float *a, int *ip, float *w)
 {
     void makewt(int nw, int *ip, float *w);
@@ -774,7 +781,7 @@ void rftbsub(int n, float *a, int nc, float *c)
     a[m + 1] = -a[m + 1];
 }
 
-#endif /* OOURA */
+//#endif /* OOURA */
 
 //#define REAL double
 

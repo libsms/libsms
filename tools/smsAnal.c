@@ -63,7 +63,7 @@ void usage (void)
              "      -a    minTrajLength (default .1 seconds)\n"
              "      -v    maxSleepingTime (default .1 seconds)\n"
              " Stochastic Analysis parameters:\n"
-             "      -e    stochasticType (default 2, approximated spectrum)\n"
+             "      -e    stochasticType (default 1, approximated spectrum). 0=none \n"
              "      -c    nStocCoeff (default 32)\n"
              );
         exit(1);
@@ -369,11 +369,11 @@ int main (int argc, char *argv[])
 	SMS_Data smsData;
 	SMS_Header smsHeader;
 
-	short pSoundData[SMS_MAX_WINDOW];
+	float pSoundData[SMS_MAX_WINDOW];
 	SMS_SndHeader SoundHeader;
 
 	char *pChInputSoundFile = NULL, *pChOutputSmsFile = NULL;
-	int iHopSize, nFrames;
+	int iHopSize, nFrames, iError;
 	long iStatus = 0, iSample = 0, sizeNewData = 0;
         int iNextSizeRead = 0;
 	short iDoAnalysis = 1, iRecord = 0;
@@ -391,7 +391,13 @@ int main (int argc, char *argv[])
 	pChOutputSmsFile = argv[argc-1];
  
 	/* open input sound */
-	sms_openSF (pChInputSoundFile, &SoundHeader);
+	iError = sms_openSF(pChInputSoundFile, &SoundHeader);
+
+	if (iError != SMS_OK)
+	{
+                printf("error in sms_openSF: %s", sms_errorString(iError));
+                exit(EXIT_FAILURE);
+	}	    
 
 	/* check default fundamental */
 	if (arguments.fDefaultFund < arguments.fLowestFund)
@@ -421,7 +427,7 @@ int main (int argc, char *argv[])
 	if (analParams.iDebugMode == SMS_DBG_SYNC)
 		sms_createDebugFile (&analParams);
 	if (analParams.iDebugMode == SMS_DBG_RESIDUAL)
-		sms_createResSF (&analParams);
+		sms_createResSF (analParams.iSamplingRate);
 
         sms_init();
         sms_initAnalysis (&analParams);
@@ -461,7 +467,7 @@ int main (int argc, char *argv[])
 			break;
 		}
 		/* perform analysis of one frame of sound */
-		iStatus = sms_analyze (pSoundData, sizeNewData, &smsData, 
+		iStatus = sms_analyze (pSoundData, sizeNewData, &smsData,
 		                       &analParams, &iNextSizeRead);
 
 		/* if there is an output SMS record, write it */

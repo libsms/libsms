@@ -59,7 +59,7 @@ int main (int argc, char *argv[])
      SMS_Header *pSmsHeader;
      FILE *pSmsFile, *fp;
      SMS_Data smsData;
-     int iError, i, j, nSamples, iFormat = 1, iFirstFrame = 0, iLastFrame = -1, 
+     int iError, i, j, iFormat = 1, iFirstFrame = 0, iLastFrame = -1, 
           iFirstTraj = 0, iLastTraj = -1;
      float fInitialTime = 0, fEndTime = 0;
         
@@ -124,9 +124,7 @@ int main (int argc, char *argv[])
      else if(pSmsHeader->iFormat == SMS_FORMAT_IHP) 
           fprintf(fp,"inharmonic_with_phase\n");
      fprintf(fp,"    iStochasticType  : ");
-     if(pSmsHeader->iStochasticType == SMS_STOC_WAVE) 
-          fprintf(fp,"waveform\n");
-     else if(pSmsHeader->iStochasticType == SMS_STOC_IFFT) 
+     if(pSmsHeader->iStochasticType == SMS_STOC_IFFT) 
           fprintf(fp,"stft\n");
      else if(pSmsHeader->iStochasticType == SMS_STOC_APPROX) 
           fprintf(fp,"approx\n");
@@ -217,37 +215,24 @@ int main (int argc, char *argv[])
 		
                if (iFormat != PRINT_DET && pSmsHeader->iStochasticType != SMS_STOC_NONE)
                {	
-                    if(pSmsHeader->iStochasticType == SMS_STOC_WAVE)
-                    {
-                         nSamples = pSmsHeader->iOriginalSRate / pSmsHeader->iFrameRate;
-                         fprintf(fp,"    stocWave: [ ");
-                         for( j = 0; j < nSamples; j++)
-                         {
-                              //print 4 values a line
-                              if( j !=0 && j%4 == 0) fprintf(fp, ",\n                        ");
-                              else if( j != 0) fprintf(fp, ", ");
-                              fprintf(fp,"%12f", smsData.pFStocWave[j]);
-                         }
-                         fprintf(fp," ]\n");
-                    }
-                    else if(pSmsHeader->iStochasticType == SMS_STOC_IFFT)
-                    {
-
-                    }
-                    else if( pSmsHeader->iStochasticType == SMS_STOC_APPROX )
-                    {
-                         fprintf(fp,"    stocGain: %f\n", *(smsData.pFStocGain));
-                         fprintf(fp,"    stocCoefficients: [");
-                         for(j = 0; j < smsData.nCoeff; j++)
-                         {
-                              if(j%4 == 0 && j !=0)
-                                   fprintf(fp,",\n                       ");
+                       if( pSmsHeader->iStochasticType == SMS_STOC_APPROX )
+                       {
+                               fprintf(fp,"    stocGain: %f\n", *(smsData.pFStocGain));
+                               fprintf(fp,"    stocCoefficients: [");
+                               for(j = 0; j < smsData.nCoeff; j++)
+                               {
+                                       if(j%4 == 0 && j !=0)
+                                               fprintf(fp,",\n                       ");
                               else if( j !=0)
-                                   fprintf(fp,", ");
-                              fprintf(fp,"%9f", smsData.pFStocCoeff[j]);
-                         }
-                         fprintf(fp," ]\n");
-                    }   
+                                      fprintf(fp,", ");
+                                       fprintf(fp,"%9f", smsData.pFStocCoeff[j]);
+                               }
+                               fprintf(fp," ]\n");
+                       }   
+                       else if(pSmsHeader->iStochasticType == SMS_STOC_IFFT)
+                       {
+                               
+                       }
                }
           }
      }

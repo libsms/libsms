@@ -81,7 +81,8 @@ int CalcRecordBSize (SMS_Header *pSmsHeader, int nTrajectories)
 void SetTraj (float *pFFreq, int inNTraj, 
                int *pITrajOrder, int outNTraj)
 {
-	int i, j, iTraj;
+	int i, j;
+        int iTraj = 0;
 	float fTmp = 22000, fLow = 0;
 
 	for (i = 0; i < outNTraj; i++)

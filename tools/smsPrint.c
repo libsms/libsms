@@ -55,7 +55,7 @@ int main (int argc, char *argv[])
 	int iError, i, j, iFormat = 1, iFirstFrame = 0, iLastFrame = -1, 
 		iFirstTraj = 0, iLastTraj = -1;
         float fInitialTime = 0, fEndTime = 0;
-        int nSamples;
+
 	for (i=1; i<argc-1; i++) 
 	{
 		if (*(argv[i]++) == '-') 
@@ -170,24 +170,17 @@ int main (int argc, char *argv[])
                                 }
                                 if(iFormat != PRINT_DET && pSmsHeader->iStochasticType != SMS_STOC_NONE)
                                         {	
-                                                if(pSmsHeader->iStochasticType == SMS_STOC_WAVE)
-                                                {
-                                                        nSamples = pSmsHeader->iOriginalSRate / pSmsHeader->iFrameRate;
-                                                        printf("\n    stoc_wave (%d samples):\n", nSamples);
-                                                        for( j = 0; j < nSamples; j++)
-                                                                printf("%f, ", smsData.pFStocWave[j]);
-                                                }
-                                                else if(pSmsHeader->iStochasticType == SMS_STOC_IFFT)
-                                                 {
-
-                                                 }
-                                                else if( pSmsHeader->iStochasticType == SMS_STOC_APPROX )
+                                                if( pSmsHeader->iStochasticType == SMS_STOC_APPROX )
                                                 {
                                                         printf("\n    stoc_gain: %f\n", *(smsData.pFStocGain));
                                                         printf("stoc_coefficients: ");
                                                         for(j = 0; j < smsData.nCoeff; j++)
                                                                 printf("%1.3f  ", smsData.pFStocCoeff[j]);
                                                 }   
+                                                else if(pSmsHeader->iStochasticType == SMS_STOC_IFFT)
+                                                 {
+                                                         /* not yet implemented */
+                                                 }
                                         }
                                 printf("\n");
                 }

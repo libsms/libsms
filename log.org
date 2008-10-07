@@ -2,8 +2,19 @@
 SMS Library Work Log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 * Present Issues (todonow)
-** [#A] in smspd externals, crashes when entire patch is closed (deallocation problem)
+** TODO fix pd externals
+   - [ ] try with gdb and debug flags
+   - [ ] move back to one file.. arg
+*** [#A]  crashes when entire patch is closed (deallocation problem)
+*** [#A] try to seperate pd external source files
+       - try with glob pointer
+*** [#A] in smspd externals, crashes when entire patch is closed (deallocation problem)
 ** TODO add SMS-OLD to svn/tags
+** TODO I don't think bad frames are being re-analyzed
+   - ReAnalyzeFrame is returning a -1 when sms_fundDeviation reports
+   that the deviations is really off, yet nothing is using this return value
+   - there are other return values of -1 as well, none used in sms_analyze
+   - [ ] try manually setting the window size to the size that is settled upon
 ** [#B] plot stochastic coefficients at different rates to see if they are the same for diff sr
 ** [#B] ways to fix the stoc_ big crunch in the beginning:
 *** something to do with sin/sinc tables or SinePhasSynth?
@@ -18,8 +29,14 @@ SMS Library Work Log
 ** DONE smsPlot.py for plotting smsData over a spectrogram of audio              
 ** DONE smsToYaml for importing into python
 * to clean:
-** TODO research the covariance functions
-*** they wee used in StocAnalysisIIR, which is no good apparently
+** TODO make names consistent
+** TODO update docs for stocastic synthesis
+   - [ ] replace Traj/Trajectories with Tracks
+   - [ ] replace Record with Frame
+** TODO why is iOriginalSRate necessary in SMS_Header?
+   - it seems that if the synthesis is completely independent of 
+   analysis, this shouldn't be.
+   - [ ] is there a better way to achieve the same thing?
 ** TODO research Hybridize functions, organize
 *** was previously only used with the MK tool, which isn't available now
 ** TODO why use smsHeader & analParams during analysis?
@@ -54,14 +71,18 @@ SMS Library Work Log
 ** DONE SmsInit() should be a global init before anything
 * Phase 1: Refactoring libsms for usage in real-time and release
 ** TODO [#A] Doxygen documentation
-** TODO [#B] convert from short to floating point data
+** TODO [#A] convert from short to floating point data
    - will need this for pd anyway
    - everything is computed in float point, so why range from 0-16000   then?
    - [X] temp fix by making a const multiplier SHORT_TO_FLOAT
+   - [ ] RIGHT NOW... spectrum mag's seem good, but still no harmonics
 ** TODO [#C] make example python scripts
 ** TODO [#C] make soundfile output format variable
 ** TODO [#C] optimizing
    - [ ] change fabs() to fabsf() if they don't need to be doubles
+   - [ ] calloc's/malloc's done per function call
+   - check if they are only done once
+       - most are in if statements, add an else with a print to check
    - [ ] same with floorf
    - [ ] store magnitudes in RMS instead of db
    - [ ] currently uses random() from stdlib.
@@ -153,3 +174,5 @@ SMS Library Work Log
 *** DONE [#A] has access to an [smsbuf] by symbol name
 *** DONE [#A] synthesizes the [smsbuf]
 ** [smsedit]
+
+* benchmarking FFT's

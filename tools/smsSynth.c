@@ -40,6 +40,7 @@ void usage (void)
              "      -t     time factor (default 1): positive value to multiply by overall time \n"
              "      -g     stochastic gain (default 1): positive value to multiply into stochastic gain \n"
              "      -x     transpose factor (default 1): value based on the Equal Tempered Scale to\n"
+             "      -f      soundfile output type (default 0): 0 is wav, 1 is aiff"
              "             transpose the frequency \n"
              "\n"
              "synthesize an analysis (.sms) file made with smsAnal."
@@ -62,6 +63,7 @@ int main (int argc, char *argv[])
         float fRecordLoc; /* exact sms frame location, used to interpolate newSmsRecord */
         float fFsRatio,  fLocIncr;
         int  detSynthType, synthType, sizeHop, iSamplingRate; /*  argument holders */
+        int iSoundFileType = 0; /* wav file */
         float timeFactor = 1.0;
         float fTranspose = 0.0;
 	float stocGain = 1.0;
@@ -125,6 +127,8 @@ int main (int argc, char *argv[])
                                         break;
                                 case 'v': verboseMode = 1;
                                         break;
+                                case 'f': sscanf(argv[i], "%d", &iSoundFileType);
+                                        break;
                                 default:   usage();
 				}
 	}
@@ -133,7 +137,9 @@ int main (int argc, char *argv[])
 	pChInputSmsFile = argv[argc-2];
 	pChOutputSoundFile = argv[argc-1];
         
-	if ((iError = sms_getHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile)) < 0)
+        iError = sms_getHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile);
+
+	if (iError != SMS_OK)
 	{
                 printf("error in sms_getHeader: %s", sms_errorString(iError));
                 exit(EXIT_FAILURE);
@@ -161,17 +167,18 @@ int main (int argc, char *argv[])
                        pSmsHeader->iOriginalSRate, pSmsHeader->iFrameRate, synthParams.origSizeHop);
                 printf("original file length: %f seconds \n", (float)  pSmsHeader->nFrames * 
                        synthParams.origSizeHop / pSmsHeader->iOriginalSRate );
+                if(!iSoundFileType) printf("output soundfile type: wav \n");
+                else  printf("output soundfile type: aiff \n");
         }
 
         /* initialize libsndfile for writing a soundfile */
-	sms_createSF (synthParams, pChOutputSoundFile);
+	sms_createSF ( pChOutputSoundFile, synthParams.iSamplingRate, 0);
 
 	/* setup for synthesis from file */
 	sms_allocRecordH (pSmsHeader, &smsRecordL);
 	sms_allocRecordH (pSmsHeader, &smsRecordR);
 	sms_allocRecord (&newSmsRecord, pSmsHeader->nTrajectories, 
-	                   pSmsHeader->nStochasticCoeff, 0,
-                           synthParams.origSizeHop, pSmsHeader->iStochasticType);
+                         pSmsHeader->nStochasticCoeff, 0, pSmsHeader->iStochasticType);
 
 	if ((pFSynthesis = (float *) calloc(synthParams.sizeHop, sizeof(float)))
 	    == NULL)

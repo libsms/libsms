@@ -18,18 +18,25 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
+/*! \file tables.c
+ * \brief sin and sinc tables.
+ * 
+ * contains functions for creating and indexing the tables
+ */
 #include "sms.h"
 
-#define SIN_TABLE_SIZE 4096//was 2046
-#define SINC_TABLE_SIZE 4096
-
+/*! \brief value to scale the sine-table-lookup phase */
 static float fSineScale;
+/*! \brief value to scale the sinc-table-lookup phase */
 static float fSincScale;
+/*! \brief global pointer to the sine table */
 float *sms_tab_sine;
+/*! \brief global pointer to the sinc table */
 float *sms_tab_sinc;
 
-/* prepares the sine table, returns 1 if allocations made, 0 on failure
- * int nTableSize;    size of table
+/*! \brief prepares the sine table
+ * \param  nTableSize    size of table
+ * \return error code \see SMS_MALLOC in SMS_ERRORS
  */
 int sms_prepSine (int nTableSize)
 {
@@ -37,7 +44,7 @@ int sms_prepSine (int nTableSize)
   float fTheta;
   
   if((sms_tab_sine = (float *)malloc(nTableSize*sizeof(float))) == 0)
-    return (0);
+    return (SMS_MALLOC);
   fSineScale =  (float)(TWO_PI) / (float)(nTableSize - 1);
   fTheta = 0.0;
   for(i = 0; i < nTableSize; i++) 
@@ -45,9 +52,9 @@ int sms_prepSine (int nTableSize)
     fTheta = fSineScale * (float)i;
     sms_tab_sine[i] = sin(fTheta);
   }
-  return (1);
+  return (SMS_OK);
 }
-/* clear sine table */
+/*! \brief clear sine table */
 void sms_clearSine()
 {
   if(sms_tab_sine)
@@ -55,8 +62,9 @@ void sms_clearSine()
   sms_tab_sine = 0;
 }
 
-/* function that returns approximately sin(fTheta)
- * float fTheta;    angle in radians
+/*! \brief table-lookup sine method
+ * \param fTheta    angle in radians
+ * \return approximately sin(fTheta)
  */
 float sms_sine (float fTheta)
 {
@@ -80,14 +88,20 @@ float sms_sine (float fTheta)
     return(-fT);
 }
 
+/*! \brief Sinc method to generate the lookup table
+ */
 static float Sinc (float x, float N)	
 {
 	return (sinf ((N/2) * x) / sinf (x/2));
 }
 
-/* function to prepare the main lobe of a frequency domain 
- *  BlackmanHarris92 window
+/*! \brief prepare the Sinc table
  *
+ * used for the main lobe of a frequency domain 
+ * BlackmanHarris92 window
+ *
+ * \param  nTableSize    size of table
+ * \return error code \see SMS_MALLOC in SMS_ERRORS
  */
 int sms_prepSinc (int nTableSize)
 {
@@ -99,7 +113,7 @@ int sms_prepSinc (int nTableSize)
 	       fThetaIncr = (8.0 * TWO_PI / N) / (nTableSize);
 
 	if((sms_tab_sinc = (float *) calloc (nTableSize, sizeof(float))) == 0)
-		return (0);
+		return (SMS_MALLOC);
 
 	for(i = 0; i < nTableSize; i++) 
 	{
@@ -115,9 +129,9 @@ int sms_prepSinc (int nTableSize)
 
         fSincScale = (float) nTableSize / 8.0;
 
-	return (1);
+	return (SMS_ERRORS);
 }
-/* clear sine table */
+/*! \brief clear sine table */
 void sms_clearSinc()
 {
   if(sms_tab_sinc)
@@ -125,8 +139,12 @@ void sms_clearSinc()
   sms_tab_sinc = 0;
 }
 
-/*
+/*! \brief global sinc table-lookup method
+ * 
  * fTheta has to be from 0 to 8
+ *
+ * \param fTheta    angle in radians
+ * \return approximately sinc(fTheta)
  */
 float sms_sinc (float fTheta)
 {
