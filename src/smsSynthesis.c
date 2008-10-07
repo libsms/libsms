@@ -32,12 +32,12 @@
 static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer, 
                           SMS_SynthParams *pSynthParams)
 {
-        long sizeFft = pSynthParams->sizeHop << 1; 
-        long iHalfSamplingRate = pSynthParams->iSamplingRate >> 1;
-        long sizeMag = pSynthParams->sizeHop;
-        long nBins = 8;
-        long  nTraj = pSmsData->nTraj;
-        long iFirstBin, k, i, l, b;
+        int sizeFft = pSynthParams->sizeHop << 1; 
+        int iHalfSamplingRate = pSynthParams->iSamplingRate >> 1;
+        int sizeMag = pSynthParams->sizeHop;
+        int nBins = 8;
+        int nTracks = pSmsData->nTracks;
+        int iFirstBin, k, i, l, b;
         float fMag=0.0, fFreq=0.0, fPhase=0.0, fLoc, fSin, fCos, fBinRemainder, 
                 fTmp, fNewMag,  fIndex;
         float fSamplingPeriod = 1.0 / pSynthParams->iSamplingRate;
@@ -110,7 +110,7 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
 #else //using realft (or OOURA)
 
         memset (pSynthParams->realftOut, 0, (sizeFft +1) * sizeof(float));
-        for (i = 0; i < nTraj; i++)
+        for (i = 0; i < nTracks; i++)
         {
                 if (((fMag = pSmsData->pFMagTraj[i]) > 0) &&
                     ((fFreq = (pSmsData->pFFreqTraj[i]) * pSynthParams->fTranspose) < iHalfSamplingRate))

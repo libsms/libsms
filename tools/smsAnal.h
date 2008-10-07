@@ -55,7 +55,7 @@ typedef struct
 	                          2 for others */
 	int iStochasticType;   /* 1 for IIR filter, 2 for line-segments,
 	                          3 for no stochastic analysis */
-	int iCleanTraj;        /* 1 if we want to clean trajectories,
+	int iCleanTracks;        /* 1 if we want to clean trajectories,
 	                          0 if not */
 	float fMinRefHarmMag;  /* minimum magnitude in dB of reference harmonic 
 	                          peak */

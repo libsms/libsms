@@ -177,7 +177,7 @@ int main (int argc, char *argv[])
 	/* setup for synthesis from file */
 	sms_allocRecordH (pSmsHeader, &smsRecordL);
 	sms_allocRecordH (pSmsHeader, &smsRecordR);
-	sms_allocRecord (&newSmsRecord, pSmsHeader->nTrajectories, 
+	sms_allocRecord (&newSmsRecord, pSmsHeader->nTracks, 
                          pSmsHeader->nStochasticCoeff, 0, pSmsHeader->iStochasticType);
 
 	if ((pFSynthesis = (float *) calloc(synthParams.sizeHop, sizeof(float)))

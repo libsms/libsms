@@ -112,7 +112,7 @@ int main (int argc, char *argv[])
      fprintf(fp,"smsHeader:\n");
      fprintf(fp,"    nFrames         : %d\n", pSmsHeader->nFrames);
      fprintf(fp,"    iFrameRate       : %d\n", pSmsHeader->iFrameRate);
-     fprintf(fp,"    nTrajectories    : %d\n", pSmsHeader->nTrajectories);
+     fprintf(fp,"    nTrajectories    : %d\n", pSmsHeader->nTracks);
      fprintf(fp,"    nStochasticCoeff : %d\n", pSmsHeader->nStochasticCoeff);
      fprintf(fp,"    iFormat          : ");
      if(pSmsHeader->iFormat == SMS_FORMAT_H) 
@@ -169,12 +169,12 @@ int main (int argc, char *argv[])
           iLastFrame = pSmsHeader->nFrames; 
 
      if (iFirstTraj > 0)
-          iFirstTraj = MIN (pSmsHeader->nTrajectories, iFirstTraj);
+          iFirstTraj = MIN (pSmsHeader->nTracks, iFirstTraj);
 
      if (iLastTraj >= 0)
-          iLastTraj = MIN (pSmsHeader->nTrajectories, iLastTraj);
+          iLastTraj = MIN (pSmsHeader->nTracks, iLastTraj);
      else
-          iLastTraj = pSmsHeader->nTrajectories;
+          iLastTraj = pSmsHeader->nTracks;
      if(iFormat != PRINT_HDR)
      {
           //:::::::::::: Write Data :::::::::::::::

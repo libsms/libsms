@@ -241,7 +241,7 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
 		sms_peakContinuation (iCurrentFrame - SMS_DELAY_FRAMES, pAnalParams);
     
 	/* fill gaps and delete short trajectories */
-	if (pAnalParams->iCleanTraj > 0 &&
+	if (pAnalParams->iCleanTracks > 0 &&
 	    pAnalParams->ppFrames[iCurrentFrame - SMS_DELAY_FRAMES]->iStatus != SMS_FRAME_EMPTY)
 		sms_cleanTrajectories (iCurrentFrame - SMS_DELAY_FRAMES, pAnalParams);
 
@@ -297,7 +297,7 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
 			/* get sharper transitions in deterministic representation */
 			sms_scaleDet (pAnalParams->synthBuffer.pFBuffer, pFData, 
 			                    pAnalParams->ppFrames[0]->deterministic.pFMagTraj,
-			                    pAnalParams, pSmsData->nTraj);
+			                    pAnalParams, pSmsData->nTracks);
       
 			pAnalParams->ppFrames[0]->iStatus = SMS_FRAME_DONE;
 
@@ -316,7 +316,7 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
 	else if (pAnalParams->ppFrames[0]->iStatus == SMS_FRAME_DONE)
 	{
 		/* put data into output */
-		int length = sizeof(float) * pSmsData->nTraj;
+		int length = sizeof(float) * pSmsData->nTracks;
 		memcpy ((char *) pSmsData->pFFreqTraj, (char *) 
 		        pAnalParams->ppFrames[0]->deterministic.pFFreqTraj, length);
 		memcpy ((char *) pSmsData->pFMagTraj, (char *) 	

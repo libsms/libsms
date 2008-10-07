@@ -129,7 +129,7 @@ int sms_prepSinc (int nTableSize)
 
         fSincScale = (float) nTableSize / 8.0;
 
-	return (SMS_ERRORS);
+	return (SMS_OK);
 }
 /*! \brief clear sine table */
 void sms_clearSinc()

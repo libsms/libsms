@@ -156,13 +156,13 @@ void sms_sineSynthFrame (SMS_Data *pSmsData, float *pFBuffer,
                     int sizeBuffer, SMS_Data *pLastFrame, 
                     int iSamplingRate)
 {
-
-
         float fMag, fFreq;
-        int i, nTraj = pSmsData->nTraj, iHalfSamplingRate = iSamplingRate >> 1;
+        int i;
+        int nTracks = pSmsData->nTracks;
+        int iHalfSamplingRate = iSamplingRate >> 1;
 
         /* go through all the trajectories */    
-        for (i = 0; i < nTraj; i++)
+        for (i = 0; i < nTracks; i++)
         {
                 /* get magnitude */
                 fMag = pSmsData->pFMagTraj[i];

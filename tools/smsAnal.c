@@ -97,7 +97,7 @@ static int InitArguments (ARGUMENTS *pArguments)
 	pArguments->nTrajectories = 60;
 	pArguments->fPeakContToGuide = .4;
 	pArguments->fFundContToGuide = .5;
-	pArguments->iCleanTraj = 1;
+	pArguments->iCleanTracks = 1;
 	pArguments->fMinTrajLength = .1;
 	pArguments->fMaxSleepingTime = .1;
 	pArguments->iStochasticType =SMS_STOC_APPROX;
@@ -202,7 +202,7 @@ static int GetArguments (char *argv[], int argc, ARGUMENTS *pArguments)
 					printf("GetArguments: Invalid fundamental contribution to guide");
 					break;
 				case 'g': if (sscanf(argv[i],"%d", 
-				              &pArguments->iCleanTraj) < 0) 
+				              &pArguments->iCleanTracks) < 0) 
 					printf("GetArguments: Invalid value for CleanTraj");
 					break;
 				case 'a': if (sscanf(argv[i],"%f",
@@ -264,7 +264,7 @@ static int FillSmsHeader (SMS_Header *pSmsHeader,
         pSmsHeader->iFormat = arguments.iFormat;
         pSmsHeader->iFrameRate = arguments.iFrameRate;
         pSmsHeader->iStochasticType = arguments.iStochasticType;
-        pSmsHeader->nTrajectories = arguments.nTrajectories;
+        pSmsHeader->nTracks = arguments.nTrajectories;
 	if(arguments.iStochasticType != SMS_STOC_APPROX)
 		pSmsHeader->nStochasticCoeff = 0;
         else
@@ -291,7 +291,7 @@ static int FillSmsHeader (SMS_Header *pSmsHeader,
                  arguments.fHighestFund, arguments.nGuides,
                  arguments.nTrajectories, arguments.fFreqDeviation, 
                  arguments.fPeakContToGuide, arguments.fFundContToGuide,
-                 arguments.iCleanTraj, arguments.fMinTrajLength,
+                 arguments.iCleanTracks, arguments.fMinTrajLength,
                  arguments.fMaxSleepingTime,  arguments.iStochasticType,
                  arguments.nStochasticCoeff);
        
@@ -340,7 +340,7 @@ static int FillAnalParams (ARGUMENTS arguments, SMS_AnalParams *pAnalParams,
 	pAnalParams->fFundContToGuide = arguments.fFundContToGuide;
 	pAnalParams->fFreqDeviation = arguments.fFreqDeviation;
 	pAnalParams->nGuides = MAX (arguments.nGuides, arguments.nTrajectories);
-	pAnalParams->iCleanTraj = arguments.iCleanTraj;
+	pAnalParams->iCleanTracks = arguments.iCleanTracks;
 	pAnalParams->fMinRefHarmMag = arguments.fMinRefHarmMag;
 	pAnalParams->fRefHarmMagDiffFromMax = arguments.fRefHarmMagDiffFromMax;
 	pAnalParams->iRefHarmonic = arguments.iRefHarmonic;

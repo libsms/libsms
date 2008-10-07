@@ -123,7 +123,7 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams)
 	for (i = 0; i < pAnalParams->iMaxDelayFrames; i++)
 	{
 		pAnalParams->pFrames[i].iStatus = SMS_FRAME_EMPTY;
-		(pAnalParams->pFrames[i].deterministic).nTraj = pAnalParams->nGuides;
+		(pAnalParams->pFrames[i].deterministic).nTracks = pAnalParams->nGuides;
 		if (((pAnalParams->pFrames[i].deterministic).pFFreqTraj =
 		    (float *)calloc (pAnalParams->nGuides, sizeof(float))) == NULL)
 			return (SMS_MALLOC);
@@ -196,7 +196,7 @@ int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
         sms_getWindow( sizeHop * 2, pSynthParams->pFDetWindow, SMS_WIN_IFFT );
 
         /* allocate memory for analysis data - size of original hopsize */
-	sms_allocRecord (&pSynthParams->prevFrame, pSmsHeader->nTrajectories, 
+	sms_allocRecord (&pSynthParams->prevFrame, pSmsHeader->nTracks, 
                          1 + pSmsHeader->nStochasticCoeff, 1, pSmsHeader->iStochasticType);
 
         /* allocate memory for FFT - big enough for output buffer (new hopsize)*/
@@ -317,7 +317,7 @@ void sms_initAnalParams (SMS_AnalParams *pAnalParams)
         pAnalParams->sizeHop = 110;
 	pAnalParams->fSizeWindow = 3.5;
 	pAnalParams->nGuides = 100;
-	pAnalParams->iCleanTraj = 1;
+	pAnalParams->iCleanTracks = 1;
 	pAnalParams->fMinRefHarmMag = 30;
 	pAnalParams->fRefHarmMagDiffFromMax = 30;
 	pAnalParams->iRefHarmonic = 1;

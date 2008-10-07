@@ -110,7 +110,7 @@ int main (int argc, char *argv[])
 	printf("\nHEADER INFORMATION:\n");
 	printf("Number of records = %d\n", pSmsHeader->nFrames);
 	printf("Frame rate (Hz) = %d\n", pSmsHeader->iFrameRate);
-	printf("Number of trajectories = %d\n", pSmsHeader->nTrajectories);
+	printf("Number of trajectories = %d\n", pSmsHeader->nTracks);
 	printf("Number of stochastic coefficients = %d\n",
     	   pSmsHeader->nStochasticCoeff);
         if(pSmsHeader->iFormat == 1) printf("Format = harmonic\n");
@@ -139,12 +139,12 @@ int main (int argc, char *argv[])
 		iLastFrame = pSmsHeader->nFrames; 
 
 	if (iFirstTraj > 0)
-		iFirstTraj = MIN (pSmsHeader->nTrajectories, iFirstTraj);
+		iFirstTraj = MIN (pSmsHeader->nTracks, iFirstTraj);
 
 	if (iLastTraj >= 0)
-		iLastTraj = MIN (pSmsHeader->nTrajectories, iLastTraj);
+		iLastTraj = MIN (pSmsHeader->nTracks, iLastTraj);
 	else
-		iLastTraj = pSmsHeader->nTrajectories;
+		iLastTraj = pSmsHeader->nTracks;
 
         if(iFormat != PRINT_HDR)
         {

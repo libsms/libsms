@@ -45,6 +45,7 @@
  *   meant to be used globally. Even still, there are some functions that are gobally defined that do
  *   not need to be.. but there are other fish to fry at the moment.
  */
+
 #ifndef _SMS_H
 #define _SMS_H
 
@@ -81,7 +82,7 @@ typedef struct
                                  \todo reference enum */
 	int iFrameRate;        /*!< rate in Hz of data frames */
 	int iStochasticType;   /*!< type stochastic representation */
-	int nTrajectories;     /*!< number of trajectoires per frame */
+	int nTracks;     /*!< number of sinusoidal tracks per frame */
 	int nStochasticCoeff;  /*!< number of stochastic coefficients per frame  */
 	float fAmplitude;      /*!< average amplitude of represented sound
                                 \todo currently unused, cleanup */
@@ -124,9 +125,7 @@ typedef struct
 	float *pFFreqTraj;       /*!< frequency of sinusoids */
 	float *pFMagTraj;       /*!< magnitude of sinusoids */
 	float *pFPhaTraj;        /*!< phase of sinusoids */
-	int nTraj;                     /*!< number of sinusoids */
-        //float *pFStocWave;   /*!< sampled waveform (if stoc type = wave) */
-        //int nSamples;             /*!< number of samples in StocWave */
+	int nTracks;                     /*!< number of sinusoidal tracks in frame */
 	float *pFStocGain;     /*!< gain of stochastic component */
 	float *pFStocCoeff;    /*!< filter coefficients for stochastic component */
 	int nCoeff;                  /*!< number of filter coefficients */
@@ -220,12 +219,12 @@ typedef struct
 	int sizeHop;              /*!< hop size of analysis window in samples */
 	float fSizeWindow;       /*!< size of analysis window in number of periods */
 	int nGuides;              /*!< number of guides used \todo explain */
-	int iCleanTraj;           /*!< whether or not to clean trajectories */
+	int iCleanTracks;           /*!< whether or not to clean sinusoidal tracks */
 	float fMinRefHarmMag;     /*!< minimum magnitude in dB for reference peak */
 	float fRefHarmMagDiffFromMax; /*!< maximum magnitude difference from reference peak to highest peak */
 	int iRefHarmonic;	       /*!< reference harmonic to use in the fundamental detection */
-	int iMinTrajLength;	       /*!< minimum length in samples of a given trajectory */
-	int iMaxSleepingTime;	   /*!< maximum sleeping time for a trajectory */
+	int iMinTrajLength;	       /*!< minimum length in samples of a given track */
+	int iMaxSleepingTime;	   /*!< maximum sleeping time for a track */
 	float fHighestFreq;        /*!< highest frequency to be searched */
 	float fMinPeakMag;         /*!< minimum magnitude in dB for a good peak */	
 	int iSoundType;            /*!< type of sound to be analyzed emumerated by SMS_SOUND_TYPE 
@@ -353,9 +352,9 @@ enum SMS_SynthType
  * 
  * There are two options for deterministic synthesis available to the 
  * SMS synthesizer.  The Inverse Fast Fourier Transform method
- * (IFFT) is more effecient for models with lots of partial trajectories, but can
+ * (IFFT) is more effecient for models with lots of partial tracks, but can
  * possibly smear transients.  The Sinusoidal Table Lookup (SIN) can
- * theoritically support faster moving trajectories at a higher fidelity, but
+ * theoritically support faster moving tracks at a higher fidelity, but
  * can consume lots of cpu at varying rates.  
  */
 enum SMS_DetSynthType
@@ -423,7 +422,7 @@ enum SMS_DBG
         SMS_DBG_PEAK_DET,	          /*!< 2, peak detection function */
         SMS_DBG_HARM_DET,	  /*!< 3, harmonic detection function */
         SMS_DBG_PEAK_CONT,        /*!< 4, peak continuation function */
-        SMS_DBG_CLEAN_TRAJ,	  /*!< 5, clean trajectories function */
+        SMS_DBG_CLEAN_TRAJ,	  /*!< 5, clean tracks function */
         SMS_DBG_SINE_SYNTH,	  /*!< 6, sine synthesis function */
         SMS_DBG_STOC_ANAL,        /*!< 7, stochastic analysis function */
         SMS_DBG_STOC_SYNTH,      /*!< 8, stochastic synthesis function */
@@ -471,7 +470,7 @@ enum SMS_WINDOWS
         SMS_WIN_IFFT              /*!< combination \todo reference docs */ 		
 };
 
-/*    re-analyze and clean trajectories */
+/* re-analyze and clean tracks */
 
 #define SMS_MIN_GOOD_FRAMES 3  /*!< minimum number of stable frames for backward search */
 

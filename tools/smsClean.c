@@ -51,7 +51,7 @@ void SearchSms (SMS_Data smsData, float *pFFreq, int *pIGoodRecords)
 {
 	int i;
 
-	for (i = 0; i < smsData.nTraj; i++)
+	for (i = 0; i < smsData.nTracks; i++)
 		if (smsData.pFMagTraj[i] > 0)
 		{		
 			pFFreq[i] += smsData.pFFreqTraj[i];
@@ -82,7 +82,7 @@ void SetTraj (float *pFFreq, int inNTraj,
                int *pITrajOrder, int outNTraj)
 {
 	int i, j;
-        int iTraj = 0;
+        int iTrack = 0;
 	float fTmp = 22000, fLow = 0;
 
 	for (i = 0; i < outNTraj; i++)
@@ -92,24 +92,24 @@ void SetTraj (float *pFFreq, int inNTraj,
 			if (pFFreq[j] > fLow)
 				fTmp = MIN (pFFreq[j], fTmp);
 			if (fTmp == pFFreq[j])
-				iTraj = j;
+				iTrack = j;
 		}
 		fLow = fTmp;
 		fTmp = 22000;
-		pITrajOrder[i] = iTraj;
+		pITrajOrder[i] = iTrack;
 	}
 }
 
 void CleanSms (SMS_Data inSmsData, SMS_Data *pOutSmsData, int *pITrajOrder)
 {
-	int iTraj, iCoeff;
+	int iTrack, iCoeff;
 
-	for (iTraj = 0; iTraj < pOutSmsData->nTraj; iTraj++)
+	for (iTrack = 0; iTrack < pOutSmsData->nTracks; iTrack++)
 	{
-		pOutSmsData->pFFreqTraj[iTraj] = 
-			inSmsData.pFFreqTraj[pITrajOrder[iTraj]];
-		pOutSmsData->pFMagTraj[iTraj] = 
-			inSmsData.pFMagTraj[pITrajOrder[iTraj]];
+		pOutSmsData->pFFreqTraj[iTrack] = 
+			inSmsData.pFFreqTraj[pITrajOrder[iTrack]];
+		pOutSmsData->pFMagTraj[iTrack] = 
+			inSmsData.pFMagTraj[pITrajOrder[iTrack]];
 	}
 
 	if (inSmsData.nCoeff > 0)
@@ -130,7 +130,7 @@ int main (int argc, char *argv[])
 	FILE *pInSmsFile, *pOutSmsFile;
 	float *pFFreq;
 	SMS_Data inSmsData, outSmsData;
-	int iError, *pIGoodRecords, *pITrajOrder, iRecord, iGoodTraj = 0, iTraj,
+	int iError, *pIGoodRecords, *pITrajOrder, iRecord, iGoodTraj = 0, iTrack,
 		iRecordBSize, iHeadBSize, iDataBSize;
   
 	/* get user arguments */
@@ -149,14 +149,14 @@ int main (int argc, char *argv[])
 	}	    
   
 	if ((pFFreq =  
-	     (float *) calloc (pInSmsHeader->nTrajectories, sizeof (float))) == 
+	     (float *) calloc (pInSmsHeader->nTracks, sizeof (float))) == 
 		 NULL)
         {
                 printf("error allocating memory for pFFreq: %s", sms_errorString(iError));
                 exit(EXIT_FAILURE);
         }
 	if ((pIGoodRecords =  
-	     (int *) calloc (pInSmsHeader->nTrajectories, sizeof (int))) == NULL)
+	     (int *) calloc (pInSmsHeader->nTracks, sizeof (int))) == NULL)
         {
                 printf("error allocating memory for plGoodRecords: %s", sms_errorString(iError));
                 exit(EXIT_FAILURE);
@@ -170,11 +170,11 @@ int main (int argc, char *argv[])
 		SearchSms (inSmsData, pFFreq, pIGoodRecords);	
 	}
   
-	for (iTraj = 0; iTraj < pInSmsHeader->nTrajectories; iTraj++)
-		if (pIGoodRecords[iTraj] > 0)
+	for (iTrack = 0; iTrack < pInSmsHeader->nTracks; iTrack++)
+		if (pIGoodRecords[iTrack] > 0)
 		{
 			iGoodTraj++;
-			pFFreq[iTraj] /= pIGoodRecords[iTraj];
+			pFFreq[iTrack] /= pIGoodRecords[iTrack];
 		}
 	
 	iRecordBSize = CalcRecordBSize (pInSmsHeader, iGoodTraj);
@@ -187,7 +187,7 @@ int main (int argc, char *argv[])
 	OutSmsHeader.iFormat = pInSmsHeader->iFormat;
 	OutSmsHeader.iFrameRate = pInSmsHeader->iFrameRate;
 	OutSmsHeader.iStochasticType = pInSmsHeader->iStochasticType;
-	OutSmsHeader.nTrajectories = iGoodTraj;
+	OutSmsHeader.nTracks = iGoodTraj;
 	OutSmsHeader.nStochasticCoeff = pInSmsHeader->nStochasticCoeff;
 	OutSmsHeader.iOriginalSRate = pInSmsHeader->iOriginalSRate;
 	OutSmsHeader.nTextCharacters = pInSmsHeader->nTextCharacters;
@@ -195,14 +195,14 @@ int main (int argc, char *argv[])
 
 	sms_allocRecordH (&OutSmsHeader, &outSmsData);
 	if ((pITrajOrder =  
-	     (int *) calloc (OutSmsHeader.nTrajectories, sizeof (int))) == NULL)
+	     (int *) calloc (OutSmsHeader.nTracks, sizeof (int))) == NULL)
         {
                 printf("error allocating memory for pITrajOrder: %s", sms_errorString(iError));
                 exit(EXIT_FAILURE);
         }
 
-	SetTraj (pFFreq, pInSmsHeader->nTrajectories, pITrajOrder, 
-	         OutSmsHeader.nTrajectories);
+	SetTraj (pFFreq, pInSmsHeader->nTracks, pITrajOrder, 
+	         OutSmsHeader.nTracks);
 
 	/* create output SMS file and write the header */
 	sms_writeHeader (pChOutputSmsFile, &OutSmsHeader, &pOutSmsFile);

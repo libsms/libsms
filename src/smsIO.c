@@ -44,7 +44,7 @@ void sms_initHeader (SMS_Header *pSmsHeader)
 	pSmsHeader->iFormat = SMS_FORMAT_H;
 	pSmsHeader->iFrameRate = 0;
 	pSmsHeader->iStochasticType = SMS_STOC_APPROX;
-	pSmsHeader->nTrajectories = 0;
+	pSmsHeader->nTracks = 0;
 	pSmsHeader->nStochasticCoeff = 0;
 	pSmsHeader->fAmplitude = 0;
 	pSmsHeader->fFrequency = 0;
@@ -81,7 +81,7 @@ void sms_fillHeader (SMS_Header *pSmsHeader,
         pSmsHeader->iFormat = pAnalParams->iFormat;
         pSmsHeader->iFrameRate = pAnalParams->iFrameRate;
         pSmsHeader->iStochasticType = pAnalParams->iStochasticType;
-        pSmsHeader->nTrajectories = nTracks;
+        pSmsHeader->nTracks = nTracks;
 	if(pAnalParams->iStochasticType != SMS_STOC_APPROX)
 		pSmsHeader->nStochasticCoeff = 0;
         else
@@ -102,7 +102,7 @@ void sms_initRecord (SMS_Data *pSmsRecord)
 	pSmsRecord->pFPhaTraj = NULL;
 	pSmsRecord->pFStocCoeff = NULL;
 	pSmsRecord->pFStocGain = NULL;
-	pSmsRecord->nTraj = 0;
+	pSmsRecord->nTracks = 0;
 	pSmsRecord->nCoeff = 0;
 	pSmsRecord->sizeData = 0;
 }
@@ -256,7 +256,7 @@ int sms_recordSizeB (SMS_Header *pSmsHeader)
 		nDet = 2;// freq, mag
         else nDet = 3; // freq, mag, phase
 
-	iSize = sizeof (float) * (nDet * pSmsHeader->nTrajectories);
+	iSize = sizeof (float) * (nDet * pSmsHeader->nTracks);
 
         if(pSmsHeader->iStochasticType == SMS_STOC_APPROX)
         {       //stocCoeff + 1 (gain)
@@ -404,7 +404,7 @@ int sms_allocRecord (SMS_Data *pSmsRecord, int nTracks, int nCoeff, int iPhase,
 		return (SMS_MALLOC);
 
 	/* set the variables in the structure */
-	pSmsRecord->nTraj = nTracks;
+	pSmsRecord->nTracks = nTracks;
 	pSmsRecord->nCoeff = nCoeff;
 	pSmsRecord->sizeData = sizeData; 
         /* set pointers to data types within smsData array */
@@ -446,7 +446,7 @@ int sms_allocRecordH (SMS_Header *pSmsHeader, SMS_Data *pSmsRecord)
 {
 	int iPhase = (pSmsHeader->iFormat == SMS_FORMAT_HP ||
 	              pSmsHeader->iFormat == SMS_FORMAT_IHP) ? 1 : 0;
-	return (sms_allocRecord (pSmsRecord, pSmsHeader->nTrajectories, 
+	return (sms_allocRecord (pSmsRecord, pSmsHeader->nTracks, 
                                    pSmsHeader->nStochasticCoeff, iPhase,
                                    pSmsHeader->iStochasticType));
 }
@@ -458,7 +458,7 @@ int sms_allocRecordH (SMS_Header *pSmsHeader, SMS_Data *pSmsRecord)
 void sms_freeRecord (SMS_Data *pSmsRecord)
 {
 	free(pSmsRecord->pSmsData);
-	pSmsRecord->nTraj = 0;
+	pSmsRecord->nTracks = 0;
 	pSmsRecord->nCoeff = 0;
 	pSmsRecord->sizeData = 0;
 	pSmsRecord->pFFreqTraj = NULL;
@@ -486,7 +486,7 @@ void sms_copyRecord (SMS_Data *pCopySmsData, SMS_Data *pOriginalSmsData)
 {
 	/* if the two records are the same size just copy data */
 	if (pCopySmsData->sizeData == pOriginalSmsData->sizeData &&
-	    pCopySmsData->nTraj == pOriginalSmsData->nTraj)
+	    pCopySmsData->nTracks == pOriginalSmsData->nTracks)
 	{
 		memcpy ((char *)pCopySmsData->pSmsData, 
 	          (char *)pOriginalSmsData->pSmsData,
@@ -495,10 +495,10 @@ void sms_copyRecord (SMS_Data *pCopySmsData, SMS_Data *pOriginalSmsData)
 	/* if records of different size copy the smallest */
 	else
 	{	
-		int nTraj = MIN (pCopySmsData->nTraj, pOriginalSmsData->nTraj);
+		int nTraj = MIN (pCopySmsData->nTracks, pOriginalSmsData->nTracks);
 		int nCoeff = MIN (pCopySmsData->nCoeff, pOriginalSmsData->nCoeff);
 
-		pCopySmsData->nTraj = nTraj;
+		pCopySmsData->nTracks = nTraj;
 		pCopySmsData->nCoeff = nCoeff;
 		memcpy ((char *)pCopySmsData->pFFreqTraj, 
 	          (char *)pOriginalSmsData->pFFreqTraj,
@@ -540,7 +540,7 @@ void sms_interpolateRecords (SMS_Data *pSmsRecord1, SMS_Data *pSmsRecord2,
 	float fFreq1, fFreq2;
 					 
 	/* interpolate the deterministic part */
-	for (i = 0; i < pSmsRecord1->nTraj; i++)
+	for (i = 0; i < pSmsRecord1->nTracks; i++)
 	{
 		fFreq1 = pSmsRecord1->pFFreqTraj[i];
 		fFreq2 = pSmsRecord2->pFFreqTraj[i];
