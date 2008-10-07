@@ -1,0 +1,14 @@
+#N canvas 859 282 450 300 10;
+#X obj 174 100 smsSynthFile~;
+#X msg 139 52 open ../test/sms/flugel.sms;
+#X obj 173 192 dak~;
+#X obj 253 137 Scope~ 130 130 256 3 128 -1 1 0 0 0 0 102 255 51 135
+135 135 0;
+#X floatatom 93 90 5 0 0 0 - - -;
+#X msg 192 77 info;
+#X connect 0 0 2 0;
+#X connect 0 0 2 1;
+#X connect 0 0 3 0;
+#X connect 1 0 0 0;
+#X connect 4 0 0 0;
+#X connect 5 0 0 0;
