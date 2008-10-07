@@ -1,0 +1,5 @@
+#!/bin/bash
+
+gcc -o smsSynthFile~.os -c -g -funroll-loops -fomit-frame-pointer -Wall -W -Wshadow -Wno-unused -Wno-parentheses -Wno-switch -fPIC -DPD -I/home/r/projects/libsms/trunk/src smsSynthFile~.c &&
+
+gcc -o smsSynthFile~.pd_linux -shared smsSynthFile~.os -L/home/r/projects/libsms/trunk/src -lm -lsndfile -lsms -lfftw3f
