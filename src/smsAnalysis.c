@@ -243,7 +243,7 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
 	/* fill gaps and delete short trajectories */
 	if (pAnalParams->iCleanTracks > 0 &&
 	    pAnalParams->ppFrames[iCurrentFrame - SMS_DELAY_FRAMES]->iStatus != SMS_FRAME_EMPTY)
-		sms_cleanTrajectories (iCurrentFrame - SMS_DELAY_FRAMES, pAnalParams);
+		sms_cleanTracks (iCurrentFrame - SMS_DELAY_FRAMES, pAnalParams);
 
 	/* do stochastic analysis */
 	if (pAnalParams->iStochasticType != SMS_STOC_NONE)
@@ -296,7 +296,7 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
                         
 			/* get sharper transitions in deterministic representation */
 			sms_scaleDet (pAnalParams->synthBuffer.pFBuffer, pFData, 
-			                    pAnalParams->ppFrames[0]->deterministic.pFMagTraj,
+			                    pAnalParams->ppFrames[0]->deterministic.pFSinMag,
 			                    pAnalParams, pSmsData->nTracks);
       
 			pAnalParams->ppFrames[0]->iStatus = SMS_FRAME_DONE;
@@ -317,14 +317,14 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
 	{
 		/* put data into output */
 		int length = sizeof(float) * pSmsData->nTracks;
-		memcpy ((char *) pSmsData->pFFreqTraj, (char *) 
-		        pAnalParams->ppFrames[0]->deterministic.pFFreqTraj, length);
-		memcpy ((char *) pSmsData->pFMagTraj, (char *) 	
-		         pAnalParams->ppFrames[0]->deterministic.pFMagTraj, length);
+		memcpy ((char *) pSmsData->pFSinFreq, (char *) 
+		        pAnalParams->ppFrames[0]->deterministic.pFSinFreq, length);
+		memcpy ((char *) pSmsData->pFSinMag, (char *) 	
+		         pAnalParams->ppFrames[0]->deterministic.pFSinMag, length);
 		if (pAnalParams->iFormat == SMS_FORMAT_HP ||
 		    pAnalParams->iFormat == SMS_FORMAT_IHP)
-			memcpy ((char *) pSmsData->pFPhaTraj, (char *) 	
-			        pAnalParams->ppFrames[0]->deterministic.pFPhaTraj, length);
+			memcpy ((char *) pSmsData->pFSinPha, (char *) 	
+			        pAnalParams->ppFrames[0]->deterministic.pFSinPha, length);
 		return (1);
 	}
 	/* done, end of sound */

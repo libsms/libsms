@@ -19,24 +19,24 @@
  * 
  */
 /*! \file fixTrajectories.c
- * \brief functions for making smoothly evolving trajectories (partial frequencies)
+ * \brief functions for making smoothly evolving tracks (partial frequencies)
  * 
- * Tries to fix gaps and short trajectories
+ * Tries to fix gaps and short tracks
  */
 
 #include "sms.h"
 
-/*! \brief fill a gap in a given trajectory 
+/*! \brief fill a gap in a given track 
  *
  * \param iCurrentFrame      currrent frame number 
- * \param iTraj                      trajectory to be filled
- * \param pIState                 pointer to the state of trajectories
+ * \param iTrack                      track to be filled
+ * \param pIState                 pointer to the state of tracks
  * \param pAnalParams       pointer to analysis parameters
  */
-static void FillGap (int iCurrentFrame, int iTraj, int *pIState, 
+static void FillGap (int iCurrentFrame, int iTrack, int *pIState, 
                      SMS_AnalParams *pAnalParams)
 {
-	int iFrame, iLastFrame = - (pIState[iTraj] - 1);
+	int iFrame, iLastFrame = - (pIState[iTrack] - 1);
 	float fConstant = TWO_PI / pAnalParams->iSamplingRate;
 	float fFirstMag, fFirstFreq, fLastMag, fLastFreq, fIncrMag, fIncrFreq,
 		fMag, fTmpPha, fFreq;
@@ -44,31 +44,31 @@ static void FillGap (int iCurrentFrame, int iTraj, int *pIState,
 	if(iCurrentFrame - iLastFrame < 0)
 		return;
   
-	/* if firstMag is 0 it means that there is no Gap, just the begining of a trajectory */
+	/* if firstMag is 0 it means that there is no Gap, just the begining of a track */
 	if (pAnalParams->ppFrames[iCurrentFrame - 
-	    iLastFrame]->deterministic.pFMagTraj[iTraj] == 0)
+	    iLastFrame]->deterministic.pFSinMag[iTrack] == 0)
 	{
-		pIState[iTraj] = 1;
+		pIState[iTrack] = 1;
 		return;
 	}
   
 	fFirstMag = 
-		pAnalParams->ppFrames[iCurrentFrame - iLastFrame]->deterministic.pFMagTraj[iTraj];
+		pAnalParams->ppFrames[iCurrentFrame - iLastFrame]->deterministic.pFSinMag[iTrack];
 	fFirstFreq = 
-		pAnalParams->ppFrames[iCurrentFrame - iLastFrame]->deterministic.pFFreqTraj[iTraj];
-	fLastMag = pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFMagTraj[iTraj];
-	fLastFreq = pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFFreqTraj[iTraj];
+		pAnalParams->ppFrames[iCurrentFrame - iLastFrame]->deterministic.pFSinFreq[iTrack];
+	fLastMag = pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinMag[iTrack];
+	fLastFreq = pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinFreq[iTrack];
 	fIncrMag =  (fLastMag - fFirstMag) / iLastFrame;
 	fIncrFreq =  (fLastFreq - fFirstFreq) / iLastFrame;
   
 	/* if inharmonic format and the two extremes are very different  */
-	/* do not interpolate, it means that they are different trajectories */
+	/* do not interpolate, it means that they are different tracks */
 	if ((pAnalParams->iFormat == SMS_FORMAT_IH ||
 	     pAnalParams->iFormat == SMS_FORMAT_IHP) &&
 		(MIN (fFirstFreq, fLastFreq) * .5 * pAnalParams->fFreqDeviation <
 	     fabs ((double) fLastFreq - fFirstFreq)))
 	{
-		pIState[iTraj] = 1;
+		pIState[iTrack] = 1;
 		return;		
 	}
 
@@ -81,24 +81,24 @@ static void FillGap (int iCurrentFrame, int iTraj, int *pIState,
 	{
 		/* interpolate magnitude */
 		fMag += fIncrMag;
-		pAnalParams->ppFrames[iFrame]->deterministic.pFMagTraj[iTraj] = fMag;
+		pAnalParams->ppFrames[iFrame]->deterministic.pFSinMag[iTrack] = fMag;
 		/* interpolate frequency */
 		fFreq += fIncrFreq;
-		pAnalParams->ppFrames[iFrame]->deterministic.pFFreqTraj[iTraj] = fFreq;
+		pAnalParams->ppFrames[iFrame]->deterministic.pFSinFreq[iTrack] = fFreq;
 		/*interpolate phase (this may not be the right way) */
 		fTmpPha = 
-			pAnalParams->ppFrames[iFrame-1]->deterministic.pFPhaTraj[iTraj] -
-				(pAnalParams->ppFrames[iFrame-1]->deterministic.pFFreqTraj[iTraj] * 
+			pAnalParams->ppFrames[iFrame-1]->deterministic.pFSinPha[iTrack] -
+				(pAnalParams->ppFrames[iFrame-1]->deterministic.pFSinFreq[iTrack] * 
 				fConstant) * pAnalParams->sizeHop;
-		pAnalParams->ppFrames[iFrame]->deterministic.pFPhaTraj[iTraj] = 
+		pAnalParams->ppFrames[iFrame]->deterministic.pFSinPha[iTrack] = 
 			fTmpPha - floor(fTmpPha/ TWO_PI) * TWO_PI;
 	}
   
 	if(pAnalParams->iDebugMode == SMS_DBG_CLEAN_TRAJ || 
 	   pAnalParams->iDebugMode == SMS_DBG_ALL)
 	{
-		fprintf (stdout, "fillGap: traj %d, frames %d to %d filled\n",
-		        iTraj, pAnalParams->ppFrames[iCurrentFrame-iLastFrame + 1]->iFrameNum, 
+		fprintf (stdout, "fillGap: track %d, frames %d to %d filled\n",
+		        iTrack, pAnalParams->ppFrames[iCurrentFrame-iLastFrame + 1]->iFrameNum, 
 		        pAnalParams->ppFrames[iCurrentFrame-1]->iFrameNum);
 		fprintf (stdout, "firstFreq %f lastFreq %f, firstMag %f lastMag %f\n",
 		        fFirstFreq, fLastFreq, fFirstMag, fLastMag);
@@ -106,54 +106,54 @@ static void FillGap (int iCurrentFrame, int iTraj, int *pIState,
   	}
 
 	/* reset status */
-	pIState[iTraj] = pAnalParams->iMinTrajLength;
+	pIState[iTrack] = pAnalParams->iMinTrackLength;
 }
 
 
-/*! \brief delete a short trajectory 
+/*! \brief delete a short track 
  *
  * this function is not exported to sms.h
  *
  * \param iCurrentFrame    current frame
- * \param iTraj                    trajectory to be deleted
- * \param pIState               pointer to the state of trajectories
+ * \param iTrack                    track to be deleted
+ * \param pIState               pointer to the state of tracks
  * \param pAnalParams     pointer to analysis parameters
  */
-static void DeleteShortTraj (int iCurrentFrame, int iTraj, int *pIState,
+static void DeleteShortTrack (int iCurrentFrame, int iTrack, int *pIState,
                              SMS_AnalParams *pAnalParams)
 {
 	int iFrame, frame;
   
-	for (iFrame = 1; iFrame <= pIState[iTraj]; iFrame++)
+	for (iFrame = 1; iFrame <= pIState[iTrack]; iFrame++)
 	{
 		frame = iCurrentFrame - iFrame;
       
 		if (frame <= 0)
 			return;
       
-		pAnalParams->ppFrames[frame]->deterministic.pFMagTraj[iTraj] = 0;
-		pAnalParams->ppFrames[frame]->deterministic.pFFreqTraj[iTraj] = 0;
-		pAnalParams->ppFrames[frame]->deterministic.pFPhaTraj[iTraj] = 0;
+		pAnalParams->ppFrames[frame]->deterministic.pFSinMag[iTrack] = 0;
+		pAnalParams->ppFrames[frame]->deterministic.pFSinFreq[iTrack] = 0;
+		pAnalParams->ppFrames[frame]->deterministic.pFSinPha[iTrack] = 0;
 	}
   
 	if (pAnalParams->iDebugMode == SMS_DBG_CLEAN_TRAJ ||
 	    pAnalParams->iDebugMode == SMS_DBG_ALL)
-		fprintf (stdout, "deleteShortTraj: traj %d, frames %d to %d deleted\n",
-		         iTraj, pAnalParams->ppFrames[iCurrentFrame - pIState[iTraj]]->iFrameNum, 
+		fprintf (stdout, "deleteShortTrack: track %d, frames %d to %d deleted\n",
+		         iTrack, pAnalParams->ppFrames[iCurrentFrame - pIState[iTrack]]->iFrameNum, 
 		         pAnalParams->ppFrames[iCurrentFrame-1]->iFrameNum);
   
 	/* reset state */
-	pIState[iTraj] = -pAnalParams->iMaxSleepingTime;
+	pIState[iTrack] = -pAnalParams->iMaxSleepingTime;
 }
 
-/*! \brief fill gaps and delete short trajectories 
+/*! \brief fill gaps and delete short tracks 
  *
  * \param iCurrentFrame     current frame number
  * \param pAnalParams      pointer to analysis parameters
  */
-void sms_cleanTrajectories (int iCurrentFrame, SMS_AnalParams *pAnalParams)
+void sms_cleanTracks (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 {
-	int iTraj, iLength, iFrame;
+	int iTrack, iLength, iFrame;
 	static int *pIState = NULL;
   
 	if (pIState == NULL)
@@ -162,31 +162,31 @@ void sms_cleanTrajectories (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 	/* if fundamental and first partial are short, delete everything */
 	if ((pAnalParams->iFormat == SMS_FORMAT_H ||
 	     pAnalParams->iFormat == SMS_FORMAT_HP) &&
-	     pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFMagTraj[0] == 0 &&
+	     pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinMag[0] == 0 &&
 	     pIState[0] > 0 &&
-	     pIState[0] < pAnalParams->iMinTrajLength &&
-	     pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFMagTraj[1] == 0 &&
+	     pIState[0] < pAnalParams->iMinTrackLength &&
+	     pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinMag[1] == 0 &&
 	     pIState[1] > 0 &&
-	     pIState[1] < pAnalParams->iMinTrajLength)
+	     pIState[1] < pAnalParams->iMinTrackLength)
 	{
 		iLength = pIState[0];
-		for (iTraj = 0; iTraj < pAnalParams->nGuides; iTraj++)
+		for (iTrack = 0; iTrack < pAnalParams->nGuides; iTrack++)
 		{
 			for (iFrame = 1; iFrame <= iLength; iFrame++)
 			{
 				pAnalParams->ppFrames[iCurrentFrame - 
-					iFrame]->deterministic.pFMagTraj[iTraj] = 0;
+					iFrame]->deterministic.pFSinMag[iTrack] = 0;
 				pAnalParams->ppFrames[iCurrentFrame - 
-					iFrame]->deterministic.pFFreqTraj[iTraj] = 0;
+					iFrame]->deterministic.pFSinFreq[iTrack] = 0;
 				pAnalParams->ppFrames[iCurrentFrame - 
-					iFrame]->deterministic.pFPhaTraj[iTraj] = 0;
+					iFrame]->deterministic.pFSinPha[iTrack] = 0;
 			}
-			pIState[iTraj] = -pAnalParams->iMaxSleepingTime;
+			pIState[iTrack] = -pAnalParams->iMaxSleepingTime;
 		}
 		if (pAnalParams->iDebugMode == SMS_DBG_CLEAN_TRAJ || 
 		    pAnalParams->iDebugMode == SMS_DBG_ALL)
                 {
-			fprintf(stdout, "cleanTraj: frame %d to frame %d deleted\n",
+			fprintf(stdout, "cleanTrack: frame %d to frame %d deleted\n",
 			        pAnalParams->ppFrames[iCurrentFrame-iLength]->iFrameNum, 
 			        pAnalParams->ppFrames[iCurrentFrame-1]->iFrameNum);
                 }
@@ -195,25 +195,25 @@ void sms_cleanTrajectories (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 	}
   
 	/* check every partial individually */
-	for (iTraj = 0; iTraj < pAnalParams->nGuides; iTraj++)
+	for (iTrack = 0; iTrack < pAnalParams->nGuides; iTrack++)
 	{
-		/* trajectory after gap */
-		if(pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFMagTraj[iTraj] != 0)
+		/* track after gap */
+		if(pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinMag[iTrack] != 0)
 		{ 
-			if(pIState[iTraj] < 0 && 
-			   pIState[iTraj] > -pAnalParams->iMaxSleepingTime)
-				FillGap (iCurrentFrame, iTraj, pIState, pAnalParams);
+			if(pIState[iTrack] < 0 && 
+			   pIState[iTrack] > -pAnalParams->iMaxSleepingTime)
+				FillGap (iCurrentFrame, iTrack, pIState, pAnalParams);
 			else
-				pIState[iTraj] = (pIState[iTraj]<0) ? 1 : pIState[iTraj]+1;
+				pIState[iTrack] = (pIState[iTrack]<0) ? 1 : pIState[iTrack]+1;
 		}
-		/* gap after trajectory */
+		/* gap after track */
 		else
 		{	   
-			if(pIState[iTraj] > 0 &&  
-			   pIState[iTraj] < pAnalParams->iMinTrajLength)
-				DeleteShortTraj (iCurrentFrame, iTraj, pIState, pAnalParams);
+			if(pIState[iTrack] > 0 &&  
+			   pIState[iTrack] < pAnalParams->iMinTrackLength)
+				DeleteShortTrack (iCurrentFrame, iTrack, pIState, pAnalParams);
 			else 
-				pIState[iTraj] = (pIState[iTraj]>0) ? -1 : pIState[iTraj]-1;
+				pIState[iTrack] = (pIState[iTrack]>0) ? -1 : pIState[iTrack]-1;
 		}
 	}
 	return;
@@ -223,16 +223,16 @@ void sms_cleanTrajectories (int iCurrentFrame, SMS_AnalParams *pAnalParams)
  *
  * \param pFSynthBuffer      synthesis buffer
  * \param pFOriginalBuffer   original sound
- * \param pFMagTraj          magnitudes to be scaled
+ * \param pFSinMag          magnitudes to be scaled
  * \param pAnalParams      pointer to analysis parameters
- * \param nTraj                    number of trajectories
+ * \param nTrack                    number of tracks
  */
 void  sms_scaleDet (float *pFSynthBuffer, float *pFOriginalBuffer, 
-                          float *pFMagTraj, SMS_AnalParams *pAnalParams, int nTraj)
+                          float *pFSinMag, SMS_AnalParams *pAnalParams, int nTrack)
 {
 	float fOriginalMag = 0, fSynthesisMag = 0;
 	float fCosScaleFactor;
-	int iTraj, i;
+	int iTrack, i;
   
 	/* get sound energy */
 	for (i = 0; i < pAnalParams->sizeHop; i++)
@@ -252,9 +252,9 @@ void  sms_scaleDet (float *pFSynthBuffer, float *pFOriginalBuffer,
 			fprintf (stdout, "Frame %d: magnitude scaled by %f\n",
 			         pAnalParams->ppFrames[0]->iFrameNum, fCosScaleFactor);
       
-		for (iTraj = 0; iTraj < nTraj; iTraj++)
-			if (pFMagTraj[iTraj] > 0)
-				pFMagTraj[iTraj] = 
-					sms_magToDB (sms_dBToMag (pFMagTraj[iTraj]) * fCosScaleFactor);
+		for (iTrack = 0; iTrack < nTrack; iTrack++)
+			if (pFSinMag[iTrack] > 0)
+				pFSinMag[iTrack] = 
+					sms_magToDB (sms_dBToMag (pFSinMag[iTrack]) * fCosScaleFactor);
 	}
 }

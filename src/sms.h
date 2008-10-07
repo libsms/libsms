@@ -122,9 +122,9 @@ typedef struct
 {
 	float *pSmsData;        /*!< pointer to all SMS data */
 	int sizeData;               /*!< size of all the data */
-	float *pFFreqTraj;       /*!< frequency of sinusoids */
-	float *pFMagTraj;       /*!< magnitude of sinusoids */
-	float *pFPhaTraj;        /*!< phase of sinusoids */
+	float *pFSinFreq;       /*!< frequency of sinusoids */
+	float *pFSinMag;       /*!< magnitude of sinusoids */
+	float *pFSinPha;        /*!< phase of sinusoids */
 	int nTracks;                     /*!< number of sinusoidal tracks in frame */
 	float *pFStocGain;     /*!< gain of stochastic component */
 	float *pFStocCoeff;    /*!< filter coefficients for stochastic component */
@@ -223,7 +223,7 @@ typedef struct
 	float fMinRefHarmMag;     /*!< minimum magnitude in dB for reference peak */
 	float fRefHarmMagDiffFromMax; /*!< maximum magnitude difference from reference peak to highest peak */
 	int iRefHarmonic;	       /*!< reference harmonic to use in the fundamental detection */
-	int iMinTrajLength;	       /*!< minimum length in samples of a given track */
+	int iMinTrackLength;	       /*!< minimum length in samples of a given track */
 	int iMaxSleepingTime;	   /*!< maximum sleeping time for a track */
 	float fHighestFreq;        /*!< highest frequency to be searched */
 	float fMinPeakMag;         /*!< minimum magnitude in dB for a good peak */	
@@ -592,10 +592,10 @@ float sms_preEmphasis (float fInput);
 
 float sms_deEmphasis (float fInput);
 
-void sms_cleanTrajectories (int iCurrentFrame, SMS_AnalParams *pAnalParams);
+void sms_cleanTracks (int iCurrentFrame, SMS_AnalParams *pAnalParams);
 
 void sms_scaleDet (float *pFSynthBuffer, float *pFOriginalBuffer,
-                         float *pFMagTraj, SMS_AnalParams *pAnalParams, int nTraj);
+                         float *pFSinMag, SMS_AnalParams *pAnalParams, int nTracks);
 			
 int sms_prepSine (int nTableSize);
 

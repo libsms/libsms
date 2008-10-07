@@ -124,13 +124,13 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams)
 	{
 		pAnalParams->pFrames[i].iStatus = SMS_FRAME_EMPTY;
 		(pAnalParams->pFrames[i].deterministic).nTracks = pAnalParams->nGuides;
-		if (((pAnalParams->pFrames[i].deterministic).pFFreqTraj =
+		if (((pAnalParams->pFrames[i].deterministic).pFSinFreq =
 		    (float *)calloc (pAnalParams->nGuides, sizeof(float))) == NULL)
 			return (SMS_MALLOC);
-		if (((pAnalParams->pFrames[i].deterministic).pFMagTraj =
+		if (((pAnalParams->pFrames[i].deterministic).pFSinMag =
 		    (float *)calloc (pAnalParams->nGuides, sizeof(float))) == NULL)
 			return (SMS_MALLOC);
-		if (((pAnalParams->pFrames[i].deterministic).pFPhaTraj =
+		if (((pAnalParams->pFrames[i].deterministic).pFSinPha =
 		    (float *) calloc (pAnalParams->nGuides, sizeof(float))) == NULL)
 			return (SMS_MALLOC);
 		pAnalParams->ppFrames[i] = &pAnalParams->pFrames[i];
@@ -241,9 +241,9 @@ void sms_freeAnalysis( SMS_AnalParams *pAnalParams )
        int i;
         for (i = 0; i < pAnalParams->iMaxDelayFrames; i++)
 	{
-                free((pAnalParams->pFrames[i].deterministic).pFFreqTraj);
-                free((pAnalParams->pFrames[i].deterministic).pFMagTraj);
-                free((pAnalParams->pFrames[i].deterministic).pFPhaTraj);
+                free((pAnalParams->pFrames[i].deterministic).pFSinFreq);
+                free((pAnalParams->pFrames[i].deterministic).pFSinMag);
+                free((pAnalParams->pFrames[i].deterministic).pFSinPha);
         }
 
         sms_freeRecord(&pAnalParams->prevFrame);
@@ -321,7 +321,7 @@ void sms_initAnalParams (SMS_AnalParams *pAnalParams)
 	pAnalParams->fMinRefHarmMag = 30;
 	pAnalParams->fRefHarmMagDiffFromMax = 30;
 	pAnalParams->iRefHarmonic = 1;
-	pAnalParams->iMinTrajLength = 40; /*!< depends on iFrameRate normally */
+	pAnalParams->iMinTrackLength = 40; /*!< depends on iFrameRate normally */
 	pAnalParams->iMaxSleepingTime = 40; /*!< depends on iFrameRate normally */
 	pAnalParams->fHighestFreq = 12000.;
 	pAnalParams->fMinPeakMag = 0;
@@ -330,7 +330,7 @@ void sms_initAnalParams (SMS_AnalParams *pAnalParams)
 	pAnalParams->iWindowType = SMS_WIN_BH_70;
         pAnalParams->iSizeSound = 0; /*!< no sound yet */
 	pAnalParams->iMaxDelayFrames = 
-		MAX(pAnalParams->iMinTrajLength, pAnalParams->iMaxSleepingTime) + 2 +
+		MAX(pAnalParams->iMinTrackLength, pAnalParams->iMaxSleepingTime) + 2 +
 			SMS_DELAY_FRAMES;
 	pAnalParams->fResidualPercentage = 0;
 }
@@ -350,11 +350,11 @@ int sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams,
                       int sizeWindow)
 {
 	/* clear deterministic data */
-	memset ((float *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFFreqTraj, 0, 
+	memset ((float *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinFreq, 0, 
 	        sizeof(float) * pAnalParams->nGuides);
-	memset ((float *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFMagTraj, 0, 
+	memset ((float *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinMag, 0, 
 	        sizeof(float) * pAnalParams->nGuides);
-	memset ((float *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFPhaTraj, 0, 
+	memset ((float *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinPha, 0, 
 	        sizeof(float) * pAnalParams->nGuides);
 	/* clear peaks */
 	memset ((void *) pAnalParams->ppFrames[iCurrentFrame]->pSpectralPeaks, 0,

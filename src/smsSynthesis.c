@@ -48,18 +48,18 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
 
         for (i = 0; i < nTraj; i++)
         {
-                if (((fMag = pSmsData->pFMagTraj[i]) > 0) &&
-                    ((fFreq = (pSmsData->pFFreqTraj[i]) * pSynthParams->fTranspose) < iHalfSamplingRate))
+                if (((fMag = pSmsData->pFSinMag[i]) > 0) &&
+                    ((fFreq = (pSmsData->pFSinFreq[i]) * pSynthParams->fTranspose) < iHalfSamplingRate))
                 {
-                        if (pSynthParams->prevFrame.pFMagTraj[i] <= 0)
+                        if (pSynthParams->prevFrame.pFSinMag[i] <= 0)
                         {
-                                pSynthParams->prevFrame.pFPhaTraj[i] = 
+                                pSynthParams->prevFrame.pFSinPha[i] = 
                                         TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
                         }
                         /* magnitude is stored in dB because most manipulations of the model need to be
                            performed in dB, not magnitude, and manipulations drastically increase computation time */
                         fMag = sms_dBToMag (fMag);
-                        fTmp = pSynthParams->prevFrame.pFPhaTraj[i] +
+                        fTmp = pSynthParams->prevFrame.pFSinPha[i] +
                                 TWO_PI * fFreq * fSamplingPeriod * sizeMag;
                         fPhase = fTmp - floor(fTmp / TWO_PI) * TWO_PI;
                         fLoc = sizeFft * fFreq  * fSamplingPeriod;
@@ -95,9 +95,9 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                                         pSynthParams->fftw.pSpectrum[l][0] += 2 * fNewMag * fCos;
                         }
                 }
-                pSynthParams->prevFrame.pFMagTraj[i] = fMag;
-                pSynthParams->prevFrame.pFPhaTraj[i] = fPhase;
-                pSynthParams->prevFrame.pFFreqTraj[i] = fFreq;
+                pSynthParams->prevFrame.pFSinMag[i] = fMag;
+                pSynthParams->prevFrame.pFSinPha[i] = fPhase;
+                pSynthParams->prevFrame.pFSinFreq[i] = fFreq;
         }
 
         fftwf_execute(pSynthParams->fftw.plan);
@@ -112,17 +112,17 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
         memset (pSynthParams->realftOut, 0, (sizeFft +1) * sizeof(float));
         for (i = 0; i < nTracks; i++)
         {
-                if (((fMag = pSmsData->pFMagTraj[i]) > 0) &&
-                    ((fFreq = (pSmsData->pFFreqTraj[i]) * pSynthParams->fTranspose) < iHalfSamplingRate))
+                if (((fMag = pSmsData->pFSinMag[i]) > 0) &&
+                    ((fFreq = (pSmsData->pFSinFreq[i]) * pSynthParams->fTranspose) < iHalfSamplingRate))
                 {
-                        if (pSynthParams->prevFrame.pFMagTraj[i] <= 0)
+                        if (pSynthParams->prevFrame.pFSinMag[i] <= 0)
                         {
-                                pSynthParams->prevFrame.pFPhaTraj[i] = 
+                                pSynthParams->prevFrame.pFSinPha[i] = 
                                         TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
                         }
                         // can fMag here be stored as magnitude instead of DB within smsData?
                         fMag = sms_dBToMag (fMag);
-                        fTmp = pSynthParams->prevFrame.pFPhaTraj[i] +
+                        fTmp = pSynthParams->prevFrame.pFSinPha[i] +
                                 TWO_PI * fFreq * fSamplingPeriod * sizeMag;
                         fPhase = fTmp - floor(fTmp / TWO_PI) * TWO_PI;
                         fLoc = sizeFft * fFreq  * fSamplingPeriod;
@@ -162,9 +162,9 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                                 }
                         }
                 }
-                pSynthParams->prevFrame.pFMagTraj[i] = fMag;
-                pSynthParams->prevFrame.pFPhaTraj[i] = fPhase;
-                pSynthParams->prevFrame.pFFreqTraj[i] = fFreq;
+                pSynthParams->prevFrame.pFSinMag[i] = fMag;
+                pSynthParams->prevFrame.pFSinPha[i] = fPhase;
+                pSynthParams->prevFrame.pFSinFreq[i] = fFreq;
         }
 
         sms_fourier(sizeFft, pSynthParams->realftOut, -1);

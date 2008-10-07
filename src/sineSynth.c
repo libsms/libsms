@@ -45,33 +45,33 @@ static void SinePhaSynth (float fFreq, float fMag, float fPhase,
   float fAlpha, fBeta, fTmp1, fTmp2;
    
   /* if no mag in last frame copy freq from current and make phase */
-  if (pLastFrame->pFMagTraj[iTrack] <= 0)
+  if (pLastFrame->pFSinMag[iTrack] <= 0)
   {
-    pLastFrame->pFFreqTraj[iTrack] = fFreq;
+    pLastFrame->pFSinFreq[iTrack] = fFreq;
     fTmp = fPhase - (fFreq * sizeBuffer);
-    pLastFrame->pFPhaTraj[iTrack] = fTmp - floor(fTmp / TWO_PI) * TWO_PI;
+    pLastFrame->pFSinPha[iTrack] = fTmp - floor(fTmp / TWO_PI) * TWO_PI;
   }
   /* and the other way */
   else if (fMag <= 0)
   {
-    fFreq = pLastFrame->pFFreqTraj[iTrack];
-    fTmp = pLastFrame->pFPhaTraj[iTrack] + 
-            (pLastFrame->pFFreqTraj[iTrack] * sizeBuffer);
+    fFreq = pLastFrame->pFSinFreq[iTrack];
+    fTmp = pLastFrame->pFSinPha[iTrack] + 
+            (pLastFrame->pFSinFreq[iTrack] * sizeBuffer);
     fPhase = fTmp - floor(fTmp / TWO_PI) * TWO_PI;
   }
   
   /* caculate the instantaneous amplitude */
-  fMagIncr = (fMag - pLastFrame->pFMagTraj[iTrack]) / sizeBuffer;
-  fInstMag = pLastFrame->pFMagTraj[iTrack];
+  fMagIncr = (fMag - pLastFrame->pFSinMag[iTrack]) / sizeBuffer;
+  fInstMag = pLastFrame->pFSinMag[iTrack];
   
   /* create instantaneous phase from freq. and phase values */
-  fTmp1 = fFreq - pLastFrame->pFFreqTraj[iTrack];
-  fTmp2 = ((pLastFrame->pFPhaTraj[iTrack] + 
-		pLastFrame->pFFreqTraj[iTrack] * sizeBuffer - fPhase) +
+  fTmp1 = fFreq - pLastFrame->pFSinFreq[iTrack];
+  fTmp2 = ((pLastFrame->pFSinPha[iTrack] + 
+		pLastFrame->pFSinFreq[iTrack] * sizeBuffer - fPhase) +
 		fTmp1 * sizeBuffer / 2.0) / TWO_PI;
   iM = (int) (fTmp2 + .5);
-  fTmp2 = fPhase - pLastFrame->pFPhaTraj[iTrack] - 
-		pLastFrame->pFFreqTraj[iTrack] * sizeBuffer +
+  fTmp2 = fPhase - pLastFrame->pFSinPha[iTrack] - 
+		pLastFrame->pFSinFreq[iTrack] * sizeBuffer +
 		TWO_PI * iM;
   fAlpha = (3.0 / (float)(sizeBuffer * sizeBuffer)) * 
     fTmp2 - fTmp1 / sizeBuffer;
@@ -81,16 +81,16 @@ static void SinePhaSynth (float fFreq, float fMag, float fPhase,
   for(i=0; i<sizeBuffer; i++)
   {
     fInstMag += fMagIncr;
-    fInstPhase = pLastFrame->pFPhaTraj[iTrack] + 
-			pLastFrame->pFFreqTraj[iTrack] * i + 
+    fInstPhase = pLastFrame->pFSinPha[iTrack] + 
+			pLastFrame->pFSinFreq[iTrack] * i + 
 			fAlpha * i * i + fBeta * i * i * i;
 
     pFWaveform[i] += sms_dBToMag(fInstMag) * sms_sine(fInstPhase + PI_2);
   }
   /* save current values into buffer */
-  pLastFrame->pFFreqTraj[iTrack] = fFreq;
-  pLastFrame->pFMagTraj[iTrack] = fMag;
-  pLastFrame->pFPhaTraj[iTrack] = fPhase;
+  pLastFrame->pFSinFreq[iTrack] = fFreq;
+  pLastFrame->pFSinMag[iTrack] = fMag;
+  pLastFrame->pFSinPha[iTrack] = fPhase;
 }
 
 /*! \brief generate a sinusoid given two frames, current and last
@@ -109,23 +109,23 @@ static void SineSynth (float fFreq, float fMag, SMS_Data *pLastFrame,
   int i;
   
   /* if no mag in last frame copy freq from current */
-  if (pLastFrame->pFMagTraj[iTrack] <= 0)
+  if (pLastFrame->pFSinMag[iTrack] <= 0)
   {
-    pLastFrame->pFFreqTraj[iTrack] = fFreq;
-    pLastFrame->pFPhaTraj[iTrack] = 
+    pLastFrame->pFSinFreq[iTrack] = fFreq;
+    pLastFrame->pFSinPha[iTrack] = 
 			TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
   }
   /* and the other way */
   else if (fMag <= 0)
-    fFreq = pLastFrame->pFFreqTraj[iTrack];
+    fFreq = pLastFrame->pFSinFreq[iTrack];
   
   /* calculate the instantaneous amplitude */
-  fMagIncr = (fMag - pLastFrame->pFMagTraj[iTrack]) / sizeBuffer;
-  fInstMag = pLastFrame->pFMagTraj[iTrack];
+  fMagIncr = (fMag - pLastFrame->pFSinMag[iTrack]) / sizeBuffer;
+  fInstMag = pLastFrame->pFSinMag[iTrack];
   /* calculate instantaneous frequency */
-  fFreqIncr = (fFreq - pLastFrame->pFFreqTraj[iTrack]) / sizeBuffer;
-  fInstFreq = pLastFrame->pFFreqTraj[iTrack];
-  fInstPhase = pLastFrame->pFPhaTraj[iTrack];
+  fFreqIncr = (fFreq - pLastFrame->pFSinFreq[iTrack]) / sizeBuffer;
+  fInstFreq = pLastFrame->pFSinFreq[iTrack];
+  fInstPhase = pLastFrame->pFSinPha[iTrack];
   
   /* generate all the samples */    
   for (i = 0; i < sizeBuffer; i++)
@@ -138,9 +138,9 @@ static void SineSynth (float fFreq, float fMag, SMS_Data *pLastFrame,
   }
   
   /* save current values into last values */
-  pLastFrame->pFFreqTraj[iTrack] = fFreq;
-  pLastFrame->pFMagTraj[iTrack] = fMag;
-  pLastFrame->pFPhaTraj[iTrack] = fInstPhase - 
+  pLastFrame->pFSinFreq[iTrack] = fFreq;
+  pLastFrame->pFSinMag[iTrack] = fMag;
+  pLastFrame->pFSinPha[iTrack] = fInstPhase - 
 		floor(fInstPhase / TWO_PI) * TWO_PI;
 }
 
@@ -165,29 +165,29 @@ void sms_sineSynthFrame (SMS_Data *pSmsData, float *pFBuffer,
         for (i = 0; i < nTracks; i++)
         {
                 /* get magnitude */
-                fMag = pSmsData->pFMagTraj[i];
+                fMag = pSmsData->pFSinMag[i];
       
-                fFreq = pSmsData->pFFreqTraj[i];
+                fFreq = pSmsData->pFSinFreq[i];
 
                 /* gaurd so transposed frequencies don't alias */
                 if (fFreq > iHalfSamplingRate || fFreq < 0) 
                         fMag = 0;
       
                 /* generate sines if there are magnitude values */
-                if ((fMag > 0) || (pLastFrame->pFMagTraj[i] > 0))
+                if ((fMag > 0) || (pLastFrame->pFSinMag[i] > 0))
                 {
                         /* frequency from Hz to radians */
                         fFreq = (fFreq == 0) ? 0 : TWO_PI * fFreq / iSamplingRate;
 
 
                         // RTE TODO: make seperate function for SineSynth /wo phase
-                        if (pSmsData->pFPhaTraj == NULL)
+                        if (pSmsData->pFSinPha == NULL)
                         {                
                                 SineSynth(fFreq, fMag, pLastFrame, pFBuffer, sizeBuffer, i);
                         }
                         else
                         {
-                                SinePhaSynth(fFreq, fMag, pSmsData->pFPhaTraj[i], pLastFrame, 
+                                SinePhaSynth(fFreq, fMag, pSmsData->pFSinPha[i], pLastFrame, 
                                              pFBuffer, sizeBuffer, i);
                         }
                 }

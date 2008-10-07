@@ -396,7 +396,7 @@ int sms_peakContinuation (int iFrame, SMS_AnalParams *pAnalParams)
 	for (iGuide = 0; iGuide < pAnalParams->nGuides; iGuide++)
 	{
 		float fPreviousFreq = 
-			pAnalParams->ppFrames[iFrame-1]->deterministic.pFFreqTraj[iGuide];
+			pAnalParams->ppFrames[iFrame-1]->deterministic.pFSinFreq[iGuide];
    
 		/* get the guide value by upgrading the previous guide */
 		if (fPreviousFreq > 0)
@@ -479,11 +479,11 @@ int sms_peakContinuation (int iFrame, SMS_AnalParams *pAnalParams)
 		/* if good continuation peak found, save it */
 		if ((iCurrentPeak = pGuides[iGuide].iPeakChosen) >= 0)
 		{
-			pAnalParams->ppFrames[iFrame]->deterministic.pFFreqTraj[iGuide] = 
+			pAnalParams->ppFrames[iFrame]->deterministic.pFSinFreq[iGuide] = 
 				pAnalParams->ppFrames[iFrame]->pSpectralPeaks[iCurrentPeak].fFreq;
-			pAnalParams->ppFrames[iFrame]->deterministic.pFMagTraj[iGuide] = 
+			pAnalParams->ppFrames[iFrame]->deterministic.pFSinMag[iGuide] = 
 				pAnalParams->ppFrames[iFrame]->pSpectralPeaks[iCurrentPeak].fMag;
-			pAnalParams->ppFrames[iFrame]->deterministic.pFPhaTraj[iGuide] = 
+			pAnalParams->ppFrames[iFrame]->deterministic.pFSinPha[iGuide] = 
 				pAnalParams->ppFrames[iFrame]->pSpectralPeaks[iCurrentPeak].fPhase;
      
 			pGuides[iGuide].iStatus = GUIDE_ACTIVE;

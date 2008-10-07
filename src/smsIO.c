@@ -97,9 +97,9 @@ void sms_fillHeader (SMS_Header *pSmsHeader,
 void sms_initRecord (SMS_Data *pSmsRecord)
 {
 	pSmsRecord->pSmsData = NULL;
-	pSmsRecord->pFFreqTraj = NULL;
-	pSmsRecord->pFMagTraj = NULL;
-	pSmsRecord->pFPhaTraj = NULL;
+	pSmsRecord->pFSinFreq = NULL;
+	pSmsRecord->pFSinMag = NULL;
+	pSmsRecord->pFSinPha = NULL;
 	pSmsRecord->pFStocCoeff = NULL;
 	pSmsRecord->pFStocGain = NULL;
 	pSmsRecord->nTracks = 0;
@@ -408,16 +408,16 @@ int sms_allocRecord (SMS_Data *pSmsRecord, int nTracks, int nCoeff, int iPhase,
 	pSmsRecord->nCoeff = nCoeff;
 	pSmsRecord->sizeData = sizeData; 
         /* set pointers to data types within smsData array */
-	pSmsRecord->pFFreqTraj = pSmsRecord->pSmsData;
-        dataPos =  (float *)(pSmsRecord->pFFreqTraj + nTracks);
-	pSmsRecord->pFMagTraj = dataPos;
-        dataPos = (float *)(pSmsRecord->pFMagTraj + nTracks);
+	pSmsRecord->pFSinFreq = pSmsRecord->pSmsData;
+        dataPos =  (float *)(pSmsRecord->pFSinFreq + nTracks);
+	pSmsRecord->pFSinMag = dataPos;
+        dataPos = (float *)(pSmsRecord->pFSinMag + nTracks);
 	if (iPhase > 0)
 	{
-		pSmsRecord->pFPhaTraj = dataPos;
-                dataPos = (float *) (pSmsRecord->pFPhaTraj + nTracks);
+		pSmsRecord->pFSinPha = dataPos;
+                dataPos = (float *) (pSmsRecord->pFSinPha + nTracks);
         }	
-	else 	pSmsRecord->pFPhaTraj = NULL;
+	else 	pSmsRecord->pFSinPha = NULL;
 	if (nCoeff > 0)
 	{
                 pSmsRecord->pFStocCoeff = dataPos;
@@ -461,8 +461,8 @@ void sms_freeRecord (SMS_Data *pSmsRecord)
 	pSmsRecord->nTracks = 0;
 	pSmsRecord->nCoeff = 0;
 	pSmsRecord->sizeData = 0;
-	pSmsRecord->pFFreqTraj = NULL;
-	pSmsRecord->pFMagTraj = NULL;
+	pSmsRecord->pFSinFreq = NULL;
+	pSmsRecord->pFSinMag = NULL;
 	pSmsRecord->pFStocCoeff = NULL;
 	pSmsRecord->pFStocGain = NULL;
 }
@@ -500,16 +500,16 @@ void sms_copyRecord (SMS_Data *pCopySmsData, SMS_Data *pOriginalSmsData)
 
 		pCopySmsData->nTracks = nTraj;
 		pCopySmsData->nCoeff = nCoeff;
-		memcpy ((char *)pCopySmsData->pFFreqTraj, 
-	          (char *)pOriginalSmsData->pFFreqTraj,
+		memcpy ((char *)pCopySmsData->pFSinFreq, 
+	          (char *)pOriginalSmsData->pFSinFreq,
 	          sizeof(float) * nTraj);
-		memcpy ((char *)pCopySmsData->pFMagTraj, 
-	          (char *)pOriginalSmsData->pFMagTraj,
+		memcpy ((char *)pCopySmsData->pFSinMag, 
+	          (char *)pOriginalSmsData->pFSinMag,
 	          sizeof(float) * nTraj);
-		if (pOriginalSmsData->pFPhaTraj != NULL &&
-	      pCopySmsData->pFPhaTraj != NULL)
-			memcpy ((char *)pCopySmsData->pFPhaTraj, 
-		          (char *)pOriginalSmsData->pFPhaTraj,
+		if (pOriginalSmsData->pFSinPha != NULL &&
+	      pCopySmsData->pFSinPha != NULL)
+			memcpy ((char *)pCopySmsData->pFSinPha, 
+		          (char *)pOriginalSmsData->pFSinPha,
 		          sizeof(float) * nTraj);
 		if (pOriginalSmsData->pFStocCoeff != NULL &&
 	      pCopySmsData->pFStocCoeff != NULL)
@@ -542,15 +542,15 @@ void sms_interpolateRecords (SMS_Data *pSmsRecord1, SMS_Data *pSmsRecord2,
 	/* interpolate the deterministic part */
 	for (i = 0; i < pSmsRecord1->nTracks; i++)
 	{
-		fFreq1 = pSmsRecord1->pFFreqTraj[i];
-		fFreq2 = pSmsRecord2->pFFreqTraj[i];
+		fFreq1 = pSmsRecord1->pFSinFreq[i];
+		fFreq2 = pSmsRecord2->pFSinFreq[i];
 		if (fFreq1 == 0) fFreq1 = fFreq2;
 		if (fFreq2 == 0) fFreq2 = fFreq1;
-		pSmsRecordOut->pFFreqTraj[i] = 
+		pSmsRecordOut->pFSinFreq[i] = 
 			fFreq1 + fInterpFactor * (fFreq2 - fFreq1);
-		pSmsRecordOut->pFMagTraj[i] = 
-			pSmsRecord1->pFMagTraj[i] + fInterpFactor * 
-			(pSmsRecord2->pFMagTraj[i] - pSmsRecord1->pFMagTraj[i]);
+		pSmsRecordOut->pFSinMag[i] = 
+			pSmsRecord1->pFSinMag[i] + fInterpFactor * 
+			(pSmsRecord2->pFSinMag[i] - pSmsRecord1->pFSinMag[i]);
 	}
 
 	/* interpolate the stochastic part. The pointer is non-null when the frame contains
