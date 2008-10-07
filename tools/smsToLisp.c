@@ -51,7 +51,7 @@ void main (int ac, char *av[])
 		if (iError == SMS_MALLOC) printf("cannot allocate memory");
 		printf("error");
 	}
-	sms_allocRecordH (pSmsHeader, &smsData);
+	sms_allocFrameH (pSmsHeader, &smsData);
 
 	havePhs = (!(pSmsHeader->iFormat == SMS_FORMAT_H ||
                pSmsHeader->iFormat == SMS_FORMAT_IH));
@@ -91,7 +91,7 @@ void main (int ac, char *av[])
 		fprintf (fp,"(setf (aref amp-%s %i) (make-array %i :initial-contents '(", namedata, j, NRec);
 		for(i = 0; i < NRec; i++) 
 		{
-			sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
+			sms_getFrame (pSmsFile, pSmsHeader, i, &smsData);
 			amps = TO_MAG (smsData.pFSinMag[j]);
 			fprintf (fp,"%f ", amps);
 		}
@@ -105,11 +105,11 @@ void main (int ac, char *av[])
 		counter = 0;
 		Sum = 0;
 		freqsm1 = 0.0;
-		sms_getRecord(pSmsFile, pSmsHeader, i, &smsData);
+		sms_getFrame(pSmsFile, pSmsHeader, i, &smsData);
 		freqs = smsData.pFSinFreq[j];
 		for(i = 0; i < NRec; i++) 
 		{
-			sms_getRecord(pSmsFile, pSmsHeader, i, &smsData);
+			sms_getFrame(pSmsFile, pSmsHeader, i, &smsData);
 			freqsp1 = smsData.pFSinFreq[j];
 			printfreqs = freqs;
 			if (freqs<0.000001 && freqsm1>0.0) printfreqs = freqsm1;
@@ -139,7 +139,7 @@ void main (int ac, char *av[])
 			fprintf (fp,"(setf (aref pha-%s %i) (make-array %i :initial-contents '(", namedata, j, NRec);
 			for (i = 0; i < NRec; i++) 
 			{
-				sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
+				sms_getFrame (pSmsFile, pSmsHeader, i, &smsData);
 				phs = smsData.pFSinPha[j];
 				fprintf (fp,"%f ", phs);
 			}
@@ -152,7 +152,7 @@ void main (int ac, char *av[])
 		fprintf (fp,"(defparameter gain-%s (make-array %i :initial-contents '(", namedata, NRec);
 		for (i = 0; i < NRec; i++)
 		{
-			sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
+			sms_getFrame (pSmsFile, pSmsHeader, i, &smsData);
 			gain = TO_MAG (*(smsData.pFStocGain));
 			fprintf (fp,"%f ", gain);
 		}
@@ -160,7 +160,7 @@ void main (int ac, char *av[])
 
 		for(i = 0; i < NRec; i++) 
 		{
-			sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
+			sms_getFrame (pSmsFile, pSmsHeader, i, &smsData);
 			fprintf (fp,"(setf (aref coef-%s %i) (make-array %i :initial-contents '(0.00 ", namedata, i, 
 			              2+pSmsHeader->nStochasticCoeff);
 		        for (j = 0; j < smsData.nCoeff; j++)

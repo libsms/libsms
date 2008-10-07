@@ -20,7 +20,7 @@ typedef struct _smssynth
         t_float transpose, stocgain;
         SMS_SynthParams synthParams;
         t_smsbuf *smsbuf;
-        SMS_Data interpolatedRecord;
+        SMS_Data interpolatedFrame;
         t_int verbose;
         t_int ready;
 } t_smssynth;
@@ -50,7 +50,7 @@ static void smssynth_buffer(t_smssynth *x, t_symbol *bufname)
                 post("smssynth_open: re-initializing synth");
                 x->ready = 0;
                 sms_freeSynth(&x->synthParams);
-                sms_freeRecord(&x->interpolatedRecord);
+                sms_freeFrame(&x->interpolatedFrame);
         }
 
         x->smsbuf =
@@ -99,7 +99,7 @@ static void smssynth_buffer(t_smssynth *x, t_symbol *bufname)
 
 	/* setup for interpolated synthesis from buffer */
         // I guess I am always ignoring phase information for now..
-	sms_allocRecord (&x->interpolatedRecord, x->smsbuf->smsHeader.nTracks,
+	sms_allocFrame (&x->interpolatedFrame, x->smsbuf->smsHeader.nTracks,
 	                   x->smsbuf->smsHeader.nStochasticCoeff, 0,
                            x->smsbuf->smsHeader.iStochasticType);
 
@@ -117,7 +117,7 @@ static t_int *smssynth_perform(t_int *w)
         if(x->ready && x->smsbuf->ready)        
         {
                 float f;
-                int i, iLeftRecord, iRightRecord;
+                int i, iLeftFrame, iRightFrame;
                 //int nFrames = x->smsbuf->smsHeader.nFrames;
                 int nFrames = x->smsbuf->nframes;
                 if(x->synthBufPos >= x->synthParams.sizeHop)
@@ -126,14 +126,14 @@ static t_int *smssynth_perform(t_int *w)
                                 x->f = nFrames -1;
                         if(x->f < 0) x->f = 0;
                 
-                        iLeftRecord = MIN (nFrames - 1, floor (x->f)); 
-                        iRightRecord = (iLeftRecord < nFrames - 2)
-                                ? (1+ iLeftRecord) : iLeftRecord;
+                        iLeftFrame = MIN (nFrames - 1, floor (x->f)); 
+                        iRightFrame = (iLeftFrame < nFrames - 2)
+                                ? (1+ iLeftFrame) : iLeftFrame;
 
-                        sms_interpolateRecords (&x->smsbuf->smsData[iLeftRecord], &x->smsbuf->smsData[iRightRecord],
-                                                &x->interpolatedRecord, x->f - iLeftRecord);
+                        sms_interpolateFrames (&x->smsbuf->smsData[iLeftFrame], &x->smsbuf->smsData[iRightFrame],
+                                                &x->interpolatedFrame, x->f - iLeftFrame);
                         
-                        sms_synthesize (&x->interpolatedRecord, x->synthBuf, &x->synthParams);
+                        sms_synthesize (&x->interpolatedFrame, x->synthBuf, &x->synthParams);
                         x->synthBufPos = 0;
                 }
                 //check when blocksize is larger than hopsize... will probably crash
@@ -246,7 +246,7 @@ static void smssynth_free(t_smssynth *x)
         if(x->smsbuf->nframes != 0) 
         {
                 sms_freeSynth(&x->synthParams);
-                sms_freeRecord(&x->interpolatedRecord);
+                sms_freeFrame(&x->interpolatedFrame);
         }
         //sms_free();
 }

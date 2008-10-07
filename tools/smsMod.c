@@ -79,11 +79,11 @@ int main (int argc, char *argv[])
     }	    
   
 	pSmsHeader->fFrequency = fFundamental;
-	sms_allocRecordH (pSmsHeader, &smsData);
+	sms_allocFrameH (pSmsHeader, &smsData);
 
   for(i = 1; i < pSmsHeader->nFrames; i++)
   {
-    sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
+    sms_getFrame (pSmsFile, pSmsHeader, i, &smsData);
     *smsData.pFStocGain += fStocFactor;
   }
   

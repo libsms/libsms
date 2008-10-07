@@ -81,7 +81,7 @@ void CopySmsHeader( SMS_Header *pFileHeader, SMS_Header *pBufHeader, char *param
         pBufHeader->nStochasticCoeff = pFileHeader->nStochasticCoeff;
         pBufHeader->iOriginalSRate = pFileHeader->iOriginalSRate;
    
-        pBufHeader->iFrameBSize = sms_recordSizeB(pBufHeader);
+        pBufHeader->iFrameBSize = sms_frameSizeB(pBufHeader);
 
         pBufHeader->nTextCharacters = pFileHeader->nTextCharacters;
         strcpy(paramString, pFileHeader->pChTextCharacters);
@@ -96,7 +96,7 @@ void smsbuf_dealloc(t_smsbuf *x)
 {
         int i;
         for( i = 0; i < x->nframes; i++)
-                sms_freeRecord(&x->smsData[i]);
+                sms_freeFrame(&x->smsData[i]);
         free(x->smsData);
 }
 
@@ -113,7 +113,7 @@ void smsbuf_alloc(t_smsbuf *x)
         /* will this be faster with one malloc? try once everything is setup */
         x->smsData = calloc(x->nframes, sizeof(SMS_Data));
         for( i = 0; i < x->nframes; i++ )
-                sms_allocRecordH (&x->smsHeader,  &x->smsData[i]);
+                sms_allocFrameH (&x->smsHeader,  &x->smsData[i]);
 }
 
 /* function to open a file and load into the buffer:
@@ -145,7 +145,7 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
         {
                 post("smsbuf_open: re-initializing");
                 for( i = 0; i < x->nframes; i++)
-                        sms_freeRecord(&x->smsData[i]);
+                        sms_freeFrame(&x->smsData[i]);
         }
 
         if ((iError = sms_getHeader (fullname->s_name, &pSmsHeader, &x->pSmsFile)) > 0)
@@ -165,8 +165,8 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
         x->smsData = calloc(x->nframes, sizeof(SMS_Data));
         for( i = 0; i < x->nframes; i++ )
         {
-                sms_allocRecordH (pSmsHeader,  &x->smsData[i]);
-                sms_getRecord (x->pSmsFile, pSmsHeader, i, &x->smsData[i]);
+                sms_allocFrameH (pSmsHeader,  &x->smsData[i]);
+                sms_getFrame (x->pSmsFile, pSmsHeader, i, &x->smsData[i]);
         }
 
         /* copy header to buffer */
@@ -199,7 +199,7 @@ static void smsbuf_save(t_smsbuf *x, t_symbol *filename)
         }
         /* write the frames */
         for(i = 0; i < x->nframes; i++)
-                sms_writeRecord (pOutputSmsFile, &x->smsHeader, &x->smsData[i]);
+                sms_writeFrame (pOutputSmsFile, &x->smsHeader, &x->smsData[i]);
 
         /* save and close file */
         sms_writeFile (pOutputSmsFile, &x->smsHeader);
@@ -286,7 +286,7 @@ static void smsbuf_free(t_smsbuf *x)
         if(x->allocated)
         {
                 for( i = 0; i < x->nframes; i++)
-                        sms_freeRecord(&x->smsData[i]);
+                        sms_freeFrame(&x->smsData[i]);
                 free(x->smsData);
         }
 

@@ -170,7 +170,7 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
         SMS_AnalFrame *pTmpAnalFrame;
 
 	/* clear SMS output */
-	sms_clearRecord (pSmsData);
+	sms_clearFrame (pSmsData);
   
 	/* set initial analysis-window size */
 	if (sizeWindow == 0)

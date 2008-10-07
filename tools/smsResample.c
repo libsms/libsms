@@ -61,13 +61,13 @@ int main (int argc, char *argv[])
                 exit(EXIT_FAILURE);
 	}	    
   
-	sms_allocRecordH (pSmsHeader, &inSmsData);
+	sms_allocFrameH (pSmsHeader, &inSmsData);
 	sms_writeHeader (pChOutputSmsFile, pSmsHeader, &pOutSmsFile);
 
 	for (i = 1 + iFactor; i < pSmsHeader->nFrames; i += iFactor)
 	{
-		sms_getRecord (pInSmsFile, pSmsHeader, i, &inSmsData);
-		sms_writeRecord (pOutSmsFile, pSmsHeader, &inSmsData);
+		sms_getFrame (pInSmsFile, pSmsHeader, i, &inSmsData);
+		sms_writeFrame (pOutSmsFile, pSmsHeader, &inSmsData);
 	}
   
 	pSmsHeader->nFrames /= iFactor;

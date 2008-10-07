@@ -51,7 +51,7 @@ void main (int argc, char *argv[])
 		quit("error");
 	}	    
     
-	sms_allocRecordH (pSmsHeader, &smsData);
+	sms_allocFrameH (pSmsHeader, &smsData);
 
 	fp = fopen(argv[2],"w");
 	namedata = (char *)strtok (argv[2],".");
@@ -77,7 +77,7 @@ void main (int argc, char *argv[])
 
 	for(i = 0; i < pSmsHeader->nFrames; i++)
 	{
-		sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
+		sms_getFrame (pSmsFile, pSmsHeader, i, &smsData);
 		fprintf(fp,"%s_amps(%d,:) = [", namedata, i+1);
 		for(j = 0; j < smsData.nTraj; j++)
 			fprintf(fp," %.2f", smsData.pFSinMag[j]);
@@ -88,7 +88,7 @@ void main (int argc, char *argv[])
 	        namedata);
 	for(i = 0; i < pSmsHeader->nFrames; i++)
 	{
-		sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
+		sms_getFrame (pSmsFile, pSmsHeader, i, &smsData);
 		fprintf(fp,"%s_freqs(%d,:) = [", namedata, i+1);
 		for(j = 0; j < smsData.nTraj; j++)
 			fprintf(fp," %.2f", smsData.pFSinFreq[j]);
@@ -102,7 +102,7 @@ void main (int argc, char *argv[])
 	            namedata);
 		for(i = 0; i < pSmsHeader->nFrames; i++)
 		{
-			sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
+			sms_getFrame (pSmsFile, pSmsHeader, i, &smsData);
 			fprintf(fp,"%s_phases(%d,:) = [", namedata, i+1);
 			for(j = 0; j < smsData.nTraj; j++)
 				fprintf(fp," %.2f", smsData.pFSinPha[j]);
@@ -115,7 +115,7 @@ void main (int argc, char *argv[])
 		        namedata, namedata);
 		for(i = 0; i < pSmsHeader->nFrames; i++)
 		{
-			sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
+			sms_getFrame (pSmsFile, pSmsHeader, i, &smsData);
 			fprintf(fp,"%s_stoccoeffs(%d,:) = [", namedata, i+1);
 			for(j = 0; j < smsData.nCoeff; j++)
 				fprintf(fp," %.4f", smsData.pFStocCoeff[j]);
@@ -125,7 +125,7 @@ void main (int argc, char *argv[])
 		        namedata);
 		for(i = 0; i < pSmsHeader->nFrames; i++)
 		{
-			sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
+			sms_getFrame (pSmsFile, pSmsHeader, i, &smsData);
 			fprintf(fp,"%s_stocgain (%d) = %.4f ;\n", namedata, i+1, 
 				*(smsData.pFStocGain));
 		}  

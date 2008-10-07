@@ -66,7 +66,7 @@ typedef struct _smsSynthFile
 	FILE *pSmsFile; 
         SMS_SynthParams synthParams;
         SMS_Header *pSmsHeader;
-        SMS_Data smsRecordL, smsRecordR, newSmsRecord;
+        SMS_Data smsFrameL, smsFrameR, newSmsFrame;
 } t_smsSynthFile;
 
 static t_int *smsSynthFile_perform(t_int *w)
@@ -76,7 +76,7 @@ static t_int *smsSynthFile_perform(t_int *w)
         t_sample *out = (t_float *)(w[3]);
         int n = (int)(w[4]);
         float f;
-        int i, iLeftRecord, iRightRecord;
+        int i, iLeftFrame, iRightFrame;
 
         if(x->pSmsHeader != NULL)        
         {
@@ -86,16 +86,16 @@ static t_int *smsSynthFile_perform(t_int *w)
                                 x->f = x->pSmsHeader->nFrames -1;
                         if(x->f < 0) x->f = 0;
                 
-                        iLeftRecord = MIN (x->pSmsHeader->nFrames - 1, floor (x->f)); 
-                        iRightRecord = (iLeftRecord < x->pSmsHeader->nFrames - 2)
-                                ? (1+ iLeftRecord) : iLeftRecord;
+                        iLeftFrame = MIN (x->pSmsHeader->nFrames - 1, floor (x->f)); 
+                        iRightFrame = (iLeftFrame < x->pSmsHeader->nFrames - 2)
+                                ? (1+ iLeftFrame) : iLeftFrame;
                 
-                        sms_getRecord (x->pSmsFile, x->pSmsHeader, iLeftRecord, &x->smsRecordL);
-                        sms_getRecord (x->pSmsFile, x->pSmsHeader, iRightRecord,&x->smsRecordR);
-                        sms_interpolateRecords (&x->smsRecordL, &x->smsRecordR, &x->newSmsRecord,
-                                               x->f - iLeftRecord);
+                        sms_getFrame (x->pSmsFile, x->pSmsHeader, iLeftFrame, &x->smsFrameL);
+                        sms_getFrame (x->pSmsFile, x->pSmsHeader, iRightFrame,&x->smsFrameR);
+                        sms_interpolateFrames (&x->smsFrameL, &x->smsFrameR, &x->newSmsFrame,
+                                               x->f - iLeftFrame);
                 
-                        sms_synthesize (&x->newSmsRecord, x->synthBuf, &x->synthParams);
+                        sms_synthesize (&x->newSmsFrame, x->synthBuf, &x->synthParams);
                         x->synthBufPos = 0;
                 }
                 //check when blocksize is larger than hopsize... will probably crash
@@ -150,9 +150,9 @@ static void smsSynthFile_open(t_smsSynthFile *x, t_symbol *filename)
         {
                 post("smsSynthFile_open: re-initializing");
                 sms_freeSynth(&x->synthParams);                
-                sms_freeRecord(&x->smsRecordL);
-                sms_freeRecord(&x->smsRecordR);
-                sms_freeRecord(&x->newSmsRecord);
+                sms_freeFrame(&x->smsFrameL);
+                sms_freeFrame(&x->smsFrameR);
+                sms_freeFrame(&x->newSmsFrame);
         }
         
         if ((iError = sms_getHeader (x->s_filename->s_name, &x->pSmsHeader, &x->pSmsFile)) < 0)
@@ -165,10 +165,10 @@ static void smsSynthFile_open(t_smsSynthFile *x, t_symbol *filename)
         
 	/* setup for synthesis from file */
         /* needs 3 frame buffers: left, right, and interpolated */
-	sms_allocRecordH (x->pSmsHeader, &x->smsRecordL);
-	sms_allocRecordH (x->pSmsHeader, &x->smsRecordR);
+	sms_allocFrameH (x->pSmsHeader, &x->smsFrameL);
+	sms_allocFrameH (x->pSmsHeader, &x->smsFrameR);
         // I guess I am always ignoring phase information for now..
-	sms_allocRecord (&x->newSmsRecord, x->pSmsHeader->nTrajectories, 
+	sms_allocFrame (&x->newSmsFrame, x->pSmsHeader->nTracks, 
 	                   x->pSmsHeader->nStochasticCoeff, 0,
                          x->pSmsHeader->iStochasticType);
 
@@ -237,9 +237,9 @@ static void smsSynthFile_free(t_smsSynthFile *x)
         if(x->pSmsHeader != NULL) 
         {
                 sms_freeSynth(&x->synthParams);
-                sms_freeRecord(&x->smsRecordL);
-                sms_freeRecord(&x->smsRecordR);
-                sms_freeRecord(&x->newSmsRecord);
+                sms_freeFrame(&x->smsFrameL);
+                sms_freeFrame(&x->smsFrameR);
+                sms_freeFrame(&x->newSmsFrame);
         }
 }
 void smsSynthFile_tilde_setup(void)

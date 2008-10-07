@@ -56,11 +56,11 @@ int main (int argc, char *argv[])
 	char *pChInputSmsFile = NULL, *pChOutputSoundFile = NULL;
 	SMS_Header *pSmsHeader;
 	FILE *pSmsFile; /* pointer to sms file to be synthesized */
-	SMS_Data smsRecordL, smsRecordR, newSmsRecord; /* left, right, and interpolated frames */
+	SMS_Data smsFrameL, smsFrameR, newSmsFrame; /* left, right, and interpolated frames */
 	float *pFSynthesis; /* waveform synthesis buffer */
-	long iError, iSample, i, nSamples, iLeftRecord, iRightRecord;
+	long iError, iSample, i, nSamples, iLeftFrame, iRightFrame;
         int verboseMode = 0;
-        float fRecordLoc; /* exact sms frame location, used to interpolate newSmsRecord */
+        float fFrameLoc; /* exact sms frame location, used to interpolate newSmsFrame */
         float fFsRatio,  fLocIncr;
         int  detSynthType, synthType, sizeHop, iSamplingRate; /*  argument holders */
         int iSoundFileType = 0; /* wav file */
@@ -175,9 +175,9 @@ int main (int argc, char *argv[])
 	sms_createSF ( pChOutputSoundFile, synthParams.iSamplingRate, 0);
 
 	/* setup for synthesis from file */
-	sms_allocFrameH (pSmsHeader, &smsRecordL);
-	sms_allocFrameH (pSmsHeader, &smsRecordR);
-	sms_allocFrame (&newSmsRecord, pSmsHeader->nTracks, 
+	sms_allocFrameH (pSmsHeader, &smsFrameL);
+	sms_allocFrameH (pSmsHeader, &smsFrameR);
+	sms_allocFrame (&newSmsFrame, pSmsHeader->nTracks, 
                          pSmsHeader->nStochasticCoeff, 0, pSmsHeader->iStochasticType);
 
 	if ((pFSynthesis = (float *) calloc(synthParams.sizeHop, sizeof(float)))
@@ -208,17 +208,17 @@ int main (int argc, char *argv[])
 
 	while (iSample < nSamples)
 	{
-		fRecordLoc =  iSample *  fLocIncr;
+		fFrameLoc =  iSample *  fLocIncr;
                 // left and right frames around location, gaurding for end of file
-		iLeftRecord = MIN (pSmsHeader->nFrames - 1, floor (fRecordLoc)); 
-		iRightRecord = (iLeftRecord < pSmsHeader->nFrames - 2)
-			? (1+ iLeftRecord) : iLeftRecord;
-		sms_getFrame (pSmsFile, pSmsHeader, iLeftRecord, &smsRecordL);
-		sms_getFrame (pSmsFile, pSmsHeader, iRightRecord,&smsRecordR);
-		sms_interpolateFrames (&smsRecordL, &smsRecordR, &newSmsRecord,
-                                       fRecordLoc - iLeftRecord);
+		iLeftFrame = MIN (pSmsHeader->nFrames - 1, floor (fFrameLoc)); 
+		iRightFrame = (iLeftFrame < pSmsHeader->nFrames - 2)
+			? (1+ iLeftFrame) : iLeftFrame;
+		sms_getFrame (pSmsFile, pSmsHeader, iLeftFrame, &smsFrameL);
+		sms_getFrame (pSmsFile, pSmsHeader, iRightFrame,&smsFrameR);
+		sms_interpolateFrames (&smsFrameL, &smsFrameR, &newSmsFrame,
+                                       fFrameLoc - iLeftFrame);
 
-                sms_synthesize (&newSmsRecord, pFSynthesis, &synthParams);
+                sms_synthesize (&newSmsFrame, pFSynthesis, &synthParams);
 		sms_writeSound (pFSynthesis, synthParams.sizeHop);
     
 		iSample += synthParams.sizeHop;
@@ -239,9 +239,9 @@ int main (int argc, char *argv[])
 
 	/* close output sound file, free memory and exit */
 	sms_writeSF ();
-        sms_freeFrame(&smsRecordL);
-        sms_freeFrame(&smsRecordR);
-        sms_freeFrame(&newSmsRecord);
+        sms_freeFrame(&smsFrameL);
+        sms_freeFrame(&smsFrameR);
+        sms_freeFrame(&newSmsFrame);
 	free (pFSynthesis);
         free (pSmsHeader);
         sms_freeSynth(&synthParams);

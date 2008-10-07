@@ -162,11 +162,11 @@ int main (int argc, char *argv[])
                 exit(EXIT_FAILURE);
         }
 
-	sms_allocRecordH (pInSmsHeader, &inSmsData);
+	sms_allocFrameH (pInSmsHeader, &inSmsData);
 
 	for (iRecord = 1; iRecord < pInSmsHeader->nFrames; iRecord++)
 	{
-		sms_getRecord (pInSmsFile, pInSmsHeader, iRecord, &inSmsData);
+		sms_getFrame (pInSmsFile, pInSmsHeader, iRecord, &inSmsData);
 		SearchSms (inSmsData, pFFreq, pIGoodRecords);	
 	}
   
@@ -193,7 +193,7 @@ int main (int argc, char *argv[])
 	OutSmsHeader.nTextCharacters = pInSmsHeader->nTextCharacters;
 	OutSmsHeader.pChTextCharacters = pInSmsHeader->pChTextCharacters;
 
-	sms_allocRecordH (&OutSmsHeader, &outSmsData);
+	sms_allocFrameH (&OutSmsHeader, &outSmsData);
 	if ((pITrajOrder =  
 	     (int *) calloc (OutSmsHeader.nTracks, sizeof (int))) == NULL)
         {
@@ -210,9 +210,9 @@ int main (int argc, char *argv[])
 	/* iterate over the input file and clean it */
 	for (iRecord = 1; iRecord < OutSmsHeader.nFrames; iRecord++)
 	{
-		sms_getRecord (pInSmsFile, pInSmsHeader, iRecord, &inSmsData);
+		sms_getFrame (pInSmsFile, pInSmsHeader, iRecord, &inSmsData);
 		CleanSms (inSmsData, &outSmsData, pITrajOrder);
-		sms_writeRecord (pOutSmsFile, &OutSmsHeader, &outSmsData);
+		sms_writeFrame (pOutSmsFile, &OutSmsHeader, &outSmsData);
 	}
 	
 	/* rewrite the header and close the output SMS file */

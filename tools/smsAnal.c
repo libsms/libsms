@@ -327,7 +327,7 @@ static int FillSmsHeader (SMS_Header *pSmsHeader,
         else
                 pSmsHeader->nStochasticCoeff = arguments.nStochasticCoeff;
         pSmsHeader->iOriginalSRate = iOriginalSRate;
-        pSmsHeader->iFrameBSize = sms_recordSizeB(pSmsHeader);
+        pSmsHeader->iFrameBSize = sms_frameSizeB(pSmsHeader);
 
         sprintf (pChTextString, 
                  "created by smsAnal with parameters: format %d, soundType %d, "
@@ -490,7 +490,7 @@ int main (int argc, char *argv[])
         sms_initAnalysis (&analParams);
 
         /* allocate output SMS record */
-	sms_allocRecordH (&smsHeader, &smsData);
+	sms_allocFrameH (&smsHeader, &smsData);
 
 	/* perform analysis */
 	iNextSizeRead = (analParams.iDefaultSizeWindow + 1) * 0.5;
@@ -530,7 +530,7 @@ int main (int argc, char *argv[])
 		/* if there is an output SMS record, write it */
 		if (iStatus == 1)
 		{
-			sms_writeRecord (pOutputSmsFile, &smsHeader, &smsData);
+			sms_writeFrame (pOutputSmsFile, &smsHeader, &smsData);
 			if(1)//todo: add verbose flag
                         {
                                 if (iRecord % 10 == 0)

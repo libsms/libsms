@@ -80,7 +80,7 @@ int main (int argc, char *argv[])
 	}	    
   
 	/* allocate two SMS records */
-	sms_allocRecordH (pSmsHeader, &smsData);
+	sms_allocFrameH (pSmsHeader, &smsData);
 
 	synthParams.iOriginalSRate = pSmsHeader->iOriginalSRate;
 	synthParams.iStochasticType = pSmsHeader->iStochasticType;
@@ -108,17 +108,17 @@ int main (int argc, char *argv[])
 	if (pFSTab == NULL)
 		PrepSine (4096);
     
-	sms_allocRecord (&synthParams.previousFrame, pSmsHeader->nTrajectories, 
+	sms_allocFrame (&synthParams.previousFrame, pSmsHeader->nTrajectories, 
 	                   1 + pSmsHeader->nStochasticCoeff, 1,
                            pSmsHeader->sizeHop, pSmsHeader->iStochasticType);
   
 	/* use first record as memory */
-	sms_getRecord (pSmsFile, pSmsHeader, 0, &smsData);
-	sms_copyRecord (&synthParams.previousFrame, &smsData);
+	sms_getFrame (pSmsFile, pSmsHeader, 0, &smsData);
+	sms_copyFrame (&synthParams.previousFrame, &smsData);
 
 	for (iRecord = 1; iRecord < pSmsHeader->nFrames; iRecord++)
 	{
-		sms_getRecord (pSmsFile, pSmsHeader, iRecord, &smsData);
+		sms_getFrame (pSmsFile, pSmsHeader, iRecord, &smsData);
 		memset ((char *)pFBuffer, 0, sizeof(float) * synthParams.sizeHop);
 		FrameSineSynth (&smsData, pFBuffer, synthParams.sizeHop, 
 		                &(synthParams.previousFrame), synthParams.iSamplingRate);

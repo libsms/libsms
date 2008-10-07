@@ -103,7 +103,7 @@ int main (int argc, char *argv[])
              exit(EXIT_FAILURE);
      }	    
      
-     sms_allocRecordH (pSmsHeader, &smsData);
+     sms_allocFrameH (pSmsHeader, &smsData);
 	
      fp = fopen(pChOutputYamlFile, "w");
 
@@ -181,7 +181,7 @@ int main (int argc, char *argv[])
           fprintf(fp, "\nsmsData:\n");
           for(i = iFirstFrame; i < iLastFrame; i++)
           {
-               sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
+               sms_getFrame (pSmsFile, pSmsHeader, i, &smsData);
                fprintf(fp,"\n  - frame    : %d \n", i);
                fprintf(fp,"    timetag  : %f \n", (float) i / pSmsHeader->iFrameRate);
                if(iFormat != 3)

@@ -91,7 +91,7 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams)
 	int sizeBuffer = (pAnalParams->iMaxDelayFrames * pAnalParams->sizeHop) + SMS_MAX_WINDOW;
 	int i;
 
-        sms_allocRecord (&pAnalParams->prevFrame, pAnalParams->nGuides, 
+        sms_allocFrame (&pAnalParams->prevFrame, pAnalParams->nGuides, 
                            pAnalParams->nStochasticCoeff, 1, pAnalParams->iStochasticType);
   
 	/* sound buffer */
@@ -196,7 +196,7 @@ int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
         sms_getWindow( sizeHop * 2, pSynthParams->pFDetWindow, SMS_WIN_IFFT );
 
         /* allocate memory for analysis data - size of original hopsize */
-	sms_allocRecord (&pSynthParams->prevFrame, pSmsHeader->nTracks, 
+	sms_allocFrame (&pSynthParams->prevFrame, pSmsHeader->nTracks, 
                          1 + pSmsHeader->nStochasticCoeff, 1, pSmsHeader->iStochasticType);
 
         /* allocate memory for FFT - big enough for output buffer (new hopsize)*/
@@ -246,7 +246,7 @@ void sms_freeAnalysis( SMS_AnalParams *pAnalParams )
                 free((pAnalParams->pFrames[i].deterministic).pFSinPha);
         }
 
-        sms_freeRecord(&pAnalParams->prevFrame);
+        sms_freeFrame(&pAnalParams->prevFrame);
         free(pAnalParams->soundBuffer.pFBuffer);
         free(pAnalParams->synthBuffer.pFBuffer);
         free(pAnalParams->pFrames);
@@ -273,7 +273,7 @@ void sms_freeSynth( SMS_SynthParams *pSynthParams )
         //printf("\n sms_freeSynth \n");
         free(pSynthParams->pFStocWindow);        
         free(pSynthParams->pFDetWindow);
-        sms_freeRecord(&pSynthParams->prevFrame);
+        sms_freeFrame(&pSynthParams->prevFrame);
 
 #ifdef FFTW
         fftwf_destroy_plan(pSynthParams->fftw.plan);

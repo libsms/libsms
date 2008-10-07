@@ -105,7 +105,7 @@ int main (int argc, char *argv[])
                 exit(EXIT_FAILURE);
 	}	    
 
-	sms_allocRecordH (pSmsHeader, &smsData);
+	sms_allocFrameH (pSmsHeader, &smsData);
 
 	printf("\nHEADER INFORMATION:\n");
 	printf("Number of records = %d\n", pSmsHeader->nFrames);
@@ -150,7 +150,7 @@ int main (int argc, char *argv[])
         {
                 for(i = iFirstFrame; i < iLastFrame; i++)
                 {
-                                sms_getRecord (pSmsFile, pSmsHeader, i, &smsData);
+                                sms_getFrame (pSmsFile, pSmsHeader, i, &smsData);
                                 printf("\nFrame #%d {%1.3fs}: ", i, (float) i / pSmsHeader->iFrameRate);
                                 if (iFormat != PRINT_STOC) 
                                 {

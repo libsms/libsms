@@ -640,24 +640,24 @@ int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader);
 int sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
                       int sizeWindow);
 		     
-int sms_allocRecord (SMS_Data *pSmsFrame, int nTracks, int nCoeff, 
+int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, 
                        int iPhase, int stochType);
 
-int sms_allocRecordH (SMS_Header *pSmsHeader, SMS_Data *pSmsFrame);
+int sms_allocFrameH (SMS_Header *pSmsHeader, SMS_Data *pSmsFrame);
 
-int sms_getRecord (FILE *pInputFile, SMS_Header *pSmsHeader, int iFrame,
+int sms_getFrame (FILE *pInputFile, SMS_Header *pSmsHeader, int iFrame,
                   SMS_Data *pSmsFrame);
 
-int sms_writeRecord (FILE *pSmsFile, SMS_Header *pSmsHeader, 
+int sms_writeFrame (FILE *pSmsFile, SMS_Header *pSmsHeader, 
                     SMS_Data *pSmsFrame);
 
-void sms_freeRecord (SMS_Data *pSmsFrame);
+void sms_freeFrame (SMS_Data *pSmsFrame);
 
-void sms_clearRecord (SMS_Data *pSmsFrame);
+void sms_clearFrame (SMS_Data *pSmsFrame);
 
-void sms_copyRecord (SMS_Data *pCopySmsFrame, SMS_Data *pOriginalSmsFrame);
+void sms_copyFrame (SMS_Data *pCopySmsFrame, SMS_Data *pOriginalSmsFrame);
 
-int sms_recordSizeB (SMS_Header *pSmsHeader);
+int sms_frameSizeB (SMS_Header *pSmsHeader);
 
 const char* sms_errorString( int iError);
 
@@ -667,7 +667,7 @@ int sms_residual (float *pFSynthesis, float *pFOriginal,
 int sms_stocAnalysis (float *pFResidual, int sizeWindow, 
                   SMS_Data *pSmsFrame, SMS_AnalParams *pAnalParams);
 
-void sms_interpolateRecords (SMS_Data *pSmsFrame1, SMS_Data *pSmsFrame2,
+void sms_interpolateFrames (SMS_Data *pSmsFrame1, SMS_Data *pSmsFrame2,
                            SMS_Data *pSmsFrameOut, float fInterpFactor);
 
 int sms_openSF (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader);
