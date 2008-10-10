@@ -3,9 +3,6 @@
 
 Import('*')
 
-
-
-
 tools = Split(' smsAnal smsSynth smsClean \
         	smsPrint smsResample \
         	smsToYaml' )

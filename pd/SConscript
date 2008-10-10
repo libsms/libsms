@@ -33,10 +33,6 @@ env = env.Clone( SHLIBPREFIX = '')
 
 conf = Configure(env)
 
-if not conf.CheckCHeader('m_pd.h'):
-    print 'cannot find pd header m_pd.h'
-    Exit(1)
-
 if not conf.CheckLibWithHeader('pthread','pthread.h','c'):
        print 'cannot find libpthread'
        Exit(1)

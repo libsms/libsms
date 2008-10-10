@@ -76,4 +76,5 @@ SConscript('tools/SConscript')
 if buildpd:
         SConscript('pd/SConscript')
 
+#SConscript('python/SConscript')
 
