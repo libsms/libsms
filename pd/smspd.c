@@ -25,7 +25,7 @@ void smspd_setup(void)
         smsbuf_setup();
         smsanal_setup();
         smssynth_tilde_setup();
-        //smsedit_setup();
+        smsedit_setup();
 
         post("smspd external library - September 16, 2008");
 
@@ -66,6 +66,14 @@ t_symbol* getFullPathName( t_symbol *infilename,  t_canvas *canvas)
     }
     return(gensym( nameout ));
 } 
+
+/* get the pointer to an smsbuf that has the given symbol name */
+/* todo: try passing a void *x to locate errors within pd */
+t_smsbuf* smspd_buffer(t_symbol *bufname)
+{
+        t_smsbuf *smsbuf = (t_smsbuf *)pd_findbyclass(bufname, smsbuf_class);
+        return(smsbuf);
+}
 
 /*this function seems to not be copying everything... or else it would be usable
   before copying the buffer from file (it crashes if it is) */
@@ -132,34 +140,30 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
         x->filename = gensym(filename->s_name);
         fullname = getFullPathName(filename, x->canvas);
 
-//        printf("smsheader address: %p ", &x->pSmsBuf->pSmsHeader);
-
         if(fullname == NULL)
         {
                 pd_error(x, "smsbuf_open: cannot find file: %s", filename->s_name);
                 return;
         }
-        else post("file: %s", fullname->s_name);
+        else if(x->verbose) post("file: %s", fullname->s_name);
         //check if a file has been opened, close and init if necessary
         if(x->nframes != 0)
         {
-                post("smsbuf_open: re-initializing");
+                if(x->verbose) post("smsbuf_open: re-initializing");
                 for( i = 0; i < x->nframes; i++)
                         sms_freeFrame(&x->smsData[i]);
         }
 
         if ((iError = sms_getHeader (fullname->s_name, &pSmsHeader, &x->pSmsFile)) > 0)
-//        if ((iError = sms_getHeader (fullname->s_name, &pHeader, &x->pSmsFile)) < 0)
 	{
                 pd_error(x, "smsbuf_open: %s", sms_errorString(iError));
                 return;
         }
-        //post("smsheader address: %p ", x->smsBuf.pSmsHeader);
-
 
         /* allocate memory for nframes of SMS_Data */
         x->nframes = pSmsHeader->nFrames;
-        if(1)post("nframes: %d ", x->nframes);
+        if(x->verbose)post("nframes: %d ", x->nframes);
+
         /*Buffer the entire file in smsBuf.  For now, I'm doing this the simplest way possible.*/        
         /* will this be faster with one malloc? try once everything is setup */
         x->smsData = calloc(x->nframes, sizeof(SMS_Data));
@@ -172,12 +176,32 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
         /* copy header to buffer */
         CopySmsHeader( pSmsHeader, &x->smsHeader, x->param_string );
 
-//        post("nFrames: %d ", x->pSmsHeader->nFrames);//x->nframes);
         x->ready = 1;
-        post("sms file buffered: %s ", filename->s_name );
+        if(x->verbose) post("sms file buffered: %s ", filename->s_name );
         return;
 }
 
+static void smsbuf_backup(t_smsbuf *x)
+{
+        if(!x->ready)
+        {
+                pd_error(x, "smsbuf_backup: buffer is not ready");
+                return;
+        }
+        int i;
+        
+        x->smsData2 = calloc(x->nframes, sizeof(SMS_Data));
+        for( i = 0; i < x->nframes; i++ )
+                memcpy((SMS_Data *) &x->smsData2[i], (SMS_Data *) &x->smsData[i],
+                        x->smsData[i].sizeData);
+/*         { */
+/*                 sms_allocFrameH (&x->smsHeader,  &x->smsData[i]); */
+/*                 sms_getFrame (x->pmsFile, &x->smsHeader, i, &x->smsData2[i]); */
+/*         } */
+
+
+
+}
 static void smsbuf_save(t_smsbuf *x, t_symbol *filename)
 {
         if(!x->ready)
@@ -189,7 +213,7 @@ static void smsbuf_save(t_smsbuf *x, t_symbol *filename)
         int i;
         int iError = 0;
         FILE *pOutputSmsFile;
-        //todo: make local write possible (to current directory) - is it by default with fopen?
+
         /* open file for writing */
         iError = sms_writeHeader(filename->s_name, &x->smsHeader, &pOutputSmsFile);
         if(iError < 0) 
@@ -203,7 +227,9 @@ static void smsbuf_save(t_smsbuf *x, t_symbol *filename)
 
         /* save and close file */
         sms_writeFile (pOutputSmsFile, &x->smsHeader);
-        post("smsbuf: wrote %d frames from buffer %s to file %s ", x->nframes, x->bufname->s_name, filename->s_name);
+        if(x->verbose)
+                post("smsbuf: wrote %d frames from buffer %s to file %s ", x->nframes,
+                     x->bufname->s_name, filename->s_name);
 }
 static void smsbuf_info(t_smsbuf *x)
 {
@@ -236,12 +262,12 @@ static void smsbuf_info(t_smsbuf *x)
                 if (x->smsHeader.nTextCharacters > 0)
                         post("ANALISIS ARGUMENTS: %s", x->smsHeader.pChTextCharacters);
         }
-        else post("smsbuf (%s) not ready", x->bufname->s_name);
+        else pd_error(x, "smsbuf (%s) not ready", x->bufname->s_name);
 }
 
 static void smsbuf_printframe(t_smsbuf *x, float f)
 {
-        if(f >= x->nframes) return;
+        if(f >= x->nframes|| f < 0) return;
                
         int i;
         int frame = (int) f;
@@ -250,12 +276,18 @@ static void smsbuf_printframe(t_smsbuf *x, float f)
         {
                 post("----- smsbuf (%s):: frame: %d, timetag: %f -----", x->bufname->s_name, frame, f / x->smsHeader.iFrameRate);
                 for(i = 0; i < x->smsHeader.nTracks; i++)
-                                       if(x->smsData[frame].pFSinMag[i] > 0.00000001 )
+                                       if(x->smsData[frame].pFSinAmp[i] > 0.00000001 )
                                                post("harmonic %d : %f[%f]", i, x->smsData[frame].pFSinFreq[i],
-                                                    x->smsData[frame].pFSinMag[i]);
+                                                    x->smsData[frame].pFSinAmp[i]);
         }
-        else post("smsbuf (%s) not ready", x->bufname->s_name);
+        else pd_error(x, "smsbuf (%s) not ready", x->bufname->s_name);
 }
+
+static void smsbuf_verbose(t_smsbuf *x, t_float flag)
+{
+        x->verbose = (int) flag;
+}
+
 static void *smsbuf_new(t_symbol *bufname)
 {
         t_smsbuf *x = (t_smsbuf *)pd_new(smsbuf_class);
@@ -264,13 +296,15 @@ static void *smsbuf_new(t_symbol *bufname)
         x->filename = NULL;
         x->nframes= 0;
         x->ready= 0;
+        x->verbose = 1;
+        x->smsData2 = NULL;
 
         //todo: make a default name if none is given:
         //if (!*s->s_name) s = gensym("delwrite~");
         // ?? do in need to check if bufname already exists? ??
         pd_bind(&x->x_obj.ob_pd, bufname);
         x->bufname = bufname;
-        post("bufname: %s", bufname->s_name);
+        //post("smsbuf using bufname: %s", bufname->s_name);
 
         sms_init();
     
@@ -301,5 +335,7 @@ void smsbuf_setup(void)
         class_addmethod(smsbuf_class, (t_method)smsbuf_save, gensym("save"), A_DEFSYM, 0);
         class_addmethod(smsbuf_class, (t_method)smsbuf_info, gensym("info"),  0);
         class_addmethod(smsbuf_class, (t_method)smsbuf_printframe, gensym("printframe"), A_DEFFLOAT, 0);
+        class_addmethod(smsbuf_class, (t_method)smsbuf_backup, gensym("backup"),  0);
+        class_addmethod(smsbuf_class, (t_method)smsbuf_verbose, gensym("verbose"), A_DEFFLOAT, 0);
 }
 

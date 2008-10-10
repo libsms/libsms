@@ -46,15 +46,15 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
 #ifdef FFTW
         memset (pSynthParams->fftw.pSpectrum, 0, (sizeMag + 1) * sizeof(fftwf_complex));
 
-        for (i = 0; i < nTraj; i++)
+        for (i = 0; i < nTracks; i++)
         {
-                if (((fMag = pSmsData->pFSinMag[i]) > 0) &&
+                if (((fMag = pSmsData->pFSinAmp[i]) > 0) &&
                     ((fFreq = (pSmsData->pFSinFreq[i]) * pSynthParams->fTranspose) < iHalfSamplingRate))
                 {
-                        if (pSynthParams->prevFrame.pFSinMag[i] <= 0)
+                        if (pSynthParams->prevFrame.pFSinAmp[i] <= 0)
                         {
                                 pSynthParams->prevFrame.pFSinPha[i] = 
-                                        TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
+                                        TWO_PI * sms_random();
                         }
                         /* magnitude is stored in dB because most manipulations of the model need to be
                            performed in dB, not magnitude, and manipulations drastically increase computation time */
@@ -95,7 +95,7 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                                         pSynthParams->fftw.pSpectrum[l][0] += 2 * fNewMag * fCos;
                         }
                 }
-                pSynthParams->prevFrame.pFSinMag[i] = fMag;
+                pSynthParams->prevFrame.pFSinAmp[i] = fMag;
                 pSynthParams->prevFrame.pFSinPha[i] = fPhase;
                 pSynthParams->prevFrame.pFSinFreq[i] = fFreq;
         }
@@ -112,19 +112,16 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
         memset (pSynthParams->realftOut, 0, (sizeFft +1) * sizeof(float));
         for (i = 0; i < nTracks; i++)
         {
-                if (((fMag = pSmsData->pFSinMag[i]) > 0) &&
+                if (((fMag = pSmsData->pFSinAmp[i]) > 0) &&
                     ((fFreq = (pSmsData->pFSinFreq[i]) * pSynthParams->fTranspose) < iHalfSamplingRate))
                 {
-                        if (pSynthParams->prevFrame.pFSinMag[i] <= 0)
-                        {
-                                pSynthParams->prevFrame.pFSinPha[i] = 
-                                        TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
-                        }
-                        // can fMag here be stored as magnitude instead of DB within smsData?
+                        if (pSynthParams->prevFrame.pFSinAmp[i] <= 0)
+                                pSynthParams->prevFrame.pFSinPha[i] = TWO_PI * sms_random();
+
                         fMag = sms_dBToMag (fMag);
                         fTmp = pSynthParams->prevFrame.pFSinPha[i] +
                                 TWO_PI * fFreq * fSamplingPeriod * sizeMag;
-                        fPhase = fTmp - floor(fTmp / TWO_PI) * TWO_PI;
+                        fPhase = fTmp - floor(fTmp * INV_TWO_PI) * TWO_PI;
                         fLoc = sizeFft * fFreq  * fSamplingPeriod;
                         iFirstBin = (int) fLoc - 3;
                         fBinRemainder = fLoc - floor (fLoc);
@@ -162,12 +159,12 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                                 }
                         }
                 }
-                pSynthParams->prevFrame.pFSinMag[i] = fMag;
+                pSynthParams->prevFrame.pFSinAmp[i] = fMag;
                 pSynthParams->prevFrame.pFSinPha[i] = fPhase;
                 pSynthParams->prevFrame.pFSinFreq[i] = fFreq;
         }
 
-        sms_fourier(sizeFft, pSynthParams->realftOut, -1);
+        sms_rdft(sizeFft, pSynthParams->realftOut, -1);
 
         for(i = 0, k = sizeMag; i < sizeMag; i++, k++) 
                 pFBuffer[i] += pSynthParams->realftOut[k] * pSynthParams->pFDetWindow[i];
@@ -222,9 +219,9 @@ static int StocSynthApprox (SMS_Data *pSmsData, float *pFBuffer,
                         pFMagSpectrum, sizeSpec2, sizeSpec1Used);
 
         /* generate random phases */
-        float one_over_half_max = 1.0 / HALF_MAX;
+        //float one_over_half_max = 1.0 / HALF_MAX;
         for (i = 0; i < sizeSpec2; i++)
-                pFPhaseSpectrum[i] =  TWO_PI * ((random() - HALF_MAX) * one_over_half_max);
+                pFPhaseSpectrum[i] =  TWO_PI * sms_random();
 
 #ifdef FFTW
         memset (pSynthParams->fftw.pSpectrum, 0, (sizeSpec2 + 1) * sizeof(fftwf_complex));

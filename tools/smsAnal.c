@@ -139,10 +139,10 @@ static int InitArguments (ARGUMENTS *pArguments)
 	pArguments->iSoundType = SMS_SOUND_TYPE_MELODY;
 	pArguments->iAnalysisDirection = SMS_DIR_FWD;
 	pArguments->fWindowSize = 3.5;
-	pArguments->iWindowType = SMS_WIN_BH_70;
+	pArguments->iWindowType = SMS_WIN_BH_62; 
 	pArguments->iFrameRate = 400;
 	pArguments->fHighestFreq = 12000.;
-	pArguments->fMinPeakMag = 0;
+	pArguments->fMinPeakMag = 0.;
 	pArguments->fFreqDeviation = .45;
 	pArguments->iRefHarmonic = 1;
 	pArguments->fMinRefHarmMag = 30;
@@ -378,9 +378,15 @@ static int FillAnalParams (ARGUMENTS arguments, SMS_AnalParams *pAnalParams,
 	pAnalParams->iWindowType = arguments.iWindowType;
 	pAnalParams->iSamplingRate = pSoundHeader->iSamplingRate;
 	pAnalParams->fSizeWindow = arguments.fWindowSize;
-	pAnalParams->iDefaultSizeWindow = 
+//	pAnalParams->iDefaultSizeWindow = 171;
+	pAnalParams->iDefaultSizeWindow =
 		(int)((pAnalParams->iSamplingRate / arguments.fDefaultFund) *
 		pAnalParams->fSizeWindow / 2) * 2 + 1; /* odd length */
+
+        printf(" \n *** iSamplingRate: %d,fSizeWindow : %f, fDefaultFund: %f iDefaultSizeWindow: %d \n ",
+               pAnalParams->iSamplingRate, pAnalParams->fSizeWindow, 
+               arguments.fDefaultFund, pAnalParams->iDefaultSizeWindow);
+
 	pAnalParams->sizeHop = iHopSize;
 	pAnalParams->fHighestFreq = arguments.fHighestFreq;
 	pAnalParams->fMinPeakMag = arguments.fMinPeakMag;
@@ -401,6 +407,7 @@ static int FillAnalParams (ARGUMENTS arguments, SMS_AnalParams *pAnalParams,
 	pAnalParams->fMinRefHarmMag = arguments.fMinRefHarmMag;
 	pAnalParams->fRefHarmMagDiffFromMax = arguments.fRefHarmMagDiffFromMax;
 	pAnalParams->iRefHarmonic = arguments.iRefHarmonic;
+	pAnalParams->iFrameRate = arguments.iFrameRate;
 	pAnalParams->iMinTrackLength = 
 		arguments.fMinTrackLength * arguments.iFrameRate;
 	pAnalParams->iMaxSleepingTime = 
@@ -408,6 +415,7 @@ static int FillAnalParams (ARGUMENTS arguments, SMS_AnalParams *pAnalParams,
 	pAnalParams->iMaxDelayFrames = 
 		MAX(pAnalParams->iMinTrackLength, pAnalParams->iMaxSleepingTime) + 2 +
 			SMS_DELAY_FRAMES;
+        printf("\n iMaxDelayFrames: %d ", pAnalParams->iMaxDelayFrames);
 	pAnalParams->fResidualPercentage = 0;
 
 	return (1);
@@ -433,7 +441,7 @@ int main (int argc, char *argv[])
 	int iHopSize, nFrames, iError;
 	long iStatus = 0, iSample = 0, sizeNewData = 0;
         int iNextSizeRead = 0;
-	short iDoAnalysis = 1, iRecord = 0;
+	short iDoAnalysis = 1, iFrame = 0;
 
 	/* initialize arguments */
 	InitArguments (&arguments);
@@ -477,6 +485,7 @@ int main (int argc, char *argv[])
 	nFrames = 3 + SoundHeader.nSamples / (float) iHopSize;
 
         /* initialize everything */
+        
 	FillAnalParams (arguments, &analParams, &SoundHeader, iHopSize);
 	FillSmsHeader (&smsHeader, nFrames, arguments,
 	               SoundHeader.iSamplingRate, iHopSize);
@@ -520,7 +529,7 @@ int main (int argc, char *argv[])
 		/* get one frame of sound */
 		if (sms_getSound (&SoundHeader, pSoundData, sizeNewData, iSample) < 0)
 		{
-			fprintf(stderr, "ComputeSms: could not read sound record %d\n", iRecord);
+			fprintf(stderr, "ComputeSms: could not read sound record %d\n", iFrame);
 			break;
 		}
 		/* perform analysis of one frame of sound */
@@ -533,22 +542,22 @@ int main (int argc, char *argv[])
 			sms_writeFrame (pOutputSmsFile, &smsHeader, &smsData);
 			if(1)//todo: add verbose flag
                         {
-                                if (iRecord % 10 == 0)
+                                if (iFrame % 10 == 0)
                                         fprintf (stderr, "%.2f ",
-                                                 iRecord / (float) smsHeader.iFrameRate);
+                                                 iFrame / (float) smsHeader.iFrameRate);
                         }
-			iRecord++;
+			iFrame++;
 		}
 		else if (iStatus == -1) /* done */
 		{
 			iDoAnalysis = 0;
-			smsHeader.nFrames = iRecord;
+			smsHeader.nFrames = iFrame;
 		}
 
 	}
         printf("\n");
 	
-        smsHeader.fResidualPerc = analParams.fResidualPercentage / iRecord;
+        smsHeader.fResidualPerc = analParams.fResidualPercentage / iFrame;
 
 	/* write an close output files */
 	sms_writeFile (pOutputSmsFile, &smsHeader);

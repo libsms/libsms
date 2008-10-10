@@ -131,7 +131,7 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 		pFBuffer[i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i];
   
 	//realft (pFBuffer, sizeMag, 1);
-        sms_fourier(sizeFft, pFBuffer, 1);
+        sms_rdft(sizeFft, pFBuffer, 1);
   
 	/* convert from rectangular to polar coordinates */
 	for (i = 0; i < sizeMag; i++)
@@ -159,7 +159,7 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 /* 		pFBuffer[1+i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i]; */
   
 /* 	realft (pFBuffer, sizeMag, 1); */
-/*         //sms_fourier(sizeFft, pFBuffer, -1); */
+/*         //sms_rdft(sizeFft, pFBuffer, -1); */
   
 /* 	/\* convert from rectangular to polar coordinates *\/ */
 /* 	for (i = 0; i < sizeMag; i++) */
@@ -249,7 +249,7 @@ int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow,
   
 	/* compute real FFT */
 	//realft (pFBuffer-1, sizeMag, 1);
-        sms_fourier(sizeFft, pFBuffer, 1); 
+        sms_rdft(sizeFft, pFBuffer, 1); 
   
 	/* convert from rectangular to polar coordinates */
 	for (i=0; i<sizeMag; i++)
@@ -299,7 +299,7 @@ int sms_invQuickSpectrum (float *pFMagSpectrum, float *pFPhaseSpectrum,
 	}
 	/* compute IFFT */
 	//realft (pFBuffer-1, sizeMag, -1);
-        sms_fourier(sizeFft, pFBuffer, -1); 
+        sms_rdft(sizeFft, pFBuffer, -1); 
  
 	/* assume the output array has been taken care off */
 	for (i = 0; i < sizeWave; i++)
@@ -340,7 +340,7 @@ int sms_invQuickSpectrumW (float *pFMagSpectrum, float *pFPhaseSpectrum,
 		pFBuffer[it2+1] = fPower * sin (pFPhaseSpectrum[i]);
 	}    
 	/* compute IFFT */
-        sms_fourier(sizeFft, pFBuffer, -1); 
+        sms_rdft(sizeFft, pFBuffer, -1); 
         //realft(pFBuffer-1, sizeMag, -1);
 
  	/* assume the output array has been taken care off */

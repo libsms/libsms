@@ -21,7 +21,7 @@
 /*! \file fourier.c 
  * \brief routines for different Fast Fourier Transform Algorithms
  *
- * look at the very bottom of this file for the global fft call, sms_fourier()
+ * look at the very bottom of this file for the global fft call, sms_rdft()
  */
 
 #include "sms.h"
@@ -124,9 +124,10 @@ void realft(float *data, int n, int isign)
 	}
 }
 
-/* ============== FFTW 3 Floating Point ======================= */
-
+/* -_-_-_-_-_-_-_-_-_-_-_- FFTW3 Floating Point -_-_-_-_-_-_-_-_-_-_-_- */
+/* FFTW3 is currently working for terminal-based programs, but not in the pd externals. */
 #ifdef FFTW
+/* hmm.. still crashing.. */
 int sms_allocFourierForward( float *pWaveform, fftwf_complex *pSpectrum, int sizeFft ) 
 {
         if((pWaveform = fftwf_malloc(sizeof(float) * sizeFft)) == NULL)
@@ -141,15 +142,25 @@ int sms_allocFourierForward( float *pWaveform, fftwf_complex *pSpectrum, int siz
         }
         return(SMS_OK);
 }
-
 #endif /* FFTW */
 
 
-/* ============= Ooura ================================= */
+/* -_-_-_-_-_-_-_-_-_-_-_-_-_-_- Ooura Real DFT -_-_-_-_-_-_-_-_-_-_-_-_-_-_ */
+/* Copyright notice:
+    This code comes from the "General Purpose FFT Package" that I obtained at 
+    the following website http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html
+    It is exactly copied from the file fft4g.c, but I have changed the doubles to floats.
+    Here is the copyright notice included in the package:
 
-//#ifdef OOURA
+    Copyright(C) 1996-2001 Takuya OOURA
+    email: ooura@mmm.t.u-tokyo.ac.jp
+    download: http://momonga.t.u-tokyo.ac.jp/~ooura/fft.html
+    You may use, copy, modify this code for any purpose and 
+    without fee. You may distribute this ORIGINAL package.
 
-/* -------- Real DFT / Inverse of Real DFT --------
+    The following is documentation of the algorithm included with the source code:
+
+     -------- Real DFT / Inverse of Real DFT --------
      [definition]
         <case1> RDFT
             R[k] = sum_j=0^n-1 a[j]*cos(2*pi*j*k/n), 0<=k<=n/2
@@ -200,7 +211,7 @@ int sms_allocFourierForward( float *pWaveform, fftwf_complex *pSpectrum, int siz
 /* ! \brief OOURA Real / Inverse DFT algoriithm
  *
  * The source code contains documentation from
- * the original author \todo finish correctly citing
+ * the original author. 
  */
 void rdft(int n, int isgn, float *a, int *ip, float *w)
 {
@@ -791,7 +802,7 @@ void rftbsub(int n, float *a, int nc, float *c)
  * \param pRealArray pointer to real array (n >= 2, n = power of 2)
  * \param direction    direction of transform. 1 for forward, -1 for reverse
  */
-void sms_fourier(  int sizeFft, float *pRealArray, int direction )
+void sms_rdft(  int sizeFft, float *pRealArray, int direction )
 { 
 #ifdef OOURA
 /*         static int ip[NMAXSQRT +2]; */

@@ -35,11 +35,11 @@ static float *pFMagSpectrum1, *pFMagSpectrum2, *pFPhaseSpectrum1,
 
 /*! \brief initialize static arrays 
  *
- * \brief sizeWave1        size of waveform 1
- * \brief sizeWave2        size of waveform 2
- * \brief params    parameters for hybridization
+ * \param sizeWave1        size of waveform 1
+ * \param sizeWave2        size of waveform 2
+ * \param pHybParams    parameters for hybridization
  */
-static int InitializeHybrid (int sizeWave1, int sizeWave2, SMS_HybParams params)
+static int InitializeHybrid (int sizeWave1, int sizeWave2, SMS_HybParams *pHybParams)
 {
     if ((pFWindow1 = (float *) calloc(sizeWave1, sizeof(float))) == NULL)
       return -1;
@@ -54,7 +54,7 @@ static int InitializeHybrid (int sizeWave1, int sizeWave2, SMS_HybParams params)
                  (double) (1+(floor(log((double)sizeWave2) / LOG2))));
     sizeMag1 = sizeFft1 >> 1;
     sizeMag2 = sizeFft2 >> 1;
-    sizeSmooth = 1 + params.iSmoothOrder;
+    sizeSmooth = 1 + pHybParams->iSmoothOrder;
     if ((pFMagSpectrum2 = 
           (float *) calloc(sizeMag2, sizeof(float))) == NULL)
       return -1;
@@ -79,9 +79,9 @@ static int InitializeHybrid (int sizeWave1, int sizeWave2, SMS_HybParams params)
 }
 
  
-/* free buffers
+/*! \brief free buffers
  */
-int freeBuffers ()
+void freeBuffers ()
 {
 	free (pFWindow1);
 	pFWindow1 = NULL;
@@ -98,12 +98,16 @@ int freeBuffers ()
 	free (pFMagEnv);
 	free (pFEnvBuffer);
 	free (pFMagEnvFilt);
-	return 1;
 }
 
-/*Compress-Expand a given spectral envelope 
+/*! \brief compress / expand a given spectral envelope 
+ *
+ * \param pFEnv hmm..
+ * \param pFSpec hmmm...
+ * \param pFWeight hmmmm...
+ * \param sizeSpec size of the spectrum
  */
-static int CompExp(float *pFEnv, float *pFSpec, float *pFWeight, int sizeSpec)
+static void CompExp(float *pFEnv, float *pFSpec, float *pFWeight, int sizeSpec)
 {
   float *pFEnd = pFSpec + sizeSpec;		
   do 
@@ -119,7 +123,7 @@ static int CompExp(float *pFEnv, float *pFSpec, float *pFWeight, int sizeSpec)
       ++pFEnv;
   }
   while (pFSpec<pFEnd);
-  return 1;
+
 }
 
 
@@ -145,7 +149,7 @@ static int FilterMagEnv (float *pFMagEnv, float *pFMagEnvFilt, int sizeMag)
  */
 static int MultiplySpectra (float *pFMagEnv, float *pFMagSpectrum, int sizeMag, 
                             float *pFMagSpectrum2, int sizeMag2, 
-                            SMS_HybParams params)
+                            SMS_HybParams *pHybParams)
 {
 	float *pFBuffer, fMag = 0, fAverageMag, fMagEnv = 0, fAverageMagEnv, 
 		fHybAverage, fMagHyb = 0, fAverageMagHyb;
@@ -176,10 +180,10 @@ static int MultiplySpectra (float *pFMagEnv, float *pFMagSpectrum, int sizeMag,
 	}
   
 	/* compress the spectral envelope from one or other sound */
-	if (params.pCompressionEnv)
+	if (pHybParams->pCompressionEnv)
 	{
-		if (params.sizeCompressionEnv == sizeMag1)
-			CompExp (pFMagEnv, pFMagSpectrum, params.pCompressionEnv, sizeMag);
+		if (pHybParams->sizeCompressionEnv == sizeMag1)
+			CompExp (pFMagEnv, pFMagSpectrum, pHybParams->pCompressionEnv, sizeMag);
 		else return -1;
 	}
 
@@ -188,8 +192,8 @@ static int MultiplySpectra (float *pFMagEnv, float *pFMagSpectrum, int sizeMag,
 		pFMagSpectrum[i] *=  pFMagEnv[i];
 
 	/* get the new average magnitude */
-	fHybAverage = params.fMagBalance * fAverageMagHyb + 
-		(1 - params.fMagBalance) * fAverageMag;
+	fHybAverage = pHybParams->fMagBalance * fAverageMagHyb + 
+		(1 - pHybParams->fMagBalance) * fAverageMag;
 
 	if (fHybAverage < .0001 || fHybAverage > 1000) fHybAverage = 1;
 
@@ -213,7 +217,7 @@ static int MultiplySpectra (float *pFMagEnv, float *pFMagSpectrum, int sizeMag,
  *
  */
 void HybridizeMag (float *pIWaveform1, int sizeWave1, float *pIWaveform2, 
-                   int sizeWave2, float *pFWaveform, SMS_HybParams params)
+                   int sizeWave2, float *pFWaveform, SMS_HybParams *pHybParams)
 {
 	int i;
 	double fMag1 = 0, fMag2 = 0, fScalar;
@@ -229,8 +233,8 @@ void HybridizeMag (float *pIWaveform1, int sizeWave1, float *pIWaveform2,
 		fMag2 += fabs (pIWaveform2[i] * pFWindow2[i]);
 	fMag2 /= sizeWave2;
 
-	fScalar = params.fMagBalance * fMag2 + 
-				    (1- params.fMagBalance) * fMag1;
+	fScalar = pHybParams->fMagBalance * fMag2 + 
+				    (1- pHybParams->fMagBalance) * fMag1;
 
 	for (i = 0; i < sizeWave1; i++)
 		pFWaveform[i] = (pIWaveform1[i] / fMag1) * fScalar;
@@ -282,53 +286,50 @@ int InterpolateArrays (float *pFArray1, int sizeArray1, float *pFArray2,
 
 }
 
-/*
- * function to hybridize two waveforms
+/*! \brief hybridize two waveforms
  *
- * float *pIWaveform1		excitation waveform
- * int sizeWave1		    size of excitation waveform
- * float *pIWaveform2		hybridization waveform
- * int sizeWave2		    size of hybridization waveform
- * float *pFWaveform		output waveform (hybridized)
- * SMS_HybParams params		control parameters
+ * \param pFWaveform1		excitation waveform
+ * \param sizeWave1		    size of excitation waveform
+ * \param pIWaveform2		hybridization waveform
+ * \param sizeWave2		    size of hybridization waveform
+ * \param pFWaveform		output waveform (hybridized)
+ * \param pHybParams		pointer to strucutre of control parameterscontrol parameters
  *
  */
-int sms_hybridize (float *pIWaveform1, int sizeWave1, float *pIWaveform2, 
-               int sizeWave2, float *pFWaveform, SMS_HybParams params)
+void sms_hybridize (float *pFWaveform1, int sizeWave1, float *pFWaveform2, 
+               int sizeWave2, float *pFWaveform, SMS_HybParams *pHybParams)
 {
 	/* initialize static variables and arrays */
 	if (pFWindow1 == NULL)
-		InitializeHybrid (sizeWave1, sizeWave2, params);
+		InitializeHybrid (sizeWave1, sizeWave2, pHybParams);
    
 	/* if there is not spectral changes perform a magnitude hybridization */
-	if (!params.pCompressionEnv)
+	if (!pHybParams->pCompressionEnv)
 	{
-		HybridizeMag (pIWaveform1, sizeWave1, pIWaveform2, sizeWave2, 
-		              pFWaveform, params);
-		return (1);
+		HybridizeMag (pFWaveform1, sizeWave1, pFWaveform2, sizeWave2, 
+		              pFWaveform, pHybParams);
+		return ;
 	}
 	/* compute the two spectra */
-        /*! \todo make seperate fft algorithm, with it's own plan for hybridize method 
-         (this is because there is no SMS_AnalParams here */
-/* 	sms_quickSpectrum (pIWaveform1, pFWindow1, sizeWave1, pFMagSpectrum1,  */
-/* 	               pFPhaseSpectrum1, sizeFft1); */
-/* 	sms_quickSpectrum (pIWaveform2, pFWindow2, sizeWave2, pFMagSpectrum2,  */
-/* 	               pFPhaseSpectrum2, sizeFft2); */
+	sms_quickSpectrum (pFWaveform1, pFWindow1, sizeWave1, pFMagSpectrum1,
+	               pFPhaseSpectrum1, sizeFft1);
+	sms_quickSpectrum (pFWaveform2, pFWindow2, sizeWave2, pFMagSpectrum2,
+	               pFPhaseSpectrum2, sizeFft2);
 
 	/* approximate the second spectrum by line segments and obtain a magnitude 
 	 * spectrum of size sizeMag1 */
 	sms_spectralApprox (pFMagSpectrum2, sizeMag2, sizeMag2, pFMagEnv, sizeMag1, 
-	                params.nCoefficients);
+	                pHybParams->nCoefficients);
 
 	/* filter the smoothed spectrum */
 	FilterMagEnv (pFMagEnv, pFMagEnvFilt, sizeMag1);
 
 	/* hybridize the two spectra */
 	MultiplySpectra (pFMagEnvFilt, pFMagSpectrum1, sizeMag1, pFMagSpectrum2, 
-	                 sizeMag2, params);
+	                 sizeMag2, pHybParams);
 
 	/* perform the inverse FFT from the hybridized spectrum */
 	sms_invQuickSpectrum (pFMagSpectrum1, pFPhaseSpectrum1, sizeFft1, 
 	                      pFWaveform, sizeWave1);
-  return 1;
+
 }

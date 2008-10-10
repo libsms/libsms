@@ -173,7 +173,7 @@ int sms_detectPeaks (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag,
 	                        pAnalParams->iSamplingRate);
   	float fPeakMag = 0;		/* magnitude of peak */
 	float fPeakLoc = 0;		/* location of peak */
-
+        
 	/* clear peak structure */
 	memset (pSpectralPeaks, 0, SMS_MAX_NPEAKS * sizeof(SMS_Peak));
   
@@ -191,6 +191,7 @@ int sms_detectPeaks (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag,
 		pSpectralPeaks[iPeak].fPhase = GetPhaseVal(pAPhaSpectrum, fPeakLoc);
 		iPeak++;
 	}
+
 	/* return the number of peaks found */
 	return (iPeak);
 }

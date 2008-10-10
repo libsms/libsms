@@ -24,13 +24,6 @@
 
 #include "sms.h"
 
-//////// RTE DEBUG /////////////
-char *fn0 = "blarg0.txt";
-FILE *f0;
-char *fn1 = "blarg1.txt";
-FILE *f1;
-/////////////////////////////////////////
-
 /*! \brief  function to implement a pole-zero filter
  * 
  * \param pFa        pointer to numerator coefficients
@@ -143,7 +136,7 @@ int sms_residual (float *pFSynthesis, float *pFOriginal,
 	if (pD == NULL)
 		pD = (float *) calloc(5, sizeof(float));	    
 
-        // RTE: why is the window made here.. why not globally or stored in SMS_AnalParams?
+        /* \todo why is the window made here.. why not globally or stored in SMS_AnalParams? */
 	if (pFWindow == NULL)
 	{
 		if ((pFWindow = (float *) calloc(sizeWindow, sizeof(float))) == NULL)
@@ -152,35 +145,13 @@ int sms_residual (float *pFSynthesis, float *pFOriginal,
                 sms_getWindow( sizeWindow, pFWindow, SMS_WIN_HAMMING);
 	}
 
-        ///// RTE DEBUG ///////////////////////////////
-        if(f0 == NULL){
-                f0 =fopen(fn0, "w+");
-                f1 =fopen(fn1, "w+");
-        }
-
-        float rms = 0.0f;
-	for (i=0; i<sizeWindow; i++)
-                rms += pFOriginal[i] * pFOriginal[i];
-        rms = sqrt(rms / sizeWindow);
-//        printf("[%d] rms: %f \n", pAnalParams->ppFrames[0]->iFrameNum, rms);
-
-        ///////////////////////////////////////
-
-
 	/* get residual */
 	for (i=0; i<sizeWindow; i++)
-        {
                 pFResidual[i] = pFOriginal[i] - pFSynthesis[i];
-                fprintf(f0, "%f ", pFOriginal[i]); ///// RTE DEBUG
-                fprintf(f1, "%f ", pFSynthesis[i]); ///// RTE DEBUG
-        }
 
-  
 	/* get energy of residual */
 	for (i=0; i<sizeWindow; i++)
 		fCurrentResidualMag += fabsf( pFResidual[i] * pFWindow[i]);
-
-
 
 	/* if residual is big enough compute coefficients */
 	if (fCurrentResidualMag/sizeWindow > .01)

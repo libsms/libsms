@@ -1,26 +1,29 @@
+# use emacs org-mode for pretty colors
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SMS Library Work Log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 * Present Issues (todonow)
-** DONE fix pd externals
-   - [ ] try with gdb and debug flags
-   - [ ] move back to one file.. arg
-*** [#A]  crashes when entire patch is closed (deallocation problem)
-*** [#A] try to seperate pd external source files
-       - try with glob pointer
-*** [#A] in smspd externals, crashes when entire patch is closed (deallocation problem)
-** TODO add SMS-OLD to svn/tags
 ** TODO I don't think bad frames are being re-analyzed
    - ReAnalyzeFrame is returning a -1 when sms_fundDeviation reports
    that the deviations is really off, yet nothing is using this return value
    - there are other return values of -1 as well, none used in sms_analyze
    - [ ] try manually setting the window size to the size that is settled upon
-*** [#B] related to stoc_ big crunch in the beginning?:
-** [#B] plot stochastic coefficients at different rates to see if they are the same for diff sr
+         - smsAnal -d9 reports sizeWindow = 1009 until about .05s of flugel.sms
+           then, it switches to 173, which seems to work for the rest of the analysis
+         - this is because the default fundamental was not set. When set with -u587 (D5),
+           the default window size is correctly around 171.  But still get the crunch!
+*** [#B] related to stoc_ big crunch in the beginning?
+** TODO what is smsClean doing differently than the cleaning within smsAnal?
+** TODO where are inharmonic tracks analyzed/synthesized differently?
+** TODO there are many members for SMS_Header not currently used
+   - such as descriptors
+** TODO make a better random function
+   - should return a floating point random number -1. : 1.
+   - [ ] try implementing the Merseinne Twister algorithm (~/src/SFMT...)
+** plot stochastic coefficients at different rates to see if they are the same for diff sr
 ** changing the framerate in smsAnal makes deterministic component empty. huh?
 *** Xavier suggests fund estimate is bad, so specify manually
 *** resample after analysis (delete 3 out of 4 frames, concatenate stoc_wave)
-** what is the difference between smsClean and the cleaning within smsAnal?
 ** what is calcCorr in tools?
 * Pre-modifications: making analysis/plotting scripts
 ** TODO [#C] SWIG libsms wrappers for more convenient use in python
@@ -69,6 +72,7 @@ SMS Library Work Log
 ** TODO [#A] Doxygen documentation
 ** TODO [#C] make example python scripts
 ** TODO [#C] optimizing
+*** benchmarking FFT's
    - [ ] change fabs() to fabsf() if they don't need to be doubles
    - [ ] calloc's/malloc's done per function call
    - check if they are only done once
@@ -167,5 +171,8 @@ SMS Library Work Log
 *** DONE [#A] has access to an [smsbuf] by symbol name
 *** DONE [#A] synthesizes the [smsbuf]
 ** [smsedit]
+*** In order to retain sanity during editing
+    - [ ] make a restore frame method
+    - [ ] make 'resolve' method
+       - averages between old and new some how
 
-* benchmarking FFT's

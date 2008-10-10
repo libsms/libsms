@@ -45,7 +45,7 @@ static void SinePhaSynth (float fFreq, float fMag, float fPhase,
   float fAlpha, fBeta, fTmp1, fTmp2;
    
   /* if no mag in last frame copy freq from current and make phase */
-  if (pLastFrame->pFSinMag[iTrack] <= 0)
+  if (pLastFrame->pFSinAmp[iTrack] <= 0)
   {
     pLastFrame->pFSinFreq[iTrack] = fFreq;
     fTmp = fPhase - (fFreq * sizeBuffer);
@@ -61,8 +61,8 @@ static void SinePhaSynth (float fFreq, float fMag, float fPhase,
   }
   
   /* caculate the instantaneous amplitude */
-  fMagIncr = (fMag - pLastFrame->pFSinMag[iTrack]) / sizeBuffer;
-  fInstMag = pLastFrame->pFSinMag[iTrack];
+  fMagIncr = (fMag - pLastFrame->pFSinAmp[iTrack]) / sizeBuffer;
+  fInstMag = pLastFrame->pFSinAmp[iTrack];
   
   /* create instantaneous phase from freq. and phase values */
   fTmp1 = fFreq - pLastFrame->pFSinFreq[iTrack];
@@ -89,7 +89,7 @@ static void SinePhaSynth (float fFreq, float fMag, float fPhase,
   }
   /* save current values into buffer */
   pLastFrame->pFSinFreq[iTrack] = fFreq;
-  pLastFrame->pFSinMag[iTrack] = fMag;
+  pLastFrame->pFSinAmp[iTrack] = fMag;
   pLastFrame->pFSinPha[iTrack] = fPhase;
 }
 
@@ -109,19 +109,19 @@ static void SineSynth (float fFreq, float fMag, SMS_Data *pLastFrame,
   int i;
   
   /* if no mag in last frame copy freq from current */
-  if (pLastFrame->pFSinMag[iTrack] <= 0)
+  if (pLastFrame->pFSinAmp[iTrack] <= 0)
   {
     pLastFrame->pFSinFreq[iTrack] = fFreq;
     pLastFrame->pFSinPha[iTrack] = 
-			TWO_PI * ((random() - HALF_MAX) / HALF_MAX);
+			TWO_PI * sms_random();
   }
   /* and the other way */
   else if (fMag <= 0)
     fFreq = pLastFrame->pFSinFreq[iTrack];
   
   /* calculate the instantaneous amplitude */
-  fMagIncr = (fMag - pLastFrame->pFSinMag[iTrack]) / sizeBuffer;
-  fInstMag = pLastFrame->pFSinMag[iTrack];
+  fMagIncr = (fMag - pLastFrame->pFSinAmp[iTrack]) / sizeBuffer;
+  fInstMag = pLastFrame->pFSinAmp[iTrack];
   /* calculate instantaneous frequency */
   fFreqIncr = (fFreq - pLastFrame->pFSinFreq[iTrack]) / sizeBuffer;
   fInstFreq = pLastFrame->pFSinFreq[iTrack];
@@ -139,7 +139,7 @@ static void SineSynth (float fFreq, float fMag, SMS_Data *pLastFrame,
   
   /* save current values into last values */
   pLastFrame->pFSinFreq[iTrack] = fFreq;
-  pLastFrame->pFSinMag[iTrack] = fMag;
+  pLastFrame->pFSinAmp[iTrack] = fMag;
   pLastFrame->pFSinPha[iTrack] = fInstPhase - 
 		floor(fInstPhase / TWO_PI) * TWO_PI;
 }
@@ -165,7 +165,7 @@ void sms_sineSynthFrame (SMS_Data *pSmsData, float *pFBuffer,
         for (i = 0; i < nTracks; i++)
         {
                 /* get magnitude */
-                fMag = pSmsData->pFSinMag[i];
+                fMag = pSmsData->pFSinAmp[i];
       
                 fFreq = pSmsData->pFSinFreq[i];
 
@@ -174,7 +174,7 @@ void sms_sineSynthFrame (SMS_Data *pSmsData, float *pFBuffer,
                         fMag = 0;
       
                 /* generate sines if there are magnitude values */
-                if ((fMag > 0) || (pLastFrame->pFSinMag[i] > 0))
+                if ((fMag > 0) || (pLastFrame->pFSinAmp[i] > 0))
                 {
                         /* frequency from Hz to radians */
                         fFreq = (fFreq == 0) ? 0 : TWO_PI * fFreq / iSamplingRate;

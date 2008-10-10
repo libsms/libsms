@@ -47,7 +47,7 @@ int main (int ac, char *av[])
 	    for(i = 0; i < NRec; i++) 
                {
           	setSmsRecord (pSmsHeader, pData, &smsData);
-          	smsData.pFSinMag[j] = TO_MAG(smsData.pFMagTraj[j]);
+          	smsData.pFSinAmp[j] = TO_MAG(smsData.pFMagTraj[j]);
           	pData += pSmsHeader->iFrameBSize;
 	       }
 	   }

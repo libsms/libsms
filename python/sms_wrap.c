@@ -8,6 +8,8 @@
  * interface file instead. 
  * ----------------------------------------------------------------------------- */
 
+#define SWIGPYTHON
+#define SWIG_PYTHON_DIRECTOR_NO_VTABLE
 /* -----------------------------------------------------------------------------
  *  This section contains generic SWIG labels for method/variable
  *  declarations/attributes, and other compiler dependent labels.
@@ -106,12 +108,8 @@
 #endif
 
 
-#include <stdio.h>
-#include <tcl.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <ctype.h>
+/* Python.h has to appear first */
+#include <Python.h>
 
 /* -----------------------------------------------------------------------------
  * swigrun.swg
@@ -699,263 +697,235 @@ SWIG_UnpackDataName(const char *c, void *ptr, size_t sz, const char *name) {
 
 
 
+
+/* Add PyOS_snprintf for old Pythons */
+#if PY_VERSION_HEX < 0x02020000
+# if defined(_MSC_VER) || defined(__BORLANDC__) || defined(_WATCOM)
+#  define PyOS_snprintf _snprintf
+# else
+#  define PyOS_snprintf snprintf
+# endif
+#endif
+
+/* A crude PyString_FromFormat implementation for old Pythons */
+#if PY_VERSION_HEX < 0x02020000
+
+#ifndef SWIG_PYBUFFER_SIZE
+# define SWIG_PYBUFFER_SIZE 1024
+#endif
+
+static PyObject *
+PyString_FromFormat(const char *fmt, ...) {
+  va_list ap;
+  char buf[SWIG_PYBUFFER_SIZE * 2];
+  int res;
+  va_start(ap, fmt);
+  res = vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  return (res < 0 || res >= (int)sizeof(buf)) ? 0 : PyString_FromString(buf);
+}
+#endif
+
+/* Add PyObject_Del for old Pythons */
+#if PY_VERSION_HEX < 0x01060000
+# define PyObject_Del(op) PyMem_DEL((op))
+#endif
+#ifndef PyObject_DEL
+# define PyObject_DEL PyObject_Del
+#endif
+
+/* A crude PyExc_StopIteration exception for old Pythons */
+#if PY_VERSION_HEX < 0x02020000
+# ifndef PyExc_StopIteration
+#  define PyExc_StopIteration PyExc_RuntimeError
+# endif
+# ifndef PyObject_GenericGetAttr
+#  define PyObject_GenericGetAttr 0
+# endif
+#endif
+/* Py_NotImplemented is defined in 2.1 and up. */
+#if PY_VERSION_HEX < 0x02010000
+# ifndef Py_NotImplemented
+#  define Py_NotImplemented PyExc_RuntimeError
+# endif
+#endif
+
+
+/* A crude PyString_AsStringAndSize implementation for old Pythons */
+#if PY_VERSION_HEX < 0x02010000
+# ifndef PyString_AsStringAndSize
+#  define PyString_AsStringAndSize(obj, s, len) {*s = PyString_AsString(obj); *len = *s ? strlen(*s) : 0;}
+# endif
+#endif
+
+/* PySequence_Size for old Pythons */
+#if PY_VERSION_HEX < 0x02000000
+# ifndef PySequence_Size
+#  define PySequence_Size PySequence_Length
+# endif
+#endif
+
+
+/* PyBool_FromLong for old Pythons */
+#if PY_VERSION_HEX < 0x02030000
+static
+PyObject *PyBool_FromLong(long ok)
+{
+  PyObject *result = ok ? Py_True : Py_False;
+  Py_INCREF(result);
+  return result;
+}
+#endif
+
+/* Py_ssize_t for old Pythons */
+/* This code is as recommended by: */
+/* http://www.python.org/dev/peps/pep-0353/#conversion-guidelines */
+#if PY_VERSION_HEX < 0x02050000 && !defined(PY_SSIZE_T_MIN)
+typedef int Py_ssize_t;
+# define PY_SSIZE_T_MAX INT_MAX
+# define PY_SSIZE_T_MIN INT_MIN
+#endif
+
 /* -----------------------------------------------------------------------------
  * error manipulation
  * ----------------------------------------------------------------------------- */
 
-SWIGINTERN const char*
-SWIG_Tcl_ErrorType(int code) {
-  const char* type = 0;
+SWIGRUNTIME PyObject*
+SWIG_Python_ErrorType(int code) {
+  PyObject* type = 0;
   switch(code) {
   case SWIG_MemoryError:
-    type = "MemoryError";
+    type = PyExc_MemoryError;
     break;
   case SWIG_IOError:
-    type = "IOError";
+    type = PyExc_IOError;
     break;
   case SWIG_RuntimeError:
-    type = "RuntimeError";
+    type = PyExc_RuntimeError;
     break;
   case SWIG_IndexError:
-    type = "IndexError";
+    type = PyExc_IndexError;
     break;
   case SWIG_TypeError:
-    type = "TypeError";
+    type = PyExc_TypeError;
     break;
   case SWIG_DivisionByZero:
-    type = "ZeroDivisionError";
+    type = PyExc_ZeroDivisionError;
     break;
   case SWIG_OverflowError:
-    type = "OverflowError";
+    type = PyExc_OverflowError;
     break;
   case SWIG_SyntaxError:
-    type = "SyntaxError";
+    type = PyExc_SyntaxError;
     break;
   case SWIG_ValueError:
-    type = "ValueError";
+    type = PyExc_ValueError;
     break;
   case SWIG_SystemError:
-    type = "SystemError";
+    type = PyExc_SystemError;
     break;
   case SWIG_AttributeError:
-    type = "AttributeError";
+    type = PyExc_AttributeError;
     break;
   default:
-    type = "RuntimeError";
+    type = PyExc_RuntimeError;
   }
   return type;
 }
 
 
-SWIGINTERN void
-SWIG_Tcl_SetErrorObj(Tcl_Interp *interp, const char *ctype, Tcl_Obj *obj)
+SWIGRUNTIME void
+SWIG_Python_AddErrorMsg(const char* mesg)
 {
-  Tcl_ResetResult(interp);
-  Tcl_SetObjResult(interp, obj);
-  Tcl_SetErrorCode(interp, "SWIG", ctype, NULL);
-}
+  PyObject *type = 0;
+  PyObject *value = 0;
+  PyObject *traceback = 0;
 
-SWIGINTERN void
-SWIG_Tcl_SetErrorMsg(Tcl_Interp *interp, const char *ctype, const char *mesg)
-{
-  Tcl_ResetResult(interp);
-  Tcl_SetErrorCode(interp, "SWIG", ctype, NULL);
-  Tcl_AppendResult(interp, ctype, " ", mesg, NULL);
-  /*
-  Tcl_AddErrorInfo(interp, ctype);
-  Tcl_AddErrorInfo(interp, " ");
-  Tcl_AddErrorInfo(interp, mesg);
-  */
-}
-
-SWIGINTERNINLINE void
-SWIG_Tcl_AddErrorMsg(Tcl_Interp *interp, const char* mesg)
-{
-  Tcl_AddErrorInfo(interp, mesg);
-}
-
-
-
-/* -----------------------------------------------------------------------------
- * SWIG API. Portion that goes into the runtime
- * ----------------------------------------------------------------------------- */
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* -----------------------------------------------------------------------------
- * Constant declarations
- * ----------------------------------------------------------------------------- */
-
-/* Constant Types */
-#define SWIG_TCL_POINTER 4
-#define SWIG_TCL_BINARY  5
-
-/* Constant information structure */
-typedef struct swig_const_info {
-    int type;
-    char *name;
-    long lvalue;
-    double dvalue;
-    void   *pvalue;
-    swig_type_info **ptype;
-} swig_const_info;
-
-typedef int   (*swig_wrapper)(ClientData, Tcl_Interp *, int, Tcl_Obj *CONST []);
-typedef int   (*swig_wrapper_func)(ClientData, Tcl_Interp *, int, Tcl_Obj *CONST []);
-typedef char *(*swig_variable_func)(ClientData, Tcl_Interp *, char *, char *, int);
-typedef void  (*swig_delete_func)(ClientData);
-
-typedef struct swig_method {
-  const char     *name;
-  swig_wrapper   method;
-} swig_method;
-
-typedef struct swig_attribute {
-  const char     *name;
-  swig_wrapper   getmethod;
-  swig_wrapper   setmethod;
-} swig_attribute;
-
-typedef struct swig_class {
-  const char         *name;
-  swig_type_info   **type;
-  swig_wrapper       constructor;
-  void              (*destructor)(void *);
-  swig_method        *methods;
-  swig_attribute     *attributes;
-  struct swig_class **bases;
-  char              **base_names;
-  swig_module_info   *module;
-} swig_class;
-
-typedef struct swig_instance {
-  Tcl_Obj       *thisptr;
-  void          *thisvalue;
-  swig_class   *classptr;
-  int            destroy;
-  Tcl_Command    cmdtok;
-} swig_instance;
-
-/* Structure for command table */
-typedef struct {
-  const char *name;
-  int       (*wrapper)(ClientData, Tcl_Interp *, int, Tcl_Obj *CONST []);
-  ClientData  clientdata;
-} swig_command_info;
-
-/* Structure for variable linking table */
-typedef struct {
-  const char *name;
-  void *addr;
-  char * (*get)(ClientData, Tcl_Interp *, char *, char *, int);
-  char * (*set)(ClientData, Tcl_Interp *, char *, char *, int);
-} swig_var_info;
-
-
-/* -----------------------------------------------------------------------------*
- *  Install a constant object 
- * -----------------------------------------------------------------------------*/
-
-static Tcl_HashTable   swigconstTable;
-static int             swigconstTableinit = 0;
-
-SWIGINTERN void
-SWIG_Tcl_SetConstantObj(Tcl_Interp *interp, const char* name, Tcl_Obj *obj) {
-  int newobj;
-  Tcl_ObjSetVar2(interp,Tcl_NewStringObj(name,-1), NULL, obj, TCL_GLOBAL_ONLY);
-  Tcl_SetHashValue(Tcl_CreateHashEntry(&swigconstTable, name, &newobj), (ClientData) obj);
-}
-
-SWIGINTERN Tcl_Obj *
-SWIG_Tcl_GetConstantObj(const char *key) {
-  Tcl_HashEntry *entryPtr;
-  if (!swigconstTableinit) return 0;
-  entryPtr = Tcl_FindHashEntry(&swigconstTable, key);
-  if (entryPtr) {
-    return (Tcl_Obj *) Tcl_GetHashValue(entryPtr);
+  if (PyErr_Occurred()) PyErr_Fetch(&type, &value, &traceback);
+  if (value) {
+    PyObject *old_str = PyObject_Str(value);
+    PyErr_Clear();
+    Py_XINCREF(type);
+    PyErr_Format(type, "%s %s", PyString_AsString(old_str), mesg);
+    Py_DECREF(old_str);
+    Py_DECREF(value);
+  } else {
+    PyErr_Format(PyExc_RuntimeError, mesg);
   }
-  return 0;
 }
 
-#ifdef __cplusplus
-}
+
+
+#if defined(SWIG_PYTHON_NO_THREADS)
+#  if defined(SWIG_PYTHON_THREADS)
+#    undef SWIG_PYTHON_THREADS
+#  endif
+#endif
+#if defined(SWIG_PYTHON_THREADS) /* Threading support is enabled */
+#  if !defined(SWIG_PYTHON_USE_GIL) && !defined(SWIG_PYTHON_NO_USE_GIL)
+#    if (PY_VERSION_HEX >= 0x02030000) /* For 2.3 or later, use the PyGILState calls */
+#      define SWIG_PYTHON_USE_GIL
+#    endif
+#  endif
+#  if defined(SWIG_PYTHON_USE_GIL) /* Use PyGILState threads calls */
+#    ifndef SWIG_PYTHON_INITIALIZE_THREADS
+#     define SWIG_PYTHON_INITIALIZE_THREADS  PyEval_InitThreads() 
+#    endif
+#    ifdef __cplusplus /* C++ code */
+       class SWIG_Python_Thread_Block {
+         bool status;
+         PyGILState_STATE state;
+       public:
+         void end() { if (status) { PyGILState_Release(state); status = false;} }
+         SWIG_Python_Thread_Block() : status(true), state(PyGILState_Ensure()) {}
+         ~SWIG_Python_Thread_Block() { end(); }
+       };
+       class SWIG_Python_Thread_Allow {
+         bool status;
+         PyThreadState *save;
+       public:
+         void end() { if (status) { PyEval_RestoreThread(save); status = false; }}
+         SWIG_Python_Thread_Allow() : status(true), save(PyEval_SaveThread()) {}
+         ~SWIG_Python_Thread_Allow() { end(); }
+       };
+#      define SWIG_PYTHON_THREAD_BEGIN_BLOCK   SWIG_Python_Thread_Block _swig_thread_block
+#      define SWIG_PYTHON_THREAD_END_BLOCK     _swig_thread_block.end()
+#      define SWIG_PYTHON_THREAD_BEGIN_ALLOW   SWIG_Python_Thread_Allow _swig_thread_allow
+#      define SWIG_PYTHON_THREAD_END_ALLOW     _swig_thread_allow.end()
+#    else /* C code */
+#      define SWIG_PYTHON_THREAD_BEGIN_BLOCK   PyGILState_STATE _swig_thread_block = PyGILState_Ensure()
+#      define SWIG_PYTHON_THREAD_END_BLOCK     PyGILState_Release(_swig_thread_block)
+#      define SWIG_PYTHON_THREAD_BEGIN_ALLOW   PyThreadState *_swig_thread_allow = PyEval_SaveThread()
+#      define SWIG_PYTHON_THREAD_END_ALLOW     PyEval_RestoreThread(_swig_thread_allow)
+#    endif
+#  else /* Old thread way, not implemented, user must provide it */
+#    if !defined(SWIG_PYTHON_INITIALIZE_THREADS)
+#      define SWIG_PYTHON_INITIALIZE_THREADS
+#    endif
+#    if !defined(SWIG_PYTHON_THREAD_BEGIN_BLOCK)
+#      define SWIG_PYTHON_THREAD_BEGIN_BLOCK
+#    endif
+#    if !defined(SWIG_PYTHON_THREAD_END_BLOCK)
+#      define SWIG_PYTHON_THREAD_END_BLOCK
+#    endif
+#    if !defined(SWIG_PYTHON_THREAD_BEGIN_ALLOW)
+#      define SWIG_PYTHON_THREAD_BEGIN_ALLOW
+#    endif
+#    if !defined(SWIG_PYTHON_THREAD_END_ALLOW)
+#      define SWIG_PYTHON_THREAD_END_ALLOW
+#    endif
+#  endif
+#else /* No thread support */
+#  define SWIG_PYTHON_INITIALIZE_THREADS
+#  define SWIG_PYTHON_THREAD_BEGIN_BLOCK
+#  define SWIG_PYTHON_THREAD_END_BLOCK
+#  define SWIG_PYTHON_THREAD_BEGIN_ALLOW
+#  define SWIG_PYTHON_THREAD_END_ALLOW
 #endif
 
-
-
 /* -----------------------------------------------------------------------------
- * See the LICENSE file for information on copyright, usage and redistribution
- * of SWIG, and the README file for authors - http://www.swig.org/release.html.
- *
- * tclrun.swg
- *
- * This file contains the runtime support for Tcl modules and includes
- * code for managing global variables and pointer type checking.
+ * Python API portion that goes into the runtime
  * ----------------------------------------------------------------------------- */
-
-/* Common SWIG API */
-
-/* for raw pointers */
-#define SWIG_ConvertPtr(oc, ptr, ty, flags)             SWIG_Tcl_ConvertPtr(interp, oc, ptr, ty, flags)
-#define SWIG_NewPointerObj(ptr, type, flags)            SWIG_Tcl_NewPointerObj(ptr, type, flags)
-
-/* for raw packed data */
-#define SWIG_ConvertPacked(obj, ptr, sz, ty)            SWIG_Tcl_ConvertPacked(interp, obj, ptr, sz, ty)
-#define SWIG_NewPackedObj(ptr, sz, type)                SWIG_Tcl_NewPackedObj(ptr, sz, type)
-
-/* for class or struct pointers */
-#define SWIG_ConvertInstance(obj, pptr, type, flags)    SWIG_Tcl_ConvertPtr(interp, obj, pptr, type, flags)
-#define SWIG_NewInstanceObj(thisvalue, type, flags)     SWIG_Tcl_NewInstanceObj(interp, thisvalue, type, flags)
-
-/* for C or C++ function pointers */
-#define SWIG_ConvertFunctionPtr(obj, pptr, type)        SWIG_Tcl_ConvertPtr(interp, obj, pptr, type, 0)
-#define SWIG_NewFunctionPtrObj(ptr, type)               SWIG_Tcl_NewPointerObj(ptr, type, 0)
-
-/* for C++ member pointers, ie, member methods */
-#define SWIG_ConvertMember(obj, ptr, sz, ty)            SWIG_Tcl_ConvertPacked(interp,obj, ptr, sz, ty)
-#define SWIG_NewMemberObj(ptr, sz, type)                SWIG_Tcl_NewPackedObj(ptr, sz, type)
-
-
-/* Runtime API */
-
-#define SWIG_GetModule(clientdata)                      SWIG_Tcl_GetModule((Tcl_Interp *) (clientdata))	     
-#define SWIG_SetModule(clientdata, pointer)          	SWIG_Tcl_SetModule((Tcl_Interp *) (clientdata), pointer)
-
-
-/* Error manipulation */
-
-#define SWIG_ErrorType(code)                            SWIG_Tcl_ErrorType(code)                                      
-#define SWIG_Error(code, msg)            		SWIG_Tcl_SetErrorMsg(interp, SWIG_Tcl_ErrorType(code), msg)
-#define SWIG_fail                        		goto fail						    
-
-
-/* Tcl-specific SWIG API */
-
-#define SWIG_Acquire(ptr)                               SWIG_Tcl_Acquire(ptr)                                     
-#define SWIG_MethodCommand                           	SWIG_Tcl_MethodCommand				       
-#define SWIG_Disown(ptr)                             	SWIG_Tcl_Disown(ptr)				       
-#define SWIG_ConvertPtrFromString(c, ptr, ty, flags) 	SWIG_Tcl_ConvertPtrFromString(interp, c, ptr, ty, flags)  
-#define SWIG_MakePtr(c, ptr, ty, flags)              	SWIG_Tcl_MakePtr(c, ptr, ty, flags)		       
-#define SWIG_PointerTypeFromString(c)                	SWIG_Tcl_PointerTypeFromString(c)			       
-#define SWIG_GetArgs                                 	SWIG_Tcl_GetArgs					       
-#define SWIG_GetConstantObj(key)                     	SWIG_Tcl_GetConstantObj(key)			       
-#define SWIG_ObjectConstructor                       	SWIG_Tcl_ObjectConstructor				       
-#define SWIG_Thisown(ptr)                            	SWIG_Tcl_Thisown(ptr)				       
-#define SWIG_ObjectDelete                            	SWIG_Tcl_ObjectDelete				       
-
-
-#define SWIG_TCL_DECL_ARGS_2(arg1, arg2)                (Tcl_Interp *interp SWIGUNUSED, arg1, arg2)
-#define SWIG_TCL_CALL_ARGS_2(arg1, arg2)                (interp, arg1, arg2)
-/* -----------------------------------------------------------------------------
- * pointers/data manipulation
- * ----------------------------------------------------------------------------- */
-
-/* For backward compatibility only */
-#define SWIG_POINTER_EXCEPTION  0
-#define SWIG_GetConstant        SWIG_GetConstantObj
-#define SWIG_Tcl_GetConstant    SWIG_Tcl_GetConstantObj
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -964,587 +934,1502 @@ extern "C" {
 #endif
 #endif
 
-/* Object support */
+/* -----------------------------------------------------------------------------
+ * Constant declarations
+ * ----------------------------------------------------------------------------- */
 
-SWIGRUNTIME Tcl_HashTable*
-SWIG_Tcl_ObjectTable(void) {
-  static Tcl_HashTable  swigobjectTable;
-  static int            swigobjectTableinit = 0;
-  if (!swigobjectTableinit) {
-    Tcl_InitHashTable(&swigobjectTable, TCL_ONE_WORD_KEYS);
-    swigobjectTableinit = 1;
-  }
-  return &swigobjectTable;
+/* Constant Types */
+#define SWIG_PY_POINTER 4
+#define SWIG_PY_BINARY  5
+
+/* Constant information structure */
+typedef struct swig_const_info {
+  int type;
+  char *name;
+  long lvalue;
+  double dvalue;
+  void   *pvalue;
+  swig_type_info **ptype;
+} swig_const_info;
+
+#ifdef __cplusplus
+#if 0
+{ /* cc-mode */
+#endif
+}
+#endif
+
+
+/* -----------------------------------------------------------------------------
+ * See the LICENSE file for information on copyright, usage and redistribution
+ * of SWIG, and the README file for authors - http://www.swig.org/release.html.
+ *
+ * pyrun.swg
+ *
+ * This file contains the runtime support for Python modules
+ * and includes code for managing global variables and pointer
+ * type checking.
+ *
+ * ----------------------------------------------------------------------------- */
+
+/* Common SWIG API */
+
+/* for raw pointers */
+#define SWIG_Python_ConvertPtr(obj, pptr, type, flags)  SWIG_Python_ConvertPtrAndOwn(obj, pptr, type, flags, 0)
+#define SWIG_ConvertPtr(obj, pptr, type, flags)         SWIG_Python_ConvertPtr(obj, pptr, type, flags)
+#define SWIG_ConvertPtrAndOwn(obj,pptr,type,flags,own)  SWIG_Python_ConvertPtrAndOwn(obj, pptr, type, flags, own)
+#define SWIG_NewPointerObj(ptr, type, flags)            SWIG_Python_NewPointerObj(ptr, type, flags)
+#define SWIG_CheckImplicit(ty)                          SWIG_Python_CheckImplicit(ty) 
+#define SWIG_AcquirePtr(ptr, src)                       SWIG_Python_AcquirePtr(ptr, src)
+#define swig_owntype                                    int
+
+/* for raw packed data */
+#define SWIG_ConvertPacked(obj, ptr, sz, ty)            SWIG_Python_ConvertPacked(obj, ptr, sz, ty)
+#define SWIG_NewPackedObj(ptr, sz, type)                SWIG_Python_NewPackedObj(ptr, sz, type)
+
+/* for class or struct pointers */
+#define SWIG_ConvertInstance(obj, pptr, type, flags)    SWIG_ConvertPtr(obj, pptr, type, flags)
+#define SWIG_NewInstanceObj(ptr, type, flags)           SWIG_NewPointerObj(ptr, type, flags)
+
+/* for C or C++ function pointers */
+#define SWIG_ConvertFunctionPtr(obj, pptr, type)        SWIG_Python_ConvertFunctionPtr(obj, pptr, type)
+#define SWIG_NewFunctionPtrObj(ptr, type)               SWIG_Python_NewPointerObj(ptr, type, 0)
+
+/* for C++ member pointers, ie, member methods */
+#define SWIG_ConvertMember(obj, ptr, sz, ty)            SWIG_Python_ConvertPacked(obj, ptr, sz, ty)
+#define SWIG_NewMemberObj(ptr, sz, type)                SWIG_Python_NewPackedObj(ptr, sz, type)
+
+
+/* Runtime API */
+
+#define SWIG_GetModule(clientdata)                      SWIG_Python_GetModule()
+#define SWIG_SetModule(clientdata, pointer)             SWIG_Python_SetModule(pointer)
+#define SWIG_NewClientData(obj)                         PySwigClientData_New(obj)
+
+#define SWIG_SetErrorObj                                SWIG_Python_SetErrorObj                            
+#define SWIG_SetErrorMsg                        	SWIG_Python_SetErrorMsg				   
+#define SWIG_ErrorType(code)                    	SWIG_Python_ErrorType(code)                        
+#define SWIG_Error(code, msg)            		SWIG_Python_SetErrorMsg(SWIG_ErrorType(code), msg) 
+#define SWIG_fail                        		goto fail					   
+
+
+/* Runtime API implementation */
+
+/* Error manipulation */
+
+SWIGINTERN void 
+SWIG_Python_SetErrorObj(PyObject *errtype, PyObject *obj) {
+  SWIG_PYTHON_THREAD_BEGIN_BLOCK; 
+  PyErr_SetObject(errtype, obj);
+  Py_DECREF(obj);
+  SWIG_PYTHON_THREAD_END_BLOCK;
 }
 
-/* Acquire ownership of a pointer */
-SWIGRUNTIME void
-SWIG_Tcl_Acquire(void *ptr) {
-  int newobj;
-  Tcl_CreateHashEntry(SWIG_Tcl_ObjectTable(), (char *) ptr, &newobj);
+SWIGINTERN void 
+SWIG_Python_SetErrorMsg(PyObject *errtype, const char *msg) {
+  SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+  PyErr_SetString(errtype, (char *) msg);
+  SWIG_PYTHON_THREAD_END_BLOCK;
+}
+
+#define SWIG_Python_Raise(obj, type, desc)  SWIG_Python_SetErrorObj(SWIG_Python_ExceptionType(desc), obj)
+
+/* Set a constant value */
+
+SWIGINTERN void
+SWIG_Python_SetConstant(PyObject *d, const char *name, PyObject *obj) {   
+  PyDict_SetItemString(d, (char*) name, obj);
+  Py_DECREF(obj);                            
+}
+
+/* Append a value to the result obj */
+
+SWIGINTERN PyObject*
+SWIG_Python_AppendOutput(PyObject* result, PyObject* obj) {
+#if !defined(SWIG_PYTHON_OUTPUT_TUPLE)
+  if (!result) {
+    result = obj;
+  } else if (result == Py_None) {
+    Py_DECREF(result);
+    result = obj;
+  } else {
+    if (!PyList_Check(result)) {
+      PyObject *o2 = result;
+      result = PyList_New(1);
+      PyList_SetItem(result, 0, o2);
+    }
+    PyList_Append(result,obj);
+    Py_DECREF(obj);
+  }
+  return result;
+#else
+  PyObject*   o2;
+  PyObject*   o3;
+  if (!result) {
+    result = obj;
+  } else if (result == Py_None) {
+    Py_DECREF(result);
+    result = obj;
+  } else {
+    if (!PyTuple_Check(result)) {
+      o2 = result;
+      result = PyTuple_New(1);
+      PyTuple_SET_ITEM(result, 0, o2);
+    }
+    o3 = PyTuple_New(1);
+    PyTuple_SET_ITEM(o3, 0, obj);
+    o2 = result;
+    result = PySequence_Concat(o2, o3);
+    Py_DECREF(o2);
+    Py_DECREF(o3);
+  }
+  return result;
+#endif
+}
+
+/* Unpack the argument tuple */
+
+SWIGINTERN int
+SWIG_Python_UnpackTuple(PyObject *args, const char *name, int min, int max, PyObject **objs)
+{
+  if (!args) {
+    if (!min && !max) {
+      return 1;
+    } else {
+      PyErr_Format(PyExc_TypeError, "%s expected %s%d arguments, got none", 
+		   name, (min == max ? "" : "at least "), min);
+      return 0;
+    }
+  }  
+  if (!PyTuple_Check(args)) {
+    PyErr_SetString(PyExc_SystemError, "UnpackTuple() argument list is not a tuple");
+    return 0;
+  } else {
+    register int l = PyTuple_GET_SIZE(args);
+    if (l < min) {
+      PyErr_Format(PyExc_TypeError, "%s expected %s%d arguments, got %d", 
+		   name, (min == max ? "" : "at least "), min, l);
+      return 0;
+    } else if (l > max) {
+      PyErr_Format(PyExc_TypeError, "%s expected %s%d arguments, got %d", 
+		   name, (min == max ? "" : "at most "), max, l);
+      return 0;
+    } else {
+      register int i;
+      for (i = 0; i < l; ++i) {
+	objs[i] = PyTuple_GET_ITEM(args, i);
+      }
+      for (; l < max; ++l) {
+	objs[l] = 0;
+      }
+      return i + 1;
+    }    
+  }
+}
+
+/* A functor is a function object with one single object argument */
+#if PY_VERSION_HEX >= 0x02020000
+#define SWIG_Python_CallFunctor(functor, obj)	        PyObject_CallFunctionObjArgs(functor, obj, NULL);
+#else
+#define SWIG_Python_CallFunctor(functor, obj)	        PyObject_CallFunction(functor, "O", obj);
+#endif
+
+/*
+  Helper for static pointer initialization for both C and C++ code, for example
+  static PyObject *SWIG_STATIC_POINTER(MyVar) = NewSomething(...);
+*/
+#ifdef __cplusplus
+#define SWIG_STATIC_POINTER(var)  var
+#else
+#define SWIG_STATIC_POINTER(var)  var = 0; if (!var) var
+#endif
+
+/* -----------------------------------------------------------------------------
+ * Pointer declarations
+ * ----------------------------------------------------------------------------- */
+
+/* Flags for new pointer objects */
+#define SWIG_POINTER_NOSHADOW       (SWIG_POINTER_OWN      << 1)
+#define SWIG_POINTER_NEW            (SWIG_POINTER_NOSHADOW | SWIG_POINTER_OWN)
+
+#define SWIG_POINTER_IMPLICIT_CONV  (SWIG_POINTER_DISOWN   << 1)
+
+#ifdef __cplusplus
+extern "C" {
+#if 0
+} /* cc-mode */
+#endif
+#endif
+
+/*  How to access Py_None */
+#if defined(_WIN32) || defined(__WIN32__) || defined(__CYGWIN__)
+#  ifndef SWIG_PYTHON_NO_BUILD_NONE
+#    ifndef SWIG_PYTHON_BUILD_NONE
+#      define SWIG_PYTHON_BUILD_NONE
+#    endif
+#  endif
+#endif
+
+#ifdef SWIG_PYTHON_BUILD_NONE
+#  ifdef Py_None
+#   undef Py_None
+#   define Py_None SWIG_Py_None()
+#  endif
+SWIGRUNTIMEINLINE PyObject * 
+_SWIG_Py_None(void)
+{
+  PyObject *none = Py_BuildValue((char*)"");
+  Py_DECREF(none);
+  return none;
+}
+SWIGRUNTIME PyObject * 
+SWIG_Py_None(void)
+{
+  static PyObject *SWIG_STATIC_POINTER(none) = _SWIG_Py_None();
+  return none;
+}
+#endif
+
+/* The python void return value */
+
+SWIGRUNTIMEINLINE PyObject * 
+SWIG_Py_Void(void)
+{
+  PyObject *none = Py_None;
+  Py_INCREF(none);
+  return none;
+}
+
+/* PySwigClientData */
+
+typedef struct {
+  PyObject *klass;
+  PyObject *newraw;
+  PyObject *newargs;
+  PyObject *destroy;
+  int delargs;
+  int implicitconv;
+} PySwigClientData;
+
+SWIGRUNTIMEINLINE int 
+SWIG_Python_CheckImplicit(swig_type_info *ty)
+{
+  PySwigClientData *data = (PySwigClientData *)ty->clientdata;
+  return data ? data->implicitconv : 0;
+}
+
+SWIGRUNTIMEINLINE PyObject *
+SWIG_Python_ExceptionType(swig_type_info *desc) {
+  PySwigClientData *data = desc ? (PySwigClientData *) desc->clientdata : 0;
+  PyObject *klass = data ? data->klass : 0;
+  return (klass ? klass : PyExc_RuntimeError);
+}
+
+
+SWIGRUNTIME PySwigClientData * 
+PySwigClientData_New(PyObject* obj)
+{
+  if (!obj) {
+    return 0;
+  } else {
+    PySwigClientData *data = (PySwigClientData *)malloc(sizeof(PySwigClientData));
+    /* the klass element */
+    data->klass = obj;
+    Py_INCREF(data->klass);
+    /* the newraw method and newargs arguments used to create a new raw instance */
+    if (PyClass_Check(obj)) {
+      data->newraw = 0;
+      data->newargs = obj;
+      Py_INCREF(obj);
+    } else {
+#if (PY_VERSION_HEX < 0x02020000)
+      data->newraw = 0;
+#else
+      data->newraw = PyObject_GetAttrString(data->klass, (char *)"__new__");
+#endif
+      if (data->newraw) {
+	Py_INCREF(data->newraw);
+	data->newargs = PyTuple_New(1);
+	PyTuple_SetItem(data->newargs, 0, obj);
+      } else {
+	data->newargs = obj;
+      }
+      Py_INCREF(data->newargs);
+    }
+    /* the destroy method, aka as the C++ delete method */
+    data->destroy = PyObject_GetAttrString(data->klass, (char *)"__swig_destroy__");
+    if (PyErr_Occurred()) {
+      PyErr_Clear();
+      data->destroy = 0;
+    }
+    if (data->destroy) {
+      int flags;
+      Py_INCREF(data->destroy);
+      flags = PyCFunction_GET_FLAGS(data->destroy);
+#ifdef METH_O
+      data->delargs = !(flags & (METH_O));
+#else
+      data->delargs = 0;
+#endif
+    } else {
+      data->delargs = 0;
+    }
+    data->implicitconv = 0;
+    return data;
+  }
+}
+
+SWIGRUNTIME void 
+PySwigClientData_Del(PySwigClientData* data)
+{
+  Py_XDECREF(data->newraw);
+  Py_XDECREF(data->newargs);
+  Py_XDECREF(data->destroy);
+}
+
+/* =============== PySwigObject =====================*/
+
+typedef struct {
+  PyObject_HEAD
+  void *ptr;
+  swig_type_info *ty;
+  int own;
+  PyObject *next;
+} PySwigObject;
+
+SWIGRUNTIME PyObject *
+PySwigObject_long(PySwigObject *v)
+{
+  return PyLong_FromVoidPtr(v->ptr);
+}
+
+SWIGRUNTIME PyObject *
+PySwigObject_format(const char* fmt, PySwigObject *v)
+{
+  PyObject *res = NULL;
+  PyObject *args = PyTuple_New(1);
+  if (args) {
+    if (PyTuple_SetItem(args, 0, PySwigObject_long(v)) == 0) {
+      PyObject *ofmt = PyString_FromString(fmt);
+      if (ofmt) {
+	res = PyString_Format(ofmt,args);
+	Py_DECREF(ofmt);
+      }
+      Py_DECREF(args);
+    }
+  }
+  return res;
+}
+
+SWIGRUNTIME PyObject *
+PySwigObject_oct(PySwigObject *v)
+{
+  return PySwigObject_format("%o",v);
+}
+
+SWIGRUNTIME PyObject *
+PySwigObject_hex(PySwigObject *v)
+{
+  return PySwigObject_format("%x",v);
+}
+
+SWIGRUNTIME PyObject *
+#ifdef METH_NOARGS
+PySwigObject_repr(PySwigObject *v)
+#else
+PySwigObject_repr(PySwigObject *v, PyObject *args)
+#endif
+{
+  const char *name = SWIG_TypePrettyName(v->ty);
+  PyObject *hex = PySwigObject_hex(v);    
+  PyObject *repr = PyString_FromFormat("<Swig Object of type '%s' at 0x%s>", name, PyString_AsString(hex));
+  Py_DECREF(hex);
+  if (v->next) {
+#ifdef METH_NOARGS
+    PyObject *nrep = PySwigObject_repr((PySwigObject *)v->next);
+#else
+    PyObject *nrep = PySwigObject_repr((PySwigObject *)v->next, args);
+#endif
+    PyString_ConcatAndDel(&repr,nrep);
+  }
+  return repr;  
 }
 
 SWIGRUNTIME int
-SWIG_Tcl_Thisown(void *ptr) {
-  if (Tcl_FindHashEntry(SWIG_Tcl_ObjectTable(), (char *) ptr)) {
-    return 1;
+PySwigObject_print(PySwigObject *v, FILE *fp, int SWIGUNUSEDPARM(flags))
+{
+#ifdef METH_NOARGS
+  PyObject *repr = PySwigObject_repr(v);
+#else
+  PyObject *repr = PySwigObject_repr(v, NULL);
+#endif
+  if (repr) {
+    fputs(PyString_AsString(repr), fp);
+    Py_DECREF(repr);
+    return 0; 
+  } else {
+    return 1; 
   }
-  return 0;
 }
 
-/* Disown a pointer.  Returns 1 if we owned it to begin with */
+SWIGRUNTIME PyObject *
+PySwigObject_str(PySwigObject *v)
+{
+  char result[SWIG_BUFFER_SIZE];
+  return SWIG_PackVoidPtr(result, v->ptr, v->ty->name, sizeof(result)) ?
+    PyString_FromString(result) : 0;
+}
+
 SWIGRUNTIME int
-SWIG_Tcl_Disown(void *ptr) {
-  Tcl_HashEntry *entryPtr = Tcl_FindHashEntry(SWIG_Tcl_ObjectTable(), (char *) ptr);
-  if (entryPtr) {
-    Tcl_DeleteHashEntry(entryPtr);
-    return 1;
-  }
-  return 0;
+PySwigObject_compare(PySwigObject *v, PySwigObject *w)
+{
+  void *i = v->ptr;
+  void *j = w->ptr;
+  return (i < j) ? -1 : ((i > j) ? 1 : 0);
 }
 
-/* Convert a pointer value */
-SWIGRUNTIME int
-SWIG_Tcl_ConvertPtrFromString(Tcl_Interp *interp, const char *c, void **ptr, swig_type_info *ty, int flags) {
-  swig_cast_info *tc;
-  /* Pointer values must start with leading underscore */
-  while (*c != '_') {
-    *ptr = (void *) 0;
-    if (strcmp(c,"NULL") == 0) return SWIG_OK;
-    /* Hmmm. It could be an object name. */
-    if (Tcl_VarEval(interp,c," cget -this", (char *) NULL) == TCL_OK) {
-      Tcl_Obj *result = Tcl_GetObjResult(interp);
-      c = Tcl_GetStringFromObj(result, NULL);
-      continue;
-    }
-    Tcl_ResetResult(interp);
-    return SWIG_ERROR;
-  }
-  c++;
-  c = SWIG_UnpackData(c,ptr,sizeof(void *));
-  if (ty) {
-    tc = c ? SWIG_TypeCheck(c,ty) : 0;
-    if (!tc) {
-      return SWIG_ERROR;
-    }
-    if (flags & SWIG_POINTER_DISOWN) {
-      SWIG_Disown((void *) *ptr);
-    }
-    *ptr = SWIG_TypeCast(tc,(void *) *ptr);
-  }
-  return SWIG_OK;
+SWIGRUNTIME PyTypeObject* _PySwigObject_type(void);
+
+SWIGRUNTIME PyTypeObject*
+PySwigObject_type(void) {
+  static PyTypeObject *SWIG_STATIC_POINTER(type) = _PySwigObject_type();
+  return type;
 }
 
-/* Convert a pointer value */
 SWIGRUNTIMEINLINE int
-SWIG_Tcl_ConvertPtr(Tcl_Interp *interp, Tcl_Obj *oc, void **ptr, swig_type_info *ty, int flags) {
-  return SWIG_Tcl_ConvertPtrFromString(interp, Tcl_GetStringFromObj(oc,NULL), ptr, ty, flags);
+PySwigObject_Check(PyObject *op) {
+  return ((op)->ob_type == PySwigObject_type())
+    || (strcmp((op)->ob_type->tp_name,"PySwigObject") == 0);
 }
 
-/* Convert a pointer value */
-SWIGRUNTIME char *
-SWIG_Tcl_PointerTypeFromString(char *c) {
-  char d;
-  /* Pointer values must start with leading underscore. NULL has no type */
-  if (*c != '_') {
+SWIGRUNTIME PyObject *
+PySwigObject_New(void *ptr, swig_type_info *ty, int own);
+
+SWIGRUNTIME void
+PySwigObject_dealloc(PyObject *v)
+{
+  PySwigObject *sobj = (PySwigObject *) v;
+  PyObject *next = sobj->next;
+  if (sobj->own) {
+    swig_type_info *ty = sobj->ty;
+    PySwigClientData *data = ty ? (PySwigClientData *) ty->clientdata : 0;
+    PyObject *destroy = data ? data->destroy : 0;
+    if (destroy) {
+      /* destroy is always a VARARGS method */
+      PyObject *res;
+      if (data->delargs) {
+	/* we need to create a temporal object to carry the destroy operation */
+	PyObject *tmp = PySwigObject_New(sobj->ptr, ty, 0);
+	res = SWIG_Python_CallFunctor(destroy, tmp);
+	Py_DECREF(tmp);
+      } else {
+	PyCFunction meth = PyCFunction_GET_FUNCTION(destroy);
+	PyObject *mself = PyCFunction_GET_SELF(destroy);
+	res = ((*meth)(mself, v));
+      }
+      Py_XDECREF(res);
+    } else {
+      const char *name = SWIG_TypePrettyName(ty);
+#if !defined(SWIG_PYTHON_SILENT_MEMLEAK)
+      printf("swig/python detected a memory leak of type '%s', no destructor found.\n", name);
+#endif
+    }
+  } 
+  Py_XDECREF(next);
+  PyObject_DEL(v);
+}
+
+SWIGRUNTIME PyObject* 
+PySwigObject_append(PyObject* v, PyObject* next)
+{
+  PySwigObject *sobj = (PySwigObject *) v;
+#ifndef METH_O
+  PyObject *tmp = 0;
+  if (!PyArg_ParseTuple(next,(char *)"O:append", &tmp)) return NULL;
+  next = tmp;
+#endif
+  if (!PySwigObject_Check(next)) {
+    return NULL;
+  }
+  sobj->next = next;
+  Py_INCREF(next);
+  return SWIG_Py_Void();
+}
+
+SWIGRUNTIME PyObject* 
+#ifdef METH_NOARGS
+PySwigObject_next(PyObject* v)
+#else
+PySwigObject_next(PyObject* v, PyObject *SWIGUNUSEDPARM(args))
+#endif
+{
+  PySwigObject *sobj = (PySwigObject *) v;
+  if (sobj->next) {    
+    Py_INCREF(sobj->next);
+    return sobj->next;
+  } else {
+    return SWIG_Py_Void();
+  }
+}
+
+SWIGINTERN PyObject*
+#ifdef METH_NOARGS
+PySwigObject_disown(PyObject *v)
+#else
+PySwigObject_disown(PyObject* v, PyObject *SWIGUNUSEDPARM(args))
+#endif
+{
+  PySwigObject *sobj = (PySwigObject *)v;
+  sobj->own = 0;
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject*
+#ifdef METH_NOARGS
+PySwigObject_acquire(PyObject *v)
+#else
+PySwigObject_acquire(PyObject* v, PyObject *SWIGUNUSEDPARM(args))
+#endif
+{
+  PySwigObject *sobj = (PySwigObject *)v;
+  sobj->own = SWIG_POINTER_OWN;
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject*
+PySwigObject_own(PyObject *v, PyObject *args)
+{
+  PyObject *val = 0;
+#if (PY_VERSION_HEX < 0x02020000)
+  if (!PyArg_ParseTuple(args,(char *)"|O:own",&val))
+#else
+  if (!PyArg_UnpackTuple(args, (char *)"own", 0, 1, &val)) 
+#endif
+    {
+      return NULL;
+    } 
+  else
+    {
+      PySwigObject *sobj = (PySwigObject *)v;
+      PyObject *obj = PyBool_FromLong(sobj->own);
+      if (val) {
+#ifdef METH_NOARGS
+	if (PyObject_IsTrue(val)) {
+	  PySwigObject_acquire(v);
+	} else {
+	  PySwigObject_disown(v);
+	}
+#else
+	if (PyObject_IsTrue(val)) {
+	  PySwigObject_acquire(v,args);
+	} else {
+	  PySwigObject_disown(v,args);
+	}
+#endif
+      } 
+      return obj;
+    }
+}
+
+#ifdef METH_O
+static PyMethodDef
+swigobject_methods[] = {
+  {(char *)"disown",  (PyCFunction)PySwigObject_disown,  METH_NOARGS,  (char *)"releases ownership of the pointer"},
+  {(char *)"acquire", (PyCFunction)PySwigObject_acquire, METH_NOARGS,  (char *)"aquires ownership of the pointer"},
+  {(char *)"own",     (PyCFunction)PySwigObject_own,     METH_VARARGS, (char *)"returns/sets ownership of the pointer"},
+  {(char *)"append",  (PyCFunction)PySwigObject_append,  METH_O,       (char *)"appends another 'this' object"},
+  {(char *)"next",    (PyCFunction)PySwigObject_next,    METH_NOARGS,  (char *)"returns the next 'this' object"},
+  {(char *)"__repr__",(PyCFunction)PySwigObject_repr,    METH_NOARGS,  (char *)"returns object representation"},
+  {0, 0, 0, 0}  
+};
+#else
+static PyMethodDef
+swigobject_methods[] = {
+  {(char *)"disown",  (PyCFunction)PySwigObject_disown,  METH_VARARGS,  (char *)"releases ownership of the pointer"},
+  {(char *)"acquire", (PyCFunction)PySwigObject_acquire, METH_VARARGS,  (char *)"aquires ownership of the pointer"},
+  {(char *)"own",     (PyCFunction)PySwigObject_own,     METH_VARARGS,  (char *)"returns/sets ownership of the pointer"},
+  {(char *)"append",  (PyCFunction)PySwigObject_append,  METH_VARARGS,  (char *)"appends another 'this' object"},
+  {(char *)"next",    (PyCFunction)PySwigObject_next,    METH_VARARGS,  (char *)"returns the next 'this' object"},
+  {(char *)"__repr__",(PyCFunction)PySwigObject_repr,   METH_VARARGS,  (char *)"returns object representation"},
+  {0, 0, 0, 0}  
+};
+#endif
+
+#if PY_VERSION_HEX < 0x02020000
+SWIGINTERN PyObject *
+PySwigObject_getattr(PySwigObject *sobj,char *name)
+{
+  return Py_FindMethod(swigobject_methods, (PyObject *)sobj, name);
+}
+#endif
+
+SWIGRUNTIME PyTypeObject*
+_PySwigObject_type(void) {
+  static char swigobject_doc[] = "Swig object carries a C/C++ instance pointer";
+  
+  static PyNumberMethods PySwigObject_as_number = {
+    (binaryfunc)0, /*nb_add*/
+    (binaryfunc)0, /*nb_subtract*/
+    (binaryfunc)0, /*nb_multiply*/
+    (binaryfunc)0, /*nb_divide*/
+    (binaryfunc)0, /*nb_remainder*/
+    (binaryfunc)0, /*nb_divmod*/
+    (ternaryfunc)0,/*nb_power*/
+    (unaryfunc)0,  /*nb_negative*/
+    (unaryfunc)0,  /*nb_positive*/
+    (unaryfunc)0,  /*nb_absolute*/
+    (inquiry)0,    /*nb_nonzero*/
+    0,		   /*nb_invert*/
+    0,		   /*nb_lshift*/
+    0,		   /*nb_rshift*/
+    0,		   /*nb_and*/
+    0,		   /*nb_xor*/
+    0,		   /*nb_or*/
+    (coercion)0,   /*nb_coerce*/
+    (unaryfunc)PySwigObject_long, /*nb_int*/
+    (unaryfunc)PySwigObject_long, /*nb_long*/
+    (unaryfunc)0,                 /*nb_float*/
+    (unaryfunc)PySwigObject_oct,  /*nb_oct*/
+    (unaryfunc)PySwigObject_hex,  /*nb_hex*/
+#if PY_VERSION_HEX >= 0x02020000
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 /* nb_inplace_add -> nb_inplace_true_divide */ 
+#elif PY_VERSION_HEX >= 0x02000000
+    0,0,0,0,0,0,0,0,0,0,0 /* nb_inplace_add -> nb_inplace_or */
+#endif
+  };
+
+  static PyTypeObject pyswigobject_type;  
+  static int type_init = 0;
+  if (!type_init) {
+    const PyTypeObject tmp
+      = {
+	PyObject_HEAD_INIT(NULL)
+	0,				    /* ob_size */
+	(char *)"PySwigObject",		    /* tp_name */
+	sizeof(PySwigObject),		    /* tp_basicsize */
+	0,			            /* tp_itemsize */
+	(destructor)PySwigObject_dealloc,   /* tp_dealloc */
+	(printfunc)PySwigObject_print,	    /* tp_print */
+#if PY_VERSION_HEX < 0x02020000
+	(getattrfunc)PySwigObject_getattr,  /* tp_getattr */ 
+#else
+	(getattrfunc)0,			    /* tp_getattr */ 
+#endif
+	(setattrfunc)0,			    /* tp_setattr */ 
+	(cmpfunc)PySwigObject_compare,	    /* tp_compare */ 
+	(reprfunc)PySwigObject_repr,	    /* tp_repr */    
+	&PySwigObject_as_number,	    /* tp_as_number */
+	0,				    /* tp_as_sequence */
+	0,				    /* tp_as_mapping */
+	(hashfunc)0,			    /* tp_hash */
+	(ternaryfunc)0,			    /* tp_call */
+	(reprfunc)PySwigObject_str,	    /* tp_str */
+	PyObject_GenericGetAttr,            /* tp_getattro */
+	0,				    /* tp_setattro */
+	0,		                    /* tp_as_buffer */
+	Py_TPFLAGS_DEFAULT,	            /* tp_flags */
+	swigobject_doc, 	            /* tp_doc */        
+	0,                                  /* tp_traverse */
+	0,                                  /* tp_clear */
+	0,                                  /* tp_richcompare */
+	0,                                  /* tp_weaklistoffset */
+#if PY_VERSION_HEX >= 0x02020000
+	0,                                  /* tp_iter */
+	0,                                  /* tp_iternext */
+	swigobject_methods,		    /* tp_methods */ 
+	0,			            /* tp_members */
+	0,				    /* tp_getset */	    	
+	0,			            /* tp_base */	        
+	0,				    /* tp_dict */	    	
+	0,				    /* tp_descr_get */  	
+	0,				    /* tp_descr_set */  	
+	0,				    /* tp_dictoffset */ 	
+	0,				    /* tp_init */	    	
+	0,				    /* tp_alloc */	    	
+	0,			            /* tp_new */	    	
+	0,	                            /* tp_free */	   
+        0,                                  /* tp_is_gc */  
+	0,				    /* tp_bases */   
+	0,				    /* tp_mro */
+	0,				    /* tp_cache */   
+ 	0,				    /* tp_subclasses */
+	0,				    /* tp_weaklist */
+#endif
+#if PY_VERSION_HEX >= 0x02030000
+	0,                                  /* tp_del */
+#endif
+#ifdef COUNT_ALLOCS
+	0,0,0,0                             /* tp_alloc -> tp_next */
+#endif
+      };
+    pyswigobject_type = tmp;
+    pyswigobject_type.ob_type = &PyType_Type;
+    type_init = 1;
+  }
+  return &pyswigobject_type;
+}
+
+SWIGRUNTIME PyObject *
+PySwigObject_New(void *ptr, swig_type_info *ty, int own)
+{
+  PySwigObject *sobj = PyObject_NEW(PySwigObject, PySwigObject_type());
+  if (sobj) {
+    sobj->ptr  = ptr;
+    sobj->ty   = ty;
+    sobj->own  = own;
+    sobj->next = 0;
+  }
+  return (PyObject *)sobj;
+}
+
+/* -----------------------------------------------------------------------------
+ * Implements a simple Swig Packed type, and use it instead of string
+ * ----------------------------------------------------------------------------- */
+
+typedef struct {
+  PyObject_HEAD
+  void *pack;
+  swig_type_info *ty;
+  size_t size;
+} PySwigPacked;
+
+SWIGRUNTIME int
+PySwigPacked_print(PySwigPacked *v, FILE *fp, int SWIGUNUSEDPARM(flags))
+{
+  char result[SWIG_BUFFER_SIZE];
+  fputs("<Swig Packed ", fp); 
+  if (SWIG_PackDataName(result, v->pack, v->size, 0, sizeof(result))) {
+    fputs("at ", fp); 
+    fputs(result, fp); 
+  }
+  fputs(v->ty->name,fp); 
+  fputs(">", fp);
+  return 0; 
+}
+  
+SWIGRUNTIME PyObject *
+PySwigPacked_repr(PySwigPacked *v)
+{
+  char result[SWIG_BUFFER_SIZE];
+  if (SWIG_PackDataName(result, v->pack, v->size, 0, sizeof(result))) {
+    return PyString_FromFormat("<Swig Packed at %s%s>", result, v->ty->name);
+  } else {
+    return PyString_FromFormat("<Swig Packed %s>", v->ty->name);
+  }  
+}
+
+SWIGRUNTIME PyObject *
+PySwigPacked_str(PySwigPacked *v)
+{
+  char result[SWIG_BUFFER_SIZE];
+  if (SWIG_PackDataName(result, v->pack, v->size, 0, sizeof(result))){
+    return PyString_FromFormat("%s%s", result, v->ty->name);
+  } else {
+    return PyString_FromString(v->ty->name);
+  }  
+}
+
+SWIGRUNTIME int
+PySwigPacked_compare(PySwigPacked *v, PySwigPacked *w)
+{
+  size_t i = v->size;
+  size_t j = w->size;
+  int s = (i < j) ? -1 : ((i > j) ? 1 : 0);
+  return s ? s : strncmp((char *)v->pack, (char *)w->pack, 2*v->size);
+}
+
+SWIGRUNTIME PyTypeObject* _PySwigPacked_type(void);
+
+SWIGRUNTIME PyTypeObject*
+PySwigPacked_type(void) {
+  static PyTypeObject *SWIG_STATIC_POINTER(type) = _PySwigPacked_type();
+  return type;
+}
+
+SWIGRUNTIMEINLINE int
+PySwigPacked_Check(PyObject *op) {
+  return ((op)->ob_type == _PySwigPacked_type()) 
+    || (strcmp((op)->ob_type->tp_name,"PySwigPacked") == 0);
+}
+
+SWIGRUNTIME void
+PySwigPacked_dealloc(PyObject *v)
+{
+  if (PySwigPacked_Check(v)) {
+    PySwigPacked *sobj = (PySwigPacked *) v;
+    free(sobj->pack);
+  }
+  PyObject_DEL(v);
+}
+
+SWIGRUNTIME PyTypeObject*
+_PySwigPacked_type(void) {
+  static char swigpacked_doc[] = "Swig object carries a C/C++ instance pointer";
+  static PyTypeObject pyswigpacked_type;
+  static int type_init = 0;  
+  if (!type_init) {
+    const PyTypeObject tmp
+      = {
+	PyObject_HEAD_INIT(NULL)
+	0,				    /* ob_size */	
+	(char *)"PySwigPacked",		    /* tp_name */	
+	sizeof(PySwigPacked),		    /* tp_basicsize */	
+	0,				    /* tp_itemsize */	
+	(destructor)PySwigPacked_dealloc,   /* tp_dealloc */	
+	(printfunc)PySwigPacked_print,	    /* tp_print */   	
+	(getattrfunc)0,			    /* tp_getattr */ 	
+	(setattrfunc)0,			    /* tp_setattr */ 	
+	(cmpfunc)PySwigPacked_compare,	    /* tp_compare */ 	
+	(reprfunc)PySwigPacked_repr,	    /* tp_repr */    	
+	0,	                            /* tp_as_number */	
+	0,				    /* tp_as_sequence */
+	0,				    /* tp_as_mapping */	
+	(hashfunc)0,			    /* tp_hash */	
+	(ternaryfunc)0,			    /* tp_call */	
+	(reprfunc)PySwigPacked_str,	    /* tp_str */	
+	PyObject_GenericGetAttr,            /* tp_getattro */
+	0,				    /* tp_setattro */
+	0,		                    /* tp_as_buffer */
+	Py_TPFLAGS_DEFAULT,	            /* tp_flags */
+	swigpacked_doc, 	            /* tp_doc */
+	0,                                  /* tp_traverse */
+	0,                                  /* tp_clear */
+	0,                                  /* tp_richcompare */
+	0,                                  /* tp_weaklistoffset */
+#if PY_VERSION_HEX >= 0x02020000
+	0,                                  /* tp_iter */
+	0,                                  /* tp_iternext */
+	0,		                    /* tp_methods */ 
+	0,			            /* tp_members */
+	0,				    /* tp_getset */	    	
+	0,			            /* tp_base */	        
+	0,				    /* tp_dict */	    	
+	0,				    /* tp_descr_get */  	
+	0,				    /* tp_descr_set */  	
+	0,				    /* tp_dictoffset */ 	
+	0,				    /* tp_init */	    	
+	0,				    /* tp_alloc */	    	
+	0,			            /* tp_new */	    	
+	0, 	                            /* tp_free */	   
+        0,                                  /* tp_is_gc */  
+	0,				    /* tp_bases */   
+	0,				    /* tp_mro */
+	0,				    /* tp_cache */   
+ 	0,				    /* tp_subclasses */
+	0,				    /* tp_weaklist */
+#endif
+#if PY_VERSION_HEX >= 0x02030000
+	0,                                  /* tp_del */
+#endif
+#ifdef COUNT_ALLOCS
+	0,0,0,0                             /* tp_alloc -> tp_next */
+#endif
+      };
+    pyswigpacked_type = tmp;
+    pyswigpacked_type.ob_type = &PyType_Type;
+    type_init = 1;
+  }
+  return &pyswigpacked_type;
+}
+
+SWIGRUNTIME PyObject *
+PySwigPacked_New(void *ptr, size_t size, swig_type_info *ty)
+{
+  PySwigPacked *sobj = PyObject_NEW(PySwigPacked, PySwigPacked_type());
+  if (sobj) {
+    void *pack = malloc(size);
+    if (pack) {
+      memcpy(pack, ptr, size);
+      sobj->pack = pack;
+      sobj->ty   = ty;
+      sobj->size = size;
+    } else {
+      PyObject_DEL((PyObject *) sobj);
+      sobj = 0;
+    }
+  }
+  return (PyObject *) sobj;
+}
+
+SWIGRUNTIME swig_type_info *
+PySwigPacked_UnpackData(PyObject *obj, void *ptr, size_t size)
+{
+  if (PySwigPacked_Check(obj)) {
+    PySwigPacked *sobj = (PySwigPacked *)obj;
+    if (sobj->size != size) return 0;
+    memcpy(ptr, sobj->pack, size);
+    return sobj->ty;
+  } else {
     return 0;
   }
-  c++;
-  /* Extract hex value from pointer */
-  while ((d = *c)) {
-    if (!(((d >= '0') && (d <= '9')) || ((d >= 'a') && (d <= 'f')))) break;
-    c++;
+}
+
+/* -----------------------------------------------------------------------------
+ * pointers/data manipulation
+ * ----------------------------------------------------------------------------- */
+
+SWIGRUNTIMEINLINE PyObject *
+_SWIG_This(void)
+{
+  return PyString_FromString("this");
+}
+
+SWIGRUNTIME PyObject *
+SWIG_This(void)
+{
+  static PyObject *SWIG_STATIC_POINTER(swig_this) = _SWIG_This();
+  return swig_this;
+}
+
+/* #define SWIG_PYTHON_SLOW_GETSET_THIS */
+
+SWIGRUNTIME PySwigObject *
+SWIG_Python_GetSwigThis(PyObject *pyobj) 
+{
+  if (PySwigObject_Check(pyobj)) {
+    return (PySwigObject *) pyobj;
+  } else {
+    PyObject *obj = 0;
+#if (!defined(SWIG_PYTHON_SLOW_GETSET_THIS) && (PY_VERSION_HEX >= 0x02030000))
+    if (PyInstance_Check(pyobj)) {
+      obj = _PyInstance_Lookup(pyobj, SWIG_This());      
+    } else {
+      PyObject **dictptr = _PyObject_GetDictPtr(pyobj);
+      if (dictptr != NULL) {
+	PyObject *dict = *dictptr;
+	obj = dict ? PyDict_GetItem(dict, SWIG_This()) : 0;
+      } else {
+#ifdef PyWeakref_CheckProxy
+	if (PyWeakref_CheckProxy(pyobj)) {
+	  PyObject *wobj = PyWeakref_GET_OBJECT(pyobj);
+	  return wobj ? SWIG_Python_GetSwigThis(wobj) : 0;
+	}
+#endif
+	obj = PyObject_GetAttr(pyobj,SWIG_This());
+	if (obj) {
+	  Py_DECREF(obj);
+	} else {
+	  if (PyErr_Occurred()) PyErr_Clear();
+	  return 0;
+	}
+      }
+    }
+#else
+    obj = PyObject_GetAttr(pyobj,SWIG_This());
+    if (obj) {
+      Py_DECREF(obj);
+    } else {
+      if (PyErr_Occurred()) PyErr_Clear();
+      return 0;
+    }
+#endif
+    if (obj && !PySwigObject_Check(obj)) {
+      /* a PyObject is called 'this', try to get the 'real this'
+	 PySwigObject from it */ 
+      return SWIG_Python_GetSwigThis(obj);
+    }
+    return (PySwigObject *)obj;
   }
-  return c;
+}
+
+/* Acquire a pointer value */
+
+SWIGRUNTIME int
+SWIG_Python_AcquirePtr(PyObject *obj, int own) {
+  if (own) {
+    PySwigObject *sobj = SWIG_Python_GetSwigThis(obj);
+    if (sobj) {
+      int oldown = sobj->own;
+      sobj->own = own;
+      return oldown;
+    }
+  }
+  return 0;
+}
+
+/* Convert a pointer value */
+
+SWIGRUNTIME int
+SWIG_Python_ConvertPtrAndOwn(PyObject *obj, void **ptr, swig_type_info *ty, int flags, int *own) {
+  if (!obj) return SWIG_ERROR;
+  if (obj == Py_None) {
+    if (ptr) *ptr = 0;
+    return SWIG_OK;
+  } else {
+    PySwigObject *sobj = SWIG_Python_GetSwigThis(obj);
+    while (sobj) {
+      void *vptr = sobj->ptr;
+      if (ty) {
+	swig_type_info *to = sobj->ty;
+	if (to == ty) {
+	  /* no type cast needed */
+	  if (ptr) *ptr = vptr;
+	  break;
+	} else {
+	  swig_cast_info *tc = SWIG_TypeCheck(to->name,ty);
+	  if (!tc) {
+	    sobj = (PySwigObject *)sobj->next;
+	  } else {
+	    if (ptr) *ptr = SWIG_TypeCast(tc,vptr);
+	    break;
+	  }
+	}
+      } else {
+	if (ptr) *ptr = vptr;
+	break;
+      }
+    }
+    if (sobj) {
+      if (own) *own = sobj->own;
+      if (flags & SWIG_POINTER_DISOWN) {
+	sobj->own = 0;
+      }
+      return SWIG_OK;
+    } else {
+      int res = SWIG_ERROR;
+      if (flags & SWIG_POINTER_IMPLICIT_CONV) {
+	PySwigClientData *data = ty ? (PySwigClientData *) ty->clientdata : 0;
+	if (data && !data->implicitconv) {
+	  PyObject *klass = data->klass;
+	  if (klass) {
+	    PyObject *impconv;
+	    data->implicitconv = 1; /* avoid recursion and call 'explicit' constructors*/
+	    impconv = SWIG_Python_CallFunctor(klass, obj);
+	    data->implicitconv = 0;
+	    if (PyErr_Occurred()) {
+	      PyErr_Clear();
+	      impconv = 0;
+	    }
+	    if (impconv) {
+	      PySwigObject *iobj = SWIG_Python_GetSwigThis(impconv);
+	      if (iobj) {
+		void *vptr;
+		res = SWIG_Python_ConvertPtrAndOwn((PyObject*)iobj, &vptr, ty, 0, 0);
+		if (SWIG_IsOK(res)) {
+		  if (ptr) {
+		    *ptr = vptr;
+		    /* transfer the ownership to 'ptr' */
+		    iobj->own = 0;
+		    res = SWIG_AddCast(res);
+		    res = SWIG_AddNewMask(res);
+		  } else {
+		    res = SWIG_AddCast(res);		    
+		  }
+		}
+	      }
+	      Py_DECREF(impconv);
+	    }
+	  }
+	}
+      }
+      return res;
+    }
+  }
+}
+
+/* Convert a function ptr value */
+
+SWIGRUNTIME int
+SWIG_Python_ConvertFunctionPtr(PyObject *obj, void **ptr, swig_type_info *ty) {
+  if (!PyCFunction_Check(obj)) {
+    return SWIG_ConvertPtr(obj, ptr, ty, 0);
+  } else {
+    void *vptr = 0;
+    
+    /* here we get the method pointer for callbacks */
+    const char *doc = (((PyCFunctionObject *)obj) -> m_ml -> ml_doc);
+    const char *desc = doc ? strstr(doc, "swig_ptr: ") : 0;
+    if (desc) {
+      desc = ty ? SWIG_UnpackVoidPtr(desc + 10, &vptr, ty->name) : 0;
+      if (!desc) return SWIG_ERROR;
+    }
+    if (ty) {
+      swig_cast_info *tc = SWIG_TypeCheck(desc,ty);
+      if (!tc) return SWIG_ERROR;
+      *ptr = SWIG_TypeCast(tc,vptr);
+    } else {
+      *ptr = vptr;
+    }
+    return SWIG_OK;
+  }
 }
 
 /* Convert a packed value value */
-SWIGRUNTIME int
-SWIG_Tcl_ConvertPacked(Tcl_Interp *SWIGUNUSEDPARM(interp) , Tcl_Obj *obj, void *ptr, int sz, swig_type_info *ty) {
-  swig_cast_info *tc;
-  const char  *c;
 
-  if (!obj) goto type_error;
-  c = Tcl_GetStringFromObj(obj,NULL);
-  /* Pointer values must start with leading underscore */
-  if (*c != '_') goto type_error;
-  c++;
-  c = SWIG_UnpackData(c,ptr,sz);
+SWIGRUNTIME int
+SWIG_Python_ConvertPacked(PyObject *obj, void *ptr, size_t sz, swig_type_info *ty) {
+  swig_type_info *to = PySwigPacked_UnpackData(obj, ptr, sz);
+  if (!to) return SWIG_ERROR;
   if (ty) {
-    tc = SWIG_TypeCheck(c,ty);
-    if (!tc) goto type_error;
+    if (to != ty) {
+      /* check type cast? */
+      swig_cast_info *tc = SWIG_TypeCheck(to->name,ty);
+      if (!tc) return SWIG_ERROR;
+    }
   }
   return SWIG_OK;
+}  
 
- type_error:
+/* -----------------------------------------------------------------------------
+ * Create a new pointer object
+ * ----------------------------------------------------------------------------- */
 
-  return SWIG_ERROR;
+/*
+  Create a new instance object, whitout calling __init__, and set the
+  'this' attribute.
+*/
+
+SWIGRUNTIME PyObject* 
+SWIG_Python_NewShadowInstance(PySwigClientData *data, PyObject *swig_this)
+{
+#if (PY_VERSION_HEX >= 0x02020000)
+  PyObject *inst = 0;
+  PyObject *newraw = data->newraw;
+  if (newraw) {
+    inst = PyObject_Call(newraw, data->newargs, NULL);
+    if (inst) {
+#if !defined(SWIG_PYTHON_SLOW_GETSET_THIS)
+      PyObject **dictptr = _PyObject_GetDictPtr(inst);
+      if (dictptr != NULL) {
+	PyObject *dict = *dictptr;
+	if (dict == NULL) {
+	  dict = PyDict_New();
+	  *dictptr = dict;
+	  PyDict_SetItem(dict, SWIG_This(), swig_this);
+	}
+      }
+#else
+      PyObject *key = SWIG_This();
+      PyObject_SetAttr(inst, key, swig_this);
+#endif
+    }
+  } else {
+    PyObject *dict = PyDict_New();
+    PyDict_SetItem(dict, SWIG_This(), swig_this);
+    inst = PyInstance_NewRaw(data->newargs, dict);
+    Py_DECREF(dict);
+  }
+  return inst;
+#else
+#if (PY_VERSION_HEX >= 0x02010000)
+  PyObject *inst;
+  PyObject *dict = PyDict_New();
+  PyDict_SetItem(dict, SWIG_This(), swig_this);
+  inst = PyInstance_NewRaw(data->newargs, dict);
+  Py_DECREF(dict);
+  return (PyObject *) inst;
+#else
+  PyInstanceObject *inst = PyObject_NEW(PyInstanceObject, &PyInstance_Type);
+  if (inst == NULL) {
+    return NULL;
+  }
+  inst->in_class = (PyClassObject *)data->newargs;
+  Py_INCREF(inst->in_class);
+  inst->in_dict = PyDict_New();
+  if (inst->in_dict == NULL) {
+    Py_DECREF(inst);
+    return NULL;
+  }
+#ifdef Py_TPFLAGS_HAVE_WEAKREFS
+  inst->in_weakreflist = NULL;
+#endif
+#ifdef Py_TPFLAGS_GC
+  PyObject_GC_Init(inst);
+#endif
+  PyDict_SetItem(inst->in_dict, SWIG_This(), swig_this);
+  return (PyObject *) inst;
+#endif
+#endif
 }
 
-
-/* Take a pointer and convert it to a string */
 SWIGRUNTIME void
-SWIG_Tcl_MakePtr(char *c, void *ptr, swig_type_info *ty, int flags) {
-  if (ptr) {
-    *(c++) = '_';
-    c = SWIG_PackData(c,&ptr,sizeof(void *));
-    strcpy(c,ty->name);
+SWIG_Python_SetSwigThis(PyObject *inst, PyObject *swig_this)
+{
+ PyObject *dict;
+#if (PY_VERSION_HEX >= 0x02020000) && !defined(SWIG_PYTHON_SLOW_GETSET_THIS)
+ PyObject **dictptr = _PyObject_GetDictPtr(inst);
+ if (dictptr != NULL) {
+   dict = *dictptr;
+   if (dict == NULL) {
+     dict = PyDict_New();
+     *dictptr = dict;
+   }
+   PyDict_SetItem(dict, SWIG_This(), swig_this);
+   return;
+ }
+#endif
+ dict = PyObject_GetAttrString(inst, (char*)"__dict__");
+ PyDict_SetItem(dict, SWIG_This(), swig_this);
+ Py_DECREF(dict);
+} 
+
+
+SWIGINTERN PyObject *
+SWIG_Python_InitShadowInstance(PyObject *args) {
+  PyObject *obj[2];
+  if (!SWIG_Python_UnpackTuple(args,(char*)"swiginit", 2, 2, obj)) {
+    return NULL;
   } else {
-    strcpy(c,(char *)"NULL");
+    PySwigObject *sthis = SWIG_Python_GetSwigThis(obj[0]);
+    if (sthis) {
+      PySwigObject_append((PyObject*) sthis, obj[1]);
+    } else {
+      SWIG_Python_SetSwigThis(obj[0], obj[1]);
+    }
+    return SWIG_Py_Void();
   }
-  flags = 0;
 }
 
 /* Create a new pointer object */
-SWIGRUNTIMEINLINE Tcl_Obj *
-SWIG_Tcl_NewPointerObj(void *ptr, swig_type_info *type, int flags) {
-  Tcl_Obj *robj;
-  char result[SWIG_BUFFER_SIZE];
-  SWIG_MakePtr(result,ptr,type,flags);
-  robj = Tcl_NewStringObj(result,-1);
-  return robj;
+
+SWIGRUNTIME PyObject *
+SWIG_Python_NewPointerObj(void *ptr, swig_type_info *type, int flags) {
+  if (!ptr) {
+    return SWIG_Py_Void();
+  } else {
+    int own = (flags & SWIG_POINTER_OWN) ? SWIG_POINTER_OWN : 0;
+    PyObject *robj = PySwigObject_New(ptr, type, own);
+    PySwigClientData *clientdata = type ? (PySwigClientData *)(type->clientdata) : 0;
+    if (clientdata && !(flags & SWIG_POINTER_NOSHADOW)) {
+      PyObject *inst = SWIG_Python_NewShadowInstance(clientdata, robj);
+      if (inst) {
+	Py_DECREF(robj);
+	robj = inst;
+      }
+    }
+    return robj;
+  }
 }
 
-SWIGRUNTIME Tcl_Obj *
-SWIG_Tcl_NewPackedObj(void *ptr, int sz, swig_type_info *type) {
-  char result[1024];
-  char *r = result;
-  if ((2*sz + 1 + strlen(type->name)) > 1000) return 0;
-  *(r++) = '_';
-  r = SWIG_PackData(r,ptr,sz);
-  strcpy(r,type->name);
-  return Tcl_NewStringObj(result,-1);
+/* Create a new packed object */
+
+SWIGRUNTIMEINLINE PyObject *
+SWIG_Python_NewPackedObj(void *ptr, size_t sz, swig_type_info *type) {
+  return ptr ? PySwigPacked_New((void *) ptr, sz, type) : SWIG_Py_Void();
 }
 
 /* -----------------------------------------------------------------------------*
  *  Get type list 
  * -----------------------------------------------------------------------------*/
 
-SWIGRUNTIME swig_module_info * 
-SWIG_Tcl_GetModule(Tcl_Interp *interp) {
-  const char *data;
-  swig_module_info *ret = 0;
+#ifdef SWIG_LINK_RUNTIME
+void *SWIG_ReturnGlobalTypeList(void *);
+#endif
+
+SWIGRUNTIME swig_module_info *
+SWIG_Python_GetModule(void) {
+  static void *type_pointer = (void *)0;
+  /* first check if module already created */
+  if (!type_pointer) {
+#ifdef SWIG_LINK_RUNTIME
+    type_pointer = SWIG_ReturnGlobalTypeList((void *)0);
+#else
+    type_pointer = PyCObject_Import((char*)"swig_runtime_data" SWIG_RUNTIME_VERSION,
+				    (char*)"type_pointer" SWIG_TYPE_TABLE_NAME);
+    if (PyErr_Occurred()) {
+      PyErr_Clear();
+      type_pointer = (void *)0;
+    }
+#endif
+  }
+  return (swig_module_info *) type_pointer;
+}
+
+#if PY_MAJOR_VERSION < 2
+/* PyModule_AddObject function was introduced in Python 2.0.  The following function
+   is copied out of Python/modsupport.c in python version 2.3.4 */
+SWIGINTERN int
+PyModule_AddObject(PyObject *m, char *name, PyObject *o)
+{
+  PyObject *dict;
+  if (!PyModule_Check(m)) {
+    PyErr_SetString(PyExc_TypeError,
+		    "PyModule_AddObject() needs module as first arg");
+    return SWIG_ERROR;
+  }
+  if (!o) {
+    PyErr_SetString(PyExc_TypeError,
+		    "PyModule_AddObject() needs non-NULL value");
+    return SWIG_ERROR;
+  }
   
-  /* first check if pointer already created */
-  data = Tcl_GetVar(interp, (char *)"swig_runtime_data_type_pointer" SWIG_RUNTIME_VERSION SWIG_TYPE_TABLE_NAME, TCL_GLOBAL_ONLY);
-  if (data) {
-    SWIG_UnpackData(data, &ret, sizeof(swig_type_info **));
+  dict = PyModule_GetDict(m);
+  if (dict == NULL) {
+    /* Internal error -- modules must have a dict! */
+    PyErr_Format(PyExc_SystemError, "module '%s' has no __dict__",
+		 PyModule_GetName(m));
+    return SWIG_ERROR;
   }
+  if (PyDict_SetItemString(dict, name, o))
+    return SWIG_ERROR;
+  Py_DECREF(o);
+  return SWIG_OK;
+}
+#endif
 
-  return ret;
+SWIGRUNTIME void
+SWIG_Python_DestroyModule(void *vptr)
+{
+  swig_module_info *swig_module = (swig_module_info *) vptr;
+  swig_type_info **types = swig_module->types;
+  size_t i;
+  for (i =0; i < swig_module->size; ++i) {
+    swig_type_info *ty = types[i];
+    if (ty->owndata) {
+      PySwigClientData *data = (PySwigClientData *) ty->clientdata;
+      if (data) PySwigClientData_Del(data);
+    }
+  }
+  Py_DECREF(SWIG_This());
 }
 
 SWIGRUNTIME void
-SWIG_Tcl_SetModule(Tcl_Interp *interp, swig_module_info *module) {
-  char buf[SWIG_BUFFER_SIZE];
-  char *data;
+SWIG_Python_SetModule(swig_module_info *swig_module) {
+  static PyMethodDef swig_empty_runtime_method_table[] = { {NULL, NULL, 0, NULL} };/* Sentinel */
 
-  /* create a new pointer */
-  data = SWIG_PackData(buf, &module, sizeof(swig_type_info **));
-  *data = 0;
-  Tcl_SetVar(interp, (char *)"swig_runtime_data_type_pointer" SWIG_RUNTIME_VERSION SWIG_TYPE_TABLE_NAME, buf, 0);
-}
-
-/* -----------------------------------------------------------------------------*
- *  Object auxiliars
- * -----------------------------------------------------------------------------*/
-
-
-SWIGRUNTIME void
-SWIG_Tcl_ObjectDelete(ClientData clientData) {
-  swig_instance *si = (swig_instance *) clientData;
-  if ((si) && (si->destroy) && (SWIG_Disown(si->thisvalue))) {
-    if (si->classptr->destructor) {
-      (si->classptr->destructor)(si->thisvalue);
-    }
-  }
-  Tcl_DecrRefCount(si->thisptr);
-  free(si);
-}
-
-/* Function to invoke object methods given an instance */
-SWIGRUNTIME int
-SWIG_Tcl_MethodCommand(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST _objv[]) {
-  char *method,   *attrname;
-  swig_instance   *inst = (swig_instance *) clientData;
-  swig_method     *meth;
-  swig_attribute  *attr;
-  Tcl_Obj         *oldarg;
-  Tcl_Obj         **objv;
-  int              rcode;
-  swig_class      *cls;
-  swig_class      *cls_stack[64];
-  int              cls_stack_bi[64];
-  int              cls_stack_top = 0;
-  int              numconf = 2;
-  int              bi;
-
-  objv = (Tcl_Obj **) _objv;
-  if (objc < 2) {
-    Tcl_SetResult(interp, (char *) "wrong # args.", TCL_STATIC);
-    return TCL_ERROR;
-  }
-  method = Tcl_GetStringFromObj(objv[1],NULL);
-  if (strcmp(method,"-acquire") == 0) {
-    inst->destroy = 1;
-    SWIG_Acquire(inst->thisvalue);
-    return TCL_OK;
-  }
-  if (strcmp(method,"-disown") == 0) {
-    if (inst->destroy) {
-      SWIG_Disown(inst->thisvalue);
-    }
-    inst->destroy = 0;
-    return TCL_OK;
-  }
-  if (strcmp(method,"-delete") == 0) {
-    Tcl_DeleteCommandFromToken(interp,inst->cmdtok);
-    return TCL_OK;
-  }
-  cls_stack[cls_stack_top] = inst->classptr;
-  cls_stack_bi[cls_stack_top] = -1;
-  cls = inst->classptr;
-  while (1) {
-    bi = cls_stack_bi[cls_stack_top];
-    cls = cls_stack[cls_stack_top];
-    if (bi != -1) {
-      if (!cls->bases[bi] && cls->base_names[bi]) {
-        /* lookup and cache the base class */
-	swig_type_info *info = SWIG_TypeQueryModule(cls->module, cls->module, cls->base_names[bi]);
-	if (info) cls->bases[bi] = (swig_class *) info->clientdata;
-      }
-      cls = cls->bases[bi];
-      if (cls) {
-        cls_stack_bi[cls_stack_top]++;
-        cls_stack_top++;
-        cls_stack[cls_stack_top] = cls;
-        cls_stack_bi[cls_stack_top] = -1;
-        continue;
-      }
-    }
-    if (!cls) {
-      cls_stack_top--;
-      if (cls_stack_top < 0) break;
-      else continue;
-    }
-    cls_stack_bi[cls_stack_top]++;
-
-    meth = cls->methods;
-    /* Check for methods */
-    while (meth && meth->name) {
-      if (strcmp(meth->name,method) == 0) {
-        oldarg = objv[1];
-        objv[1] = inst->thisptr;
-        Tcl_IncrRefCount(inst->thisptr);
-        rcode = (*meth->method)(clientData,interp,objc,objv);
-        objv[1] = oldarg;
-        Tcl_DecrRefCount(inst->thisptr);
-        return rcode;
-      }
-      meth++;
-    }
-    /* Check class methods for a match */
-    if (strcmp(method,"cget") == 0) {
-      if (objc < 3) {
-        Tcl_SetResult(interp, (char *) "wrong # args.", TCL_STATIC);
-        return TCL_ERROR;
-      }
-      attrname = Tcl_GetStringFromObj(objv[2],NULL);
-      attr = cls->attributes;
-      while (attr && attr->name) {
-        if ((strcmp(attr->name, attrname) == 0) && (attr->getmethod)) {
-          oldarg = objv[1];
-          objv[1] = inst->thisptr;
-          Tcl_IncrRefCount(inst->thisptr);
-          rcode = (*attr->getmethod)(clientData,interp,2, objv);
-          objv[1] = oldarg;
-          Tcl_DecrRefCount(inst->thisptr);
-          return rcode;
-        }
-        attr++;
-      }
-      if (strcmp(attrname, "-this") == 0) {
-        Tcl_SetObjResult(interp, Tcl_DuplicateObj(inst->thisptr));
-        return TCL_OK;
-      }
-      if (strcmp(attrname, "-thisown") == 0) {
-        if (SWIG_Thisown(inst->thisvalue)) {
-          Tcl_SetResult(interp,(char*)"1",TCL_STATIC);
-        } else {
-          Tcl_SetResult(interp,(char*)"0",TCL_STATIC);
-        }
-        return TCL_OK;
-      }
-    } else if (strcmp(method, "configure") == 0) {
-      int i;
-      if (objc < 4) {
-        Tcl_SetResult(interp, (char *) "wrong # args.", TCL_STATIC);
-        return TCL_ERROR;
-      }
-      i = 2;
-      while (i < objc) {
-        attrname = Tcl_GetStringFromObj(objv[i],NULL);
-        attr = cls->attributes;
-        while (attr && attr->name) {
-          if ((strcmp(attr->name, attrname) == 0) && (attr->setmethod)) {
-            oldarg = objv[i];
-            objv[i] = inst->thisptr;
-            Tcl_IncrRefCount(inst->thisptr);
-            rcode = (*attr->setmethod)(clientData,interp,3, &objv[i-1]);
-            objv[i] = oldarg;
-            Tcl_DecrRefCount(inst->thisptr);
-            if (rcode != TCL_OK) return rcode;
-            numconf += 2;
-          }
-          attr++;
-        }
-        i+=2;
-      }
-    }
-  }
-  if (strcmp(method,"configure") == 0) {
-    if (numconf >= objc) {
-      return TCL_OK;
-    } else {
-      Tcl_SetResult(interp,(char *) "Invalid attribute name.", TCL_STATIC);
-      return TCL_ERROR;
-    }
-  }
-  if (strcmp(method,"cget") == 0) {
-    Tcl_SetResult(interp,(char *) "Invalid attribute name.", TCL_STATIC);
-    return TCL_ERROR;
-  }
-  Tcl_SetResult(interp, (char *) "Invalid method. Must be one of: configure cget -acquire -disown -delete", TCL_STATIC);
-  cls = inst->classptr;
-  bi = 0;
-  while (cls) {
-    meth = cls->methods;
-    while (meth && meth->name) {
-      char *cr = (char *) Tcl_GetStringResult(interp);
-      int meth_len = strlen(meth->name);
-      char* where = strchr(cr,':');
-      while(where) {
-        where = strstr(where, meth->name);
-        if(where) {
-          if(where[-1] == ' ' && (where[meth_len] == ' ' || where[meth_len]==0)) {
-            break;
-          } else {
-            where++;
-          }
-        }
-      }
-
-      if (!where)
-        Tcl_AppendElement(interp, (char *) meth->name);
-      meth++;
-    }
-    cls = inst->classptr->bases[bi++];
-  }
-  return TCL_ERROR;
-}
-
-/* This function takes the current result and turns it into an object command */
-SWIGRUNTIME Tcl_Obj *
-SWIG_Tcl_NewInstanceObj(Tcl_Interp *interp, void *thisvalue, swig_type_info *type, int flags) {
-  Tcl_Obj *robj = SWIG_NewPointerObj(thisvalue, type,0);
-  /* Check to see if this pointer belongs to a class or not */
-  if ((type->clientdata) && (interp)) {
-    Tcl_CmdInfo    ci;
-    char          *name;
-    name = Tcl_GetStringFromObj(robj,NULL);
-    if (!Tcl_GetCommandInfo(interp,name, &ci) || (flags)) {
-      swig_instance *newinst = (swig_instance *) malloc(sizeof(swig_instance));
-      newinst->thisptr = Tcl_DuplicateObj(robj);
-      Tcl_IncrRefCount(newinst->thisptr);
-      newinst->thisvalue = thisvalue;
-      newinst->classptr = (swig_class *) type->clientdata;
-      newinst->destroy = flags;
-      newinst->cmdtok = Tcl_CreateObjCommand(interp, Tcl_GetStringFromObj(robj,NULL), (swig_wrapper_func) SWIG_MethodCommand, (ClientData) newinst, (swig_delete_func) SWIG_ObjectDelete);
-      if (flags) {
-        SWIG_Acquire(thisvalue);
-      }
-    }
-  }
-  return robj;
-}
-
-/* Function to create objects */
-SWIGRUNTIME int
-SWIG_Tcl_ObjectConstructor(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
-  Tcl_Obj          *newObj = 0;
-  void             *thisvalue = 0;
-  swig_instance   *newinst = 0;
-  swig_class      *classptr = (swig_class *) clientData;
-  swig_wrapper     cons = 0;
-  char             *name = 0;
-  int               firstarg = 0;
-  int               thisarg = 0;
-  int               destroy = 1;
-
-  if (!classptr) {
-    Tcl_SetResult(interp, (char *) "swig: internal runtime error. No class object defined.", TCL_STATIC);
-    return TCL_ERROR;
-  }
-  cons = classptr->constructor;
-  if (objc > 1) {
-    char *s = Tcl_GetStringFromObj(objv[1],NULL);
-    if (strcmp(s,"-this") == 0) {
-      thisarg = 2;
-      cons = 0;
-    } else if (strcmp(s,"-args") == 0) {
-      firstarg = 1;
-    } else if (objc == 2) {
-      firstarg = 1;
-      name = s;
-    } else if (objc >= 3) {
-      char *s1;
-      name = s;
-      s1 = Tcl_GetStringFromObj(objv[2],NULL);
-      if (strcmp(s1,"-this") == 0) {
-	thisarg = 3;
-	cons = 0;
-      } else {
-	firstarg = 1;
-      }
-    }
-  }
-  if (cons) {
-    int result;
-    result = (*cons)(0, interp, objc-firstarg, &objv[firstarg]);
-    if (result != TCL_OK) {
-      return result;
-    }
-    newObj = Tcl_DuplicateObj(Tcl_GetObjResult(interp));
-    if (!name) name = Tcl_GetStringFromObj(newObj,NULL);
-  } else if (thisarg > 0) {
-    if (thisarg < objc) {
-      destroy = 0;
-      newObj = Tcl_DuplicateObj(objv[thisarg]);
-      if (!name) name = Tcl_GetStringFromObj(newObj,NULL);
-    } else {
-      Tcl_SetResult(interp, (char *) "wrong # args.", TCL_STATIC);
-      return TCL_ERROR;
-    }
+  PyObject *module = Py_InitModule((char*)"swig_runtime_data" SWIG_RUNTIME_VERSION,
+				   swig_empty_runtime_method_table);
+  PyObject *pointer = PyCObject_FromVoidPtr((void *) swig_module, SWIG_Python_DestroyModule);
+  if (pointer && module) {
+    PyModule_AddObject(module, (char*)"type_pointer" SWIG_TYPE_TABLE_NAME, pointer);
   } else {
-    Tcl_SetResult(interp, (char *) "No constructor available.", TCL_STATIC);
-    return TCL_ERROR;
+    Py_XDECREF(pointer);
   }
-  if (SWIG_Tcl_ConvertPtr(interp,newObj, (void **) &thisvalue, *(classptr->type), 0) != SWIG_OK) {
-    Tcl_DecrRefCount(newObj);
-    return TCL_ERROR;
-  }
-  newinst = (swig_instance *) malloc(sizeof(swig_instance));
-  newinst->thisptr = newObj;
-  Tcl_IncrRefCount(newObj);
-  newinst->thisvalue = thisvalue;
-  newinst->classptr = classptr;
-  newinst->destroy = destroy;
-  if (destroy) {
-    SWIG_Acquire(thisvalue);
-  }
-  newinst->cmdtok = Tcl_CreateObjCommand(interp,name, (swig_wrapper) SWIG_MethodCommand, (ClientData) newinst, (swig_delete_func) SWIG_ObjectDelete);
-  return TCL_OK;
 }
 
-/* -----------------------------------------------------------------------------*
- *   Get arguments 
- * -----------------------------------------------------------------------------*/
+/* The python cached type query */
+SWIGRUNTIME PyObject *
+SWIG_Python_TypeCache(void) {
+  static PyObject *SWIG_STATIC_POINTER(cache) = PyDict_New();
+  return cache;
+}
+
+SWIGRUNTIME swig_type_info *
+SWIG_Python_TypeQuery(const char *type)
+{
+  PyObject *cache = SWIG_Python_TypeCache();
+  PyObject *key = PyString_FromString(type); 
+  PyObject *obj = PyDict_GetItem(cache, key);
+  swig_type_info *descriptor;
+  if (obj) {
+    descriptor = (swig_type_info *) PyCObject_AsVoidPtr(obj);
+  } else {
+    swig_module_info *swig_module = SWIG_Python_GetModule();
+    descriptor = SWIG_TypeQueryModule(swig_module, swig_module, type);
+    if (descriptor) {
+      obj = PyCObject_FromVoidPtr(descriptor, NULL);
+      PyDict_SetItem(cache, key, obj);
+      Py_DECREF(obj);
+    }
+  }
+  Py_DECREF(key);
+  return descriptor;
+}
+
+/* 
+   For backward compatibility only
+*/
+#define SWIG_POINTER_EXCEPTION  0
+#define SWIG_arg_fail(arg)      SWIG_Python_ArgFail(arg)
+#define SWIG_MustGetPtr(p, type, argnum, flags)  SWIG_Python_MustGetPtr(p, type, argnum, flags)
+
 SWIGRUNTIME int
-SWIG_Tcl_GetArgs(Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[], const char *fmt, ...) {
-  int        argno = 0, opt = 0;
-  long       tempi;
-  double     tempd;
-  const char *c;
-  va_list    ap;
-  void      *vptr;
-  Tcl_Obj   *obj = 0;
-  swig_type_info *ty;
-
-  va_start(ap,fmt);
-  for (c = fmt; (*c && (*c != ':') && (*c != ';')); c++,argno++) {
-    if (*c == '|') {
-      opt = 1;
-      c++;
-    }
-    if (argno >= (objc-1)) {
-      if (!opt) {
-        Tcl_SetResult(interp, (char *) "Wrong number of arguments ", TCL_STATIC);
-        goto argerror;
+SWIG_Python_AddErrMesg(const char* mesg, int infront)
+{
+  if (PyErr_Occurred()) {
+    PyObject *type = 0;
+    PyObject *value = 0;
+    PyObject *traceback = 0;
+    PyErr_Fetch(&type, &value, &traceback);
+    if (value) {
+      PyObject *old_str = PyObject_Str(value);
+      Py_XINCREF(type);
+      PyErr_Clear();
+      if (infront) {
+	PyErr_Format(type, "%s %s", mesg, PyString_AsString(old_str));
       } else {
-        va_end(ap);
-        return TCL_OK;
+	PyErr_Format(type, "%s %s", PyString_AsString(old_str), mesg);
       }
+      Py_DECREF(old_str);
     }
-
-    vptr = va_arg(ap,void *);
-    if (vptr) {
-      if (isupper(*c)) {
-        obj = SWIG_Tcl_GetConstantObj(Tcl_GetStringFromObj(objv[argno+1],0));
-        if (!obj) obj = objv[argno+1];
-      } else {
-        obj = objv[argno+1];
-      }
-      switch(*c) {
-      case 'i': case 'I':
-      case 'l': case 'L':
-      case 'h': case 'H':
-      case 'b': case 'B':
-        if (Tcl_GetLongFromObj(interp,obj,&tempi) != TCL_OK) goto argerror;
-        if ((*c == 'i') || (*c == 'I')) *((int *)vptr) = (int)tempi;
-        else if ((*c == 'l') || (*c == 'L')) *((long *)vptr) = (long)tempi;
-        else if ((*c == 'h') || (*c == 'H')) *((short*)vptr) = (short)tempi;
-        else if ((*c == 'b') || (*c == 'B')) *((unsigned char *)vptr) = (unsigned char)tempi;
-        break;
-      case 'f': case 'F':
-      case 'd': case 'D':
-        if (Tcl_GetDoubleFromObj(interp,obj,&tempd) != TCL_OK) goto argerror;
-        if ((*c == 'f') || (*c == 'F')) *((float *) vptr) = (float)tempd;
-        else if ((*c == 'd') || (*c == 'D')) *((double*) vptr) = tempd;
-        break;
-      case 's': case 'S':
-        if (*(c+1) == '#') {
-          int *vlptr = (int *) va_arg(ap, void *);
-          *((char **) vptr) = Tcl_GetStringFromObj(obj, vlptr);
-          c++;
-        } else {
-          *((char **)vptr) = Tcl_GetStringFromObj(obj,NULL);
-        }
-        break;
-      case 'c': case 'C':
-        *((char *)vptr) = *(Tcl_GetStringFromObj(obj,NULL));
-        break;
-      case 'p': case 'P':
-        ty = (swig_type_info *) va_arg(ap, void *);
-        if (SWIG_Tcl_ConvertPtr(interp, obj, (void **) vptr, ty, 0) != SWIG_OK) goto argerror;
-        break;
-      case 'o': case 'O':
-        *((Tcl_Obj **)vptr) = objv[argno+1];
-        break;
-      default:
-        break;
-      }
-    }
-  }
-
-  if ((*c != ';') && ((objc-1) > argno)) {
-    Tcl_SetResult(interp, (char *) "Wrong # args.", TCL_STATIC);
-    goto argerror;
-  }
-  va_end(ap);
-  return TCL_OK;
-
- argerror:
-  {
-    char temp[32];
-    sprintf(temp,"%d", argno+1);
-    c = strchr(fmt,':');
-    if (!c) c = strchr(fmt,';');
-    if (!c) c = (char *)"";
-    Tcl_AppendResult(interp,c," argument ", temp, NULL);
-    va_end(ap);
-    return TCL_ERROR;
+    return 1;
+  } else {
+    return 0;
   }
 }
+  
+SWIGRUNTIME int
+SWIG_Python_ArgFail(int argnum)
+{
+  if (PyErr_Occurred()) {
+    /* add information about failing argument */
+    char mesg[256];
+    PyOS_snprintf(mesg, sizeof(mesg), "argument number %d:", argnum);
+    return SWIG_Python_AddErrMesg(mesg, 1);
+  } else {
+    return 0;
+  }
+}
+
+SWIGRUNTIMEINLINE const char *
+PySwigObject_GetDesc(PyObject *self)
+{
+  PySwigObject *v = (PySwigObject *)self;
+  swig_type_info *ty = v ? v->ty : 0;
+  return ty ? ty->str : (char*)"";
+}
+
+SWIGRUNTIME void
+SWIG_Python_TypeError(const char *type, PyObject *obj)
+{
+  if (type) {
+#if defined(SWIG_COBJECT_TYPES)
+    if (obj && PySwigObject_Check(obj)) {
+      const char *otype = (const char *) PySwigObject_GetDesc(obj);
+      if (otype) {
+	PyErr_Format(PyExc_TypeError, "a '%s' is expected, 'PySwigObject(%s)' is received",
+		     type, otype);
+	return;
+      }
+    } else 
+#endif      
+    {
+      const char *otype = (obj ? obj->ob_type->tp_name : 0); 
+      if (otype) {
+	PyObject *str = PyObject_Str(obj);
+	const char *cstr = str ? PyString_AsString(str) : 0;
+	if (cstr) {
+	  PyErr_Format(PyExc_TypeError, "a '%s' is expected, '%s(%s)' is received",
+		       type, otype, cstr);
+	} else {
+	  PyErr_Format(PyExc_TypeError, "a '%s' is expected, '%s' is received",
+		       type, otype);
+	}
+	Py_XDECREF(str);
+	return;
+      }
+    }   
+    PyErr_Format(PyExc_TypeError, "a '%s' is expected", type);
+  } else {
+    PyErr_Format(PyExc_TypeError, "unexpected type is received");
+  }
+}
+
+
+/* Convert a pointer value, signal an exception on a type mismatch */
+SWIGRUNTIME void *
+SWIG_Python_MustGetPtr(PyObject *obj, swig_type_info *ty, int argnum, int flags) {
+  void *result;
+  if (SWIG_Python_ConvertPtr(obj, &result, ty, flags) == -1) {
+    PyErr_Clear();
+    if (flags & SWIG_POINTER_EXCEPTION) {
+      SWIG_Python_TypeError(SWIG_TypePrettyName(ty), obj);
+      SWIG_Python_ArgFail(argnum);
+    }
+  }
+  return result;
+}
+
 
 #ifdef __cplusplus
 #if 0
@@ -1563,18 +2448,44 @@ SWIG_Tcl_GetArgs(Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[], const char
 
 /* -------- TYPES TABLE (BEGIN) -------- */
 
-#define SWIGTYPE_p_char swig_types[0]
-static swig_type_info *swig_types[2];
-static swig_module_info swig_module = {swig_types, 1, 0, 0, 0, 0};
+#define SWIGTYPE_p_FILE swig_types[0]
+#define SWIGTYPE_p_SMS_AnalFrame swig_types[1]
+#define SWIGTYPE_p_SMS_AnalParams swig_types[2]
+#define SWIGTYPE_p_SMS_ContCandidate swig_types[3]
+#define SWIGTYPE_p_SMS_Data swig_types[4]
+#define SWIGTYPE_p_SMS_Guide swig_types[5]
+#define SWIGTYPE_p_SMS_HarmCandidate swig_types[6]
+#define SWIGTYPE_p_SMS_Header swig_types[7]
+#define SWIGTYPE_p_SMS_HybParams swig_types[8]
+#define SWIGTYPE_p_SMS_Peak swig_types[9]
+#define SWIGTYPE_p_SMS_SndBuffer swig_types[10]
+#define SWIGTYPE_p_SMS_SndHeader swig_types[11]
+#define SWIGTYPE_p_SMS_SynthParams swig_types[12]
+#define SWIGTYPE_p_char swig_types[13]
+#define SWIGTYPE_p_float swig_types[14]
+#define SWIGTYPE_p_int swig_types[15]
+#define SWIGTYPE_p_p_FILE swig_types[16]
+#define SWIGTYPE_p_p_SMS_AnalFrame swig_types[17]
+#define SWIGTYPE_p_p_SMS_Header swig_types[18]
+static swig_type_info *swig_types[20];
+static swig_module_info swig_module = {swig_types, 19, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
 #define SWIG_MangledTypeQuery(name) SWIG_MangledTypeQueryModule(&swig_module, &swig_module, name)
 
 /* -------- TYPES TABLE (END) -------- */
 
-#define SWIG_init    Sms_Init
-#define SWIG_name    "sms"
-#define SWIG_prefix  ""
-#define SWIG_version "0.0"
+#if (PY_VERSION_HEX <= 0x02000000)
+# if !defined(SWIG_PYTHON_CLASSIC)
+#  error "This python version requires swig to be run with the '-classic' option"
+# endif
+#endif
+
+/*-----------------------------------------------
+              @(target):= _sms.so
+  ------------------------------------------------*/
+#define SWIG_init    init_sms
+
+#define SWIG_name    "_sms"
 
 #define SWIGVERSION 0x010331 
 #define SWIG_VERSION SWIGVERSION
@@ -1584,58 +2495,9777 @@ static swig_module_info swig_module = {swig_types, 1, 0, 0, 0, 0};
 #define SWIG_as_voidptrptr(a) ((void)SWIG_as_voidptr(*a),(void**)(a)) 
 
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-#ifdef MAC_TCL
-#pragma export on
-#endif
-SWIGEXPORT int SWIG_init(Tcl_Interp *);
-#ifdef MAC_TCL
-#pragma export off
-#endif
-#ifdef __cplusplus
-}
-#endif
-
-
-
 #define SWIG_FILE_WITH_INIT
 #include "../src/sms.h"
+/* #include "../src/sms.c"  */
+/* #include "../src/smsAnalysis.c"  */
+/* #include "../src/smsSynthesis.c"  */
+/* #include "../src/sineSynth.c"  */
+/* #include "../src/peakDetection.c"  */
+/* #include "../src/harmDetection.c"  */
+/* #include "../src/peakContinuation.c"  */
+/* #include "../src/stocAnalysis.c"  */
+/* #include "../src/getResidual.c"  */
+/* #include "../src/spectralApprox.c"  */
+/* #include "../src/spectrum.c"  */
+/* #include "../src/fixTracks.c"  */
+/* #include "../src/fourier.c"  */
+/* #include "../src/filters.c"  */
+/* #include "../src/tables.c"  */
+/* #include "../src/windows.c" */
+/* #include "../src/smsIO.c"  */
+/* #include "../src/soundIO.c"  */
+/* #include "../src/hybridize.c" */
+int sms_init( void );  
+
+
+  #define SWIG_From_long   PyInt_FromLong 
+
+
+SWIGINTERNINLINE PyObject *
+SWIG_From_int  (int value)
+{    
+  return SWIG_From_long  (value);
+}
+
+
+#include <limits.h>
+#ifndef LLONG_MIN
+# define LLONG_MIN	LONG_LONG_MIN
+#endif
+#ifndef LLONG_MAX
+# define LLONG_MAX	LONG_LONG_MAX
+#endif
+#ifndef ULLONG_MAX
+# define ULLONG_MAX	ULONG_LONG_MAX
+#endif
+
+
+SWIGINTERN int
+SWIG_AsVal_double (PyObject *obj, double *val)
+{
+  int res = SWIG_TypeError;
+  if (PyFloat_Check(obj)) {
+    if (val) *val = PyFloat_AsDouble(obj);
+    return SWIG_OK;
+  } else if (PyInt_Check(obj)) {
+    if (val) *val = PyInt_AsLong(obj);
+    return SWIG_OK;
+  } else if (PyLong_Check(obj)) {
+    double v = PyLong_AsDouble(obj);
+    if (!PyErr_Occurred()) {
+      if (val) *val = v;
+      return SWIG_OK;
+    } else {
+      PyErr_Clear();
+    }
+  }
+#ifdef SWIG_PYTHON_CAST_MODE
+  {
+    int dispatch = 0;
+    double d = PyFloat_AsDouble(obj);
+    if (!PyErr_Occurred()) {
+      if (val) *val = d;
+      return SWIG_AddCast(SWIG_OK);
+    } else {
+      PyErr_Clear();
+    }
+    if (!dispatch) {
+      long v = PyLong_AsLong(obj);
+      if (!PyErr_Occurred()) {
+	if (val) *val = v;
+	return SWIG_AddCast(SWIG_AddCast(SWIG_OK));
+      } else {
+	PyErr_Clear();
+      }
+    }
+  }
+#endif
+  return res;
+}
+
+
+#include <float.h>
+
+
+#include <math.h>
+
+
+SWIGINTERNINLINE int
+SWIG_CanCastAsInteger(double *d, double min, double max) {
+  double x = *d;
+  if ((min <= x && x <= max)) {
+   double fx = floor(x);
+   double cx = ceil(x);
+   double rd =  ((x - fx) < 0.5) ? fx : cx; /* simple rint */
+   if ((errno == EDOM) || (errno == ERANGE)) {
+     errno = 0;
+   } else {
+     double summ, reps, diff;
+     if (rd < x) {
+       diff = x - rd;
+     } else if (rd > x) {
+       diff = rd - x;
+     } else {
+       return 1;
+     }
+     summ = rd + x;
+     reps = diff/summ;
+     if (reps < 8*DBL_EPSILON) {
+       *d = rd;
+       return 1;
+     }
+   }
+  }
+  return 0;
+}
+
+
+SWIGINTERN int
+SWIG_AsVal_long (PyObject *obj, long* val)
+{
+  if (PyInt_Check(obj)) {
+    if (val) *val = PyInt_AsLong(obj);
+    return SWIG_OK;
+  } else if (PyLong_Check(obj)) {
+    long v = PyLong_AsLong(obj);
+    if (!PyErr_Occurred()) {
+      if (val) *val = v;
+      return SWIG_OK;
+    } else {
+      PyErr_Clear();
+    }
+  }
+#ifdef SWIG_PYTHON_CAST_MODE
+  {
+    int dispatch = 0;
+    long v = PyInt_AsLong(obj);
+    if (!PyErr_Occurred()) {
+      if (val) *val = v;
+      return SWIG_AddCast(SWIG_OK);
+    } else {
+      PyErr_Clear();
+    }
+    if (!dispatch) {
+      double d;
+      int res = SWIG_AddCast(SWIG_AsVal_double (obj,&d));
+      if (SWIG_IsOK(res) && SWIG_CanCastAsInteger(&d, LONG_MIN, LONG_MAX)) {
+	if (val) *val = (long)(d);
+	return res;
+      }
+    }
+  }
+#endif
+  return SWIG_TypeError;
+}
+
+
+SWIGINTERN int
+SWIG_AsVal_int (PyObject * obj, int *val)
+{
+  long v;
+  int res = SWIG_AsVal_long (obj, &v);
+  if (SWIG_IsOK(res)) {
+    if ((v < INT_MIN || v > INT_MAX)) {
+      return SWIG_OverflowError;
+    } else {
+      if (val) *val = (int)(v);
+    }
+  }  
+  return res;
+}
+
+
+SWIGINTERN int
+SWIG_AsVal_float (PyObject * obj, float *val)
+{
+  double v;
+  int res = SWIG_AsVal_double (obj, &v);
+  if (SWIG_IsOK(res)) {
+    if ((v < -FLT_MAX || v > FLT_MAX)) {
+      return SWIG_OverflowError;
+    } else {
+      if (val) *val = (float)(v);
+    }
+  }  
+  return res;
+}
+
+
+  #define SWIG_From_double   PyFloat_FromDouble 
+
+
+SWIGINTERNINLINE PyObject *
+SWIG_From_float  (float value)
+{    
+  return SWIG_From_double  (value);
+}
+
+
+SWIGINTERN swig_type_info*
+SWIG_pchar_descriptor(void)
+{
+  static int init = 0;
+  static swig_type_info* info = 0;
+  if (!init) {
+    info = SWIG_TypeQuery("_p_char");
+    init = 1;
+  }
+  return info;
+}
+
+
+SWIGINTERN int
+SWIG_AsCharPtrAndSize(PyObject *obj, char** cptr, size_t* psize, int *alloc)
+{
+  if (PyString_Check(obj)) {
+    char *cstr; Py_ssize_t len;
+    PyString_AsStringAndSize(obj, &cstr, &len);
+    if (cptr)  {
+      if (alloc) {
+	/* 
+	   In python the user should not be able to modify the inner
+	   string representation. To warranty that, if you define
+	   SWIG_PYTHON_SAFE_CSTRINGS, a new/copy of the python string
+	   buffer is always returned.
+
+	   The default behavior is just to return the pointer value,
+	   so, be careful.
+	*/ 
+#if defined(SWIG_PYTHON_SAFE_CSTRINGS)
+	if (*alloc != SWIG_OLDOBJ) 
+#else
+	if (*alloc == SWIG_NEWOBJ) 
+#endif
+	  {
+	    *cptr = (char *)memcpy((char *)malloc((len + 1)*sizeof(char)), cstr, sizeof(char)*(len + 1));
+	    *alloc = SWIG_NEWOBJ;
+	  }
+	else {
+	  *cptr = cstr;
+	  *alloc = SWIG_OLDOBJ;
+	}
+      } else {
+	*cptr = PyString_AsString(obj);
+      }
+    }
+    if (psize) *psize = len + 1;
+    return SWIG_OK;
+  } else {
+    swig_type_info* pchar_descriptor = SWIG_pchar_descriptor();
+    if (pchar_descriptor) {
+      void* vptr = 0;
+      if (SWIG_ConvertPtr(obj, &vptr, pchar_descriptor, 0) == SWIG_OK) {
+	if (cptr) *cptr = (char *) vptr;
+	if (psize) *psize = vptr ? (strlen((char *)vptr) + 1) : 0;
+	if (alloc) *alloc = SWIG_OLDOBJ;
+	return SWIG_OK;
+      }
+    }
+  }
+  return SWIG_TypeError;
+}
+
+
+
+
+
+SWIGINTERNINLINE PyObject *
+SWIG_FromCharPtrAndSize(const char* carray, size_t size)
+{
+  if (carray) {
+    if (size > INT_MAX) {
+      swig_type_info* pchar_descriptor = SWIG_pchar_descriptor();
+      return pchar_descriptor ? 
+	SWIG_NewPointerObj((char *)(carray), pchar_descriptor, 0) : SWIG_Py_Void();
+    } else {
+      return PyString_FromStringAndSize(carray, (int)(size));
+    }
+  } else {
+    return SWIG_Py_Void();
+  }
+}
+
+
+SWIGINTERNINLINE PyObject * 
+SWIG_FromCharPtr(const char *cptr)
+{ 
+  return SWIG_FromCharPtrAndSize(cptr, (cptr ? strlen(cptr) : 0));
+}
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+SWIGINTERN PyObject *_wrap_SMS_Header_iSmsMagic_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_iSmsMagic_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iSmsMagic_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_iSmsMagic_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iSmsMagic = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
 
-static swig_command_info swig_commands[] = {
-    {0, 0, 0}
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iSmsMagic_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_iSmsMagic_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iSmsMagic_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int) ((arg1)->iSmsMagic);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iHeadBSize_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_iHeadBSize_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iHeadBSize_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_iHeadBSize_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iHeadBSize = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iHeadBSize_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_iHeadBSize_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iHeadBSize_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int) ((arg1)->iHeadBSize);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_nFrames_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_nFrames_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_nFrames_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_nFrames_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->nFrames = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_nFrames_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_nFrames_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_nFrames_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int) ((arg1)->nFrames);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iFrameBSize_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_iFrameBSize_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iFrameBSize_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_iFrameBSize_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iFrameBSize = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iFrameBSize_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_iFrameBSize_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iFrameBSize_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int) ((arg1)->iFrameBSize);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iFormat_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_iFormat_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iFormat_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_iFormat_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iFormat = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iFormat_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_iFormat_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iFormat_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int) ((arg1)->iFormat);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iFrameRate_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_iFrameRate_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iFrameRate_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_iFrameRate_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iFrameRate = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iFrameRate_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_iFrameRate_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iFrameRate_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int) ((arg1)->iFrameRate);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iStochasticType_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_iStochasticType_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iStochasticType_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_iStochasticType_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iStochasticType = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iStochasticType_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_iStochasticType_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iStochasticType_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int) ((arg1)->iStochasticType);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_nTracks_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_nTracks_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_nTracks_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_nTracks_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->nTracks = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_nTracks_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_nTracks_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_nTracks_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int) ((arg1)->nTracks);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_nStochasticCoeff_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_nStochasticCoeff_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_nStochasticCoeff_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_nStochasticCoeff_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->nStochasticCoeff = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_nStochasticCoeff_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_nStochasticCoeff_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_nStochasticCoeff_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int) ((arg1)->nStochasticCoeff);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_fAmplitude_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_fAmplitude_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_fAmplitude_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_fAmplitude_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fAmplitude = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_fAmplitude_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_fAmplitude_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_fAmplitude_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (float) ((arg1)->fAmplitude);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_fFrequency_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_fFrequency_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_fFrequency_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_fFrequency_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fFrequency = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_fFrequency_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_fFrequency_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_fFrequency_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (float) ((arg1)->fFrequency);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iOriginalSRate_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_iOriginalSRate_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iOriginalSRate_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_iOriginalSRate_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iOriginalSRate = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iOriginalSRate_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_iOriginalSRate_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iOriginalSRate_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int) ((arg1)->iOriginalSRate);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iBegSteadyState_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_iBegSteadyState_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iBegSteadyState_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_iBegSteadyState_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iBegSteadyState = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iBegSteadyState_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_iBegSteadyState_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iBegSteadyState_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int) ((arg1)->iBegSteadyState);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iEndSteadyState_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_iEndSteadyState_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iEndSteadyState_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_iEndSteadyState_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iEndSteadyState = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_iEndSteadyState_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_iEndSteadyState_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_iEndSteadyState_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int) ((arg1)->iEndSteadyState);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_fResidualPerc_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_fResidualPerc_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_fResidualPerc_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_fResidualPerc_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fResidualPerc = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_fResidualPerc_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_fResidualPerc_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_fResidualPerc_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (float) ((arg1)->fResidualPerc);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_nLoopRecords_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_nLoopRecords_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_nLoopRecords_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_nLoopRecords_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->nLoopRecords = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_nLoopRecords_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_nLoopRecords_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_nLoopRecords_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int) ((arg1)->nLoopRecords);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_nSpecEnvelopePoints_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_nSpecEnvelopePoints_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_nSpecEnvelopePoints_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_nSpecEnvelopePoints_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->nSpecEnvelopePoints = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_nSpecEnvelopePoints_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_nSpecEnvelopePoints_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_nSpecEnvelopePoints_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int) ((arg1)->nSpecEnvelopePoints);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_nTextCharacters_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_nTextCharacters_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_nTextCharacters_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Header_nTextCharacters_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->nTextCharacters = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_nTextCharacters_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_nTextCharacters_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_nTextCharacters_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int) ((arg1)->nTextCharacters);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_pILoopRecords_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int *arg2 = (int *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_pILoopRecords_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_pILoopRecords_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_int, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_Header_pILoopRecords_set" "', argument " "2"" of type '" "int *""'"); 
+  }
+  arg2 = (int *)(argp2);
+  if (arg1) (arg1)->pILoopRecords = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_pILoopRecords_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_pILoopRecords_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_pILoopRecords_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int *) ((arg1)->pILoopRecords);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_int, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_pFSpectralEnvelope_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  float *arg2 = (float *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_pFSpectralEnvelope_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_pFSpectralEnvelope_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_Header_pFSpectralEnvelope_set" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  if (arg1) (arg1)->pFSpectralEnvelope = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_pFSpectralEnvelope_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  float *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_pFSpectralEnvelope_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_pFSpectralEnvelope_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (float *) ((arg1)->pFSpectralEnvelope);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_float, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_pChTextCharacters_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  char *arg2 = (char *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 ;
+  char *buf2 = 0 ;
+  int alloc2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Header_pChTextCharacters_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_pChTextCharacters_set" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  res2 = SWIG_AsCharPtrAndSize(obj1, &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_Header_pChTextCharacters_set" "', argument " "2"" of type '" "char *""'");
+  }
+  arg2 = (char *)(buf2);
+  if (arg1->pChTextCharacters) free((char*)arg1->pChTextCharacters);
+  if (arg2) {
+    size_t size = strlen((const char *)(arg2)) + 1;
+    arg1->pChTextCharacters = (char *)(char *)memcpy((char *)malloc((size)*sizeof(char)), (const char *)(arg2), sizeof(char)*(size));
+  } else {
+    arg1->pChTextCharacters = 0;
+  }
+  resultobj = SWIG_Py_Void();
+  if (alloc2 == SWIG_NEWOBJ) free((char*)buf2);
+  return resultobj;
+fail:
+  if (alloc2 == SWIG_NEWOBJ) free((char*)buf2);
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Header_pChTextCharacters_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  char *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Header_pChTextCharacters_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Header_pChTextCharacters_get" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (char *) ((arg1)->pChTextCharacters);
+  resultobj = SWIG_FromCharPtr((const char *)result);
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_SMS_Header(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)":new_SMS_Header")) SWIG_fail;
+  result = (SMS_Header *)(SMS_Header *) calloc(1, sizeof(SMS_Header));
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_Header, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_SMS_Header(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_SMS_Header",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SMS_Header" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  free((char *) arg1);
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *SMS_Header_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O|swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_SMS_Header, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *_wrap_SMS_SndHeader_nSamples_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndHeader *arg1 = (SMS_SndHeader *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SndHeader_nSamples_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndHeader, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SndHeader_nSamples_set" "', argument " "1"" of type '" "SMS_SndHeader *""'"); 
+  }
+  arg1 = (SMS_SndHeader *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_SndHeader_nSamples_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->nSamples = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SndHeader_nSamples_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndHeader *arg1 = (SMS_SndHeader *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SndHeader_nSamples_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndHeader, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SndHeader_nSamples_get" "', argument " "1"" of type '" "SMS_SndHeader *""'"); 
+  }
+  arg1 = (SMS_SndHeader *)(argp1);
+  result = (int) ((arg1)->nSamples);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SndHeader_iSamplingRate_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndHeader *arg1 = (SMS_SndHeader *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SndHeader_iSamplingRate_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndHeader, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SndHeader_iSamplingRate_set" "', argument " "1"" of type '" "SMS_SndHeader *""'"); 
+  }
+  arg1 = (SMS_SndHeader *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_SndHeader_iSamplingRate_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iSamplingRate = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SndHeader_iSamplingRate_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndHeader *arg1 = (SMS_SndHeader *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SndHeader_iSamplingRate_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndHeader, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SndHeader_iSamplingRate_get" "', argument " "1"" of type '" "SMS_SndHeader *""'"); 
+  }
+  arg1 = (SMS_SndHeader *)(argp1);
+  result = (int) ((arg1)->iSamplingRate);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SndHeader_channelCount_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndHeader *arg1 = (SMS_SndHeader *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SndHeader_channelCount_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndHeader, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SndHeader_channelCount_set" "', argument " "1"" of type '" "SMS_SndHeader *""'"); 
+  }
+  arg1 = (SMS_SndHeader *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_SndHeader_channelCount_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->channelCount = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SndHeader_channelCount_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndHeader *arg1 = (SMS_SndHeader *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SndHeader_channelCount_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndHeader, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SndHeader_channelCount_get" "', argument " "1"" of type '" "SMS_SndHeader *""'"); 
+  }
+  arg1 = (SMS_SndHeader *)(argp1);
+  result = (int) ((arg1)->channelCount);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SndHeader_sizeHeader_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndHeader *arg1 = (SMS_SndHeader *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SndHeader_sizeHeader_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndHeader, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SndHeader_sizeHeader_set" "', argument " "1"" of type '" "SMS_SndHeader *""'"); 
+  }
+  arg1 = (SMS_SndHeader *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_SndHeader_sizeHeader_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->sizeHeader = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SndHeader_sizeHeader_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndHeader *arg1 = (SMS_SndHeader *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SndHeader_sizeHeader_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndHeader, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SndHeader_sizeHeader_get" "', argument " "1"" of type '" "SMS_SndHeader *""'"); 
+  }
+  arg1 = (SMS_SndHeader *)(argp1);
+  result = (int) ((arg1)->sizeHeader);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_SMS_SndHeader(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndHeader *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)":new_SMS_SndHeader")) SWIG_fail;
+  result = (SMS_SndHeader *)(SMS_SndHeader *) calloc(1, sizeof(SMS_SndHeader));
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_SndHeader, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_SMS_SndHeader(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndHeader *arg1 = (SMS_SndHeader *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_SMS_SndHeader",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndHeader, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SMS_SndHeader" "', argument " "1"" of type '" "SMS_SndHeader *""'"); 
+  }
+  arg1 = (SMS_SndHeader *)(argp1);
+  free((char *) arg1);
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *SMS_SndHeader_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O|swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_SMS_SndHeader, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *_wrap_SMS_Data_pSmsData_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  float *arg2 = (float *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Data_pSmsData_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_pSmsData_set" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_Data_pSmsData_set" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  if (arg1) (arg1)->pSmsData = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_pSmsData_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  float *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Data_pSmsData_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_pSmsData_get" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  result = (float *) ((arg1)->pSmsData);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_float, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_sizeData_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Data_sizeData_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_sizeData_set" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Data_sizeData_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->sizeData = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_sizeData_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Data_sizeData_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_sizeData_get" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  result = (int) ((arg1)->sizeData);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_pFSinFreq_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  float *arg2 = (float *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Data_pFSinFreq_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_pFSinFreq_set" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_Data_pFSinFreq_set" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  if (arg1) (arg1)->pFSinFreq = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_pFSinFreq_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  float *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Data_pFSinFreq_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_pFSinFreq_get" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  result = (float *) ((arg1)->pFSinFreq);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_float, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_pFSinAmp_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  float *arg2 = (float *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Data_pFSinAmp_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_pFSinAmp_set" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_Data_pFSinAmp_set" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  if (arg1) (arg1)->pFSinAmp = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_pFSinAmp_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  float *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Data_pFSinAmp_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_pFSinAmp_get" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  result = (float *) ((arg1)->pFSinAmp);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_float, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_pFSinPha_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  float *arg2 = (float *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Data_pFSinPha_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_pFSinPha_set" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_Data_pFSinPha_set" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  if (arg1) (arg1)->pFSinPha = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_pFSinPha_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  float *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Data_pFSinPha_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_pFSinPha_get" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  result = (float *) ((arg1)->pFSinPha);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_float, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_nTracks_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Data_nTracks_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_nTracks_set" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Data_nTracks_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->nTracks = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_nTracks_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Data_nTracks_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_nTracks_get" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  result = (int) ((arg1)->nTracks);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_pFStocGain_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  float *arg2 = (float *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Data_pFStocGain_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_pFStocGain_set" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_Data_pFStocGain_set" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  if (arg1) (arg1)->pFStocGain = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_pFStocGain_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  float *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Data_pFStocGain_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_pFStocGain_get" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  result = (float *) ((arg1)->pFStocGain);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_float, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_pFStocCoeff_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  float *arg2 = (float *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Data_pFStocCoeff_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_pFStocCoeff_set" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_Data_pFStocCoeff_set" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  if (arg1) (arg1)->pFStocCoeff = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_pFStocCoeff_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  float *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Data_pFStocCoeff_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_pFStocCoeff_get" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  result = (float *) ((arg1)->pFStocCoeff);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_float, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_nCoeff_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Data_nCoeff_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_nCoeff_set" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Data_nCoeff_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->nCoeff = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Data_nCoeff_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Data_nCoeff_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Data_nCoeff_get" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  result = (int) ((arg1)->nCoeff);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_SMS_Data(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)":new_SMS_Data")) SWIG_fail;
+  result = (SMS_Data *)(SMS_Data *) calloc(1, sizeof(SMS_Data));
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_Data, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_SMS_Data(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_SMS_Data",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SMS_Data" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  free((char *) arg1);
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *SMS_Data_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O|swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_SMS_Data, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *_wrap_SMS_SndBuffer_pFBuffer_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndBuffer *arg1 = (SMS_SndBuffer *) 0 ;
+  float *arg2 = (float *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SndBuffer_pFBuffer_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndBuffer, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SndBuffer_pFBuffer_set" "', argument " "1"" of type '" "SMS_SndBuffer *""'"); 
+  }
+  arg1 = (SMS_SndBuffer *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_SndBuffer_pFBuffer_set" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  if (arg1) (arg1)->pFBuffer = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SndBuffer_pFBuffer_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndBuffer *arg1 = (SMS_SndBuffer *) 0 ;
+  float *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SndBuffer_pFBuffer_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndBuffer, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SndBuffer_pFBuffer_get" "', argument " "1"" of type '" "SMS_SndBuffer *""'"); 
+  }
+  arg1 = (SMS_SndBuffer *)(argp1);
+  result = (float *) ((arg1)->pFBuffer);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_float, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SndBuffer_sizeBuffer_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndBuffer *arg1 = (SMS_SndBuffer *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SndBuffer_sizeBuffer_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndBuffer, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SndBuffer_sizeBuffer_set" "', argument " "1"" of type '" "SMS_SndBuffer *""'"); 
+  }
+  arg1 = (SMS_SndBuffer *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_SndBuffer_sizeBuffer_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->sizeBuffer = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SndBuffer_sizeBuffer_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndBuffer *arg1 = (SMS_SndBuffer *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SndBuffer_sizeBuffer_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndBuffer, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SndBuffer_sizeBuffer_get" "', argument " "1"" of type '" "SMS_SndBuffer *""'"); 
+  }
+  arg1 = (SMS_SndBuffer *)(argp1);
+  result = (int) ((arg1)->sizeBuffer);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SndBuffer_iMarker_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndBuffer *arg1 = (SMS_SndBuffer *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SndBuffer_iMarker_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndBuffer, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SndBuffer_iMarker_set" "', argument " "1"" of type '" "SMS_SndBuffer *""'"); 
+  }
+  arg1 = (SMS_SndBuffer *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_SndBuffer_iMarker_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iMarker = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SndBuffer_iMarker_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndBuffer *arg1 = (SMS_SndBuffer *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SndBuffer_iMarker_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndBuffer, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SndBuffer_iMarker_get" "', argument " "1"" of type '" "SMS_SndBuffer *""'"); 
+  }
+  arg1 = (SMS_SndBuffer *)(argp1);
+  result = (int) ((arg1)->iMarker);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SndBuffer_iFirstGood_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndBuffer *arg1 = (SMS_SndBuffer *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SndBuffer_iFirstGood_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndBuffer, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SndBuffer_iFirstGood_set" "', argument " "1"" of type '" "SMS_SndBuffer *""'"); 
+  }
+  arg1 = (SMS_SndBuffer *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_SndBuffer_iFirstGood_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iFirstGood = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SndBuffer_iFirstGood_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndBuffer *arg1 = (SMS_SndBuffer *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SndBuffer_iFirstGood_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndBuffer, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SndBuffer_iFirstGood_get" "', argument " "1"" of type '" "SMS_SndBuffer *""'"); 
+  }
+  arg1 = (SMS_SndBuffer *)(argp1);
+  result = (int) ((arg1)->iFirstGood);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_SMS_SndBuffer(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndBuffer *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)":new_SMS_SndBuffer")) SWIG_fail;
+  result = (SMS_SndBuffer *)(SMS_SndBuffer *) calloc(1, sizeof(SMS_SndBuffer));
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_SndBuffer, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_SMS_SndBuffer(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndBuffer *arg1 = (SMS_SndBuffer *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_SMS_SndBuffer",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndBuffer, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SMS_SndBuffer" "', argument " "1"" of type '" "SMS_SndBuffer *""'"); 
+  }
+  arg1 = (SMS_SndBuffer *)(argp1);
+  free((char *) arg1);
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *SMS_SndBuffer_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O|swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_SMS_SndBuffer, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *_wrap_SMS_Peak_fFreq_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Peak *arg1 = (SMS_Peak *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Peak_fFreq_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Peak, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Peak_fFreq_set" "', argument " "1"" of type '" "SMS_Peak *""'"); 
+  }
+  arg1 = (SMS_Peak *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Peak_fFreq_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fFreq = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Peak_fFreq_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Peak *arg1 = (SMS_Peak *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Peak_fFreq_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Peak, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Peak_fFreq_get" "', argument " "1"" of type '" "SMS_Peak *""'"); 
+  }
+  arg1 = (SMS_Peak *)(argp1);
+  result = (float) ((arg1)->fFreq);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Peak_fMag_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Peak *arg1 = (SMS_Peak *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Peak_fMag_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Peak, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Peak_fMag_set" "', argument " "1"" of type '" "SMS_Peak *""'"); 
+  }
+  arg1 = (SMS_Peak *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Peak_fMag_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fMag = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Peak_fMag_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Peak *arg1 = (SMS_Peak *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Peak_fMag_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Peak, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Peak_fMag_get" "', argument " "1"" of type '" "SMS_Peak *""'"); 
+  }
+  arg1 = (SMS_Peak *)(argp1);
+  result = (float) ((arg1)->fMag);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Peak_fPhase_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Peak *arg1 = (SMS_Peak *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Peak_fPhase_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Peak, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Peak_fPhase_set" "', argument " "1"" of type '" "SMS_Peak *""'"); 
+  }
+  arg1 = (SMS_Peak *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Peak_fPhase_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fPhase = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Peak_fPhase_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Peak *arg1 = (SMS_Peak *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Peak_fPhase_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Peak, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Peak_fPhase_get" "', argument " "1"" of type '" "SMS_Peak *""'"); 
+  }
+  arg1 = (SMS_Peak *)(argp1);
+  result = (float) ((arg1)->fPhase);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_SMS_Peak(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Peak *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)":new_SMS_Peak")) SWIG_fail;
+  result = (SMS_Peak *)(SMS_Peak *) calloc(1, sizeof(SMS_Peak));
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_Peak, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_SMS_Peak(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Peak *arg1 = (SMS_Peak *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_SMS_Peak",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Peak, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SMS_Peak" "', argument " "1"" of type '" "SMS_Peak *""'"); 
+  }
+  arg1 = (SMS_Peak *)(argp1);
+  free((char *) arg1);
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *SMS_Peak_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O|swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_SMS_Peak, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *_wrap_SMS_AnalFrame_iFrameSample_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalFrame_iFrameSample_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalFrame_iFrameSample_set" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalFrame_iFrameSample_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iFrameSample = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalFrame_iFrameSample_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalFrame_iFrameSample_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalFrame_iFrameSample_get" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  result = (int) ((arg1)->iFrameSample);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalFrame_iFrameSize_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalFrame_iFrameSize_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalFrame_iFrameSize_set" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalFrame_iFrameSize_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iFrameSize = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalFrame_iFrameSize_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalFrame_iFrameSize_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalFrame_iFrameSize_get" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  result = (int) ((arg1)->iFrameSize);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalFrame_iFrameNum_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalFrame_iFrameNum_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalFrame_iFrameNum_set" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalFrame_iFrameNum_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iFrameNum = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalFrame_iFrameNum_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalFrame_iFrameNum_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalFrame_iFrameNum_get" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  result = (int) ((arg1)->iFrameNum);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalFrame_pSpectralPeaks_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  SMS_Peak *arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalFrame_pSpectralPeaks_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalFrame_pSpectralPeaks_set" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_Peak, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_AnalFrame_pSpectralPeaks_set" "', argument " "2"" of type '" "SMS_Peak [200]""'"); 
+  } 
+  arg2 = (SMS_Peak *)(argp2);
+  {
+    if (arg2) {
+      size_t ii = 0;
+      for (; ii < (size_t)200; ++ii) arg1->pSpectralPeaks[ii] = arg2[ii];
+    } else {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in variable '""pSpectralPeaks""' of type '""SMS_Peak [200]""'");
+    }
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalFrame_pSpectralPeaks_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  SMS_Peak *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalFrame_pSpectralPeaks_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalFrame_pSpectralPeaks_get" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  result = (SMS_Peak *)(SMS_Peak *) ((arg1)->pSpectralPeaks);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_Peak, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalFrame_nPeaks_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalFrame_nPeaks_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalFrame_nPeaks_set" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalFrame_nPeaks_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->nPeaks = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalFrame_nPeaks_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalFrame_nPeaks_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalFrame_nPeaks_get" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  result = (int) ((arg1)->nPeaks);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalFrame_fFundamental_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalFrame_fFundamental_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalFrame_fFundamental_set" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalFrame_fFundamental_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fFundamental = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalFrame_fFundamental_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalFrame_fFundamental_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalFrame_fFundamental_get" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  result = (float) ((arg1)->fFundamental);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalFrame_deterministic_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  SMS_Data *arg2 = (SMS_Data *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalFrame_deterministic_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalFrame_deterministic_set" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_AnalFrame_deterministic_set" "', argument " "2"" of type '" "SMS_Data *""'"); 
+  }
+  arg2 = (SMS_Data *)(argp2);
+  if (arg1) (arg1)->deterministic = *arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalFrame_deterministic_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  SMS_Data *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalFrame_deterministic_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalFrame_deterministic_get" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  result = (SMS_Data *)& ((arg1)->deterministic);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_Data, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalFrame_iStatus_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalFrame_iStatus_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalFrame_iStatus_set" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalFrame_iStatus_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iStatus = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalFrame_iStatus_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalFrame_iStatus_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalFrame_iStatus_get" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  result = (int) ((arg1)->iStatus);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_SMS_AnalFrame(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)":new_SMS_AnalFrame")) SWIG_fail;
+  result = (SMS_AnalFrame *)(SMS_AnalFrame *) calloc(1, sizeof(SMS_AnalFrame));
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_AnalFrame, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_SMS_AnalFrame(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_SMS_AnalFrame",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SMS_AnalFrame" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  free((char *) arg1);
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *SMS_AnalFrame_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O|swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_SMS_AnalFrame, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iDebugMode_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_iDebugMode_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iDebugMode_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_iDebugMode_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iDebugMode = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iDebugMode_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_iDebugMode_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iDebugMode_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->iDebugMode);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iFormat_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_iFormat_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iFormat_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_iFormat_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iFormat = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iFormat_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_iFormat_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iFormat_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->iFormat);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iFrameRate_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_iFrameRate_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iFrameRate_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_iFrameRate_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iFrameRate = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iFrameRate_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_iFrameRate_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iFrameRate_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->iFrameRate);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iStochasticType_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_iStochasticType_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iStochasticType_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_iStochasticType_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iStochasticType = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iStochasticType_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_iStochasticType_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iStochasticType_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->iStochasticType);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_nStochasticCoeff_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_nStochasticCoeff_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_nStochasticCoeff_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_nStochasticCoeff_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->nStochasticCoeff = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_nStochasticCoeff_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_nStochasticCoeff_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_nStochasticCoeff_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->nStochasticCoeff);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fLowestFundamental_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_fLowestFundamental_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fLowestFundamental_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_fLowestFundamental_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fLowestFundamental = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fLowestFundamental_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_fLowestFundamental_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fLowestFundamental_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (float) ((arg1)->fLowestFundamental);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fHighestFundamental_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_fHighestFundamental_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fHighestFundamental_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_fHighestFundamental_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fHighestFundamental = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fHighestFundamental_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_fHighestFundamental_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fHighestFundamental_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (float) ((arg1)->fHighestFundamental);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fDefaultFundamental_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_fDefaultFundamental_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fDefaultFundamental_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_fDefaultFundamental_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fDefaultFundamental = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fDefaultFundamental_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_fDefaultFundamental_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fDefaultFundamental_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (float) ((arg1)->fDefaultFundamental);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fPeakContToGuide_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_fPeakContToGuide_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fPeakContToGuide_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_fPeakContToGuide_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fPeakContToGuide = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fPeakContToGuide_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_fPeakContToGuide_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fPeakContToGuide_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (float) ((arg1)->fPeakContToGuide);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fFundContToGuide_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_fFundContToGuide_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fFundContToGuide_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_fFundContToGuide_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fFundContToGuide = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fFundContToGuide_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_fFundContToGuide_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fFundContToGuide_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (float) ((arg1)->fFundContToGuide);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fFreqDeviation_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_fFreqDeviation_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fFreqDeviation_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_fFreqDeviation_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fFreqDeviation = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fFreqDeviation_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_fFreqDeviation_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fFreqDeviation_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (float) ((arg1)->fFreqDeviation);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iSamplingRate_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_iSamplingRate_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iSamplingRate_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_iSamplingRate_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iSamplingRate = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iSamplingRate_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_iSamplingRate_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iSamplingRate_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->iSamplingRate);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iDefaultSizeWindow_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_iDefaultSizeWindow_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iDefaultSizeWindow_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_iDefaultSizeWindow_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iDefaultSizeWindow = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iDefaultSizeWindow_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_iDefaultSizeWindow_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iDefaultSizeWindow_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->iDefaultSizeWindow);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_sizeHop_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_sizeHop_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_sizeHop_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_sizeHop_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->sizeHop = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_sizeHop_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_sizeHop_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_sizeHop_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->sizeHop);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fSizeWindow_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_fSizeWindow_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fSizeWindow_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_fSizeWindow_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fSizeWindow = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fSizeWindow_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_fSizeWindow_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fSizeWindow_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (float) ((arg1)->fSizeWindow);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_nGuides_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_nGuides_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_nGuides_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_nGuides_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->nGuides = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_nGuides_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_nGuides_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_nGuides_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->nGuides);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iCleanTracks_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_iCleanTracks_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iCleanTracks_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_iCleanTracks_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iCleanTracks = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iCleanTracks_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_iCleanTracks_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iCleanTracks_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->iCleanTracks);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fMinRefHarmMag_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_fMinRefHarmMag_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fMinRefHarmMag_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_fMinRefHarmMag_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fMinRefHarmMag = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fMinRefHarmMag_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_fMinRefHarmMag_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fMinRefHarmMag_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (float) ((arg1)->fMinRefHarmMag);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fRefHarmMagDiffFromMax_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_fRefHarmMagDiffFromMax_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fRefHarmMagDiffFromMax_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_fRefHarmMagDiffFromMax_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fRefHarmMagDiffFromMax = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fRefHarmMagDiffFromMax_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_fRefHarmMagDiffFromMax_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fRefHarmMagDiffFromMax_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (float) ((arg1)->fRefHarmMagDiffFromMax);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iRefHarmonic_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_iRefHarmonic_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iRefHarmonic_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_iRefHarmonic_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iRefHarmonic = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iRefHarmonic_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_iRefHarmonic_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iRefHarmonic_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->iRefHarmonic);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iMinTrackLength_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_iMinTrackLength_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iMinTrackLength_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_iMinTrackLength_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iMinTrackLength = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iMinTrackLength_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_iMinTrackLength_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iMinTrackLength_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->iMinTrackLength);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iMaxSleepingTime_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_iMaxSleepingTime_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iMaxSleepingTime_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_iMaxSleepingTime_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iMaxSleepingTime = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iMaxSleepingTime_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_iMaxSleepingTime_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iMaxSleepingTime_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->iMaxSleepingTime);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fHighestFreq_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_fHighestFreq_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fHighestFreq_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_fHighestFreq_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fHighestFreq = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fHighestFreq_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_fHighestFreq_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fHighestFreq_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (float) ((arg1)->fHighestFreq);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fMinPeakMag_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_fMinPeakMag_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fMinPeakMag_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_fMinPeakMag_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fMinPeakMag = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fMinPeakMag_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_fMinPeakMag_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fMinPeakMag_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (float) ((arg1)->fMinPeakMag);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iSoundType_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_iSoundType_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iSoundType_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_iSoundType_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iSoundType = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iSoundType_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_iSoundType_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iSoundType_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->iSoundType);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iAnalysisDirection_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_iAnalysisDirection_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iAnalysisDirection_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_iAnalysisDirection_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iAnalysisDirection = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iAnalysisDirection_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_iAnalysisDirection_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iAnalysisDirection_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->iAnalysisDirection);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iSizeSound_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_iSizeSound_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iSizeSound_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_iSizeSound_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iSizeSound = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iSizeSound_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_iSizeSound_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iSizeSound_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->iSizeSound);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iWindowType_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_iWindowType_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iWindowType_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_iWindowType_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iWindowType = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iWindowType_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_iWindowType_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iWindowType_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->iWindowType);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iMaxDelayFrames_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_iMaxDelayFrames_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iMaxDelayFrames_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_iMaxDelayFrames_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iMaxDelayFrames = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_iMaxDelayFrames_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_iMaxDelayFrames_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_iMaxDelayFrames_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int) ((arg1)->iMaxDelayFrames);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_prevFrame_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  SMS_Data *arg2 = (SMS_Data *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_prevFrame_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_prevFrame_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_AnalParams_prevFrame_set" "', argument " "2"" of type '" "SMS_Data *""'"); 
+  }
+  arg2 = (SMS_Data *)(argp2);
+  if (arg1) (arg1)->prevFrame = *arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_prevFrame_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  SMS_Data *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_prevFrame_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_prevFrame_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (SMS_Data *)& ((arg1)->prevFrame);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_Data, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_soundBuffer_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  SMS_SndBuffer *arg2 = (SMS_SndBuffer *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_soundBuffer_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_soundBuffer_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_SndBuffer, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_AnalParams_soundBuffer_set" "', argument " "2"" of type '" "SMS_SndBuffer *""'"); 
+  }
+  arg2 = (SMS_SndBuffer *)(argp2);
+  if (arg1) (arg1)->soundBuffer = *arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_soundBuffer_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  SMS_SndBuffer *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_soundBuffer_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_soundBuffer_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (SMS_SndBuffer *)& ((arg1)->soundBuffer);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_SndBuffer, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_synthBuffer_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  SMS_SndBuffer *arg2 = (SMS_SndBuffer *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_synthBuffer_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_synthBuffer_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_SndBuffer, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_AnalParams_synthBuffer_set" "', argument " "2"" of type '" "SMS_SndBuffer *""'"); 
+  }
+  arg2 = (SMS_SndBuffer *)(argp2);
+  if (arg1) (arg1)->synthBuffer = *arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_synthBuffer_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  SMS_SndBuffer *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_synthBuffer_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_synthBuffer_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (SMS_SndBuffer *)& ((arg1)->synthBuffer);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_SndBuffer, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_pFrames_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  SMS_AnalFrame *arg2 = (SMS_AnalFrame *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_pFrames_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_pFrames_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_AnalFrame, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_AnalParams_pFrames_set" "', argument " "2"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg2 = (SMS_AnalFrame *)(argp2);
+  if (arg1) (arg1)->pFrames = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_pFrames_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  SMS_AnalFrame *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_pFrames_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_pFrames_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (SMS_AnalFrame *) ((arg1)->pFrames);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_ppFrames_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  SMS_AnalFrame **arg2 = (SMS_AnalFrame **) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_ppFrames_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_ppFrames_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_AnalParams_ppFrames_set" "', argument " "2"" of type '" "SMS_AnalFrame **""'"); 
+  }
+  arg2 = (SMS_AnalFrame **)(argp2);
+  if (arg1) (arg1)->ppFrames = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_ppFrames_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  SMS_AnalFrame **result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_ppFrames_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_ppFrames_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (SMS_AnalFrame **) ((arg1)->ppFrames);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_p_SMS_AnalFrame, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fResidualPercentage_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_AnalParams_fResidualPercentage_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fResidualPercentage_set" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_AnalParams_fResidualPercentage_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fResidualPercentage = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_AnalParams_fResidualPercentage_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_AnalParams_fResidualPercentage_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_AnalParams_fResidualPercentage_get" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (float) ((arg1)->fResidualPercentage);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_SMS_AnalParams(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)":new_SMS_AnalParams")) SWIG_fail;
+  result = (SMS_AnalParams *)(SMS_AnalParams *) calloc(1, sizeof(SMS_AnalParams));
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_AnalParams, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_SMS_AnalParams(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_SMS_AnalParams",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SMS_AnalParams" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  free((char *) arg1);
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *SMS_AnalParams_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O|swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_SMS_AnalParams, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_iStochasticType_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SynthParams_iStochasticType_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_iStochasticType_set" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_SynthParams_iStochasticType_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iStochasticType = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_iStochasticType_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SynthParams_iStochasticType_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_iStochasticType_get" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  result = (int) ((arg1)->iStochasticType);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_iSynthesisType_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SynthParams_iSynthesisType_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_iSynthesisType_set" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_SynthParams_iSynthesisType_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iSynthesisType = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_iSynthesisType_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SynthParams_iSynthesisType_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_iSynthesisType_get" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  result = (int) ((arg1)->iSynthesisType);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_iDetSynthType_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SynthParams_iDetSynthType_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_iDetSynthType_set" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_SynthParams_iDetSynthType_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iDetSynthType = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_iDetSynthType_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SynthParams_iDetSynthType_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_iDetSynthType_get" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  result = (int) ((arg1)->iDetSynthType);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_iOriginalSRate_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SynthParams_iOriginalSRate_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_iOriginalSRate_set" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_SynthParams_iOriginalSRate_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iOriginalSRate = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_iOriginalSRate_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SynthParams_iOriginalSRate_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_iOriginalSRate_get" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  result = (int) ((arg1)->iOriginalSRate);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_iSamplingRate_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SynthParams_iSamplingRate_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_iSamplingRate_set" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_SynthParams_iSamplingRate_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iSamplingRate = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_iSamplingRate_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SynthParams_iSamplingRate_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_iSamplingRate_get" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  result = (int) ((arg1)->iSamplingRate);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_prevFrame_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  SMS_Data *arg2 = (SMS_Data *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SynthParams_prevFrame_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_prevFrame_set" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_SynthParams_prevFrame_set" "', argument " "2"" of type '" "SMS_Data *""'"); 
+  }
+  arg2 = (SMS_Data *)(argp2);
+  if (arg1) (arg1)->prevFrame = *arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_prevFrame_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  SMS_Data *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SynthParams_prevFrame_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_prevFrame_get" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  result = (SMS_Data *)& ((arg1)->prevFrame);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_Data, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_sizeHop_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SynthParams_sizeHop_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_sizeHop_set" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_SynthParams_sizeHop_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->sizeHop = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_sizeHop_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SynthParams_sizeHop_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_sizeHop_get" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  result = (int) ((arg1)->sizeHop);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_origSizeHop_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SynthParams_origSizeHop_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_origSizeHop_set" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_SynthParams_origSizeHop_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->origSizeHop = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_origSizeHop_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SynthParams_origSizeHop_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_origSizeHop_get" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  result = (int) ((arg1)->origSizeHop);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_pFDetWindow_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  float *arg2 = (float *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SynthParams_pFDetWindow_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_pFDetWindow_set" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_SynthParams_pFDetWindow_set" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  if (arg1) (arg1)->pFDetWindow = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_pFDetWindow_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  float *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SynthParams_pFDetWindow_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_pFDetWindow_get" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  result = (float *) ((arg1)->pFDetWindow);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_float, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_pFStocWindow_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  float *arg2 = (float *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SynthParams_pFStocWindow_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_pFStocWindow_set" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_SynthParams_pFStocWindow_set" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  if (arg1) (arg1)->pFStocWindow = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_pFStocWindow_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  float *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SynthParams_pFStocWindow_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_pFStocWindow_get" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  result = (float *) ((arg1)->pFStocWindow);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_float, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_fStocGain_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SynthParams_fStocGain_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_fStocGain_set" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_SynthParams_fStocGain_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fStocGain = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_fStocGain_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SynthParams_fStocGain_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_fStocGain_get" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  result = (float) ((arg1)->fStocGain);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_fTranspose_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SynthParams_fTranspose_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_fTranspose_set" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_SynthParams_fTranspose_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fTranspose = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_fTranspose_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SynthParams_fTranspose_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_fTranspose_get" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  result = (float) ((arg1)->fTranspose);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_realftOut_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  float *arg2 = (float *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_SynthParams_realftOut_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_realftOut_set" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_SynthParams_realftOut_set" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  if (arg1) (arg1)->realftOut = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_SynthParams_realftOut_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  float *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_SynthParams_realftOut_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_SynthParams_realftOut_get" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  result = (float *) ((arg1)->realftOut);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_float, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_SMS_SynthParams(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)":new_SMS_SynthParams")) SWIG_fail;
+  result = (SMS_SynthParams *)(SMS_SynthParams *) calloc(1, sizeof(SMS_SynthParams));
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_SynthParams, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_SMS_SynthParams(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_SMS_SynthParams",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SMS_SynthParams" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  free((char *) arg1);
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *SMS_SynthParams_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O|swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_SMS_SynthParams, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *_wrap_SMS_HarmCandidate_fFreq_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HarmCandidate *arg1 = (SMS_HarmCandidate *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_HarmCandidate_fFreq_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HarmCandidate, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HarmCandidate_fFreq_set" "', argument " "1"" of type '" "SMS_HarmCandidate *""'"); 
+  }
+  arg1 = (SMS_HarmCandidate *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_HarmCandidate_fFreq_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fFreq = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HarmCandidate_fFreq_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HarmCandidate *arg1 = (SMS_HarmCandidate *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_HarmCandidate_fFreq_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HarmCandidate, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HarmCandidate_fFreq_get" "', argument " "1"" of type '" "SMS_HarmCandidate *""'"); 
+  }
+  arg1 = (SMS_HarmCandidate *)(argp1);
+  result = (float) ((arg1)->fFreq);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HarmCandidate_fMag_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HarmCandidate *arg1 = (SMS_HarmCandidate *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_HarmCandidate_fMag_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HarmCandidate, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HarmCandidate_fMag_set" "', argument " "1"" of type '" "SMS_HarmCandidate *""'"); 
+  }
+  arg1 = (SMS_HarmCandidate *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_HarmCandidate_fMag_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fMag = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HarmCandidate_fMag_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HarmCandidate *arg1 = (SMS_HarmCandidate *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_HarmCandidate_fMag_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HarmCandidate, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HarmCandidate_fMag_get" "', argument " "1"" of type '" "SMS_HarmCandidate *""'"); 
+  }
+  arg1 = (SMS_HarmCandidate *)(argp1);
+  result = (float) ((arg1)->fMag);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HarmCandidate_fMagPerc_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HarmCandidate *arg1 = (SMS_HarmCandidate *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_HarmCandidate_fMagPerc_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HarmCandidate, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HarmCandidate_fMagPerc_set" "', argument " "1"" of type '" "SMS_HarmCandidate *""'"); 
+  }
+  arg1 = (SMS_HarmCandidate *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_HarmCandidate_fMagPerc_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fMagPerc = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HarmCandidate_fMagPerc_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HarmCandidate *arg1 = (SMS_HarmCandidate *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_HarmCandidate_fMagPerc_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HarmCandidate, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HarmCandidate_fMagPerc_get" "', argument " "1"" of type '" "SMS_HarmCandidate *""'"); 
+  }
+  arg1 = (SMS_HarmCandidate *)(argp1);
+  result = (float) ((arg1)->fMagPerc);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HarmCandidate_fFreqDev_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HarmCandidate *arg1 = (SMS_HarmCandidate *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_HarmCandidate_fFreqDev_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HarmCandidate, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HarmCandidate_fFreqDev_set" "', argument " "1"" of type '" "SMS_HarmCandidate *""'"); 
+  }
+  arg1 = (SMS_HarmCandidate *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_HarmCandidate_fFreqDev_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fFreqDev = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HarmCandidate_fFreqDev_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HarmCandidate *arg1 = (SMS_HarmCandidate *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_HarmCandidate_fFreqDev_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HarmCandidate, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HarmCandidate_fFreqDev_get" "', argument " "1"" of type '" "SMS_HarmCandidate *""'"); 
+  }
+  arg1 = (SMS_HarmCandidate *)(argp1);
+  result = (float) ((arg1)->fFreqDev);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HarmCandidate_fHarmRatio_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HarmCandidate *arg1 = (SMS_HarmCandidate *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_HarmCandidate_fHarmRatio_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HarmCandidate, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HarmCandidate_fHarmRatio_set" "', argument " "1"" of type '" "SMS_HarmCandidate *""'"); 
+  }
+  arg1 = (SMS_HarmCandidate *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_HarmCandidate_fHarmRatio_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fHarmRatio = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HarmCandidate_fHarmRatio_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HarmCandidate *arg1 = (SMS_HarmCandidate *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_HarmCandidate_fHarmRatio_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HarmCandidate, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HarmCandidate_fHarmRatio_get" "', argument " "1"" of type '" "SMS_HarmCandidate *""'"); 
+  }
+  arg1 = (SMS_HarmCandidate *)(argp1);
+  result = (float) ((arg1)->fHarmRatio);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_SMS_HarmCandidate(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HarmCandidate *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)":new_SMS_HarmCandidate")) SWIG_fail;
+  result = (SMS_HarmCandidate *)(SMS_HarmCandidate *) calloc(1, sizeof(SMS_HarmCandidate));
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_HarmCandidate, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_SMS_HarmCandidate(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HarmCandidate *arg1 = (SMS_HarmCandidate *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_SMS_HarmCandidate",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HarmCandidate, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SMS_HarmCandidate" "', argument " "1"" of type '" "SMS_HarmCandidate *""'"); 
+  }
+  arg1 = (SMS_HarmCandidate *)(argp1);
+  free((char *) arg1);
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *SMS_HarmCandidate_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O|swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_SMS_HarmCandidate, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *_wrap_SMS_ContCandidate_fFreqDev_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_ContCandidate *arg1 = (SMS_ContCandidate *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_ContCandidate_fFreqDev_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_ContCandidate, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_ContCandidate_fFreqDev_set" "', argument " "1"" of type '" "SMS_ContCandidate *""'"); 
+  }
+  arg1 = (SMS_ContCandidate *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_ContCandidate_fFreqDev_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fFreqDev = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_ContCandidate_fFreqDev_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_ContCandidate *arg1 = (SMS_ContCandidate *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_ContCandidate_fFreqDev_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_ContCandidate, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_ContCandidate_fFreqDev_get" "', argument " "1"" of type '" "SMS_ContCandidate *""'"); 
+  }
+  arg1 = (SMS_ContCandidate *)(argp1);
+  result = (float) ((arg1)->fFreqDev);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_ContCandidate_fMagDev_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_ContCandidate *arg1 = (SMS_ContCandidate *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_ContCandidate_fMagDev_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_ContCandidate, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_ContCandidate_fMagDev_set" "', argument " "1"" of type '" "SMS_ContCandidate *""'"); 
+  }
+  arg1 = (SMS_ContCandidate *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_ContCandidate_fMagDev_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fMagDev = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_ContCandidate_fMagDev_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_ContCandidate *arg1 = (SMS_ContCandidate *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_ContCandidate_fMagDev_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_ContCandidate, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_ContCandidate_fMagDev_get" "', argument " "1"" of type '" "SMS_ContCandidate *""'"); 
+  }
+  arg1 = (SMS_ContCandidate *)(argp1);
+  result = (float) ((arg1)->fMagDev);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_ContCandidate_iPeak_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_ContCandidate *arg1 = (SMS_ContCandidate *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_ContCandidate_iPeak_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_ContCandidate, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_ContCandidate_iPeak_set" "', argument " "1"" of type '" "SMS_ContCandidate *""'"); 
+  }
+  arg1 = (SMS_ContCandidate *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_ContCandidate_iPeak_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iPeak = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_ContCandidate_iPeak_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_ContCandidate *arg1 = (SMS_ContCandidate *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_ContCandidate_iPeak_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_ContCandidate, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_ContCandidate_iPeak_get" "', argument " "1"" of type '" "SMS_ContCandidate *""'"); 
+  }
+  arg1 = (SMS_ContCandidate *)(argp1);
+  result = (int) ((arg1)->iPeak);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_SMS_ContCandidate(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_ContCandidate *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)":new_SMS_ContCandidate")) SWIG_fail;
+  result = (SMS_ContCandidate *)(SMS_ContCandidate *) calloc(1, sizeof(SMS_ContCandidate));
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_ContCandidate, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_SMS_ContCandidate(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_ContCandidate *arg1 = (SMS_ContCandidate *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_SMS_ContCandidate",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_ContCandidate, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SMS_ContCandidate" "', argument " "1"" of type '" "SMS_ContCandidate *""'"); 
+  }
+  arg1 = (SMS_ContCandidate *)(argp1);
+  free((char *) arg1);
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *SMS_ContCandidate_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O|swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_SMS_ContCandidate, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *_wrap_SMS_Guide_fFreq_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Guide *arg1 = (SMS_Guide *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Guide_fFreq_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Guide, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Guide_fFreq_set" "', argument " "1"" of type '" "SMS_Guide *""'"); 
+  }
+  arg1 = (SMS_Guide *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Guide_fFreq_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fFreq = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Guide_fFreq_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Guide *arg1 = (SMS_Guide *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Guide_fFreq_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Guide, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Guide_fFreq_get" "', argument " "1"" of type '" "SMS_Guide *""'"); 
+  }
+  arg1 = (SMS_Guide *)(argp1);
+  result = (float) ((arg1)->fFreq);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Guide_fMag_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Guide *arg1 = (SMS_Guide *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Guide_fMag_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Guide, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Guide_fMag_set" "', argument " "1"" of type '" "SMS_Guide *""'"); 
+  }
+  arg1 = (SMS_Guide *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Guide_fMag_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fMag = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Guide_fMag_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Guide *arg1 = (SMS_Guide *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Guide_fMag_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Guide, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Guide_fMag_get" "', argument " "1"" of type '" "SMS_Guide *""'"); 
+  }
+  arg1 = (SMS_Guide *)(argp1);
+  result = (float) ((arg1)->fMag);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Guide_iStatus_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Guide *arg1 = (SMS_Guide *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Guide_iStatus_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Guide, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Guide_iStatus_set" "', argument " "1"" of type '" "SMS_Guide *""'"); 
+  }
+  arg1 = (SMS_Guide *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Guide_iStatus_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iStatus = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Guide_iStatus_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Guide *arg1 = (SMS_Guide *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Guide_iStatus_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Guide, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Guide_iStatus_get" "', argument " "1"" of type '" "SMS_Guide *""'"); 
+  }
+  arg1 = (SMS_Guide *)(argp1);
+  result = (int) ((arg1)->iStatus);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Guide_iPeakChosen_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Guide *arg1 = (SMS_Guide *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_Guide_iPeakChosen_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Guide, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Guide_iPeakChosen_set" "', argument " "1"" of type '" "SMS_Guide *""'"); 
+  }
+  arg1 = (SMS_Guide *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_Guide_iPeakChosen_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iPeakChosen = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_Guide_iPeakChosen_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Guide *arg1 = (SMS_Guide *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_Guide_iPeakChosen_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Guide, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_Guide_iPeakChosen_get" "', argument " "1"" of type '" "SMS_Guide *""'"); 
+  }
+  arg1 = (SMS_Guide *)(argp1);
+  result = (int) ((arg1)->iPeakChosen);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_SMS_Guide(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Guide *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)":new_SMS_Guide")) SWIG_fail;
+  result = (SMS_Guide *)(SMS_Guide *) calloc(1, sizeof(SMS_Guide));
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_Guide, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_SMS_Guide(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Guide *arg1 = (SMS_Guide *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_SMS_Guide",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Guide, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SMS_Guide" "', argument " "1"" of type '" "SMS_Guide *""'"); 
+  }
+  arg1 = (SMS_Guide *)(argp1);
+  free((char *) arg1);
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *SMS_Guide_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O|swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_SMS_Guide, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN int sms_tab_sine_set(PyObject *_val) {
+  {
+    void *argp = 0;
+    int res = SWIG_ConvertPtr(_val, &argp, SWIGTYPE_p_float,  0 );  
+    if (!SWIG_IsOK(res)) {
+      SWIG_exception_fail(SWIG_ArgError(res), "in variable '""sms_tab_sine""' of type '""float *""'");
+    }
+    sms_tab_sine = (float *)(argp);
+  }
+  return 0;
+fail:
+  return 1;
+}
+
+
+SWIGINTERN PyObject *sms_tab_sine_get(void) {
+  PyObject *pyobj = 0;
+  
+  pyobj = SWIG_NewPointerObj(SWIG_as_voidptr(sms_tab_sine), SWIGTYPE_p_float,  0 );
+  return pyobj;
+}
+
+
+SWIGINTERN int sms_tab_sinc_set(PyObject *_val) {
+  {
+    void *argp = 0;
+    int res = SWIG_ConvertPtr(_val, &argp, SWIGTYPE_p_float,  0 );  
+    if (!SWIG_IsOK(res)) {
+      SWIG_exception_fail(SWIG_ArgError(res), "in variable '""sms_tab_sinc""' of type '""float *""'");
+    }
+    sms_tab_sinc = (float *)(argp);
+  }
+  return 0;
+fail:
+  return 1;
+}
+
+
+SWIGINTERN PyObject *sms_tab_sinc_get(void) {
+  PyObject *pyobj = 0;
+  
+  pyobj = SWIG_NewPointerObj(SWIG_as_voidptr(sms_tab_sinc), SWIGTYPE_p_float,  0 );
+  return pyobj;
+}
+
+
+SWIGINTERN int sms_window_spec_set(PyObject *_val) {
+  {
+    void *argp = 0;
+    int res = SWIG_ConvertPtr(_val, &argp, SWIGTYPE_p_float,  0 );  
+    if (!SWIG_IsOK(res)) {
+      SWIG_exception_fail(SWIG_ArgError(res), "in variable '""sms_window_spec""' of type '""float *""'");
+    }
+    sms_window_spec = (float *)(argp);
+  }
+  return 0;
+fail:
+  return 1;
+}
+
+
+SWIGINTERN PyObject *sms_window_spec_get(void) {
+  PyObject *pyobj = 0;
+  
+  pyobj = SWIG_NewPointerObj(SWIG_as_voidptr(sms_window_spec), SWIGTYPE_p_float,  0 );
+  return pyobj;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_magToDB(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float arg1 ;
+  float result;
+  float val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_magToDB",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_float(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "sms_magToDB" "', argument " "1"" of type '" "float""'");
+  } 
+  arg1 = (float)(val1);
+  result = (float)sms_magToDB(arg1);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_dBToMag(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float arg1 ;
+  float result;
+  float val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_dBToMag",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_float(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "sms_dBToMag" "', argument " "1"" of type '" "float""'");
+  } 
+  arg1 = (float)(val1);
+  result = (float)sms_dBToMag(arg1);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_analyze(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  long arg2 ;
+  SMS_Data *arg3 = (SMS_Data *) 0 ;
+  SMS_AnalParams *arg4 = (SMS_AnalParams *) 0 ;
+  int *arg5 = (int *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  long val2 ;
+  int ecode2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  void *argp5 = 0 ;
+  int res5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:sms_analyze",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_analyze" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  ecode2 = SWIG_AsVal_long(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "sms_analyze" "', argument " "2"" of type '" "long""'");
+  } 
+  arg2 = (long)(val2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "sms_analyze" "', argument " "3"" of type '" "SMS_Data *""'"); 
+  }
+  arg3 = (SMS_Data *)(argp3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "sms_analyze" "', argument " "4"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg4 = (SMS_AnalParams *)(argp4);
+  res5 = SWIG_ConvertPtr(obj4, &argp5,SWIGTYPE_p_int, 0 |  0 );
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "sms_analyze" "', argument " "5"" of type '" "int *""'"); 
+  }
+  arg5 = (int *)(argp5);
+  result = (int)sms_analyze(arg1,arg2,arg3,arg4,arg5);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_init(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int result;
+  
+  if (!PyArg_ParseTuple(args,(char *)":sms_init")) SWIG_fail;
+  result = (int)sms_init();
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_free(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  
+  if (!PyArg_ParseTuple(args,(char *)":sms_free")) SWIG_fail;
+  sms_free();
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_initAnalysis(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_initAnalysis",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_initAnalysis" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int)sms_initAnalysis(arg1);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_initAnalParams(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_initAnalParams",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_initAnalParams" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  sms_initAnalParams(arg1);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_initSynth(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  SMS_SynthParams *arg2 = (SMS_SynthParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:sms_initSynth",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_initSynth" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_initSynth" "', argument " "2"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg2 = (SMS_SynthParams *)(argp2);
+  result = (int)sms_initSynth(arg1,arg2);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_freeAnalysis(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_freeAnalysis",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_freeAnalysis" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  sms_freeAnalysis(arg1);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_freeSynth(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SynthParams *arg1 = (SMS_SynthParams *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_freeSynth",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_freeSynth" "', argument " "1"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg1 = (SMS_SynthParams *)(argp1);
+  sms_freeSynth(arg1);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_fillSndBuffer(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  long arg2 ;
+  SMS_AnalParams *arg3 = (SMS_AnalParams *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  long val2 ;
+  int ecode2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:sms_fillSndBuffer",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_fillSndBuffer" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  ecode2 = SWIG_AsVal_long(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "sms_fillSndBuffer" "', argument " "2"" of type '" "long""'");
+  } 
+  arg2 = (long)(val2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "sms_fillSndBuffer" "', argument " "3"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg3 = (SMS_AnalParams *)(argp3);
+  sms_fillSndBuffer(arg1,arg2,arg3);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_getWindow(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  float *arg2 = (float *) 0 ;
+  int arg3 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:sms_getWindow",&obj0,&obj1,&obj2)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "sms_getWindow" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = (int)(val1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_getWindow" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "sms_getWindow" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = (int)(val3);
+  sms_getWindow(arg1,arg2,arg3);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_spectrum(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  int arg2 ;
+  float *arg3 = (float *) 0 ;
+  float *arg4 = (float *) 0 ;
+  SMS_AnalParams *arg5 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  void *argp5 = 0 ;
+  int res5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:sms_spectrum",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_spectrum" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "sms_spectrum" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "sms_spectrum" "', argument " "3"" of type '" "float *""'"); 
+  }
+  arg3 = (float *)(argp3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "sms_spectrum" "', argument " "4"" of type '" "float *""'"); 
+  }
+  arg4 = (float *)(argp4);
+  res5 = SWIG_ConvertPtr(obj4, &argp5,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "sms_spectrum" "', argument " "5"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg5 = (SMS_AnalParams *)(argp5);
+  result = (int)sms_spectrum(arg1,arg2,arg3,arg4,arg5);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_quickSpectrum(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  float *arg2 = (float *) 0 ;
+  int arg3 ;
+  float *arg4 = (float *) 0 ;
+  float *arg5 = (float *) 0 ;
+  int arg6 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  void *argp5 = 0 ;
+  int res5 = 0 ;
+  int val6 ;
+  int ecode6 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  PyObject * obj5 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOO:sms_quickSpectrum",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_quickSpectrum" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_quickSpectrum" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "sms_quickSpectrum" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = (int)(val3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "sms_quickSpectrum" "', argument " "4"" of type '" "float *""'"); 
+  }
+  arg4 = (float *)(argp4);
+  res5 = SWIG_ConvertPtr(obj4, &argp5,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "sms_quickSpectrum" "', argument " "5"" of type '" "float *""'"); 
+  }
+  arg5 = (float *)(argp5);
+  ecode6 = SWIG_AsVal_int(obj5, &val6);
+  if (!SWIG_IsOK(ecode6)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "sms_quickSpectrum" "', argument " "6"" of type '" "int""'");
+  } 
+  arg6 = (int)(val6);
+  result = (int)sms_quickSpectrum(arg1,arg2,arg3,arg4,arg5,arg6);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_invQuickSpectrum(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  float *arg2 = (float *) 0 ;
+  int arg3 ;
+  float *arg4 = (float *) 0 ;
+  int arg5 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  int val5 ;
+  int ecode5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:sms_invQuickSpectrum",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_invQuickSpectrum" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_invQuickSpectrum" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "sms_invQuickSpectrum" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = (int)(val3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "sms_invQuickSpectrum" "', argument " "4"" of type '" "float *""'"); 
+  }
+  arg4 = (float *)(argp4);
+  ecode5 = SWIG_AsVal_int(obj4, &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "sms_invQuickSpectrum" "', argument " "5"" of type '" "int""'");
+  } 
+  arg5 = (int)(val5);
+  result = (int)sms_invQuickSpectrum(arg1,arg2,arg3,arg4,arg5);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_invQuickSpectrumW(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  float *arg2 = (float *) 0 ;
+  int arg3 ;
+  float *arg4 = (float *) 0 ;
+  int arg5 ;
+  float *arg6 = (float *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  int val5 ;
+  int ecode5 = 0 ;
+  void *argp6 = 0 ;
+  int res6 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  PyObject * obj5 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOO:sms_invQuickSpectrumW",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_invQuickSpectrumW" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_invQuickSpectrumW" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "sms_invQuickSpectrumW" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = (int)(val3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "sms_invQuickSpectrumW" "', argument " "4"" of type '" "float *""'"); 
+  }
+  arg4 = (float *)(argp4);
+  ecode5 = SWIG_AsVal_int(obj4, &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "sms_invQuickSpectrumW" "', argument " "5"" of type '" "int""'");
+  } 
+  arg5 = (int)(val5);
+  res6 = SWIG_ConvertPtr(obj5, &argp6,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res6)) {
+    SWIG_exception_fail(SWIG_ArgError(res6), "in method '" "sms_invQuickSpectrumW" "', argument " "6"" of type '" "float *""'"); 
+  }
+  arg6 = (float *)(argp6);
+  result = (int)sms_invQuickSpectrumW(arg1,arg2,arg3,arg4,arg5,arg6);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_spectralApprox(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  int arg2 ;
+  int arg3 ;
+  float *arg4 = (float *) 0 ;
+  int arg5 ;
+  int arg6 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  int val5 ;
+  int ecode5 = 0 ;
+  int val6 ;
+  int ecode6 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  PyObject * obj5 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOO:sms_spectralApprox",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_spectralApprox" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "sms_spectralApprox" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "sms_spectralApprox" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = (int)(val3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "sms_spectralApprox" "', argument " "4"" of type '" "float *""'"); 
+  }
+  arg4 = (float *)(argp4);
+  ecode5 = SWIG_AsVal_int(obj4, &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "sms_spectralApprox" "', argument " "5"" of type '" "int""'");
+  } 
+  arg5 = (int)(val5);
+  ecode6 = SWIG_AsVal_int(obj5, &val6);
+  if (!SWIG_IsOK(ecode6)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "sms_spectralApprox" "', argument " "6"" of type '" "int""'");
+  } 
+  arg6 = (int)(val6);
+  result = (int)sms_spectralApprox(arg1,arg2,arg3,arg4,arg5,arg6);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_sizeNextWindow(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  SMS_AnalParams *arg2 = (SMS_AnalParams *) 0 ;
+  int result;
+  int val1 ;
+  int ecode1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:sms_sizeNextWindow",&obj0,&obj1)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "sms_sizeNextWindow" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = (int)(val1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_sizeNextWindow" "', argument " "2"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg2 = (SMS_AnalParams *)(argp2);
+  result = (int)sms_sizeNextWindow(arg1,arg2);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_fundDeviation(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int arg2 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:sms_fundDeviation",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_fundDeviation" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "sms_fundDeviation" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  result = (float)sms_fundDeviation(arg1,arg2);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_detectPeaks(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  float *arg2 = (float *) 0 ;
+  int arg3 ;
+  SMS_Peak *arg4 = (SMS_Peak *) 0 ;
+  SMS_AnalParams *arg5 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  void *argp5 = 0 ;
+  int res5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:sms_detectPeaks",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_detectPeaks" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_detectPeaks" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "sms_detectPeaks" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = (int)(val3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4,SWIGTYPE_p_SMS_Peak, 0 |  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "sms_detectPeaks" "', argument " "4"" of type '" "SMS_Peak *""'"); 
+  }
+  arg4 = (SMS_Peak *)(argp4);
+  res5 = SWIG_ConvertPtr(obj4, &argp5,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "sms_detectPeaks" "', argument " "5"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg5 = (SMS_AnalParams *)(argp5);
+  result = (int)sms_detectPeaks(arg1,arg2,arg3,arg4,arg5);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_harmDetection(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalFrame *arg1 = (SMS_AnalFrame *) 0 ;
+  float arg2 ;
+  SMS_AnalParams *arg3 = (SMS_AnalParams *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:sms_harmDetection",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_harmDetection" "', argument " "1"" of type '" "SMS_AnalFrame *""'"); 
+  }
+  arg1 = (SMS_AnalFrame *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "sms_harmDetection" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "sms_harmDetection" "', argument " "3"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg3 = (SMS_AnalParams *)(argp3);
+  sms_harmDetection(arg1,arg2,arg3);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_peakContinuation(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  SMS_AnalParams *arg2 = (SMS_AnalParams *) 0 ;
+  int result;
+  int val1 ;
+  int ecode1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:sms_peakContinuation",&obj0,&obj1)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "sms_peakContinuation" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = (int)(val1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_peakContinuation" "', argument " "2"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg2 = (SMS_AnalParams *)(argp2);
+  result = (int)sms_peakContinuation(arg1,arg2);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_preEmphasis(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float arg1 ;
+  float result;
+  float val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_preEmphasis",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_float(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "sms_preEmphasis" "', argument " "1"" of type '" "float""'");
+  } 
+  arg1 = (float)(val1);
+  result = (float)sms_preEmphasis(arg1);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_deEmphasis(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float arg1 ;
+  float result;
+  float val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_deEmphasis",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_float(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "sms_deEmphasis" "', argument " "1"" of type '" "float""'");
+  } 
+  arg1 = (float)(val1);
+  result = (float)sms_deEmphasis(arg1);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_cleanTracks(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  SMS_AnalParams *arg2 = (SMS_AnalParams *) 0 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:sms_cleanTracks",&obj0,&obj1)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "sms_cleanTracks" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = (int)(val1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_cleanTracks" "', argument " "2"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg2 = (SMS_AnalParams *)(argp2);
+  sms_cleanTracks(arg1,arg2);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_scaleDet(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  float *arg2 = (float *) 0 ;
+  float *arg3 = (float *) 0 ;
+  SMS_AnalParams *arg4 = (SMS_AnalParams *) 0 ;
+  int arg5 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  int val5 ;
+  int ecode5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:sms_scaleDet",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_scaleDet" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_scaleDet" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "sms_scaleDet" "', argument " "3"" of type '" "float *""'"); 
+  }
+  arg3 = (float *)(argp3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "sms_scaleDet" "', argument " "4"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg4 = (SMS_AnalParams *)(argp4);
+  ecode5 = SWIG_AsVal_int(obj4, &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "sms_scaleDet" "', argument " "5"" of type '" "int""'");
+  } 
+  arg5 = (int)(val5);
+  sms_scaleDet(arg1,arg2,arg3,arg4,arg5);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_prepSine(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  int result;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_prepSine",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "sms_prepSine" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = (int)(val1);
+  result = (int)sms_prepSine(arg1);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_prepSinc(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  int result;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_prepSinc",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "sms_prepSinc" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = (int)(val1);
+  result = (int)sms_prepSinc(arg1);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_clearSine(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  
+  if (!PyArg_ParseTuple(args,(char *)":sms_clearSine")) SWIG_fail;
+  sms_clearSine();
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_clearSinc(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  
+  if (!PyArg_ParseTuple(args,(char *)":sms_clearSinc")) SWIG_fail;
+  sms_clearSinc();
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_sine(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float arg1 ;
+  float result;
+  float val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_sine",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_float(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "sms_sine" "', argument " "1"" of type '" "float""'");
+  } 
+  arg1 = (float)(val1);
+  result = (float)sms_sine(arg1);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_sinc(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float arg1 ;
+  float result;
+  float val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_sinc",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_float(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "sms_sinc" "', argument " "1"" of type '" "float""'");
+  } 
+  arg1 = (float)(val1);
+  result = (float)sms_sinc(arg1);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_synthesize(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  float *arg2 = (float *) 0 ;
+  SMS_SynthParams *arg3 = (SMS_SynthParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:sms_synthesize",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_synthesize" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_synthesize" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_SMS_SynthParams, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "sms_synthesize" "', argument " "3"" of type '" "SMS_SynthParams *""'"); 
+  }
+  arg3 = (SMS_SynthParams *)(argp3);
+  result = (int)sms_synthesize(arg1,arg2,arg3);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_sineSynthFrame(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  float *arg2 = (float *) 0 ;
+  int arg3 ;
+  SMS_Data *arg4 = (SMS_Data *) 0 ;
+  int arg5 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  int val5 ;
+  int ecode5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:sms_sineSynthFrame",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_sineSynthFrame" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_sineSynthFrame" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "sms_sineSynthFrame" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = (int)(val3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "sms_sineSynthFrame" "', argument " "4"" of type '" "SMS_Data *""'"); 
+  }
+  arg4 = (SMS_Data *)(argp4);
+  ecode5 = SWIG_AsVal_int(obj4, &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "sms_sineSynthFrame" "', argument " "5"" of type '" "int""'");
+  } 
+  arg5 = (int)(val5);
+  sms_sineSynthFrame(arg1,arg2,arg3,arg4,arg5);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_initHeader(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_initHeader",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_initHeader" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  sms_initHeader(arg1);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_getHeader(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  char *arg1 = (char *) 0 ;
+  SMS_Header **arg2 = (SMS_Header **) 0 ;
+  FILE **arg3 = (FILE **) 0 ;
+  int result;
+  int res1 ;
+  char *buf1 = 0 ;
+  int alloc1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:sms_getHeader",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_AsCharPtrAndSize(obj0, &buf1, NULL, &alloc1);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_getHeader" "', argument " "1"" of type '" "char *""'");
+  }
+  arg1 = (char *)(buf1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_getHeader" "', argument " "2"" of type '" "SMS_Header **""'"); 
+  }
+  arg2 = (SMS_Header **)(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_p_FILE, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "sms_getHeader" "', argument " "3"" of type '" "FILE **""'"); 
+  }
+  arg3 = (FILE **)(argp3);
+  result = (int)sms_getHeader(arg1,arg2,arg3);
+  resultobj = SWIG_From_int((int)(result));
+  if (alloc1 == SWIG_NEWOBJ) free((char*)buf1);
+  return resultobj;
+fail:
+  if (alloc1 == SWIG_NEWOBJ) free((char*)buf1);
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_fillHeader(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int arg2 ;
+  SMS_AnalParams *arg3 = (SMS_AnalParams *) 0 ;
+  int arg4 ;
+  int arg5 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  int val4 ;
+  int ecode4 = 0 ;
+  int val5 ;
+  int ecode5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:sms_fillHeader",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_fillHeader" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "sms_fillHeader" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "sms_fillHeader" "', argument " "3"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg3 = (SMS_AnalParams *)(argp3);
+  ecode4 = SWIG_AsVal_int(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "sms_fillHeader" "', argument " "4"" of type '" "int""'");
+  } 
+  arg4 = (int)(val4);
+  ecode5 = SWIG_AsVal_int(obj4, &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "sms_fillHeader" "', argument " "5"" of type '" "int""'");
+  } 
+  arg5 = (int)(val5);
+  sms_fillHeader(arg1,arg2,arg3,arg4,arg5);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_writeHeader(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  char *arg1 = (char *) 0 ;
+  SMS_Header *arg2 = (SMS_Header *) 0 ;
+  FILE **arg3 = (FILE **) 0 ;
+  int result;
+  int res1 ;
+  char *buf1 = 0 ;
+  int alloc1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:sms_writeHeader",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_AsCharPtrAndSize(obj0, &buf1, NULL, &alloc1);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_writeHeader" "', argument " "1"" of type '" "char *""'");
+  }
+  arg1 = (char *)(buf1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_writeHeader" "', argument " "2"" of type '" "SMS_Header *""'"); 
+  }
+  arg2 = (SMS_Header *)(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_p_FILE, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "sms_writeHeader" "', argument " "3"" of type '" "FILE **""'"); 
+  }
+  arg3 = (FILE **)(argp3);
+  result = (int)sms_writeHeader(arg1,arg2,arg3);
+  resultobj = SWIG_From_int((int)(result));
+  if (alloc1 == SWIG_NEWOBJ) free((char*)buf1);
+  return resultobj;
+fail:
+  if (alloc1 == SWIG_NEWOBJ) free((char*)buf1);
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_writeFile(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  FILE *arg1 = (FILE *) 0 ;
+  SMS_Header *arg2 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:sms_writeFile",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_FILE, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_writeFile" "', argument " "1"" of type '" "FILE *""'"); 
+  }
+  arg1 = (FILE *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_writeFile" "', argument " "2"" of type '" "SMS_Header *""'"); 
+  }
+  arg2 = (SMS_Header *)(argp2);
+  result = (int)sms_writeFile(arg1,arg2);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_initFrame(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  SMS_AnalParams *arg2 = (SMS_AnalParams *) 0 ;
+  int arg3 ;
+  int result;
+  int val1 ;
+  int ecode1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:sms_initFrame",&obj0,&obj1,&obj2)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "sms_initFrame" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = (int)(val1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_initFrame" "', argument " "2"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg2 = (SMS_AnalParams *)(argp2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "sms_initFrame" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = (int)(val3);
+  result = (int)sms_initFrame(arg1,arg2,arg3);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_allocFrame(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  int arg2 ;
+  int arg3 ;
+  int arg4 ;
+  int arg5 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  int val4 ;
+  int ecode4 = 0 ;
+  int val5 ;
+  int ecode5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:sms_allocFrame",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_allocFrame" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "sms_allocFrame" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "sms_allocFrame" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = (int)(val3);
+  ecode4 = SWIG_AsVal_int(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "sms_allocFrame" "', argument " "4"" of type '" "int""'");
+  } 
+  arg4 = (int)(val4);
+  ecode5 = SWIG_AsVal_int(obj4, &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "sms_allocFrame" "', argument " "5"" of type '" "int""'");
+  } 
+  arg5 = (int)(val5);
+  result = (int)sms_allocFrame(arg1,arg2,arg3,arg4,arg5);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_allocFrameH(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  SMS_Data *arg2 = (SMS_Data *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:sms_allocFrameH",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_allocFrameH" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_allocFrameH" "', argument " "2"" of type '" "SMS_Data *""'"); 
+  }
+  arg2 = (SMS_Data *)(argp2);
+  result = (int)sms_allocFrameH(arg1,arg2);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_getFrame(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  FILE *arg1 = (FILE *) 0 ;
+  SMS_Header *arg2 = (SMS_Header *) 0 ;
+  int arg3 ;
+  SMS_Data *arg4 = (SMS_Data *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:sms_getFrame",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_FILE, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_getFrame" "', argument " "1"" of type '" "FILE *""'"); 
+  }
+  arg1 = (FILE *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_getFrame" "', argument " "2"" of type '" "SMS_Header *""'"); 
+  }
+  arg2 = (SMS_Header *)(argp2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "sms_getFrame" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = (int)(val3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "sms_getFrame" "', argument " "4"" of type '" "SMS_Data *""'"); 
+  }
+  arg4 = (SMS_Data *)(argp4);
+  result = (int)sms_getFrame(arg1,arg2,arg3,arg4);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_writeFrame(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  FILE *arg1 = (FILE *) 0 ;
+  SMS_Header *arg2 = (SMS_Header *) 0 ;
+  SMS_Data *arg3 = (SMS_Data *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:sms_writeFrame",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_FILE, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_writeFrame" "', argument " "1"" of type '" "FILE *""'"); 
+  }
+  arg1 = (FILE *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_writeFrame" "', argument " "2"" of type '" "SMS_Header *""'"); 
+  }
+  arg2 = (SMS_Header *)(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "sms_writeFrame" "', argument " "3"" of type '" "SMS_Data *""'"); 
+  }
+  arg3 = (SMS_Data *)(argp3);
+  result = (int)sms_writeFrame(arg1,arg2,arg3);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_freeFrame(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_freeFrame",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_freeFrame" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  sms_freeFrame(arg1);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_clearFrame(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_clearFrame",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_clearFrame" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  sms_clearFrame(arg1);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_copyFrame(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  SMS_Data *arg2 = (SMS_Data *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:sms_copyFrame",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_copyFrame" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_copyFrame" "', argument " "2"" of type '" "SMS_Data *""'"); 
+  }
+  arg2 = (SMS_Data *)(argp2);
+  sms_copyFrame(arg1,arg2);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_frameSizeB(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Header *arg1 = (SMS_Header *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_frameSizeB",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Header, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_frameSizeB" "', argument " "1"" of type '" "SMS_Header *""'"); 
+  }
+  arg1 = (SMS_Header *)(argp1);
+  result = (int)sms_frameSizeB(arg1);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_errorString(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  char *result = 0 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_errorString",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "sms_errorString" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = (int)(val1);
+  result = (char *)sms_errorString(arg1);
+  resultobj = SWIG_FromCharPtr((const char *)result);
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_residual(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  float *arg2 = (float *) 0 ;
+  float *arg3 = (float *) 0 ;
+  int arg4 ;
+  SMS_AnalParams *arg5 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  int val4 ;
+  int ecode4 = 0 ;
+  void *argp5 = 0 ;
+  int res5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:sms_residual",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_residual" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_residual" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "sms_residual" "', argument " "3"" of type '" "float *""'"); 
+  }
+  arg3 = (float *)(argp3);
+  ecode4 = SWIG_AsVal_int(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "sms_residual" "', argument " "4"" of type '" "int""'");
+  } 
+  arg4 = (int)(val4);
+  res5 = SWIG_ConvertPtr(obj4, &argp5,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "sms_residual" "', argument " "5"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg5 = (SMS_AnalParams *)(argp5);
+  result = (int)sms_residual(arg1,arg2,arg3,arg4,arg5);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_stocAnalysis(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  int arg2 ;
+  SMS_Data *arg3 = (SMS_Data *) 0 ;
+  SMS_AnalParams *arg4 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:sms_stocAnalysis",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_stocAnalysis" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "sms_stocAnalysis" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "sms_stocAnalysis" "', argument " "3"" of type '" "SMS_Data *""'"); 
+  }
+  arg3 = (SMS_Data *)(argp3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "sms_stocAnalysis" "', argument " "4"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg4 = (SMS_AnalParams *)(argp4);
+  result = (int)sms_stocAnalysis(arg1,arg2,arg3,arg4);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_interpolateFrames(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_Data *arg1 = (SMS_Data *) 0 ;
+  SMS_Data *arg2 = (SMS_Data *) 0 ;
+  SMS_Data *arg3 = (SMS_Data *) 0 ;
+  float arg4 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  float val4 ;
+  int ecode4 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:sms_interpolateFrames",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_interpolateFrames" "', argument " "1"" of type '" "SMS_Data *""'"); 
+  }
+  arg1 = (SMS_Data *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_interpolateFrames" "', argument " "2"" of type '" "SMS_Data *""'"); 
+  }
+  arg2 = (SMS_Data *)(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_SMS_Data, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "sms_interpolateFrames" "', argument " "3"" of type '" "SMS_Data *""'"); 
+  }
+  arg3 = (SMS_Data *)(argp3);
+  ecode4 = SWIG_AsVal_float(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "sms_interpolateFrames" "', argument " "4"" of type '" "float""'");
+  } 
+  arg4 = (float)(val4);
+  sms_interpolateFrames(arg1,arg2,arg3,arg4);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_openSF(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  char *arg1 = (char *) 0 ;
+  SMS_SndHeader *arg2 = (SMS_SndHeader *) 0 ;
+  int result;
+  int res1 ;
+  char *buf1 = 0 ;
+  int alloc1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:sms_openSF",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_AsCharPtrAndSize(obj0, &buf1, NULL, &alloc1);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_openSF" "', argument " "1"" of type '" "char *""'");
+  }
+  arg1 = (char *)(buf1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_SMS_SndHeader, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_openSF" "', argument " "2"" of type '" "SMS_SndHeader *""'"); 
+  }
+  arg2 = (SMS_SndHeader *)(argp2);
+  result = (int)sms_openSF(arg1,arg2);
+  resultobj = SWIG_From_int((int)(result));
+  if (alloc1 == SWIG_NEWOBJ) free((char*)buf1);
+  return resultobj;
+fail:
+  if (alloc1 == SWIG_NEWOBJ) free((char*)buf1);
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_getSound(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_SndHeader *arg1 = (SMS_SndHeader *) 0 ;
+  float *arg2 = (float *) 0 ;
+  long arg3 ;
+  long arg4 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  long val3 ;
+  int ecode3 = 0 ;
+  long val4 ;
+  int ecode4 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:sms_getSound",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_SndHeader, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_getSound" "', argument " "1"" of type '" "SMS_SndHeader *""'"); 
+  }
+  arg1 = (SMS_SndHeader *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_getSound" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  ecode3 = SWIG_AsVal_long(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "sms_getSound" "', argument " "3"" of type '" "long""'");
+  } 
+  arg3 = (long)(val3);
+  ecode4 = SWIG_AsVal_long(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "sms_getSound" "', argument " "4"" of type '" "long""'");
+  } 
+  arg4 = (long)(val4);
+  result = (int)sms_getSound(arg1,arg2,arg3,arg4);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_createSF(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  char *arg1 = (char *) 0 ;
+  int arg2 ;
+  int arg3 ;
+  int result;
+  int res1 ;
+  char *buf1 = 0 ;
+  int alloc1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:sms_createSF",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_AsCharPtrAndSize(obj0, &buf1, NULL, &alloc1);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_createSF" "', argument " "1"" of type '" "char *""'");
+  }
+  arg1 = (char *)(buf1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "sms_createSF" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "sms_createSF" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = (int)(val3);
+  result = (int)sms_createSF(arg1,arg2,arg3);
+  resultobj = SWIG_From_int((int)(result));
+  if (alloc1 == SWIG_NEWOBJ) free((char*)buf1);
+  return resultobj;
+fail:
+  if (alloc1 == SWIG_NEWOBJ) free((char*)buf1);
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_writeSound(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:sms_writeSound",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_writeSound" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "sms_writeSound" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  sms_writeSound(arg1,arg2);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_writeSF(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  
+  if (!PyArg_ParseTuple(args,(char *)":sms_writeSF")) SWIG_fail;
+  sms_writeSF();
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_realft(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  int arg2 ;
+  int arg3 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:realft",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "realft" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "realft" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "realft" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = (int)(val3);
+  realft(arg1,arg2,arg3);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_fourier(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  float *arg2 = (float *) 0 ;
+  int arg3 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:sms_fourier",&obj0,&obj1,&obj2)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "sms_fourier" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = (int)(val1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_fourier" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "sms_fourier" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = (int)(val3);
+  sms_fourier(arg1,arg2,arg3);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_createResSF(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  int result;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_createResSF",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "sms_createResSF" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = (int)(val1);
+  result = (int)sms_createResSF(arg1);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_writeResSound(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  int arg2 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:sms_writeResSound",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_writeResSound" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "sms_writeResSound" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  result = (int)sms_writeResSound(arg1,arg2);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_writeResSF(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  
+  if (!PyArg_ParseTuple(args,(char *)":sms_writeResSF")) SWIG_fail;
+  sms_writeResSF();
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_createDebugFile(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_AnalParams *arg1 = (SMS_AnalParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:sms_createDebugFile",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_AnalParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_createDebugFile" "', argument " "1"" of type '" "SMS_AnalParams *""'"); 
+  }
+  arg1 = (SMS_AnalParams *)(argp1);
+  result = (int)sms_createDebugFile(arg1);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_writeDebugData(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  float *arg2 = (float *) 0 ;
+  float *arg3 = (float *) 0 ;
+  int arg4 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  int val4 ;
+  int ecode4 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:sms_writeDebugData",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_writeDebugData" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sms_writeDebugData" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "sms_writeDebugData" "', argument " "3"" of type '" "float *""'"); 
+  }
+  arg3 = (float *)(argp3);
+  ecode4 = SWIG_AsVal_int(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "sms_writeDebugData" "', argument " "4"" of type '" "int""'");
+  } 
+  arg4 = (int)(val4);
+  sms_writeDebugData(arg1,arg2,arg3,arg4);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_writeDebugFile(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  
+  if (!PyArg_ParseTuple(args,(char *)":sms_writeDebugFile")) SWIG_fail;
+  sms_writeDebugFile();
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HybParams_nCoefficients_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HybParams *arg1 = (SMS_HybParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_HybParams_nCoefficients_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HybParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HybParams_nCoefficients_set" "', argument " "1"" of type '" "SMS_HybParams *""'"); 
+  }
+  arg1 = (SMS_HybParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_HybParams_nCoefficients_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->nCoefficients = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HybParams_nCoefficients_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HybParams *arg1 = (SMS_HybParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_HybParams_nCoefficients_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HybParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HybParams_nCoefficients_get" "', argument " "1"" of type '" "SMS_HybParams *""'"); 
+  }
+  arg1 = (SMS_HybParams *)(argp1);
+  result = (int) ((arg1)->nCoefficients);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HybParams_fGain_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HybParams *arg1 = (SMS_HybParams *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_HybParams_fGain_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HybParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HybParams_fGain_set" "', argument " "1"" of type '" "SMS_HybParams *""'"); 
+  }
+  arg1 = (SMS_HybParams *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_HybParams_fGain_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fGain = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HybParams_fGain_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HybParams *arg1 = (SMS_HybParams *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_HybParams_fGain_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HybParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HybParams_fGain_get" "', argument " "1"" of type '" "SMS_HybParams *""'"); 
+  }
+  arg1 = (SMS_HybParams *)(argp1);
+  result = (float) ((arg1)->fGain);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HybParams_fMagBalance_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HybParams *arg1 = (SMS_HybParams *) 0 ;
+  float arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_HybParams_fMagBalance_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HybParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HybParams_fMagBalance_set" "', argument " "1"" of type '" "SMS_HybParams *""'"); 
+  }
+  arg1 = (SMS_HybParams *)(argp1);
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_HybParams_fMagBalance_set" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = (float)(val2);
+  if (arg1) (arg1)->fMagBalance = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HybParams_fMagBalance_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HybParams *arg1 = (SMS_HybParams *) 0 ;
+  float result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_HybParams_fMagBalance_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HybParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HybParams_fMagBalance_get" "', argument " "1"" of type '" "SMS_HybParams *""'"); 
+  }
+  arg1 = (SMS_HybParams *)(argp1);
+  result = (float) ((arg1)->fMagBalance);
+  resultobj = SWIG_From_float((float)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HybParams_iSmoothOrder_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HybParams *arg1 = (SMS_HybParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_HybParams_iSmoothOrder_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HybParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HybParams_iSmoothOrder_set" "', argument " "1"" of type '" "SMS_HybParams *""'"); 
+  }
+  arg1 = (SMS_HybParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_HybParams_iSmoothOrder_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->iSmoothOrder = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HybParams_iSmoothOrder_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HybParams *arg1 = (SMS_HybParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_HybParams_iSmoothOrder_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HybParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HybParams_iSmoothOrder_get" "', argument " "1"" of type '" "SMS_HybParams *""'"); 
+  }
+  arg1 = (SMS_HybParams *)(argp1);
+  result = (int) ((arg1)->iSmoothOrder);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HybParams_pCompressionEnv_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HybParams *arg1 = (SMS_HybParams *) 0 ;
+  float *arg2 = (float *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_HybParams_pCompressionEnv_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HybParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HybParams_pCompressionEnv_set" "', argument " "1"" of type '" "SMS_HybParams *""'"); 
+  }
+  arg1 = (SMS_HybParams *)(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_float, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SMS_HybParams_pCompressionEnv_set" "', argument " "2"" of type '" "float *""'"); 
+  }
+  arg2 = (float *)(argp2);
+  if (arg1) (arg1)->pCompressionEnv = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HybParams_pCompressionEnv_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HybParams *arg1 = (SMS_HybParams *) 0 ;
+  float *result = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_HybParams_pCompressionEnv_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HybParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HybParams_pCompressionEnv_get" "', argument " "1"" of type '" "SMS_HybParams *""'"); 
+  }
+  arg1 = (SMS_HybParams *)(argp1);
+  result = (float *) ((arg1)->pCompressionEnv);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_float, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HybParams_sizeCompressionEnv_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HybParams *arg1 = (SMS_HybParams *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SMS_HybParams_sizeCompressionEnv_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HybParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HybParams_sizeCompressionEnv_set" "', argument " "1"" of type '" "SMS_HybParams *""'"); 
+  }
+  arg1 = (SMS_HybParams *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SMS_HybParams_sizeCompressionEnv_set" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  if (arg1) (arg1)->sizeCompressionEnv = arg2;
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SMS_HybParams_sizeCompressionEnv_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HybParams *arg1 = (SMS_HybParams *) 0 ;
+  int result;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SMS_HybParams_sizeCompressionEnv_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HybParams, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SMS_HybParams_sizeCompressionEnv_get" "', argument " "1"" of type '" "SMS_HybParams *""'"); 
+  }
+  arg1 = (SMS_HybParams *)(argp1);
+  result = (int) ((arg1)->sizeCompressionEnv);
+  resultobj = SWIG_From_int((int)(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_SMS_HybParams(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HybParams *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)":new_SMS_HybParams")) SWIG_fail;
+  result = (SMS_HybParams *)(SMS_HybParams *) calloc(1, sizeof(SMS_HybParams));
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_SMS_HybParams, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_SMS_HybParams(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  SMS_HybParams *arg1 = (SMS_HybParams *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_SMS_HybParams",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_SMS_HybParams, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SMS_HybParams" "', argument " "1"" of type '" "SMS_HybParams *""'"); 
+  }
+  arg1 = (SMS_HybParams *)(argp1);
+  free((char *) arg1);
+  
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *SMS_HybParams_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O|swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_SMS_HybParams, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *_wrap_sms_hybridize(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  int arg2 ;
+  float *arg3 = (float *) 0 ;
+  int arg4 ;
+  float *arg5 = (float *) 0 ;
+  SMS_HybParams *arg6 = (SMS_HybParams *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  int val4 ;
+  int ecode4 = 0 ;
+  void *argp5 = 0 ;
+  int res5 = 0 ;
+  void *argp6 = 0 ;
+  int res6 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  PyObject * obj5 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOO:sms_hybridize",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_hybridize" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "sms_hybridize" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "sms_hybridize" "', argument " "3"" of type '" "float *""'"); 
+  }
+  arg3 = (float *)(argp3);
+  ecode4 = SWIG_AsVal_int(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "sms_hybridize" "', argument " "4"" of type '" "int""'");
+  } 
+  arg4 = (int)(val4);
+  res5 = SWIG_ConvertPtr(obj4, &argp5,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "sms_hybridize" "', argument " "5"" of type '" "float *""'"); 
+  }
+  arg5 = (float *)(argp5);
+  res6 = SWIG_ConvertPtr(obj5, &argp6,SWIGTYPE_p_SMS_HybParams, 0 |  0 );
+  if (!SWIG_IsOK(res6)) {
+    SWIG_exception_fail(SWIG_ArgError(res6), "in method '" "sms_hybridize" "', argument " "6"" of type '" "SMS_HybParams *""'"); 
+  }
+  arg6 = (SMS_HybParams *)(argp6);
+  sms_hybridize(arg1,arg2,arg3,arg4,arg5,arg6);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_sms_filterArray(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  float *arg1 = (float *) 0 ;
+  int arg2 ;
+  int arg3 ;
+  float *arg4 = (float *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:sms_filterArray",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sms_filterArray" "', argument " "1"" of type '" "float *""'"); 
+  }
+  arg1 = (float *)(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "sms_filterArray" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = (int)(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "sms_filterArray" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = (int)(val3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "sms_filterArray" "', argument " "4"" of type '" "float *""'"); 
+  }
+  arg4 = (float *)(argp4);
+  sms_filterArray(arg1,arg2,arg3,arg4);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+static PyMethodDef SwigMethods[] = {
+	 { (char *)"SMS_Header_iSmsMagic_set", _wrap_SMS_Header_iSmsMagic_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iSmsMagic_get", _wrap_SMS_Header_iSmsMagic_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iHeadBSize_set", _wrap_SMS_Header_iHeadBSize_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iHeadBSize_get", _wrap_SMS_Header_iHeadBSize_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_nFrames_set", _wrap_SMS_Header_nFrames_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_nFrames_get", _wrap_SMS_Header_nFrames_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iFrameBSize_set", _wrap_SMS_Header_iFrameBSize_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iFrameBSize_get", _wrap_SMS_Header_iFrameBSize_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iFormat_set", _wrap_SMS_Header_iFormat_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iFormat_get", _wrap_SMS_Header_iFormat_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iFrameRate_set", _wrap_SMS_Header_iFrameRate_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iFrameRate_get", _wrap_SMS_Header_iFrameRate_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iStochasticType_set", _wrap_SMS_Header_iStochasticType_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iStochasticType_get", _wrap_SMS_Header_iStochasticType_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_nTracks_set", _wrap_SMS_Header_nTracks_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_nTracks_get", _wrap_SMS_Header_nTracks_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_nStochasticCoeff_set", _wrap_SMS_Header_nStochasticCoeff_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_nStochasticCoeff_get", _wrap_SMS_Header_nStochasticCoeff_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_fAmplitude_set", _wrap_SMS_Header_fAmplitude_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_fAmplitude_get", _wrap_SMS_Header_fAmplitude_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_fFrequency_set", _wrap_SMS_Header_fFrequency_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_fFrequency_get", _wrap_SMS_Header_fFrequency_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iOriginalSRate_set", _wrap_SMS_Header_iOriginalSRate_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iOriginalSRate_get", _wrap_SMS_Header_iOriginalSRate_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iBegSteadyState_set", _wrap_SMS_Header_iBegSteadyState_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iBegSteadyState_get", _wrap_SMS_Header_iBegSteadyState_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iEndSteadyState_set", _wrap_SMS_Header_iEndSteadyState_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_iEndSteadyState_get", _wrap_SMS_Header_iEndSteadyState_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_fResidualPerc_set", _wrap_SMS_Header_fResidualPerc_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_fResidualPerc_get", _wrap_SMS_Header_fResidualPerc_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_nLoopRecords_set", _wrap_SMS_Header_nLoopRecords_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_nLoopRecords_get", _wrap_SMS_Header_nLoopRecords_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_nSpecEnvelopePoints_set", _wrap_SMS_Header_nSpecEnvelopePoints_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_nSpecEnvelopePoints_get", _wrap_SMS_Header_nSpecEnvelopePoints_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_nTextCharacters_set", _wrap_SMS_Header_nTextCharacters_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_nTextCharacters_get", _wrap_SMS_Header_nTextCharacters_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_pILoopRecords_set", _wrap_SMS_Header_pILoopRecords_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_pILoopRecords_get", _wrap_SMS_Header_pILoopRecords_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_pFSpectralEnvelope_set", _wrap_SMS_Header_pFSpectralEnvelope_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_pFSpectralEnvelope_get", _wrap_SMS_Header_pFSpectralEnvelope_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_pChTextCharacters_set", _wrap_SMS_Header_pChTextCharacters_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_pChTextCharacters_get", _wrap_SMS_Header_pChTextCharacters_get, METH_VARARGS, NULL},
+	 { (char *)"new_SMS_Header", _wrap_new_SMS_Header, METH_VARARGS, NULL},
+	 { (char *)"delete_SMS_Header", _wrap_delete_SMS_Header, METH_VARARGS, NULL},
+	 { (char *)"SMS_Header_swigregister", SMS_Header_swigregister, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndHeader_nSamples_set", _wrap_SMS_SndHeader_nSamples_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndHeader_nSamples_get", _wrap_SMS_SndHeader_nSamples_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndHeader_iSamplingRate_set", _wrap_SMS_SndHeader_iSamplingRate_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndHeader_iSamplingRate_get", _wrap_SMS_SndHeader_iSamplingRate_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndHeader_channelCount_set", _wrap_SMS_SndHeader_channelCount_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndHeader_channelCount_get", _wrap_SMS_SndHeader_channelCount_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndHeader_sizeHeader_set", _wrap_SMS_SndHeader_sizeHeader_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndHeader_sizeHeader_get", _wrap_SMS_SndHeader_sizeHeader_get, METH_VARARGS, NULL},
+	 { (char *)"new_SMS_SndHeader", _wrap_new_SMS_SndHeader, METH_VARARGS, NULL},
+	 { (char *)"delete_SMS_SndHeader", _wrap_delete_SMS_SndHeader, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndHeader_swigregister", SMS_SndHeader_swigregister, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_pSmsData_set", _wrap_SMS_Data_pSmsData_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_pSmsData_get", _wrap_SMS_Data_pSmsData_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_sizeData_set", _wrap_SMS_Data_sizeData_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_sizeData_get", _wrap_SMS_Data_sizeData_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_pFSinFreq_set", _wrap_SMS_Data_pFSinFreq_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_pFSinFreq_get", _wrap_SMS_Data_pFSinFreq_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_pFSinAmp_set", _wrap_SMS_Data_pFSinAmp_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_pFSinAmp_get", _wrap_SMS_Data_pFSinAmp_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_pFSinPha_set", _wrap_SMS_Data_pFSinPha_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_pFSinPha_get", _wrap_SMS_Data_pFSinPha_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_nTracks_set", _wrap_SMS_Data_nTracks_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_nTracks_get", _wrap_SMS_Data_nTracks_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_pFStocGain_set", _wrap_SMS_Data_pFStocGain_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_pFStocGain_get", _wrap_SMS_Data_pFStocGain_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_pFStocCoeff_set", _wrap_SMS_Data_pFStocCoeff_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_pFStocCoeff_get", _wrap_SMS_Data_pFStocCoeff_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_nCoeff_set", _wrap_SMS_Data_nCoeff_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_nCoeff_get", _wrap_SMS_Data_nCoeff_get, METH_VARARGS, NULL},
+	 { (char *)"new_SMS_Data", _wrap_new_SMS_Data, METH_VARARGS, NULL},
+	 { (char *)"delete_SMS_Data", _wrap_delete_SMS_Data, METH_VARARGS, NULL},
+	 { (char *)"SMS_Data_swigregister", SMS_Data_swigregister, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndBuffer_pFBuffer_set", _wrap_SMS_SndBuffer_pFBuffer_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndBuffer_pFBuffer_get", _wrap_SMS_SndBuffer_pFBuffer_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndBuffer_sizeBuffer_set", _wrap_SMS_SndBuffer_sizeBuffer_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndBuffer_sizeBuffer_get", _wrap_SMS_SndBuffer_sizeBuffer_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndBuffer_iMarker_set", _wrap_SMS_SndBuffer_iMarker_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndBuffer_iMarker_get", _wrap_SMS_SndBuffer_iMarker_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndBuffer_iFirstGood_set", _wrap_SMS_SndBuffer_iFirstGood_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndBuffer_iFirstGood_get", _wrap_SMS_SndBuffer_iFirstGood_get, METH_VARARGS, NULL},
+	 { (char *)"new_SMS_SndBuffer", _wrap_new_SMS_SndBuffer, METH_VARARGS, NULL},
+	 { (char *)"delete_SMS_SndBuffer", _wrap_delete_SMS_SndBuffer, METH_VARARGS, NULL},
+	 { (char *)"SMS_SndBuffer_swigregister", SMS_SndBuffer_swigregister, METH_VARARGS, NULL},
+	 { (char *)"SMS_Peak_fFreq_set", _wrap_SMS_Peak_fFreq_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Peak_fFreq_get", _wrap_SMS_Peak_fFreq_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Peak_fMag_set", _wrap_SMS_Peak_fMag_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Peak_fMag_get", _wrap_SMS_Peak_fMag_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Peak_fPhase_set", _wrap_SMS_Peak_fPhase_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Peak_fPhase_get", _wrap_SMS_Peak_fPhase_get, METH_VARARGS, NULL},
+	 { (char *)"new_SMS_Peak", _wrap_new_SMS_Peak, METH_VARARGS, NULL},
+	 { (char *)"delete_SMS_Peak", _wrap_delete_SMS_Peak, METH_VARARGS, NULL},
+	 { (char *)"SMS_Peak_swigregister", SMS_Peak_swigregister, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_iFrameSample_set", _wrap_SMS_AnalFrame_iFrameSample_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_iFrameSample_get", _wrap_SMS_AnalFrame_iFrameSample_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_iFrameSize_set", _wrap_SMS_AnalFrame_iFrameSize_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_iFrameSize_get", _wrap_SMS_AnalFrame_iFrameSize_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_iFrameNum_set", _wrap_SMS_AnalFrame_iFrameNum_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_iFrameNum_get", _wrap_SMS_AnalFrame_iFrameNum_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_pSpectralPeaks_set", _wrap_SMS_AnalFrame_pSpectralPeaks_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_pSpectralPeaks_get", _wrap_SMS_AnalFrame_pSpectralPeaks_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_nPeaks_set", _wrap_SMS_AnalFrame_nPeaks_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_nPeaks_get", _wrap_SMS_AnalFrame_nPeaks_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_fFundamental_set", _wrap_SMS_AnalFrame_fFundamental_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_fFundamental_get", _wrap_SMS_AnalFrame_fFundamental_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_deterministic_set", _wrap_SMS_AnalFrame_deterministic_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_deterministic_get", _wrap_SMS_AnalFrame_deterministic_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_iStatus_set", _wrap_SMS_AnalFrame_iStatus_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_iStatus_get", _wrap_SMS_AnalFrame_iStatus_get, METH_VARARGS, NULL},
+	 { (char *)"new_SMS_AnalFrame", _wrap_new_SMS_AnalFrame, METH_VARARGS, NULL},
+	 { (char *)"delete_SMS_AnalFrame", _wrap_delete_SMS_AnalFrame, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalFrame_swigregister", SMS_AnalFrame_swigregister, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iDebugMode_set", _wrap_SMS_AnalParams_iDebugMode_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iDebugMode_get", _wrap_SMS_AnalParams_iDebugMode_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iFormat_set", _wrap_SMS_AnalParams_iFormat_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iFormat_get", _wrap_SMS_AnalParams_iFormat_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iFrameRate_set", _wrap_SMS_AnalParams_iFrameRate_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iFrameRate_get", _wrap_SMS_AnalParams_iFrameRate_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iStochasticType_set", _wrap_SMS_AnalParams_iStochasticType_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iStochasticType_get", _wrap_SMS_AnalParams_iStochasticType_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_nStochasticCoeff_set", _wrap_SMS_AnalParams_nStochasticCoeff_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_nStochasticCoeff_get", _wrap_SMS_AnalParams_nStochasticCoeff_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fLowestFundamental_set", _wrap_SMS_AnalParams_fLowestFundamental_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fLowestFundamental_get", _wrap_SMS_AnalParams_fLowestFundamental_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fHighestFundamental_set", _wrap_SMS_AnalParams_fHighestFundamental_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fHighestFundamental_get", _wrap_SMS_AnalParams_fHighestFundamental_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fDefaultFundamental_set", _wrap_SMS_AnalParams_fDefaultFundamental_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fDefaultFundamental_get", _wrap_SMS_AnalParams_fDefaultFundamental_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fPeakContToGuide_set", _wrap_SMS_AnalParams_fPeakContToGuide_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fPeakContToGuide_get", _wrap_SMS_AnalParams_fPeakContToGuide_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fFundContToGuide_set", _wrap_SMS_AnalParams_fFundContToGuide_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fFundContToGuide_get", _wrap_SMS_AnalParams_fFundContToGuide_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fFreqDeviation_set", _wrap_SMS_AnalParams_fFreqDeviation_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fFreqDeviation_get", _wrap_SMS_AnalParams_fFreqDeviation_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iSamplingRate_set", _wrap_SMS_AnalParams_iSamplingRate_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iSamplingRate_get", _wrap_SMS_AnalParams_iSamplingRate_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iDefaultSizeWindow_set", _wrap_SMS_AnalParams_iDefaultSizeWindow_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iDefaultSizeWindow_get", _wrap_SMS_AnalParams_iDefaultSizeWindow_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_sizeHop_set", _wrap_SMS_AnalParams_sizeHop_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_sizeHop_get", _wrap_SMS_AnalParams_sizeHop_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fSizeWindow_set", _wrap_SMS_AnalParams_fSizeWindow_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fSizeWindow_get", _wrap_SMS_AnalParams_fSizeWindow_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_nGuides_set", _wrap_SMS_AnalParams_nGuides_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_nGuides_get", _wrap_SMS_AnalParams_nGuides_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iCleanTracks_set", _wrap_SMS_AnalParams_iCleanTracks_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iCleanTracks_get", _wrap_SMS_AnalParams_iCleanTracks_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fMinRefHarmMag_set", _wrap_SMS_AnalParams_fMinRefHarmMag_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fMinRefHarmMag_get", _wrap_SMS_AnalParams_fMinRefHarmMag_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fRefHarmMagDiffFromMax_set", _wrap_SMS_AnalParams_fRefHarmMagDiffFromMax_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fRefHarmMagDiffFromMax_get", _wrap_SMS_AnalParams_fRefHarmMagDiffFromMax_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iRefHarmonic_set", _wrap_SMS_AnalParams_iRefHarmonic_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iRefHarmonic_get", _wrap_SMS_AnalParams_iRefHarmonic_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iMinTrackLength_set", _wrap_SMS_AnalParams_iMinTrackLength_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iMinTrackLength_get", _wrap_SMS_AnalParams_iMinTrackLength_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iMaxSleepingTime_set", _wrap_SMS_AnalParams_iMaxSleepingTime_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iMaxSleepingTime_get", _wrap_SMS_AnalParams_iMaxSleepingTime_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fHighestFreq_set", _wrap_SMS_AnalParams_fHighestFreq_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fHighestFreq_get", _wrap_SMS_AnalParams_fHighestFreq_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fMinPeakMag_set", _wrap_SMS_AnalParams_fMinPeakMag_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fMinPeakMag_get", _wrap_SMS_AnalParams_fMinPeakMag_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iSoundType_set", _wrap_SMS_AnalParams_iSoundType_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iSoundType_get", _wrap_SMS_AnalParams_iSoundType_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iAnalysisDirection_set", _wrap_SMS_AnalParams_iAnalysisDirection_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iAnalysisDirection_get", _wrap_SMS_AnalParams_iAnalysisDirection_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iSizeSound_set", _wrap_SMS_AnalParams_iSizeSound_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iSizeSound_get", _wrap_SMS_AnalParams_iSizeSound_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iWindowType_set", _wrap_SMS_AnalParams_iWindowType_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iWindowType_get", _wrap_SMS_AnalParams_iWindowType_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iMaxDelayFrames_set", _wrap_SMS_AnalParams_iMaxDelayFrames_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_iMaxDelayFrames_get", _wrap_SMS_AnalParams_iMaxDelayFrames_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_prevFrame_set", _wrap_SMS_AnalParams_prevFrame_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_prevFrame_get", _wrap_SMS_AnalParams_prevFrame_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_soundBuffer_set", _wrap_SMS_AnalParams_soundBuffer_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_soundBuffer_get", _wrap_SMS_AnalParams_soundBuffer_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_synthBuffer_set", _wrap_SMS_AnalParams_synthBuffer_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_synthBuffer_get", _wrap_SMS_AnalParams_synthBuffer_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_pFrames_set", _wrap_SMS_AnalParams_pFrames_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_pFrames_get", _wrap_SMS_AnalParams_pFrames_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_ppFrames_set", _wrap_SMS_AnalParams_ppFrames_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_ppFrames_get", _wrap_SMS_AnalParams_ppFrames_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fResidualPercentage_set", _wrap_SMS_AnalParams_fResidualPercentage_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_fResidualPercentage_get", _wrap_SMS_AnalParams_fResidualPercentage_get, METH_VARARGS, NULL},
+	 { (char *)"new_SMS_AnalParams", _wrap_new_SMS_AnalParams, METH_VARARGS, NULL},
+	 { (char *)"delete_SMS_AnalParams", _wrap_delete_SMS_AnalParams, METH_VARARGS, NULL},
+	 { (char *)"SMS_AnalParams_swigregister", SMS_AnalParams_swigregister, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_iStochasticType_set", _wrap_SMS_SynthParams_iStochasticType_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_iStochasticType_get", _wrap_SMS_SynthParams_iStochasticType_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_iSynthesisType_set", _wrap_SMS_SynthParams_iSynthesisType_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_iSynthesisType_get", _wrap_SMS_SynthParams_iSynthesisType_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_iDetSynthType_set", _wrap_SMS_SynthParams_iDetSynthType_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_iDetSynthType_get", _wrap_SMS_SynthParams_iDetSynthType_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_iOriginalSRate_set", _wrap_SMS_SynthParams_iOriginalSRate_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_iOriginalSRate_get", _wrap_SMS_SynthParams_iOriginalSRate_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_iSamplingRate_set", _wrap_SMS_SynthParams_iSamplingRate_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_iSamplingRate_get", _wrap_SMS_SynthParams_iSamplingRate_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_prevFrame_set", _wrap_SMS_SynthParams_prevFrame_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_prevFrame_get", _wrap_SMS_SynthParams_prevFrame_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_sizeHop_set", _wrap_SMS_SynthParams_sizeHop_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_sizeHop_get", _wrap_SMS_SynthParams_sizeHop_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_origSizeHop_set", _wrap_SMS_SynthParams_origSizeHop_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_origSizeHop_get", _wrap_SMS_SynthParams_origSizeHop_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_pFDetWindow_set", _wrap_SMS_SynthParams_pFDetWindow_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_pFDetWindow_get", _wrap_SMS_SynthParams_pFDetWindow_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_pFStocWindow_set", _wrap_SMS_SynthParams_pFStocWindow_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_pFStocWindow_get", _wrap_SMS_SynthParams_pFStocWindow_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_fStocGain_set", _wrap_SMS_SynthParams_fStocGain_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_fStocGain_get", _wrap_SMS_SynthParams_fStocGain_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_fTranspose_set", _wrap_SMS_SynthParams_fTranspose_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_fTranspose_get", _wrap_SMS_SynthParams_fTranspose_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_realftOut_set", _wrap_SMS_SynthParams_realftOut_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_realftOut_get", _wrap_SMS_SynthParams_realftOut_get, METH_VARARGS, NULL},
+	 { (char *)"new_SMS_SynthParams", _wrap_new_SMS_SynthParams, METH_VARARGS, NULL},
+	 { (char *)"delete_SMS_SynthParams", _wrap_delete_SMS_SynthParams, METH_VARARGS, NULL},
+	 { (char *)"SMS_SynthParams_swigregister", SMS_SynthParams_swigregister, METH_VARARGS, NULL},
+	 { (char *)"SMS_HarmCandidate_fFreq_set", _wrap_SMS_HarmCandidate_fFreq_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_HarmCandidate_fFreq_get", _wrap_SMS_HarmCandidate_fFreq_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_HarmCandidate_fMag_set", _wrap_SMS_HarmCandidate_fMag_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_HarmCandidate_fMag_get", _wrap_SMS_HarmCandidate_fMag_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_HarmCandidate_fMagPerc_set", _wrap_SMS_HarmCandidate_fMagPerc_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_HarmCandidate_fMagPerc_get", _wrap_SMS_HarmCandidate_fMagPerc_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_HarmCandidate_fFreqDev_set", _wrap_SMS_HarmCandidate_fFreqDev_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_HarmCandidate_fFreqDev_get", _wrap_SMS_HarmCandidate_fFreqDev_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_HarmCandidate_fHarmRatio_set", _wrap_SMS_HarmCandidate_fHarmRatio_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_HarmCandidate_fHarmRatio_get", _wrap_SMS_HarmCandidate_fHarmRatio_get, METH_VARARGS, NULL},
+	 { (char *)"new_SMS_HarmCandidate", _wrap_new_SMS_HarmCandidate, METH_VARARGS, NULL},
+	 { (char *)"delete_SMS_HarmCandidate", _wrap_delete_SMS_HarmCandidate, METH_VARARGS, NULL},
+	 { (char *)"SMS_HarmCandidate_swigregister", SMS_HarmCandidate_swigregister, METH_VARARGS, NULL},
+	 { (char *)"SMS_ContCandidate_fFreqDev_set", _wrap_SMS_ContCandidate_fFreqDev_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_ContCandidate_fFreqDev_get", _wrap_SMS_ContCandidate_fFreqDev_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_ContCandidate_fMagDev_set", _wrap_SMS_ContCandidate_fMagDev_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_ContCandidate_fMagDev_get", _wrap_SMS_ContCandidate_fMagDev_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_ContCandidate_iPeak_set", _wrap_SMS_ContCandidate_iPeak_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_ContCandidate_iPeak_get", _wrap_SMS_ContCandidate_iPeak_get, METH_VARARGS, NULL},
+	 { (char *)"new_SMS_ContCandidate", _wrap_new_SMS_ContCandidate, METH_VARARGS, NULL},
+	 { (char *)"delete_SMS_ContCandidate", _wrap_delete_SMS_ContCandidate, METH_VARARGS, NULL},
+	 { (char *)"SMS_ContCandidate_swigregister", SMS_ContCandidate_swigregister, METH_VARARGS, NULL},
+	 { (char *)"SMS_Guide_fFreq_set", _wrap_SMS_Guide_fFreq_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Guide_fFreq_get", _wrap_SMS_Guide_fFreq_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Guide_fMag_set", _wrap_SMS_Guide_fMag_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Guide_fMag_get", _wrap_SMS_Guide_fMag_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Guide_iStatus_set", _wrap_SMS_Guide_iStatus_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Guide_iStatus_get", _wrap_SMS_Guide_iStatus_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_Guide_iPeakChosen_set", _wrap_SMS_Guide_iPeakChosen_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_Guide_iPeakChosen_get", _wrap_SMS_Guide_iPeakChosen_get, METH_VARARGS, NULL},
+	 { (char *)"new_SMS_Guide", _wrap_new_SMS_Guide, METH_VARARGS, NULL},
+	 { (char *)"delete_SMS_Guide", _wrap_delete_SMS_Guide, METH_VARARGS, NULL},
+	 { (char *)"SMS_Guide_swigregister", SMS_Guide_swigregister, METH_VARARGS, NULL},
+	 { (char *)"sms_magToDB", _wrap_sms_magToDB, METH_VARARGS, NULL},
+	 { (char *)"sms_dBToMag", _wrap_sms_dBToMag, METH_VARARGS, NULL},
+	 { (char *)"sms_analyze", _wrap_sms_analyze, METH_VARARGS, NULL},
+	 { (char *)"sms_init", _wrap_sms_init, METH_VARARGS, NULL},
+	 { (char *)"sms_free", _wrap_sms_free, METH_VARARGS, NULL},
+	 { (char *)"sms_initAnalysis", _wrap_sms_initAnalysis, METH_VARARGS, NULL},
+	 { (char *)"sms_initAnalParams", _wrap_sms_initAnalParams, METH_VARARGS, NULL},
+	 { (char *)"sms_initSynth", _wrap_sms_initSynth, METH_VARARGS, NULL},
+	 { (char *)"sms_freeAnalysis", _wrap_sms_freeAnalysis, METH_VARARGS, NULL},
+	 { (char *)"sms_freeSynth", _wrap_sms_freeSynth, METH_VARARGS, NULL},
+	 { (char *)"sms_fillSndBuffer", _wrap_sms_fillSndBuffer, METH_VARARGS, NULL},
+	 { (char *)"sms_getWindow", _wrap_sms_getWindow, METH_VARARGS, NULL},
+	 { (char *)"sms_spectrum", _wrap_sms_spectrum, METH_VARARGS, NULL},
+	 { (char *)"sms_quickSpectrum", _wrap_sms_quickSpectrum, METH_VARARGS, NULL},
+	 { (char *)"sms_invQuickSpectrum", _wrap_sms_invQuickSpectrum, METH_VARARGS, NULL},
+	 { (char *)"sms_invQuickSpectrumW", _wrap_sms_invQuickSpectrumW, METH_VARARGS, NULL},
+	 { (char *)"sms_spectralApprox", _wrap_sms_spectralApprox, METH_VARARGS, NULL},
+	 { (char *)"sms_sizeNextWindow", _wrap_sms_sizeNextWindow, METH_VARARGS, NULL},
+	 { (char *)"sms_fundDeviation", _wrap_sms_fundDeviation, METH_VARARGS, NULL},
+	 { (char *)"sms_detectPeaks", _wrap_sms_detectPeaks, METH_VARARGS, NULL},
+	 { (char *)"sms_harmDetection", _wrap_sms_harmDetection, METH_VARARGS, NULL},
+	 { (char *)"sms_peakContinuation", _wrap_sms_peakContinuation, METH_VARARGS, NULL},
+	 { (char *)"sms_preEmphasis", _wrap_sms_preEmphasis, METH_VARARGS, NULL},
+	 { (char *)"sms_deEmphasis", _wrap_sms_deEmphasis, METH_VARARGS, NULL},
+	 { (char *)"sms_cleanTracks", _wrap_sms_cleanTracks, METH_VARARGS, NULL},
+	 { (char *)"sms_scaleDet", _wrap_sms_scaleDet, METH_VARARGS, NULL},
+	 { (char *)"sms_prepSine", _wrap_sms_prepSine, METH_VARARGS, NULL},
+	 { (char *)"sms_prepSinc", _wrap_sms_prepSinc, METH_VARARGS, NULL},
+	 { (char *)"sms_clearSine", _wrap_sms_clearSine, METH_VARARGS, NULL},
+	 { (char *)"sms_clearSinc", _wrap_sms_clearSinc, METH_VARARGS, NULL},
+	 { (char *)"sms_sine", _wrap_sms_sine, METH_VARARGS, NULL},
+	 { (char *)"sms_sinc", _wrap_sms_sinc, METH_VARARGS, NULL},
+	 { (char *)"sms_synthesize", _wrap_sms_synthesize, METH_VARARGS, NULL},
+	 { (char *)"sms_sineSynthFrame", _wrap_sms_sineSynthFrame, METH_VARARGS, NULL},
+	 { (char *)"sms_initHeader", _wrap_sms_initHeader, METH_VARARGS, NULL},
+	 { (char *)"sms_getHeader", _wrap_sms_getHeader, METH_VARARGS, NULL},
+	 { (char *)"sms_fillHeader", _wrap_sms_fillHeader, METH_VARARGS, NULL},
+	 { (char *)"sms_writeHeader", _wrap_sms_writeHeader, METH_VARARGS, NULL},
+	 { (char *)"sms_writeFile", _wrap_sms_writeFile, METH_VARARGS, NULL},
+	 { (char *)"sms_initFrame", _wrap_sms_initFrame, METH_VARARGS, NULL},
+	 { (char *)"sms_allocFrame", _wrap_sms_allocFrame, METH_VARARGS, NULL},
+	 { (char *)"sms_allocFrameH", _wrap_sms_allocFrameH, METH_VARARGS, NULL},
+	 { (char *)"sms_getFrame", _wrap_sms_getFrame, METH_VARARGS, NULL},
+	 { (char *)"sms_writeFrame", _wrap_sms_writeFrame, METH_VARARGS, NULL},
+	 { (char *)"sms_freeFrame", _wrap_sms_freeFrame, METH_VARARGS, NULL},
+	 { (char *)"sms_clearFrame", _wrap_sms_clearFrame, METH_VARARGS, NULL},
+	 { (char *)"sms_copyFrame", _wrap_sms_copyFrame, METH_VARARGS, NULL},
+	 { (char *)"sms_frameSizeB", _wrap_sms_frameSizeB, METH_VARARGS, NULL},
+	 { (char *)"sms_errorString", _wrap_sms_errorString, METH_VARARGS, NULL},
+	 { (char *)"sms_residual", _wrap_sms_residual, METH_VARARGS, NULL},
+	 { (char *)"sms_stocAnalysis", _wrap_sms_stocAnalysis, METH_VARARGS, NULL},
+	 { (char *)"sms_interpolateFrames", _wrap_sms_interpolateFrames, METH_VARARGS, NULL},
+	 { (char *)"sms_openSF", _wrap_sms_openSF, METH_VARARGS, NULL},
+	 { (char *)"sms_getSound", _wrap_sms_getSound, METH_VARARGS, NULL},
+	 { (char *)"sms_createSF", _wrap_sms_createSF, METH_VARARGS, NULL},
+	 { (char *)"sms_writeSound", _wrap_sms_writeSound, METH_VARARGS, NULL},
+	 { (char *)"sms_writeSF", _wrap_sms_writeSF, METH_VARARGS, NULL},
+	 { (char *)"realft", _wrap_realft, METH_VARARGS, NULL},
+	 { (char *)"sms_fourier", _wrap_sms_fourier, METH_VARARGS, NULL},
+	 { (char *)"sms_createResSF", _wrap_sms_createResSF, METH_VARARGS, NULL},
+	 { (char *)"sms_writeResSound", _wrap_sms_writeResSound, METH_VARARGS, NULL},
+	 { (char *)"sms_writeResSF", _wrap_sms_writeResSF, METH_VARARGS, NULL},
+	 { (char *)"sms_createDebugFile", _wrap_sms_createDebugFile, METH_VARARGS, NULL},
+	 { (char *)"sms_writeDebugData", _wrap_sms_writeDebugData, METH_VARARGS, NULL},
+	 { (char *)"sms_writeDebugFile", _wrap_sms_writeDebugFile, METH_VARARGS, NULL},
+	 { (char *)"SMS_HybParams_nCoefficients_set", _wrap_SMS_HybParams_nCoefficients_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_HybParams_nCoefficients_get", _wrap_SMS_HybParams_nCoefficients_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_HybParams_fGain_set", _wrap_SMS_HybParams_fGain_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_HybParams_fGain_get", _wrap_SMS_HybParams_fGain_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_HybParams_fMagBalance_set", _wrap_SMS_HybParams_fMagBalance_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_HybParams_fMagBalance_get", _wrap_SMS_HybParams_fMagBalance_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_HybParams_iSmoothOrder_set", _wrap_SMS_HybParams_iSmoothOrder_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_HybParams_iSmoothOrder_get", _wrap_SMS_HybParams_iSmoothOrder_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_HybParams_pCompressionEnv_set", _wrap_SMS_HybParams_pCompressionEnv_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_HybParams_pCompressionEnv_get", _wrap_SMS_HybParams_pCompressionEnv_get, METH_VARARGS, NULL},
+	 { (char *)"SMS_HybParams_sizeCompressionEnv_set", _wrap_SMS_HybParams_sizeCompressionEnv_set, METH_VARARGS, NULL},
+	 { (char *)"SMS_HybParams_sizeCompressionEnv_get", _wrap_SMS_HybParams_sizeCompressionEnv_get, METH_VARARGS, NULL},
+	 { (char *)"new_SMS_HybParams", _wrap_new_SMS_HybParams, METH_VARARGS, NULL},
+	 { (char *)"delete_SMS_HybParams", _wrap_delete_SMS_HybParams, METH_VARARGS, NULL},
+	 { (char *)"SMS_HybParams_swigregister", SMS_HybParams_swigregister, METH_VARARGS, NULL},
+	 { (char *)"sms_hybridize", _wrap_sms_hybridize, METH_VARARGS, NULL},
+	 { (char *)"sms_filterArray", _wrap_sms_filterArray, METH_VARARGS, NULL},
+	 { NULL, NULL, 0, NULL }
 };
 
-static swig_var_info swig_variables[] = {
-    {0,0,0,0}
-};
-
-static swig_const_info swig_constants[] = {
-    {0,0,0,0,0,0}
-};
 
 /* -------- TYPE CONVERSION AND EQUIVALENCE RULES (BEGIN) -------- */
 
+static swig_type_info _swigt__p_FILE = {"_p_FILE", "FILE *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_SMS_AnalFrame = {"_p_SMS_AnalFrame", "SMS_AnalFrame *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_SMS_AnalParams = {"_p_SMS_AnalParams", "SMS_AnalParams *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_SMS_ContCandidate = {"_p_SMS_ContCandidate", "SMS_ContCandidate *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_SMS_Data = {"_p_SMS_Data", "SMS_Data *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_SMS_Guide = {"_p_SMS_Guide", "SMS_Guide *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_SMS_HarmCandidate = {"_p_SMS_HarmCandidate", "SMS_HarmCandidate *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_SMS_Header = {"_p_SMS_Header", "SMS_Header *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_SMS_HybParams = {"_p_SMS_HybParams", "SMS_HybParams *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_SMS_Peak = {"_p_SMS_Peak", "SMS_Peak *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_SMS_SndBuffer = {"_p_SMS_SndBuffer", "SMS_SndBuffer *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_SMS_SndHeader = {"_p_SMS_SndHeader", "SMS_SndHeader *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_SMS_SynthParams = {"_p_SMS_SynthParams", "SMS_SynthParams *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_char = {"_p_char", "char *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_float = {"_p_float", "float *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_int = {"_p_int", "int *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_p_FILE = {"_p_p_FILE", "FILE **", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_p_SMS_AnalFrame = {"_p_p_SMS_AnalFrame", "SMS_AnalFrame **", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_p_SMS_Header = {"_p_p_SMS_Header", "SMS_Header **", 0, 0, (void*)0, 0};
 
 static swig_type_info *swig_type_initial[] = {
+  &_swigt__p_FILE,
+  &_swigt__p_SMS_AnalFrame,
+  &_swigt__p_SMS_AnalParams,
+  &_swigt__p_SMS_ContCandidate,
+  &_swigt__p_SMS_Data,
+  &_swigt__p_SMS_Guide,
+  &_swigt__p_SMS_HarmCandidate,
+  &_swigt__p_SMS_Header,
+  &_swigt__p_SMS_HybParams,
+  &_swigt__p_SMS_Peak,
+  &_swigt__p_SMS_SndBuffer,
+  &_swigt__p_SMS_SndHeader,
+  &_swigt__p_SMS_SynthParams,
   &_swigt__p_char,
+  &_swigt__p_float,
+  &_swigt__p_int,
+  &_swigt__p_p_FILE,
+  &_swigt__p_p_SMS_AnalFrame,
+  &_swigt__p_p_SMS_Header,
 };
 
+static swig_cast_info _swigc__p_FILE[] = {  {&_swigt__p_FILE, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_SMS_AnalFrame[] = {  {&_swigt__p_SMS_AnalFrame, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_SMS_AnalParams[] = {  {&_swigt__p_SMS_AnalParams, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_SMS_ContCandidate[] = {  {&_swigt__p_SMS_ContCandidate, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_SMS_Data[] = {  {&_swigt__p_SMS_Data, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_SMS_Guide[] = {  {&_swigt__p_SMS_Guide, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_SMS_HarmCandidate[] = {  {&_swigt__p_SMS_HarmCandidate, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_SMS_Header[] = {  {&_swigt__p_SMS_Header, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_SMS_HybParams[] = {  {&_swigt__p_SMS_HybParams, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_SMS_Peak[] = {  {&_swigt__p_SMS_Peak, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_SMS_SndBuffer[] = {  {&_swigt__p_SMS_SndBuffer, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_SMS_SndHeader[] = {  {&_swigt__p_SMS_SndHeader, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_SMS_SynthParams[] = {  {&_swigt__p_SMS_SynthParams, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_char[] = {  {&_swigt__p_char, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_float[] = {  {&_swigt__p_float, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_int[] = {  {&_swigt__p_int, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_p_FILE[] = {  {&_swigt__p_p_FILE, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_p_SMS_AnalFrame[] = {  {&_swigt__p_p_SMS_AnalFrame, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_p_SMS_Header[] = {  {&_swigt__p_p_SMS_Header, 0, 0, 0},{0, 0, 0, 0}};
 
 static swig_cast_info *swig_cast_initial[] = {
+  _swigc__p_FILE,
+  _swigc__p_SMS_AnalFrame,
+  _swigc__p_SMS_AnalParams,
+  _swigc__p_SMS_ContCandidate,
+  _swigc__p_SMS_Data,
+  _swigc__p_SMS_Guide,
+  _swigc__p_SMS_HarmCandidate,
+  _swigc__p_SMS_Header,
+  _swigc__p_SMS_HybParams,
+  _swigc__p_SMS_Peak,
+  _swigc__p_SMS_SndBuffer,
+  _swigc__p_SMS_SndHeader,
+  _swigc__p_SMS_SynthParams,
   _swigc__p_char,
+  _swigc__p_float,
+  _swigc__p_int,
+  _swigc__p_p_FILE,
+  _swigc__p_p_SMS_AnalFrame,
+  _swigc__p_p_SMS_Header,
 };
 
 
 /* -------- TYPE CONVERSION AND EQUIVALENCE RULES (END) -------- */
+
+static swig_const_info swig_const_table[] = {
+{0, 0, 0, 0.0, 0, 0}};
 
 #ifdef __cplusplus
 }
@@ -1869,31 +12499,203 @@ SWIG_PropagateClientData(void) {
 #endif
 
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+  
+  /* Python-specific SWIG API */
+#define SWIG_newvarlink()                             SWIG_Python_newvarlink()
+#define SWIG_addvarlink(p, name, get_attr, set_attr)  SWIG_Python_addvarlink(p, name, get_attr, set_attr)
+#define SWIG_InstallConstants(d, constants)           SWIG_Python_InstallConstants(d, constants)
+  
+  /* -----------------------------------------------------------------------------
+   * global variable support code.
+   * ----------------------------------------------------------------------------- */
+  
+  typedef struct swig_globalvar {
+    char       *name;                  /* Name of global variable */
+    PyObject *(*get_attr)(void);       /* Return the current value */
+    int       (*set_attr)(PyObject *); /* Set the value */
+    struct swig_globalvar *next;
+  } swig_globalvar;
+  
+  typedef struct swig_varlinkobject {
+    PyObject_HEAD
+    swig_globalvar *vars;
+  } swig_varlinkobject;
+  
+  SWIGINTERN PyObject *
+  swig_varlink_repr(swig_varlinkobject *SWIGUNUSEDPARM(v)) {
+    return PyString_FromString("<Swig global variables>");
+  }
+  
+  SWIGINTERN PyObject *
+  swig_varlink_str(swig_varlinkobject *v) {
+    PyObject *str = PyString_FromString("(");
+    swig_globalvar  *var;
+    for (var = v->vars; var; var=var->next) {
+      PyString_ConcatAndDel(&str,PyString_FromString(var->name));
+      if (var->next) PyString_ConcatAndDel(&str,PyString_FromString(", "));
+    }
+    PyString_ConcatAndDel(&str,PyString_FromString(")"));
+    return str;
+  }
+  
+  SWIGINTERN int
+  swig_varlink_print(swig_varlinkobject *v, FILE *fp, int SWIGUNUSEDPARM(flags)) {
+    PyObject *str = swig_varlink_str(v);
+    fprintf(fp,"Swig global variables ");
+    fprintf(fp,"%s\n", PyString_AsString(str));
+    Py_DECREF(str);
+    return 0;
+  }
+  
+  SWIGINTERN void
+  swig_varlink_dealloc(swig_varlinkobject *v) {
+    swig_globalvar *var = v->vars;
+    while (var) {
+      swig_globalvar *n = var->next;
+      free(var->name);
+      free(var);
+      var = n;
+    }
+  }
+  
+  SWIGINTERN PyObject *
+  swig_varlink_getattr(swig_varlinkobject *v, char *n) {
+    PyObject *res = NULL;
+    swig_globalvar *var = v->vars;
+    while (var) {
+      if (strcmp(var->name,n) == 0) {
+        res = (*var->get_attr)();
+        break;
+      }
+      var = var->next;
+    }
+    if (res == NULL && !PyErr_Occurred()) {
+      PyErr_SetString(PyExc_NameError,"Unknown C global variable");
+    }
+    return res;
+  }
+  
+  SWIGINTERN int
+  swig_varlink_setattr(swig_varlinkobject *v, char *n, PyObject *p) {
+    int res = 1;
+    swig_globalvar *var = v->vars;
+    while (var) {
+      if (strcmp(var->name,n) == 0) {
+        res = (*var->set_attr)(p);
+        break;
+      }
+      var = var->next;
+    }
+    if (res == 1 && !PyErr_Occurred()) {
+      PyErr_SetString(PyExc_NameError,"Unknown C global variable");
+    }
+    return res;
+  }
+  
+  SWIGINTERN PyTypeObject*
+  swig_varlink_type(void) {
+    static char varlink__doc__[] = "Swig var link object";
+    static PyTypeObject varlink_type;
+    static int type_init = 0;  
+    if (!type_init) {
+      const PyTypeObject tmp
+      = {
+        PyObject_HEAD_INIT(NULL)
+        0,                                  /* Number of items in variable part (ob_size) */
+        (char *)"swigvarlink",              /* Type name (tp_name) */
+        sizeof(swig_varlinkobject),         /* Basic size (tp_basicsize) */
+        0,                                  /* Itemsize (tp_itemsize) */
+        (destructor) swig_varlink_dealloc,   /* Deallocator (tp_dealloc) */ 
+        (printfunc) swig_varlink_print,     /* Print (tp_print) */
+        (getattrfunc) swig_varlink_getattr, /* get attr (tp_getattr) */
+        (setattrfunc) swig_varlink_setattr, /* Set attr (tp_setattr) */
+        0,                                  /* tp_compare */
+        (reprfunc) swig_varlink_repr,       /* tp_repr */
+        0,                                  /* tp_as_number */
+        0,                                  /* tp_as_sequence */
+        0,                                  /* tp_as_mapping */
+        0,                                  /* tp_hash */
+        0,                                  /* tp_call */
+        (reprfunc)swig_varlink_str,        /* tp_str */
+        0,                                  /* tp_getattro */
+        0,                                  /* tp_setattro */
+        0,                                  /* tp_as_buffer */
+        0,                                  /* tp_flags */
+        varlink__doc__,                     /* tp_doc */
+        0,                                  /* tp_traverse */
+        0,                                  /* tp_clear */
+        0,                                  /* tp_richcompare */
+        0,                                  /* tp_weaklistoffset */
+#if PY_VERSION_HEX >= 0x02020000
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* tp_iter -> tp_weaklist */
+#endif
+#if PY_VERSION_HEX >= 0x02030000
+        0,                                  /* tp_del */
+#endif
+#ifdef COUNT_ALLOCS
+        0,0,0,0                             /* tp_alloc -> tp_next */
+#endif
+      };
+      varlink_type = tmp;
+      varlink_type.ob_type = &PyType_Type;
+      type_init = 1;
+    }
+    return &varlink_type;
+  }
+  
+  /* Create a variable linking object for use later */
+  SWIGINTERN PyObject *
+  SWIG_Python_newvarlink(void) {
+    swig_varlinkobject *result = PyObject_NEW(swig_varlinkobject, swig_varlink_type());
+    if (result) {
+      result->vars = 0;
+    }
+    return ((PyObject*) result);
+  }
+  
+  SWIGINTERN void 
+  SWIG_Python_addvarlink(PyObject *p, char *name, PyObject *(*get_attr)(void), int (*set_attr)(PyObject *p)) {
+    swig_varlinkobject *v = (swig_varlinkobject *) p;
+    swig_globalvar *gv = (swig_globalvar *) malloc(sizeof(swig_globalvar));
+    if (gv) {
+      size_t size = strlen(name)+1;
+      gv->name = (char *)malloc(size);
+      if (gv->name) {
+        strncpy(gv->name,name,size);
+        gv->get_attr = get_attr;
+        gv->set_attr = set_attr;
+        gv->next = v->vars;
+      }
+    }
+    v->vars = gv;
+  }
+  
+  SWIGINTERN PyObject *
+  SWIG_globals(void) {
+    static PyObject *_SWIG_globals = 0; 
+    if (!_SWIG_globals) _SWIG_globals = SWIG_newvarlink();  
+    return _SWIG_globals;
+  }
   
   /* -----------------------------------------------------------------------------
    * constants/methods manipulation
    * ----------------------------------------------------------------------------- */
   
   /* Install Constants */
-  
   SWIGINTERN void
-  SWIG_Tcl_InstallConstants(Tcl_Interp *interp, swig_const_info constants[]) {
-    int i;
-    Tcl_Obj *obj;
-    
-    if (!swigconstTableinit) {
-      Tcl_InitHashTable(&swigconstTable, TCL_STRING_KEYS);
-      swigconstTableinit = 1;
-    }
-    for (i = 0; constants[i].type; i++) {
+  SWIG_Python_InstallConstants(PyObject *d, swig_const_info constants[]) {
+    PyObject *obj = 0;
+    size_t i;
+    for (i = 0; constants[i].type; ++i) {
       switch(constants[i].type) {
-      case SWIG_TCL_POINTER:
+      case SWIG_PY_POINTER:
         obj = SWIG_NewPointerObj(constants[i].pvalue, *(constants[i]).ptype,0);
         break;
-      case SWIG_TCL_BINARY:
+      case SWIG_PY_BINARY:
         obj = SWIG_NewPackedObj(constants[i].pvalue, constants[i].lvalue, *(constants[i].ptype));
         break;
       default:
@@ -1901,10 +12703,57 @@ extern "C" {
         break;
       }
       if (obj) {
-        SWIG_Tcl_SetConstantObj(interp, constants[i].name, obj);
+        PyDict_SetItemString(d, constants[i].name, obj);
+        Py_DECREF(obj);
       }
     }
   }
+  
+  /* -----------------------------------------------------------------------------*/
+  /* Fix SwigMethods to carry the callback ptrs when needed */
+  /* -----------------------------------------------------------------------------*/
+  
+  SWIGINTERN void
+  SWIG_Python_FixMethods(PyMethodDef *methods,
+    swig_const_info *const_table,
+    swig_type_info **types,
+    swig_type_info **types_initial) {
+    size_t i;
+    for (i = 0; methods[i].ml_name; ++i) {
+      const char *c = methods[i].ml_doc;
+      if (c && (c = strstr(c, "swig_ptr: "))) {
+        int j;
+        swig_const_info *ci = 0;
+        const char *name = c + 10;
+        for (j = 0; const_table[j].type; ++j) {
+          if (strncmp(const_table[j].name, name, 
+              strlen(const_table[j].name)) == 0) {
+            ci = &(const_table[j]);
+            break;
+          }
+        }
+        if (ci) {
+          size_t shift = (ci->ptype) - types;
+          swig_type_info *ty = types_initial[shift];
+          size_t ldoc = (c - methods[i].ml_doc);
+          size_t lptr = strlen(ty->name)+2*sizeof(void*)+2;
+          char *ndoc = (char*)malloc(ldoc + lptr + 10);
+          if (ndoc) {
+            char *buff = ndoc;
+            void *ptr = (ci->type == SWIG_PY_POINTER) ? ci->pvalue : 0;
+            if (ptr) {
+              strncpy(buff, methods[i].ml_doc, ldoc);
+              buff += ldoc;
+              strncpy(buff, "swig_ptr: ", 10);
+              buff += 10;
+              SWIG_PackVoidPtr(buff, ptr, ty->name, lptr);
+              methods[i].ml_doc = ndoc;
+            }
+          }
+        }
+      }
+    }
+  } 
   
 #ifdef __cplusplus
 }
@@ -1914,41 +12763,94 @@ extern "C" {
  *  Partial Init method
  * -----------------------------------------------------------------------------*/
 
-SWIGEXPORT int SWIG_init(Tcl_Interp *interp) {
-  int i;
-  if (interp == 0) return TCL_ERROR;
-#ifdef USE_TCL_STUBS
-  if (Tcl_InitStubs(interp, (char*)"8.1", 0) == NULL) {
-    return TCL_ERROR;
-  }
-#endif  
-  Tcl_PkgProvide(interp, (char*)SWIG_name, (char*)SWIG_version);
-  
-#ifdef SWIG_namespace
-  Tcl_Eval(interp, "namespace eval " SWIG_namespace " { }");
+#ifdef __cplusplus
+extern "C"
 #endif
+SWIGEXPORT void SWIG_init(void) {
+  PyObject *m, *d;
   
-  SWIG_InitializeModule((void *) interp);
-  SWIG_PropagateClientData();
+  /* Fix SwigMethods to carry the callback ptrs when needed */
+  SWIG_Python_FixMethods(SwigMethods, swig_const_table, swig_types, swig_type_initial);
   
-  for (i = 0; swig_commands[i].name; i++) {
-    Tcl_CreateObjCommand(interp, (char *) swig_commands[i].name, (swig_wrapper_func) swig_commands[i].wrapper,
-      swig_commands[i].clientdata, NULL);
-  }
-  for (i = 0; swig_variables[i].name; i++) {
-    Tcl_SetVar(interp, (char *) swig_variables[i].name, (char *) "", TCL_GLOBAL_ONLY);
-    Tcl_TraceVar(interp, (char *) swig_variables[i].name, TCL_TRACE_READS | TCL_GLOBAL_ONLY, 
-      (Tcl_VarTraceProc *) swig_variables[i].get, (ClientData) swig_variables[i].addr);
-    Tcl_TraceVar(interp, (char *) swig_variables[i].name, TCL_TRACE_WRITES | TCL_GLOBAL_ONLY, 
-      (Tcl_VarTraceProc *) swig_variables[i].set, (ClientData) swig_variables[i].addr);
-  }
+  m = Py_InitModule((char *) SWIG_name, SwigMethods);
+  d = PyModule_GetDict(m);
   
-  SWIG_Tcl_InstallConstants(interp, swig_constants);
+  SWIG_InitializeModule(0);
+  SWIG_InstallConstants(d,swig_const_table);
   
   
-  return TCL_OK;
-}
-SWIGEXPORT int Sms_SafeInit(Tcl_Interp *interp) {
-  return SWIG_init(interp);
+  SWIG_Python_SetConstant(d, "SMS_MAX_NPEAKS",SWIG_From_int((int)(200)));
+  SWIG_Python_SetConstant(d, "SMS_MIN_MAG",SWIG_From_double((double)(.01)));
+  SWIG_Python_SetConstant(d, "SMS_FORMAT_H",SWIG_From_int((int)(SMS_FORMAT_H)));
+  SWIG_Python_SetConstant(d, "SMS_FORMAT_IH",SWIG_From_int((int)(SMS_FORMAT_IH)));
+  SWIG_Python_SetConstant(d, "SMS_FORMAT_HP",SWIG_From_int((int)(SMS_FORMAT_HP)));
+  SWIG_Python_SetConstant(d, "SMS_FORMAT_IHP",SWIG_From_int((int)(SMS_FORMAT_IHP)));
+  SWIG_Python_SetConstant(d, "SMS_STYPE_ALL",SWIG_From_int((int)(SMS_STYPE_ALL)));
+  SWIG_Python_SetConstant(d, "SMS_STYPE_DET",SWIG_From_int((int)(SMS_STYPE_DET)));
+  SWIG_Python_SetConstant(d, "SMS_STYPE_STOC",SWIG_From_int((int)(SMS_STYPE_STOC)));
+  SWIG_Python_SetConstant(d, "SMS_DET_IFFT",SWIG_From_int((int)(SMS_DET_IFFT)));
+  SWIG_Python_SetConstant(d, "SMS_DET_SIN",SWIG_From_int((int)(SMS_DET_SIN)));
+  SWIG_Python_SetConstant(d, "SMS_STOC_NONE",SWIG_From_int((int)(SMS_STOC_NONE)));
+  SWIG_Python_SetConstant(d, "SMS_STOC_APPROX",SWIG_From_int((int)(SMS_STOC_APPROX)));
+  SWIG_Python_SetConstant(d, "SMS_STOC_IFFT",SWIG_From_int((int)(SMS_STOC_IFFT)));
+  SWIG_Python_SetConstant(d, "SMS_OK",SWIG_From_int((int)(SMS_OK)));
+  SWIG_Python_SetConstant(d, "SMS_NOPEN",SWIG_From_int((int)(SMS_NOPEN)));
+  SWIG_Python_SetConstant(d, "SMS_NSMS",SWIG_From_int((int)(SMS_NSMS)));
+  SWIG_Python_SetConstant(d, "SMS_MALLOC",SWIG_From_int((int)(SMS_MALLOC)));
+  SWIG_Python_SetConstant(d, "SMS_RDERR",SWIG_From_int((int)(SMS_RDERR)));
+  SWIG_Python_SetConstant(d, "SMS_WRERR",SWIG_From_int((int)(SMS_WRERR)));
+  SWIG_Python_SetConstant(d, "SMS_FFTWERR",SWIG_From_int((int)(SMS_FFTWERR)));
+  SWIG_Python_SetConstant(d, "SMS_SNDERR",SWIG_From_int((int)(SMS_SNDERR)));
+  SWIG_Python_SetConstant(d, "SMS_DBG_NONE",SWIG_From_int((int)(SMS_DBG_NONE)));
+  SWIG_Python_SetConstant(d, "SMS_DBG_INIT",SWIG_From_int((int)(SMS_DBG_INIT)));
+  SWIG_Python_SetConstant(d, "SMS_DBG_PEAK_DET",SWIG_From_int((int)(SMS_DBG_PEAK_DET)));
+  SWIG_Python_SetConstant(d, "SMS_DBG_HARM_DET",SWIG_From_int((int)(SMS_DBG_HARM_DET)));
+  SWIG_Python_SetConstant(d, "SMS_DBG_PEAK_CONT",SWIG_From_int((int)(SMS_DBG_PEAK_CONT)));
+  SWIG_Python_SetConstant(d, "SMS_DBG_CLEAN_TRAJ",SWIG_From_int((int)(SMS_DBG_CLEAN_TRAJ)));
+  SWIG_Python_SetConstant(d, "SMS_DBG_SINE_SYNTH",SWIG_From_int((int)(SMS_DBG_SINE_SYNTH)));
+  SWIG_Python_SetConstant(d, "SMS_DBG_STOC_ANAL",SWIG_From_int((int)(SMS_DBG_STOC_ANAL)));
+  SWIG_Python_SetConstant(d, "SMS_DBG_STOC_SYNTH",SWIG_From_int((int)(SMS_DBG_STOC_SYNTH)));
+  SWIG_Python_SetConstant(d, "SMS_DBG_SMS_ANAL",SWIG_From_int((int)(SMS_DBG_SMS_ANAL)));
+  SWIG_Python_SetConstant(d, "SMS_DBG_ALL",SWIG_From_int((int)(SMS_DBG_ALL)));
+  SWIG_Python_SetConstant(d, "SMS_DBG_RESIDUAL",SWIG_From_int((int)(SMS_DBG_RESIDUAL)));
+  SWIG_Python_SetConstant(d, "SMS_DBG_SYNC",SWIG_From_int((int)(SMS_DBG_SYNC)));
+  SWIG_Python_SetConstant(d, "SMS_MAX_WINDOW",SWIG_From_int((int)(8190)));
+  SWIG_Python_SetConstant(d, "SMS_SOUND_TYPE_MELODY",SWIG_From_int((int)(SMS_SOUND_TYPE_MELODY)));
+  SWIG_Python_SetConstant(d, "SMS_SOUND_TYPE_NOTE",SWIG_From_int((int)(SMS_SOUND_TYPE_NOTE)));
+  SWIG_Python_SetConstant(d, "SMS_DIR_FWD",SWIG_From_int((int)(SMS_DIR_FWD)));
+  SWIG_Python_SetConstant(d, "SMS_DIR_REV",SWIG_From_int((int)(SMS_DIR_REV)));
+  SWIG_Python_SetConstant(d, "SMS_WIN_HAMMING",SWIG_From_int((int)(SMS_WIN_HAMMING)));
+  SWIG_Python_SetConstant(d, "SMS_WIN_BH_62",SWIG_From_int((int)(SMS_WIN_BH_62)));
+  SWIG_Python_SetConstant(d, "SMS_WIN_BH_70",SWIG_From_int((int)(SMS_WIN_BH_70)));
+  SWIG_Python_SetConstant(d, "SMS_WIN_BH_74",SWIG_From_int((int)(SMS_WIN_BH_74)));
+  SWIG_Python_SetConstant(d, "SMS_WIN_BH_92",SWIG_From_int((int)(SMS_WIN_BH_92)));
+  SWIG_Python_SetConstant(d, "SMS_WIN_HANNING",SWIG_From_int((int)(SMS_WIN_HANNING)));
+  SWIG_Python_SetConstant(d, "SMS_WIN_IFFT",SWIG_From_int((int)(SMS_WIN_IFFT)));
+  SWIG_Python_SetConstant(d, "SMS_MIN_GOOD_FRAMES",SWIG_From_int((int)(3)));
+  SWIG_Python_SetConstant(d, "SMS_MAX_DEVIATION",SWIG_From_double((double)(.01)));
+  SWIG_Python_SetConstant(d, "SMS_ANAL_DELAY",SWIG_From_int((int)(10)));
+  SWIG_Python_SetConstant(d, "SMS_DELAY_FRAMES",SWIG_From_int((int)((3+10))));
+  SWIG_Python_SetConstant(d, "SMS_FRAME_EMPTY",SWIG_From_int((int)(SMS_FRAME_EMPTY)));
+  SWIG_Python_SetConstant(d, "SMS_FRAME_READY",SWIG_From_int((int)(SMS_FRAME_READY)));
+  SWIG_Python_SetConstant(d, "SMS_FRAME_PEAKS_FOUND",SWIG_From_int((int)(SMS_FRAME_PEAKS_FOUND)));
+  SWIG_Python_SetConstant(d, "SMS_FRAME_FUND_FOUND",SWIG_From_int((int)(SMS_FRAME_FUND_FOUND)));
+  SWIG_Python_SetConstant(d, "SMS_FRAME_TRAJ_FOUND",SWIG_From_int((int)(SMS_FRAME_TRAJ_FOUND)));
+  SWIG_Python_SetConstant(d, "SMS_FRAME_CLEANED",SWIG_From_int((int)(SMS_FRAME_CLEANED)));
+  SWIG_Python_SetConstant(d, "SMS_FRAME_RECOMPUTED",SWIG_From_int((int)(SMS_FRAME_RECOMPUTED)));
+  SWIG_Python_SetConstant(d, "SMS_FRAME_DETER_SYNTH",SWIG_From_int((int)(SMS_FRAME_DETER_SYNTH)));
+  SWIG_Python_SetConstant(d, "SMS_FRAME_STOC_COMPUTED",SWIG_From_int((int)(SMS_FRAME_STOC_COMPUTED)));
+  SWIG_Python_SetConstant(d, "SMS_FRAME_DONE",SWIG_From_int((int)(SMS_FRAME_DONE)));
+  SWIG_Python_SetConstant(d, "SMS_FRAME_END",SWIG_From_int((int)(SMS_FRAME_END)));
+  SWIG_Python_SetConstant(d, "SMS_MIN_SIZE_FRAME",SWIG_From_int((int)(128)));
+  PyDict_SetItemString(d,(char*)"cvar", SWIG_globals());
+  SWIG_addvarlink(SWIG_globals(),(char*)"sms_tab_sine",sms_tab_sine_get, sms_tab_sine_set);
+  SWIG_addvarlink(SWIG_globals(),(char*)"sms_tab_sinc",sms_tab_sinc_get, sms_tab_sinc_set);
+  SWIG_addvarlink(SWIG_globals(),(char*)"sms_window_spec",sms_window_spec_get, sms_window_spec_set);
+  SWIG_Python_SetConstant(d, "PI",SWIG_From_double((double)(3.141592653589793238462643)));
+  SWIG_Python_SetConstant(d, "TWO_PI",SWIG_From_double((double)(6.28318530717958647692)));
+  SWIG_Python_SetConstant(d, "PI_2",SWIG_From_double((double)(1.57079632679489661923)));
+  SWIG_Python_SetConstant(d, "HALF_MAX",SWIG_From_double((double)(1073741823.5)));
+  SWIG_Python_SetConstant(d, "LOG2",SWIG_From_double((double)(0.69314718)));
+  SWIG_Python_SetConstant(d, "LOG10",SWIG_From_double((double)(2.302585092994)));
 }
 

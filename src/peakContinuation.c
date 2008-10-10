@@ -481,7 +481,7 @@ int sms_peakContinuation (int iFrame, SMS_AnalParams *pAnalParams)
 		{
 			pAnalParams->ppFrames[iFrame]->deterministic.pFSinFreq[iGuide] = 
 				pAnalParams->ppFrames[iFrame]->pSpectralPeaks[iCurrentPeak].fFreq;
-			pAnalParams->ppFrames[iFrame]->deterministic.pFSinMag[iGuide] = 
+			pAnalParams->ppFrames[iFrame]->deterministic.pFSinAmp[iGuide] = 
 				pAnalParams->ppFrames[iFrame]->pSpectralPeaks[iCurrentPeak].fMag;
 			pAnalParams->ppFrames[iFrame]->deterministic.pFSinPha[iGuide] = 
 				pAnalParams->ppFrames[iFrame]->pSpectralPeaks[iCurrentPeak].fPhase;

@@ -131,7 +131,7 @@ typedef struct
 	float *pSmsData;        /*!< pointer to all SMS data */
 	int sizeData;               /*!< size of all the data */
 	float *pFSinFreq;       /*!< frequency of sinusoids */
-	float *pFSinMag;       /*!< magnitude of sinusoids */
+	float *pFSinAmp;       /*!< magnitude of sinusoids */
 	float *pFSinPha;        /*!< phase of sinusoids */
 	int nTracks;                     /*!< number of sinusoidal tracks in frame */
 	float *pFStocGain;     /*!< gain of stochastic component */
@@ -426,7 +426,7 @@ enum SMS_ERRORS
 enum SMS_DBG
 {
         SMS_DBG_NONE,                    /*!< 0, no debugging */
-        SMS_DBG_INIT,                       /*!< 1, initialitzation functions */
+        SMS_DBG_INIT,                       /*!< 1, initialitzation functions \todo currently not doing anything */
         SMS_DBG_PEAK_DET,	          /*!< 2, peak detection function */
         SMS_DBG_HARM_DET,	  /*!< 3, harmonic detection function */
         SMS_DBG_PEAK_CONT,        /*!< 4, peak continuation function */
@@ -522,8 +522,9 @@ extern float *sms_window_spec;
  */
 #define PI 3.141592653589793238462643    /*!< pi */
 #define TWO_PI 6.28318530717958647692 /*!< pi * 2 */
+#define INV_TWO_PI (1 / TWO_PI) /*!< 1 / ( pi * 2) */
 #define PI_2 1.57079632679489661923        /*< pi / 2 */
-#define HALF_MAX 1073741823.5  /*!< half the max of a 32-bit word */
+//#define HALF_MAX 1073741823.5  /*!< half the max of a 32-bit word */
 #define LOG2 0.69314718 /*!< \todo write this in mathematical terms */
 #define LOG10 2.302585092994
 
@@ -600,7 +601,7 @@ float sms_deEmphasis (float fInput);
 void sms_cleanTracks (int iCurrentFrame, SMS_AnalParams *pAnalParams);
 
 void sms_scaleDet (float *pFSynthBuffer, float *pFOriginalBuffer,
-                         float *pFSinMag, SMS_AnalParams *pAnalParams, int nTracks);
+                         float *pFSinAmp, SMS_AnalParams *pAnalParams, int nTracks);
 			
 int sms_prepSine (int nTableSize);
 
@@ -613,6 +614,8 @@ void sms_clearSinc();
 float sms_sine (float fTheta);
 
 float sms_sinc (float fTheta);
+
+float sms_random ();
 
 int sms_synthesize (SMS_Data *pSmsFrame, float*pFSynthesis, 
                   SMS_SynthParams *pSynthParams);
@@ -634,8 +637,6 @@ int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader,
                     FILE **ppOutSmsFile);
 
 int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader);
-
-//void sms_initFrame (SMS_Data *pSmsFrame);
 
 int sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
                       int sizeWindow);
@@ -685,10 +686,10 @@ void sms_writeSF ();
 void realft (float *data, int n, int isign); /* \todo remove me */
 
 #ifdef FFTW
-int sms_allocFourierForward( float *pWaveform, fftwf_complex *pSpectrum, int sizeFft);
+/* int sms_allocFourierForward( float *pWaveform, fftwf_complex *pSpectrum, int sizeFft); */
 #endif
 
-void sms_fourier(   int sizeFft, float *pRealArray, int direction );
+void sms_rdft(   int sizeFft, float *pRealArray, int direction );
 
 /***********************************************************************************/
 /************* debug functions: ******************************************************/
@@ -723,8 +724,8 @@ typedef struct
   int sizeCompressionEnv;
 } SMS_HybParams;
 
-int sms_hybridize (float *pIWaveform1, int sizeWave1, float *pIWaveform2, 
-               int sizeWave2, float *pFWaveform, SMS_HybParams params);
+void sms_hybridize (float *pFWaveform1, int sizeWave1, float *pFWaveform2, 
+               int sizeWave2, float *pFWaveform, SMS_HybParams *pHybParams);
 
 void sms_filterArray (float *pFArray, int size1, int size2, float *pFOutArray);
 

@@ -159,13 +159,13 @@ int main (int argc, char *argv[])
                                             pSmsHeader->iFormat == SMS_FORMAT_IH))
                                         {
                                                 for(j = iFirstTrack; j < iLastTrack; j++)
-                                                        printf("%5.2f[%2.4f]  ", smsData.pFSinFreq[j], smsData.pFSinMag[j]);
+                                                        printf("%5.2f[%2.4f]  ", smsData.pFSinFreq[j], smsData.pFSinAmp[j]);
                                         }
                                         else 
                                         {
                                                 for(j = iFirstTrack; j < iLastTrack; j++)
                                                         printf("%5.2f[%2.4f, %2.4f]  ", smsData.pFSinFreq[j], 
-                                                               smsData.pFSinMag[j], smsData.pFSinPha[j]);
+                                                               smsData.pFSinAmp[j], smsData.pFSinPha[j]);
                                         }
                                 }
                                 if(iFormat != PRINT_DET && pSmsHeader->iStochasticType != SMS_STOC_NONE)

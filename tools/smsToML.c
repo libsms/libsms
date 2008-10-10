@@ -80,7 +80,7 @@ void main (int argc, char *argv[])
 		sms_getFrame (pSmsFile, pSmsHeader, i, &smsData);
 		fprintf(fp,"%s_amps(%d,:) = [", namedata, i+1);
 		for(j = 0; j < smsData.nTraj; j++)
-			fprintf(fp," %.2f", smsData.pFSinMag[j]);
+			fprintf(fp," %.2f", smsData.pFSinAmp[j]);
 		fprintf(fp," ];\n");
 	}
       

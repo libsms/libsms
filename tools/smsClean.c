@@ -52,7 +52,7 @@ void SearchSms (SMS_Data smsData, float *pFFreq, int *pIGoodRecords)
 	int i;
 
 	for (i = 0; i < smsData.nTracks; i++)
-		if (smsData.pFSinMag[i] > 0)
+		if (smsData.pFSinAmp[i] > 0)
 		{		
 			pFFreq[i] += smsData.pFSinFreq[i];
 			pIGoodRecords[i]++;
@@ -108,8 +108,8 @@ void CleanSms (SMS_Data inSmsData, SMS_Data *pOutSmsData, int *pITrajOrder)
 	{
 		pOutSmsData->pFSinFreq[iTrack] = 
 			inSmsData.pFSinFreq[pITrajOrder[iTrack]];
-		pOutSmsData->pFSinMag[iTrack] = 
-			inSmsData.pFSinMag[pITrajOrder[iTrack]];
+		pOutSmsData->pFSinAmp[iTrack] = 
+			inSmsData.pFSinAmp[pITrajOrder[iTrack]];
 	}
 
 	if (inSmsData.nCoeff > 0)

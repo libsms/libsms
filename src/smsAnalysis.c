@@ -48,7 +48,8 @@ static void AnalyzeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams,
 		((pAnalParams->ppFrames[iCurrentFrame]->iFrameSize + 1) >> 1) + 1;
 	float *pFData = 
 		&(pAnalParams->soundBuffer.pFBuffer[iSoundLoc - pAnalParams->soundBuffer.iMarker]);
-  
+        int iFrame;
+
 	/* compute the magnitude and phase spectra */
 	sizeMag = sms_spectrum(pFData, pAnalParams->ppFrames[iCurrentFrame]->iFrameSize,
 	                   pFMagSpectrum, pFPhaSpectrum, pAnalParams);
@@ -62,11 +63,11 @@ static void AnalyzeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams,
 	if (pAnalParams->iDebugMode == SMS_DBG_PEAK_DET || 
 	    pAnalParams->iDebugMode == SMS_DBG_ALL)
 	{
-		fprintf(stdout, "Frame %d peaks: ", 
-		        pAnalParams->ppFrames[iCurrentFrame]->iFrameNum);
+                iFrame = pAnalParams->ppFrames[iCurrentFrame]->iFrameNum;
+		printf("Frame %d (%.2fs) peaks: ", iFrame, iFrame / (float) pAnalParams->iFrameRate);
 		/* print only the first 10 peaks */
 		for(i=0; i<10; i++)
-			fprintf(stdout, " %.2f[%.2f], ", 
+			printf(" %.2f[%.2f], ", 
 			        pAnalParams->ppFrames[iCurrentFrame]->pSpectralPeaks[i].fFreq,
 			        pAnalParams->ppFrames[iCurrentFrame]->pSpectralPeaks[i].fMag);
 		fprintf(stdout, "\n");
@@ -198,8 +199,9 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
       
 		if (pAnalParams->iDebugMode == SMS_DBG_SMS_ANAL || 
 		    pAnalParams->iDebugMode == SMS_DBG_ALL)
-			fprintf (stdout, "Frame %d: sizeWindow %d, sizeNewData %ld, firstSampleBuffer %d, centerSample %d\n",
-			         pAnalParams->ppFrames[iCurrentFrame]->iFrameNum,
+			fprintf (stdout, "Frame %d (%.3fs): sizeWindow %d, sizeNewData %ld, firstSampleBuffer %d, centerSample %d\n",
+			         pAnalParams->ppFrames[iCurrentFrame]->iFrameNum, 
+                                 pAnalParams->ppFrames[iCurrentFrame]->iFrameNum / (float) pAnalParams->iFrameRate,
 			         sizeWindow, sizeNewData, pAnalParams->soundBuffer.iMarker,
 		           pAnalParams->ppFrames[iCurrentFrame]->iFrameSample);
 
@@ -296,7 +298,7 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
                         
 			/* get sharper transitions in deterministic representation */
 			sms_scaleDet (pAnalParams->synthBuffer.pFBuffer, pFData, 
-			                    pAnalParams->ppFrames[0]->deterministic.pFSinMag,
+			                    pAnalParams->ppFrames[0]->deterministic.pFSinAmp,
 			                    pAnalParams, pSmsData->nTracks);
       
 			pAnalParams->ppFrames[0]->iStatus = SMS_FRAME_DONE;
@@ -319,8 +321,8 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
 		int length = sizeof(float) * pSmsData->nTracks;
 		memcpy ((char *) pSmsData->pFSinFreq, (char *) 
 		        pAnalParams->ppFrames[0]->deterministic.pFSinFreq, length);
-		memcpy ((char *) pSmsData->pFSinMag, (char *) 	
-		         pAnalParams->ppFrames[0]->deterministic.pFSinMag, length);
+		memcpy ((char *) pSmsData->pFSinAmp, (char *) 	
+		         pAnalParams->ppFrames[0]->deterministic.pFSinAmp, length);
 		if (pAnalParams->iFormat == SMS_FORMAT_HP ||
 		    pAnalParams->iFormat == SMS_FORMAT_IHP)
 			memcpy ((char *) pSmsData->pFSinPha, (char *) 	

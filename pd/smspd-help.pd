@@ -1,4 +1,4 @@
-#N canvas 748 407 471 525 10;
+#N canvas 299 359 777 525 10;
 #X obj 24 19 smspd;
 #X obj 123 83 smsbuf \$0-blarg;
 #X obj 156 309 smssynth~ \$0-blarg;
@@ -6,8 +6,8 @@
 #X msg 138 58 info;
 #X floatatom 109 275 5 0 0 0 - - -;
 #X obj 150 359 dak~;
-#X obj 295 339 et;
-#X obj 295 360 Scope~ 130 130 256 3 128 -1 1 0 0 0 0 102 255 51 135
+#X obj 315 339 et;
+#X obj 315 360 Scope~ 130 130 256 3 128 -1 1 0 0 0 0 102 255 51 135
 135 135 0;
 #X msg 269 284 stocgain \$1;
 #X floatatom 271 263 5 0 0 0 - - -;
@@ -179,7 +179,7 @@
 #X connect 9 0 8 0;
 #X restore 408 52 pd test;
 #X floatatom 408 76 5 0 0 0 - - -;
-#X obj 451 77 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 1
+#X obj 451 77 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
 #X floatatom 8 257 5 0 0 0 - - -;
 #X obj 50 469 hsl 200 15 0 615 0 0 empty empty empty -2 -8 0 10 -262144
@@ -187,11 +187,117 @@
 #X msg 167 144 soundfile ../test/audio/piano.aiff;
 #X msg 325 201 synthtype \$1;
 #X obj 324 181 hradio 15 1 0 3 empty empty empty 0 -8 0 10 -262144
--1 -1 1;
+-1 -1 0;
+#N canvas 0 0 450 300 spectrum 0;
+#X obj 48 62 inlet~;
+#X obj 55 125 fiddle~ 8092;
+#X obj 101 181 mtof;
+#X floatatom 101 203 5 0 0 1 hertz - -;
+#X floatatom 110 160 5 0 0 1 midinote - -;
+#X connect 0 0 1 0;
+#X connect 1 2 2 0;
+#X connect 1 2 4 0;
+#X connect 2 0 3 0;
+#X restore 234 361 pd spectrum;
+#X obj 522 156 smsedit \$0-blarg;
+#X floatatom 521 74 5 0 0 0 - - -;
+#X msg 520 95 printframe \$1;
+#X msg 618 112 buffer \$1-blarg;
+#X obj 618 92 \$0;
+#X obj 618 75 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#N canvas 773 58 450 300 edit-bp 0;
+#X obj 178 243 outlet;
+#X obj 247 155 t b f;
+#X obj 285 156 t b f;
+#X floatatom 208 136 5 0 0 2 frame - -;
+#X floatatom 248 136 5 0 0 2 track - -;
+#X floatatom 285 136 5 0 0 2 value - -;
+#X obj 208 156 t b f;
+#X msg 178 59 symbol set;
+#X msg 178 79 symbol add;
+#X msg 178 99 symbol scale;
+#X msg 178 214 bp \$1 \$2 \$3 \$4 \$5;
+#X obj 68 247 print;
+#X msg 108 9 symbol freq;
+#X msg 108 28 symbol amp;
+#X obj 178 185 pack s s 100 0 0;
+#X connect 1 0 14 0;
+#X connect 1 1 14 3;
+#X connect 2 0 14 0;
+#X connect 2 1 14 4;
+#X connect 3 0 6 0;
+#X connect 4 0 1 0;
+#X connect 5 0 2 0;
+#X connect 6 0 14 0;
+#X connect 6 1 14 2;
+#X connect 7 0 14 0;
+#X connect 8 0 14 0;
+#X connect 9 0 14 0;
+#X connect 10 0 0 0;
+#X connect 12 0 14 1;
+#X connect 13 0 14 1;
+#X connect 14 0 10 0;
+#X restore 532 130 pd edit-bp;
+#N canvas 75 595 688 300 edit-evens 0;
+#X obj 99 220 outlet;
+#X msg 99 147 evens transpose \$1 \$2;
+#X obj 99 114 pack 0 0;
+#X obj 117 88 t b f;
+#X floatatom 99 59 5 0 0 2 frame - -;
+#X floatatom 135 61 5 0 0 2 midi - -;
+#X obj 116 17 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X obj 249 114 pack 0 0;
+#X obj 267 88 t b f;
+#X floatatom 249 59 5 0 0 2 frame - -;
+#X floatatom 285 61 5 0 0 2 value - -;
+#X obj 266 17 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X msg 249 147 evens ampmod \$1 \$2;
+#X obj 389 114 pack 0 0;
+#X obj 407 88 t b f;
+#X floatatom 389 59 5 0 0 2 frame - -;
+#X floatatom 425 61 5 0 0 2 value - -;
+#X obj 406 17 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X msg 389 147 evens ampdev \$1 \$2;
+#X obj 481 20 metro 100;
+#X obj 483 1 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0 1
+;
+#X connect 1 0 0 0;
+#X connect 2 0 1 0;
+#X connect 3 0 2 0;
+#X connect 3 1 2 1;
+#X connect 4 0 2 0;
+#X connect 5 0 3 0;
+#X connect 6 0 5 0;
+#X connect 7 0 12 0;
+#X connect 8 0 7 0;
+#X connect 8 1 7 1;
+#X connect 9 0 7 0;
+#X connect 10 0 8 0;
+#X connect 11 0 10 0;
+#X connect 12 0 0 0;
+#X connect 13 0 18 0;
+#X connect 14 0 13 0;
+#X connect 14 1 13 1;
+#X connect 15 0 13 0;
+#X connect 16 0 14 0;
+#X connect 17 0 16 0;
+#X connect 18 0 0 0;
+#X connect 19 0 16 0;
+#X connect 20 0 19 0;
+#X restore 628 135 pd edit-evens;
+#X msg 581 33 verbose \$1;
+#X obj 583 12 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+1;
+#X msg 199 55 backup;
 #X connect 2 0 6 0;
 #X connect 2 0 6 1;
 #X connect 2 0 8 0;
 #X connect 2 0 7 0;
+#X connect 2 0 36 0;
 #X connect 3 0 1 0;
 #X connect 4 0 1 0;
 #X connect 5 0 2 0;
@@ -219,3 +325,13 @@
 #X connect 33 0 16 0;
 #X connect 34 0 2 0;
 #X connect 35 0 34 0;
+#X connect 38 0 39 0;
+#X connect 39 0 37 0;
+#X connect 40 0 37 0;
+#X connect 41 0 40 0;
+#X connect 42 0 41 0;
+#X connect 43 0 37 0;
+#X connect 44 0 37 0;
+#X connect 45 0 37 0;
+#X connect 46 0 45 0;
+#X connect 47 0 1 0;

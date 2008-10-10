@@ -92,7 +92,7 @@ void main (int ac, char *av[])
 		for(i = 0; i < NRec; i++) 
 		{
 			sms_getFrame (pSmsFile, pSmsHeader, i, &smsData);
-			amps = TO_MAG (smsData.pFSinMag[j]);
+			amps = TO_MAG (smsData.pFSinAmp[j]);
 			fprintf (fp,"%f ", amps);
 		}
 		fprintf (fp,")))\n\n");
