@@ -90,11 +90,6 @@ void sms_fillHeader (SMS_Header *pSmsHeader,
         pSmsHeader->iFrameBSize = sms_frameSizeB(pSmsHeader);
 }
 
-/*! \brief initialize an SMS data frame
- *
- * \param pSmsFrame	pointer to a frame of SMS data
- * \todo why need both of these initFrame's ?
- */
 /* void sms_initFrame (SMS_Data *pSmsFrame) */
 /* { */
 /* 	pSmsFrame->pSmsData = NULL; */

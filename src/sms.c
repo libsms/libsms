@@ -30,6 +30,8 @@ FILE *pDebug; /*!< pointer to debug file */
 float *sms_window_spec;
 float  *sms_tab_sine, *sms_tab_sinc;
 
+#define SIZE_TABLES 4096
+
 #define RAND_STDMATH 1
 #define HALF_MAX 1073741823.5  /*!< half the max of a 32-bit word */
 #define INV_HALF_MAX (1.0 / HALF_MAX)
@@ -38,27 +40,31 @@ float  *sms_tab_sine, *sms_tab_sinc;
  *
  * Currently, just generating the sine and sinc tables.
  * This is necessary before both analysis and synthesis.
- * \todo why return something here?
+ *
+ * \return error code \see SMS_MALLOC or SMS_OK in SMS_ERRORS
  */
 int sms_init( void )
 {
+        int iError;
 	if (sms_tab_sine == NULL)
         {
-                sms_prepSine (2046); //try 4096
-                sms_prepSinc (4096);
+                iError = sms_prepSine (SIZE_TABLES);
+                if(iError) return(SMS_MALLOC);
+                iError = sms_prepSinc (SIZE_TABLES);
+                if(iError) return(SMS_MALLOC);
 
-#ifdef FFTW
-        printf("libsms: using FFTW fft routines\n");
-#else
-#ifdef OOURA 
-        printf("libsms: using OOURA fft routines\n");
-#else
-        printf("libsms: using realft fft routines\n");
-#endif /* OOURA */
-#endif /* FFTW */
+/* #ifdef FFTW */
+/*         printf("libsms: using FFTW fft routines\n"); */
+/* #else */
+/* #ifdef OOURA  */
+/*         printf("libsms: using OOURA fft routines\n"); */
+/* #else */
+/*         printf("libsms: using realft fft routines\n"); */
+/* #endif /\* OOURA *\/ */
+/* #endif /\* FFTW *\/ */
         }
 
-        return (1);
+        return (SMS_OK);
 }
 
 /*! \brief free global data

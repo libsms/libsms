@@ -181,6 +181,7 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
         return;
 }
 
+/* TODO: take care of re-allocations */
 static void smsbuf_backup(t_smsbuf *x)
 {
         if(!x->ready)
@@ -189,17 +190,33 @@ static void smsbuf_backup(t_smsbuf *x)
                 return;
         }
         int i;
-        
+
         x->smsData2 = calloc(x->nframes, sizeof(SMS_Data));
         for( i = 0; i < x->nframes; i++ )
-                memcpy((SMS_Data *) &x->smsData2[i], (SMS_Data *) &x->smsData[i],
-                        x->smsData[i].sizeData);
-/*         { */
-/*                 sms_allocFrameH (&x->smsHeader,  &x->smsData[i]); */
-/*                 sms_getFrame (x->pmsFile, &x->smsHeader, i, &x->smsData2[i]); */
-/*         } */
+        {
+                sms_allocFrameH (&x->smsHeader,  &x->smsData2[i]);
+                sms_copyFrame(&x->smsData2[i],&x->smsData[i]);
+        }
+}
 
+static void smsbuf_switch(t_smsbuf *x)
+{
+        if(!x->ready)
+        {
+                pd_error(x, "smsbuf_switch: buffer is not ready");
+                return;
+        }
+        if(!x->smsData2)
+        {
+                pd_error(x, "smsbuf_switch: backup buffer is not ready");
+                return;
+        }
+        int i;
 
+        for( i = 0; i < x->nframes; i++ )
+/*                 memcpy((SMS_Data *) &x->smsData[i], (SMS_Data *) &x->smsData2[i], */
+/*                         x->smsData2[i].sizeData); */
+                sms_copyFrame(&x->smsData[i],&x->smsData2[i]);
 
 }
 static void smsbuf_save(t_smsbuf *x, t_symbol *filename)
@@ -324,6 +341,13 @@ static void smsbuf_free(t_smsbuf *x)
                 free(x->smsData);
         }
 
+        if(x->smsData2)
+        {
+                for( i = 0; i < x->nframes; i++)
+                        sms_freeFrame(&x->smsData2[i]);
+                free(x->smsData2);
+        }
+
         pd_unbind(&x->x_obj.ob_pd, x->bufname);
 }
 
@@ -336,6 +360,8 @@ void smsbuf_setup(void)
         class_addmethod(smsbuf_class, (t_method)smsbuf_info, gensym("info"),  0);
         class_addmethod(smsbuf_class, (t_method)smsbuf_printframe, gensym("printframe"), A_DEFFLOAT, 0);
         class_addmethod(smsbuf_class, (t_method)smsbuf_backup, gensym("backup"),  0);
+        class_addmethod(smsbuf_class, (t_method)smsbuf_switch, gensym("switch"),  0);
         class_addmethod(smsbuf_class, (t_method)smsbuf_verbose, gensym("verbose"), A_DEFFLOAT, 0);
+
 }
 

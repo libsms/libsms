@@ -18,12 +18,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
-/*! \file smsAnal.c
- *  \brief command line program for SMS analysis.
- *
- */
 #include "sms.h"
-//#include "smsAnal.h"
+
+int verbose = 0;
 
 void usage (void)
 {
@@ -34,6 +31,7 @@ void usage (void)
              "See the man page for details.\n\n"
              "Options:\n"
              "      --help (this message)\n"
+             "      -v    verbose mode (default 0, none)\n"
              "      -d    debugMode (default 0, none)\n"
              "      -f    format (default 1, harmonic)\n"
              "      -q    soundType (default 0, sound phrase)\n"
@@ -55,13 +53,13 @@ void usage (void)
              " Peak Continuation parameters:\n"
              "      -n    nGuides (default 100)\n"
              "      -p    nTracks (default 60)\n"
-             "      -v    freqDeviation (default .45)\n"
+             "      -w    freqDeviation (default .45)\n"
              "      -t    peakContGuide (default .4)\n"
              "      -o    fundContToGuide (default .5)\n"
              " Track Cleaning parameters:\n"
              "      -g    cleanTrack (default 1, yes)\n"
              "      -a    minTrackLength (default .1 seconds)\n"
-             "      -v    maxSleepingTime (default .1 seconds)\n"
+             "      -b    maxSleepingTime (default .1 seconds)\n"
              " Stochastic Analysis parameters:\n"
              "      -e    stochasticType (default 1, approximated spectrum). 0=none \n"
              "      -c    nStocCoeff (default 32)\n"
@@ -180,6 +178,10 @@ static int GetArguments (char *argv[], int argc, ARGUMENTS *pArguments)
 		{
 			switch (*(argv[i]++)) 
 			{
+				case 'v': if (sscanf(argv[i],"%d", 
+				              &verbose) < 0)
+					printf("GetArguments: Invalid verbose mode");
+					break;
 				case 'd': if (sscanf(argv[i],"%d", 
 				              &pArguments->iDebugMode) < 0)
 					printf("GetArguments: Invalid debug mode");
@@ -246,7 +248,7 @@ static int GetArguments (char *argv[], int argc, ARGUMENTS *pArguments)
 				              &pArguments->nTracks) < 1) 
 					printf("GetArguments: Invalid number of tracks");
 					break;
-				case 'v': if (sscanf(argv[i],"%f", 
+				case 'w': if (sscanf(argv[i],"%f", 
 				              &pArguments->fFreqDeviation) < 0) 
 					printf("GetArguments: Invalid frequency deviation");
 					break;
@@ -378,15 +380,9 @@ static int FillAnalParams (ARGUMENTS arguments, SMS_AnalParams *pAnalParams,
 	pAnalParams->iWindowType = arguments.iWindowType;
 	pAnalParams->iSamplingRate = pSoundHeader->iSamplingRate;
 	pAnalParams->fSizeWindow = arguments.fWindowSize;
-//	pAnalParams->iDefaultSizeWindow = 171;
 	pAnalParams->iDefaultSizeWindow =
 		(int)((pAnalParams->iSamplingRate / arguments.fDefaultFund) *
 		pAnalParams->fSizeWindow / 2) * 2 + 1; /* odd length */
-
-        printf(" \n *** iSamplingRate: %d,fSizeWindow : %f, fDefaultFund: %f iDefaultSizeWindow: %d \n ",
-               pAnalParams->iSamplingRate, pAnalParams->fSizeWindow, 
-               arguments.fDefaultFund, pAnalParams->iDefaultSizeWindow);
-
 	pAnalParams->sizeHop = iHopSize;
 	pAnalParams->fHighestFreq = arguments.fHighestFreq;
 	pAnalParams->fMinPeakMag = arguments.fMinPeakMag;
@@ -415,16 +411,12 @@ static int FillAnalParams (ARGUMENTS arguments, SMS_AnalParams *pAnalParams,
 	pAnalParams->iMaxDelayFrames = 
 		MAX(pAnalParams->iMinTrackLength, pAnalParams->iMaxSleepingTime) + 2 +
 			SMS_DELAY_FRAMES;
-        printf("\n iMaxDelayFrames: %d ", pAnalParams->iMaxDelayFrames);
 	pAnalParams->fResidualPercentage = 0;
 
 	return (1);
 
 }
 
-/* main of the program
- *
- */
 int main (int argc, char *argv[])
 {
 	ARGUMENTS arguments;
@@ -540,7 +532,7 @@ int main (int argc, char *argv[])
 		if (iStatus == 1)
 		{
 			sms_writeFrame (pOutputSmsFile, &smsHeader, &smsData);
-			if(1)//todo: add verbose flag
+			if(verbose)
                         {
                                 if (iFrame % 10 == 0)
                                         fprintf (stderr, "%.2f ",
@@ -553,10 +545,8 @@ int main (int argc, char *argv[])
 			iDoAnalysis = 0;
 			smsHeader.nFrames = iFrame;
 		}
-
 	}
         printf("\n");
-	
         smsHeader.fResidualPerc = analParams.fResidualPercentage / iFrame;
 
 	/* write an close output files */
@@ -565,6 +555,8 @@ int main (int argc, char *argv[])
 		sms_writeResSF ();
 	if (analParams.iDebugMode == SMS_DBG_SYNC)
 		sms_writeDebugFile ();
+
+        printf("wrote %d analysis frames to %s\n", iFrame, pChOutputSmsFile);
 
         /* cleanup */
         sms_freeAnalysis(&analParams);

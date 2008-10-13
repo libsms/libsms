@@ -20,10 +20,11 @@ SMS Library Work Log
 ** TODO make a better random function
    - should return a floating point random number -1. : 1.
    - [ ] try implementing the Merseinne Twister algorithm (~/src/SFMT...)
+** TODO find out if there is any benifit to a dynamic library at one point
 ** plot stochastic coefficients at different rates to see if they are the same for diff sr
 ** changing the framerate in smsAnal makes deterministic component empty. huh?
 *** Xavier suggests fund estimate is bad, so specify manually
-*** resample after analysis (delete 3 out of 4 frames, concatenate stoc_wave)
+*** resample after analysis (delete 3 out of 4 frames)
 ** what is calcCorr in tools?
 * Pre-modifications: making analysis/plotting scripts
 ** TODO [#C] SWIG libsms wrappers for more convenient use in python
@@ -70,9 +71,11 @@ SMS Library Work Log
 ** DONE SmsInit() should be a global init before anything
 * Phase 1: Refactoring libsms for usage in real-time and release
 ** TODO [#A] Doxygen documentation
+   - [ ] go through To-Do list
+** TODO [#A] scons install for pd
 ** TODO [#C] make example python scripts
 ** TODO [#C] optimizing
-*** benchmarking FFT's
+   - [ ] benchmark FFT's
    - [ ] change fabs() to fabsf() if they don't need to be doubles
    - [ ] calloc's/malloc's done per function call
    - check if they are only done once
@@ -102,10 +105,6 @@ SMS Library Work Log
             - SincTab is also hardcoded for index = 0:8
      - [ ] why is the real component obtained by Mag * sin(theta)?
             - shouldn't it be cos(theta)?
-**** periodic mess-ups in waveform:
-      - 9 samples of zero
-      - good samples: 44 ?
-      - then, discontinuities (+infinite?) :
 ** DONE [#A] switch build scripts to scons
    - [X] get env. exporting/importing fixed
    - [ ] add install/uninstall functionality

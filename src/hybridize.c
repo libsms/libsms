@@ -290,7 +290,7 @@ int InterpolateArrays (float *pFArray1, int sizeArray1, float *pFArray2,
  *
  * \param pFWaveform1		excitation waveform
  * \param sizeWave1		    size of excitation waveform
- * \param pIWaveform2		hybridization waveform
+ * \param pFWaveform2		hybridization waveform
  * \param sizeWave2		    size of hybridization waveform
  * \param pFWaveform		output waveform (hybridized)
  * \param pHybParams		pointer to strucutre of control parameterscontrol parameters

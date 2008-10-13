@@ -26,7 +26,6 @@ env = Environment( ENV = os.environ, options = opts, CCFLAGS='-Wall -Winline ')
 
 if int(ARGUMENTS.get('debug', 0 )):
         env.Append(CCFLAGS = '-g')
-#        env.Append(LIBS = '-lefence')
 else:
         env.Append(CCFLAGS = '-O2 ')
 
@@ -70,11 +69,14 @@ if int(ARGUMENTS.get('ooura', 1)):
 prefix = ARGUMENTS.get('prefix', '/usr/local')
 
 Export( ['env','prefix'] )
+
+print "libraries exporting: ", env.Dump('LIBS')
+
 #SConscript( ['src/SConscript', 'tools/SConscript', 'pd/SConscript'], exports= ['env','prefix'] )
 SConscript('src/SConscript')
 SConscript('tools/SConscript')
-if buildpd:
-        SConscript('pd/SConscript')
+# if buildpd:
+#         SConscript('pd/SConscript')
 
 #SConscript('python/SConscript')
 

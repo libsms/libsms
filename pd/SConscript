@@ -5,39 +5,46 @@ import os
 
 Import('*')
 
+print "libraries importing: ", env.Dump('LIBS')
+
 smspd_sources =  Split("""
                                             smspd.c 
                                             smsanal.c 
                                             smssynth~.c
                                             smsedit.c
 """ )
-
-debug_mode = ARGUMENTS.get('debug',0 )
-
-if int(debug_mode):
-    sms_cflags = '-Wall -g'
-else:
-    sms_cflags = ' -O2 -funroll-loops -fomit-frame-pointer \
-        -Wall -W -Wshadow  \
-        -Wno-unused -Wno-parentheses -Wno-switch '
     
-sms_srcpath = '../src'
+sms_srcpath = '../src '
+
+# if int(debug_mode):
+#     sms_cflags = '-Wall -g'
+# else:
+#     sms_cflags = ' -O2 -funroll-loops -fomit-frame-pointer \
+#         -Wall -W -Wshadow  \
+#         -Wno-unused -Wno-parentheses -Wno-switch '
 
 
 #sms_libs =  ['m', 'sndfile', 'sms', 'fftw3f', 'pthread']
 
-env = Environment( ENV = os.environ, CCFLAGS = sms_cflags , CPPPATH = sms_srcpath, CPPDEFINES= 'PD')
+#env = Environment( ENV = os.environ, CCFLAGS = sms_cflags , CPPPATH = sms_srcpath, CPPDEFINES= 'PD')
 #env.Append( LIBPATH = sms_srcpath, LIBS = sms_libs )
-env.Append( LIBPATH = sms_srcpath, LIBS = 'sms' )
-env = env.Clone( SHLIBPREFIX = '')
+env.Append(CPPPATH = sms_srcpath, CPPDEFINES= 'PD' )
+#env.Append( LIBPATH = sms_srcpath, LIBS = 'sms' )
+env = env.Clone( LIBS = ['m', 'sndfile', 'sms', 'pthread'])
+#env = env.Clone( SHLIBPREFIX = '')
+env = env.Clone( SHLIBPREFIX = '', LIBPARTH = '../src ', CPPPATH = '../src ')
 
 conf = Configure(env)
+
+print "LIBPATH: ", env.Dump('LIBPATH')
 
 if not conf.CheckLibWithHeader('pthread','pthread.h','c'):
        print 'cannot find libpthread'
        Exit(1)
 
 env = conf.Finish()
+
+print "libraries compiling into externals: ", env.Dump('LIBS')
 
 print "compiling for:" , os.name 
 if  os.name == 'posix' :

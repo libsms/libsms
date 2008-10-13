@@ -188,7 +188,7 @@ static void smsedit_evens( t_smsedit *x, t_symbol *op, t_float frame, t_float va
                 if(x->verbose)post("smsedit: scaling even tracks in frame %d by a factor of %.3f (midi)",
                                    iFrame, value);
         }
-        if(!strcmp(op->s_name,"ampmod"))
+        else if(!strcmp(op->s_name,"ampmod"))
         {
                 for( i = 0; (i*2) <  nTracks; i++)
                         pFrame->pFSinAmp[i*2] += value;
@@ -196,7 +196,7 @@ static void smsedit_evens( t_smsedit *x, t_symbol *op, t_float frame, t_float va
                 if(x->verbose)post("smsedit: scaling the amplitude of even tracks in frame %d by a factor of %.3f",
                                    iFrame, value);
         }
-        if(!strcmp(op->s_name,"ampdev"))
+        else if(!strcmp(op->s_name,"ampdev"))
         {
                 for( i = 0; (i*2) <  nTracks; i++)
                         pFrame->pFSinAmp[i*2] += value * sms_random();
@@ -207,6 +207,44 @@ static void smsedit_evens( t_smsedit *x, t_symbol *op, t_float frame, t_float va
         else if(x->verbose) post("smsbuf_evens: unknown operation: %s", op->s_name);
 
 }
+
+static void smsedit_converge( t_smsedit *x, t_float frame, t_float w)
+{
+        if(!x->smsbuf)
+        {
+                pd_error(x, "smsedit: no pointer to an smsbuf");
+                return;
+        }
+        if(!x->smsbuf->ready)
+        {
+                pd_error(x, "smsedit: smsbuf is not ready");
+                return;
+        }
+        if(w <= 0) w =0;
+        if(w >= 1) w = 1;
+
+        int iFrame = (int) frame;
+        int i;
+        float transpose;
+
+        if(iFrame >= x->smsbuf->nframes || iFrame < 0)
+        {
+                post("smsedit_bp: frame out of range");
+                return;
+        }
+        
+        SMS_Data *pFrame = &x->smsbuf->smsData[iFrame];
+        SMS_Data *pFrameBackup = &x->smsbuf->smsData2[iFrame];
+        int nTracks = pFrame->nTracks;
+        float u = 1 - w;
+
+        for(i = 0; i < nTracks; i++)
+        {
+                pFrame->pFSinFreq[i] = pFrame->pFSinFreq[i] * u + pFrameBackup->pFSinFreq[i] * w;
+                pFrame->pFSinAmp[i] = pFrame->pFSinAmp[i] * u + pFrameBackup->pFSinAmp[i] * w;
+        }
+}
+
 static void smsedit_verbose(t_smsedit *x, t_float flag)
 {
         x->verbose = (int) flag;
@@ -252,6 +290,6 @@ void smsedit_setup(void)
         class_addmethod(smsedit_class, (t_method)smsedit_bp, gensym("bp"), A_DEFSYM, A_DEFSYM,
                         A_DEFFLOAT, A_DEFFLOAT, A_DEFFLOAT, 0);
         class_addmethod(smsedit_class, (t_method)smsedit_evens, gensym("evens"), A_DEFSYM, A_DEFFLOAT, A_DEFFLOAT, 0);
-        class_addmethod(smsbuf_class, (t_method)smsedit_verbose, gensym("verbose"), A_DEFFLOAT, 0);
-
+        class_addmethod(smsedit_class, (t_method)smsedit_verbose, gensym("verbose"), A_DEFFLOAT, 0);
+        class_addmethod(smsedit_class, (t_method)smsedit_converge, gensym("converge"), A_DEFFLOAT, A_DEFFLOAT, 0);
 }

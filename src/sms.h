@@ -33,8 +33,7 @@
  * it useful on modern day platforms.  The goal of this library is to be usable in real-time audio
  * applications for performing high-fidelity synthesis of sound models. It should work on most 
  * platforms available, although Linux is the only one tested so far. 
- *         - Richard Thomas Eakin - reakin@iua.upf.edu
- *         - Xavier, do you want your email address here?
+ *         - Richard Thomas Eakin - reakin [at] iua [dot] upf [dot] edu
  *
  * \par Info about the coding style used in this library:
  * - all functions used globally throughout the library are prepended with sms_ and are of the form
@@ -50,6 +49,15 @@
  *   Synthesis, these two terms are used interchangeably for the partial sinusoidal components of a
  *   sound, or deterministic sinusoidal decompositinon.  In this code only the term 'track' is used for
  *   clarity and universality.
+ *
+ * \par Third Party Libraries Used:
+ * - libsndfile: http://www.mega-nerd.com/libsndfile/ - soundfile input and output in various formats
+ * - FFTW3 (floating point) http://www.fftw.org/ - an optional compilation flag allows the library to
+ *   use FFTW to compute fast fourier transforms.  It is much faster, but is messy in its current 
+ *  stage and the pd externals crash with it (I do not know why, other than pointers to memory
+ *  are getting mixed up).
+ *
+ * \todo note about tools and tests here
  */
 
 #ifndef _SMS_H
@@ -124,7 +132,14 @@ typedef struct {
 /*! \struct SMS_Data
  *  \brief structure with SMS data
  *
- * \todo details..
+ * Here is where all the analysis data ends up. Once data is in here, it is ready
+ * for synthesis.
+ * 
+ * It is in one contigous block (pSmsData), the other pointer members point 
+ * specifically to each component in the block.
+ *
+ * pFSinPha is optional in the final output, but it is always used to construct the
+ * residual signal.
  */
 typedef struct 
 {
@@ -147,7 +162,6 @@ typedef struct
  * sample number of the sound source that corresponds to the first sample 
  * in the buffer.
  *
- * \todo document what iFirst good is for.
  */
 typedef struct
 {
@@ -172,7 +186,8 @@ typedef struct
 /*! \struct SMS_AnalFrame
  *  \brief structure to hold an analysis frame
  *
- *  \todo details..
+ *  This structure has extra information for continuing the analysis,
+ *   which can be disregarded once the analysis is complete.
  */
 typedef struct 
 {
@@ -180,11 +195,10 @@ typedef struct
                                corresponds to the middle of the frame */
 	int iFrameSize;           /*!< number of samples used in the frame */
 	int iFrameNum;            /*!< frame number */
-	SMS_Peak pSpectralPeaks[SMS_MAX_NPEAKS];  /*!< spectral peaks found in frame
-                                                   \see SMS_Peak */
+	SMS_Peak pSpectralPeaks[SMS_MAX_NPEAKS];  /*!< spectral peaks found in frame */
 	int nPeaks;               /*!< number of peaks found */
 	float fFundamental;       /*!< fundamental frequency in frame */
-	SMS_Data deterministic;   /*!< deterministic data \see SMS_Data */
+	SMS_Data deterministic;   /*!< deterministic data */
 	int iStatus; /*!< status of frame enumerated by SMS_FRAME_STATUS
                        \see SMS_FRAME_STATUS */
 } SMS_AnalFrame;
@@ -206,7 +220,9 @@ typedef struct
 /*! \struct SMS_AnalParams
  * \brief structure with useful information for analysis functions
  *
- * \todo details
+ * Each analysis needs one of these, which contains all settings,
+ * sound data, deterministic synthesis data, and every other 
+ * piece of data that needs to be shared between functions.
  */
 typedef struct 
 {
@@ -246,7 +262,7 @@ typedef struct
         SMS_Data prevFrame;   /*!< the previous analysis frame  */
         SMS_SndBuffer soundBuffer;    /*!< samples to be analyzed */
         SMS_SndBuffer synthBuffer; /*!< resynthesized samples needed to get the residual */
-        SMS_AnalFrame *pFrames;  /*!< \todo explain why AnalFrame is necessary here */
+        SMS_AnalFrame *pFrames;  /*!< \todo is AnalFrame is necessary here? */
         SMS_AnalFrame **ppFrames; /*!< \todo explain why this double pointer is necessary */
         float fResidualPercentage; /*!< accumalitive residual percentage */
 #ifdef FFTW

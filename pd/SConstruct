@@ -1,13 +1,14 @@
 # -*- python -*-
 # Top-level scons script for libsms and tools
 
-# is there a way to automatically remove the .os object files? or maybe just move them to another folder
-
 import os
 
-#can't seem to keep the externals in seperate files and still get them to see the buffer..
-#smspd_sources =  Split(' smspd.c ' )
-smspd_sources =  Split(' smspd.c smsanal.c smssynth~.c' )
+smspd_sources =  Split("""
+                                            smspd.c 
+                                            smsanal.c 
+                                            smssynth~.c
+                                            smsedit.c
+""" )
 
 debug_mode = ARGUMENTS.get('debug',0 )
 
@@ -20,11 +21,24 @@ else:
     
 sms_srcpath = '../src'
 
+
 sms_libs =  ['m', 'sndfile', 'sms', 'fftw3f', 'pthread']
 
 env = Environment( ENV = os.environ, CCFLAGS = sms_cflags , CPPPATH = sms_srcpath, CPPDEFINES= 'PD')
 env.Append( LIBPATH = sms_srcpath, LIBS = sms_libs )
 env = env.Clone( SHLIBPREFIX = '')
+
+conf = Configure(env)
+
+if not conf.CheckCHeader('m_pd.h'):
+    print 'cannot find pd header m_pd.h'
+    Exit(1)
+
+if not conf.CheckLibWithHeader('m','math.h','c'):
+        print 'cannot find libmath'
+        Exit(1)
+
+env = conf.Finish()
 
 print "compiling for:" , os.name 
 if  os.name == 'posix' :
@@ -37,10 +51,6 @@ else:
     print "scons error: only linux, mac, and nt are covered so far"
 
 
-#for ext in sms_externals:
-#    external = env.LoadableModule( target = ext, source = ext+'.c')
-#    Depends(external, '../src/libsms.a')
-
-
 smspd = env.LoadableModule( target = "smspd", source = smspd_sources)
 Depends(smspd, '../src/libsms.a')
+
