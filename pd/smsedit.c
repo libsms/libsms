@@ -241,7 +241,7 @@ static void smsedit_converge( t_smsedit *x, t_float frame, t_float w)
         for(i = 0; i < nTracks; i++)
         {
                 pFrame->pFSinFreq[i] = pFrame->pFSinFreq[i] * u + pFrameBackup->pFSinFreq[i] * w;
-                pFrame->pFSinAmp[i] = pFrame->pFSinAmp[i] * u + pFrameBackup->pFSinAmp[i] * w;
+                pFrame->pFSinAmp[i] = pFrame->pFSinAmp[i] * u + pFrameBackup->pFSinAmp[i] * w;
         }
 }
 

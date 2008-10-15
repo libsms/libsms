@@ -2,24 +2,24 @@
 #include "smspd.h"
 #include <string.h>
 
-static t_class *smspd_class;
+static t_class *sms_class;
 
-typedef struct smspd 
+typedef struct sms 
 {
   t_object t_obj;
-} t_smspd;
+} t_sms;
 
-static void *smspd_new(void)
+static void *sms_new(void)
 {
-  t_smspd *x = (t_smspd *)pd_new(smspd_class);
+  t_sms *x = (t_sms *)pd_new(sms_class);
   return (x);
 }
 
-void smspd_setup(void) 
+void sms_setup(void) 
 {
 
-        smspd_class = class_new(gensym("smspd"), smspd_new, 0,
-                           sizeof(t_smspd), CLASS_NOINLET, 0);
+        sms_class = class_new(gensym("sms"), sms_new, 0,
+                           sizeof(t_sms), CLASS_NOINLET, 0);
 
         //call object setup routines
         smsbuf_setup();
@@ -27,7 +27,7 @@ void smspd_setup(void)
         smssynth_tilde_setup();
         smsedit_setup();
 
-        post("smspd external library - September 16, 2008");
+        post("sms library - v1.0-pre October 15, 2008");
 
 }
 
