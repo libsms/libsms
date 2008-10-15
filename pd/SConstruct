@@ -8,20 +8,20 @@ import os
 debug_mode = ARGUMENTS.get('debug',0 )
 prefix = ARGUMENTS.get('prefix','/usr/local/lib')
 
-smspd_sources =  Split("""
+sources =  Split("""
                                             smspd.c 
                                             smsanal.c 
                                             smssynth~.c
                                             smsedit.c
 """ )
 helpfiles = []
-helpfiles.append('smspd-test.pd')
-for x in smspd_sources:
-    helpfiles.append('help/' + os.path.splitext(os.path.basename(x))[0] + '-help.pd')
+for x in sources:
+    if x == 'smspd.c':
+        helpfiles.append('help/sms-help.pd/')
+    else:
+        helpfiles.append('help/' + os.path.splitext(os.path.basename(x))[0] + '-help.pd')
+
     
-
-print "helpfiles:: ", helpfiles
-
 help_dir = prefix + '/pd/doc/5.reference/sms'
 extra_dir = prefix + '/pd/extra'
 
@@ -64,9 +64,9 @@ else:
     print "scons error: only linux, mac, and nt are covered so far"
 
 
-smspd = env.LoadableModule( target = "sms", source = smspd_sources)
-Depends(smspd, '../src/libsms.a')
-env.Install(extra_dir, smspd)
+pdlib = env.LoadableModule( target = "sms", source = sources)
+Depends(pdlib, '../src/libsms.a')
+env.Install(extra_dir, pdlib)
 env.Alias('install', extra_dir)
 env.Install(help_dir, helpfiles)
 env.Alias('install', help_dir)
