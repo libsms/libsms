@@ -75,9 +75,6 @@
 
 #define SMS_MAX_NPEAKS      200    /*!< \brief maximum number of peaks  */
 
-/*! \brief temporarily doing fft calculations in double presions (OOURA)*/
-//#define REAL double
-
 /*! \struct SMS_Header 
  *  \brief structure for the header of an SMS file 
  *  
@@ -86,7 +83,11 @@
  *  
  *  The header also contains variable components for additional information
  *  that may be stored along with the analysis, such as descriptors or text.
- *  \todo describe descriptors better. find what variables are used for what
+ *  
+ *  In the first release, the descriptors are not used, but are here because they
+ *  were implemented in previous versions of this code (in the 90's).  With time,
+ *  the documentation will be updated to reflect which members of the header
+ *  are useful in manipulations, and what functions to use for these manipulatinos
  */
 typedef struct 
 {
@@ -94,23 +95,19 @@ typedef struct
 	int iHeadBSize;        /*!< size in bytes of header */
 	int nFrames;	         /*!< number of data frames */
 	int iFrameBSize;      /*!< size in bytes of each data frame */
-	int iFormat;           /*!< type of data format 
-                                 \todo reference enum */
+	int iFormat;           /*!< type of data format \see SMS_Format */
 	int iFrameRate;        /*!< rate in Hz of data frames */
 	int iStochasticType;   /*!< type stochastic representation */
 	int nTracks;     /*!< number of sinusoidal tracks per frame */
 	int nStochasticCoeff;  /*!< number of stochastic coefficients per frame  */
-	float fAmplitude;      /*!< average amplitude of represented sound
-                                \todo currently unused, cleanup */
+	float fAmplitude;      /*!< average amplitude of represented sound.  */
 	float fFrequency;      /*!< average fundamental frequency
                                 \todo what good is this here? should be in SMS_Data */
 	int iOriginalSRate;    /*!< sampling rate of original sound */
-	int iBegSteadyState;   /*!< record number of begining of steady state
-                                \todo currently unused, cleanup */
-	int iEndSteadyState;   /*!< record number of end of steady state
-                                \todo currently unused, cleanup */
+	int iBegSteadyState;   /*!< record number of begining of steady state. */
+	int iEndSteadyState;   /*!< record number of end of steady state. */
 	float fResidualPerc;   /*!< percentage of the residual to original */
-	int nLoopRecords;      /*< number of loop records specified */
+	int nLoopRecords;      /*< number of loop records specified. */
 	int nSpecEnvelopePoints; /*< number of breakpoints in spectral envelope */
 	int nTextCharacters;   /*< number of text characters */
 	/* variable part */
@@ -265,6 +262,7 @@ typedef struct
         SMS_AnalFrame *pFrames;  /*!< \todo is AnalFrame is necessary here? */
         SMS_AnalFrame **ppFrames; /*!< \todo explain why this double pointer is necessary */
         float fResidualPercentage; /*!< accumalitive residual percentage */
+        float *pFSpectrumWindow; /*< the window used during spectrum analysis */
 #ifdef FFTW
         SMS_Fourier fftw; /*!< structure of data used by the FFTW library (floating point) */
 #endif
@@ -298,7 +296,7 @@ typedef struct
 #ifdef FFTW
         SMS_Fourier fftw; /*!< structure of data used by the FFTW library (floating point) */
 #else
-        float *realftOut; /*!< RTE_DEBUG : comparing realft and fftw \todo remove this */
+        float *pFFTBuff;  /*!< an array for an inplace inverse FFT transform */
 #endif
 } SMS_SynthParams;
 
@@ -525,12 +523,6 @@ enum SMS_FRAME_STATUS
 
 #define SMS_MIN_SIZE_FRAME  128   /* size of synthesis frame */
 
-extern float *sms_tab_sine; /*!< global table to hold a sine function */
-extern float *sms_tab_sinc; /*!< global table to hold a sinc function */
-
-extern float *sms_window_spec;
-
-
 /*! \defgroup math_macros Math Macros 
  *  \brief mathematical operations and values needed for functions within
  *   this library 
@@ -632,6 +624,8 @@ float sms_sine (float fTheta);
 float sms_sinc (float fTheta);
 
 float sms_random ();
+
+int sms_power2(int n);
 
 int sms_synthesize (SMS_Data *pSmsFrame, float*pFSynthesis, 
                   SMS_SynthParams *pSynthParams);

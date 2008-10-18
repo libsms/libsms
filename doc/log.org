@@ -27,14 +27,10 @@ SMS Library Work Log
 *** resample after analysis (delete 3 out of 4 frames)
 ** what is calcCorr in tools?
 * Pre-modifications: making analysis/plotting scripts
-** TODO [#C] SWIG libsms wrappers for more convenient use in python
+** DONE SWIG libsms wrappers for more convenient use in python
 ** DONE smsPlot.py for plotting smsData over a spectrogram of audio              
 ** DONE smsToYaml for importing into python
 * to clean:
-** TODO make names consistent
-   - [X] replace Traj/Trajectories with Tracks
-   - [ ] replace Record with Frame
-** TODO update docs for stocastic synthesis
 ** TODO why is iOriginalSRate necessary in SMS_Header?
    - it seems that if the synthesis is completely independent of 
    analysis, this shouldn't be.
@@ -70,8 +66,18 @@ SMS Library Work Log
         - defined in variousFuntions for now, as SmsInit() is always called.
 ** DONE SmsInit() should be a global init before anything
 * Phase 1: Refactoring libsms for usage in real-time and release
+** TODO [#A] add function for changing synth hopsize
+   - along with it other parameters will change, as well as re-inits
 ** TODO [#A] Doxygen documentation
    - [ ] go through To-Do list
+   - [ ] move main page documentation somewhere other than sms.h
+*** things to add to main page
+    - [ ] copyright information
+    - [ ] info on pd files (reference to readme.txt to install)
+    - [ ] info on python
+    - [ ] info on tools
+    - [ ] info on tests
+    - [ ] section on a feature wish-list
 ** TODO [#A] scons install for pd
 ** TODO [#C] make example python scripts
 ** TODO [#C] optimizing
@@ -165,6 +171,7 @@ SMS Library Work Log
    - also can analyze from file
 *** DONE add analysis parameter classes (lots of them)
 ** [smssynth]
+*** TODO fix functino for changing sizehop
 *** TODO re-init the synthesizer when samplerate changes
     - actually, probably is not necessary -- check
 *** DONE [#A] has access to an [smsbuf] by symbol name

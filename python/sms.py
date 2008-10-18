@@ -397,6 +397,9 @@ class SMS_AnalParams(_object):
     __swig_setmethods__["fResidualPercentage"] = _sms.SMS_AnalParams_fResidualPercentage_set
     __swig_getmethods__["fResidualPercentage"] = _sms.SMS_AnalParams_fResidualPercentage_get
     if _newclass:fResidualPercentage = _swig_property(_sms.SMS_AnalParams_fResidualPercentage_get, _sms.SMS_AnalParams_fResidualPercentage_set)
+    __swig_setmethods__["pFSpectrumWindow"] = _sms.SMS_AnalParams_pFSpectrumWindow_set
+    __swig_getmethods__["pFSpectrumWindow"] = _sms.SMS_AnalParams_pFSpectrumWindow_get
+    if _newclass:pFSpectrumWindow = _swig_property(_sms.SMS_AnalParams_pFSpectrumWindow_get, _sms.SMS_AnalParams_pFSpectrumWindow_set)
     def __init__(self, *args): 
         this = _sms.new_SMS_AnalParams(*args)
         try: self.this.append(this)
@@ -707,7 +710,6 @@ class SMS_HybParams(_object):
     __del__ = lambda self : None;
 SMS_HybParams_swigregister = _sms.SMS_HybParams_swigregister
 SMS_HybParams_swigregister(SMS_HybParams)
-cvar = _sms.cvar
 
 sms_hybridize = _sms.sms_hybridize
 sms_filterArray = _sms.sms_filterArray

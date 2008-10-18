@@ -114,7 +114,7 @@ void smsbuf_alloc(t_smsbuf *x)
 {
         if(x->allocated)
         {
-                post("smsbuf already allocated, deallocating");
+                if(x->verbose)post("smsbuf already allocated, deallocating");
                 smsbuf_dealloc(x);
         }
         int i;
@@ -300,9 +300,21 @@ static void smsbuf_printframe(t_smsbuf *x, float f)
         else pd_error(x, "smsbuf (%s) not ready", x->bufname->s_name);
 }
 
+static void smsbuf_frames(t_smsbuf *x)
+{
+
+        if(x->ready)  outlet_float(x->outlet1 , x->nframes);
+
+}
+
 static void smsbuf_verbose(t_smsbuf *x, t_float flag)
 {
-        x->verbose = (int) flag;
+        if(!flag) x->verbose = 0;
+        else
+        {
+                x->verbose = 1;
+                post("smsanal: verbose messages");
+        }
 }
 
 static void *smsbuf_new(t_symbol *bufname)
@@ -313,8 +325,9 @@ static void *smsbuf_new(t_symbol *bufname)
         x->filename = NULL;
         x->nframes= 0;
         x->ready= 0;
-        x->verbose = 1;
+        x->verbose = 0;
         x->smsData2 = NULL;
+        x->outlet1 = outlet_new(&x->x_obj,  gensym("float"));
 
         //todo: make a default name if none is given:
         //if (!*s->s_name) s = gensym("delwrite~");
@@ -362,6 +375,6 @@ void smsbuf_setup(void)
         class_addmethod(smsbuf_class, (t_method)smsbuf_backup, gensym("backup"),  0);
         class_addmethod(smsbuf_class, (t_method)smsbuf_switch, gensym("switch"),  0);
         class_addmethod(smsbuf_class, (t_method)smsbuf_verbose, gensym("verbose"), A_DEFFLOAT, 0);
-
+        class_addmethod(smsbuf_class, (t_method)smsbuf_frames, gensym("frames"), 0);
 }
 

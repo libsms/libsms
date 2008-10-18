@@ -27,7 +27,7 @@
 char *pChDebugFile = "debug.txt"; /*!< debug text file */
 FILE *pDebug; /*!< pointer to debug file */
 
-float *sms_window_spec;
+/* float *sms_window_spec; */
 float  *sms_tab_sine, *sms_tab_sinc;
 
 #define SIZE_TABLES 4096
@@ -52,16 +52,6 @@ int sms_init( void )
                 if(iError) return(SMS_MALLOC);
                 iError = sms_prepSinc (SIZE_TABLES);
                 if(iError) return(SMS_MALLOC);
-
-/* #ifdef FFTW */
-/*         printf("libsms: using FFTW fft routines\n"); */
-/* #else */
-/* #ifdef OOURA  */
-/*         printf("libsms: using OOURA fft routines\n"); */
-/* #else */
-/*         printf("libsms: using realft fft routines\n"); */
-/* #endif /\* OOURA *\/ */
-/* #endif /\* FFTW *\/ */
         }
 
         return (SMS_OK);
@@ -77,7 +67,7 @@ void sms_free( void )
         sms_clearSine();
         sms_clearSinc();
 
-	if(sms_window_spec) free(sms_window_spec);
+/* 	if(sms_window_spec) free(sms_window_spec); */
 
         //fftwf_cleanup();
 
@@ -147,8 +137,8 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams)
 	}
 
 	/* initialitze window buffer for spectrum */
-	if(!sms_window_spec)
-                sms_window_spec = (float *) calloc (SMS_MAX_WINDOW, sizeof(float));
+        if(!(pAnalParams->pFSpectrumWindow = (float *) calloc (SMS_MAX_WINDOW, sizeof(float))))
+		return (SMS_MALLOC);
 
         /* allocate memory for FFT */
 
@@ -233,7 +223,7 @@ int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
         }
 #else        
         /*debugging realft */
-        pSynthParams->realftOut = (float *) calloc(sizeFft+1, sizeof(float));
+        pSynthParams->pFFTBuff = (float *) calloc(sizeFft+1, sizeof(float));
 #endif
 
         return (SMS_OK);
@@ -261,6 +251,7 @@ void sms_freeAnalysis( SMS_AnalParams *pAnalParams )
         free(pAnalParams->synthBuffer.pFBuffer);
         free(pAnalParams->pFrames);
         free(pAnalParams->ppFrames);
+        free(pAnalParams->pFSpectrumWindow);
 
 #ifdef FFTW
         fftwf_free(pAnalParams->fftw.pWaveform);
@@ -290,13 +281,13 @@ void sms_freeSynth( SMS_SynthParams *pSynthParams )
         fftwf_free(pSynthParams->fftw.pSpectrum);
         fftwf_free(pSynthParams->fftw.pWaveform);
 #else
-        free (pSynthParams->realftOut);
+        free (pSynthParams->pFFTBuff);
 #endif
 }
 
 /*! \brief give default values to an SMS_AnalParams struct 
  * 
- * This will fill an SMS_AnalParams with values that work
+ * This will initialize an SMS_AnalParams with values that work
  * for common analyses.  It is useful to start with and then
  * adjust the parameters manually to fit a particular sound
  *
@@ -593,3 +584,20 @@ float sms_random()
 #endif
         return(f);
 }
+
+/*! \brief make sure a number is a power of 2
+ *
+ * \return a power of two integer >= input value
+ */
+int sms_power2( int n)
+{
+        int pow = -1;
+        while(n)
+        {
+                n >>= 1;
+                pow++;
+        }
+        return(1<<pow);
+}
+
+

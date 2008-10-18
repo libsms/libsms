@@ -44,7 +44,7 @@ static void smssynth_buffer(t_smssynth *x, t_symbol *bufname)
                 x->bufname = bufname;
         }
 
-        //check if a file has been opened, if so re-init
+        /* check if a file has been opened, if so re-init */
         if(x->ready)
         {
                 post("smssynth_open: re-initializing synth");
@@ -68,34 +68,8 @@ static void smssynth_buffer(t_smssynth *x, t_symbol *bufname)
         }
         else if(x->verbose)
                 post("smssynth: [smsbuf %s] was successfully found ", x->bufname->s_name);
- 
-        post("(BEFORE) smssynth: %d frames in buffer (before sms_initSynth)", x->smsbuf->nframes);
-        post("smsbuf status: %d", x->smsbuf->ready);
-        post("iFrameRate:(#1) %d ", x->smsbuf->smsHeader.iFrameRate);
 
         sms_initSynth( &x->smsbuf->smsHeader, &x->synthParams );
-
-        // why is nFrames here reading as zero after loading a file in smsbuf??
-        post("smssynth: %d frames in buffer (after sms_initSynth)", x->smsbuf->nframes);
-        post("smsbuf status: %d", x->smsbuf->ready);
-        post("iFrameRate:(#2) %d ", x->smsbuf->smsHeader.iFrameRate);
-
-        x->smsbuf =
-        (t_smsbuf *)pd_findbyclass(x->bufname, smsbuf_class);
-
-        if(!x->smsbuf)
-        {
-                pd_error(x, "smssynth~: %s was not found", x->bufname->s_name);
-                return;
-        }
-        if(!x->smsbuf->ready)
-        {
-                pd_error(x, "smsbuf not ready");
-                return;
-        }
-        else if(x->verbose)
-                post("smssynth: [smsbuf %s] was successfully found (again)", x->bufname->s_name);
-        post("iFrameRate(#3): %d ", x->smsbuf->smsHeader.iFrameRate);
 
 	/* setup for interpolated synthesis from buffer */
         // I guess I am always ignoring phase information for now..
@@ -144,15 +118,23 @@ static t_int *smssynth_perform(t_int *w)
 
         return (w+5);
 }
-static void smssynth_sizehop(t_smssynth *x, t_float *fSizeHop)
+static void smssynth_sizehop(t_smssynth *x, t_float f)
 {
-        //what is minimum hopsize?
-        post("TODO: set sizeHop and re-init");
+        /* check if a file has been opened, if so re-init */
+        if(x->ready)
+        {
+                post("smssynth_open: re-initializing synth");
+                x->ready = 0;
+                sms_freeSynth(&x->synthParams);
+                sms_freeFrame(&x->interpolatedFrame);
+        }
+        
+        x->synthParams.sizeHop = x->synthBufPos = sms_power2((int) f);
+        if(x->ready) smssynth_buffer(x,x->bufname);
 }
 
 static void smssynth_transpose(t_smssynth *x, t_float f)
 {
-/*         x->transpose = f; */
         x->synthParams.fTranspose = TEMPERED_TO_FREQ( f );
         if(x->verbose) post("transpose: %f", x->synthParams.fTranspose);
 }
@@ -187,8 +169,7 @@ static void smssynth_synthtype(t_smssynth *x, t_float f)
 
 static void smssynth_info(t_smssynth *x)
 {
-
-        post("__arguments__");
+        post("smssynth~ %s info:", x->bufname->s_name);
         post("samplingrate: %d  ", x->synthParams.iSamplingRate);
         if(x->synthParams.iSynthesisType == SMS_STYPE_ALL) 
                 post("synthesis type: all ");
@@ -201,13 +182,6 @@ static void smssynth_info(t_smssynth *x)
         else if(x->synthParams.iDetSynthType == SMS_DET_SIN) 
                 post("deteministic synthesis method: oscillator bank ");
         post("sizeHop: %d ", x->synthParams.sizeHop);
-        post("__header info__");
-/*         post("fOriginalSRate: %d, iFrameRate: %d, origSizeHop: %d", */
-/*              x->pSmsHeader->iOriginalSRate, x->pSmsHeader->iFrameRate, x->synthParams.origSizeHop); */
-/*         post("original file length: %f seconds ", (float)  x->pSmsHeader->nFrames * */
-/*              x->synthParams.origSizeHop / x->pSmsHeader->iOriginalSRate ); */
-
-
 
 }
 
@@ -248,7 +222,6 @@ static void smssynth_free(t_smssynth *x)
                 sms_freeSynth(&x->synthParams);
                 sms_freeFrame(&x->interpolatedFrame);
         }
-        //sms_free();
 }
 void smssynth_tilde_setup(void)
 {
@@ -258,7 +231,7 @@ void smssynth_tilde_setup(void)
         class_addmethod(smssynth_class, (t_method)smssynth_dsp, gensym("dsp"), 0);
         class_addmethod(smssynth_class, (t_method)smssynth_buffer, gensym("buffer"), A_DEFSYM, 0);
         class_addmethod(smssynth_class, (t_method)smssynth_info, gensym("info"),  0);
-        class_addmethod(smssynth_class, (t_method)smssynth_sizehop, gensym("sizeHop"), A_DEFFLOAT, 0);
+        class_addmethod(smssynth_class, (t_method)smssynth_sizehop, gensym("sizehop"), A_DEFFLOAT, 0);
         class_addmethod(smssynth_class, (t_method)smssynth_transpose, gensym("transpose"), A_DEFFLOAT, 0);
         class_addmethod(smssynth_class, (t_method)smssynth_stocgain, gensym("stocgain"), A_DEFFLOAT, 0);
         class_addmethod(smssynth_class, (t_method)smssynth_synthtype, gensym("synthtype"), A_DEFFLOAT, 0);

@@ -25,7 +25,6 @@ env.Append(LIBS = 'sms',  CPPPATH = '../src', LIBPATH = '../src')
 for t in tools:
 	t_src = t+'.c'
 	t_man = '../man/' + t +'.1'
-        print "manpage: ", t_man
 	tool =env.Program( target = t, source = t_src)
         Depends(tool, '../src/libsms.a')
         #install tool

@@ -44,9 +44,9 @@ if 'doxygen' in commands:
 Help(opts.GenerateHelpText(env))
 
 conf = Configure(env)
-if not conf.CheckLibWithHeader('m','math.h','c'):
-        print 'cannot find libmath'
-        Exit(1)
+# if not conf.CheckLibWithHeader('m','math.h','c'):
+#         print 'cannot find libmath'
+#         Exit(1)
 
 if not conf.CheckLibWithHeader('sndfile','sndfile.h','c'):
         print 'cannot find libsndfile'
@@ -63,14 +63,11 @@ if int(ARGUMENTS.get('fftw', 0)):
 env = conf.Finish()
 #done checking for libraries
 
-if int(ARGUMENTS.get('ooura', 1)):
-        env.Append(CCFLAGS = ' -DOOURA ')
-        
 prefix = ARGUMENTS.get('prefix', '/usr/local')
 
 Export( ['env','prefix'] )
 
-print "libraries exporting: ", env.Dump('LIBS')
+#print "libraries exporting: ", env.Dump('LIBS')
 
 #SConscript( ['src/SConscript', 'tools/SConscript', 'pd/SConscript'], exports= ['env','prefix'] )
 SConscript('src/SConscript')

@@ -1,4 +1,4 @@
-#N canvas 299 359 777 525 10;
+#N canvas 574 293 777 525 10;
 #X obj 24 19 smspd;
 #X obj 123 83 smsbuf \$0-blarg;
 #X obj 156 309 smssynth~ \$0-blarg;
@@ -190,14 +190,14 @@
 -1 -1 0;
 #N canvas 0 0 450 300 spectrum 0;
 #X obj 48 62 inlet~;
-#X obj 55 125 fiddle~ 8092;
 #X obj 101 181 mtof;
 #X floatatom 101 203 5 0 0 1 hertz - -;
 #X floatatom 110 160 5 0 0 1 midinote - -;
-#X connect 0 0 1 0;
-#X connect 1 2 2 0;
-#X connect 1 2 4 0;
-#X connect 2 0 3 0;
+#X obj 55 125 fiddle~ 8192;
+#X connect 0 0 4 0;
+#X connect 1 0 2 0;
+#X connect 4 2 1 0;
+#X connect 4 2 3 0;
 #X restore 234 361 pd spectrum;
 #X obj 522 156 smsedit \$0-blarg;
 #X floatatom 521 74 5 0 0 0 - - -;
@@ -239,7 +239,7 @@
 #X connect 13 0 14 1;
 #X connect 14 0 10 0;
 #X restore 532 130 pd edit-bp;
-#N canvas 75 595 688 300 edit-evens 1;
+#N canvas 75 595 688 300 edit-evens 0;
 #X obj 99 220 outlet;
 #X msg 99 147 evens transpose \$1 \$2;
 #X obj 99 114 pack 0 0;
@@ -297,6 +297,9 @@
 #X obj 336 32 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
 -1;
 #X msg 482 24 converge 100 0.1;
+#X msg 175 187 buffer;
+#X msg 356 267 sizehop 1024;
+#X msg 413 285 info;
 #X connect 2 0 6 0;
 #X connect 2 0 6 1;
 #X connect 2 0 8 0;
@@ -342,3 +345,6 @@
 #X connect 48 0 1 0;
 #X connect 49 0 20 0;
 #X connect 50 0 37 0;
+#X connect 51 0 2 0;
+#X connect 52 0 2 0;
+#X connect 53 0 2 0;

@@ -3,39 +3,35 @@
 
 import os
 
-    
-
-debug_mode = ARGUMENTS.get('debug',0 )
-prefix = ARGUMENTS.get('prefix','/usr/local/lib')
-
 sources =  Split("""
                                             smspd.c 
                                             smsanal.c 
                                             smssynth~.c
                                             smsedit.c
 """ )
-helpfiles = []
-for x in sources:
-    if x == 'smspd.c':
-        helpfiles.append('help/sms-help.pd/')
-    else:
-        helpfiles.append('help/' + os.path.splitext(os.path.basename(x))[0] + '-help.pd')
 
+debug_mode = ARGUMENTS.get('debug',0 )
+prefix = ARGUMENTS.get('prefix','/usr/local/lib')
     
-help_dir = prefix + '/pd/doc/5.reference/sms'
-extra_dir = prefix + '/pd/extra'
-
 if int(debug_mode):
     sms_cflags = '-Wall -g'
 else:
     sms_cflags = ' -O2 -funroll-loops -fomit-frame-pointer \
         -Wall -W -Wshadow  \
         -Wno-unused -Wno-parentheses -Wno-switch '
-    
+
 sms_srcpath = '../src'
-
-
+help_dir = prefix + '/pd/doc/5.reference/sms'
+extra_dir = prefix + '/pd/extra'
 sms_libs =  ['m', 'sndfile', 'sms', 'fftw3f', 'pthread']
+
+helpfiles = []
+helpfiles.append('help/smsbuf-help.pd')
+for x in sources:
+    if x == 'smspd.c':
+        helpfiles.append('help/sms-help.pd/')
+    else:
+        helpfiles.append('help/' + os.path.splitext(os.path.basename(x))[0] + '-help.pd')
 
 env = Environment( ENV = os.environ, CCFLAGS = sms_cflags , CPPPATH = sms_srcpath, CPPDEFINES= 'PD')
 env.Append( LIBPATH = sms_srcpath, LIBS = sms_libs )

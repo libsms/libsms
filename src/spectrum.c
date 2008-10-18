@@ -58,7 +58,7 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 	/* compute window when necessary and re-plan fftw*/
 	if (iOldSizeWindow != sizeWindow) 
         {       
-                sms_getWindow (sizeWindow, sms_window_spec, pAnalParams->iWindowType);
+                sms_getWindow (sizeWindow, pAnalParams->pFSpectrumWindow, pAnalParams->iWindowType);
 
                 if(fftwPlanned)
                         fftwf_destroy_plan(pAnalParams->fftw.plan);
@@ -80,10 +80,10 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 	/* apply window to waveform and center window around 0 */
 	iOffset = sizeFft - (iMiddleWindow - 1);
 	for (i=0; i<iMiddleWindow-1; i++)
-		pAnalParams->fftw.pWaveform[iOffset + i] =  sms_window_spec[i] * pFWaveform[i];
+		pAnalParams->fftw.pWaveform[iOffset + i] =  pAnalParams->pFSpectrumWindow[i] * pFWaveform[i];
 	iOffset = iMiddleWindow - 1;
 	for (i=0; i<iMiddleWindow; i++)
-		pAnalParams->fftw.pWaveform[i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i];
+		pAnalParams->fftw.pWaveform[i] = pAnalParams->pFSpectrumWindow[iOffset + i] * pFWaveform[iOffset + i];
 
         fftwf_execute(pAnalParams->fftw.plan);
 
@@ -107,10 +107,10 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
         pFMagSpectrum[0] = sms_magToDB (sqrt (fReal * fReal + fImag * fImag));
         pFPhaseSpectrum[0] = atan2(-fImag, fReal);
 
-#else /* using realft() */        
+#else /* using OOURA */        
 	if (iOldSizeWindow != sizeWindow) 
         {
-                sms_getWindow (sizeWindow, sms_window_spec, pAnalParams->iWindowType);
+                sms_getWindow (sizeWindow, pAnalParams->pFSpectrumWindow, pAnalParams->iWindowType);
         }
 	iOldSizeWindow = sizeWindow;
 
@@ -125,17 +125,16 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 	/* apply window to waveform and center window around 0 */
 	iOffset = sizeFft - (iMiddleWindow - 1);
 	for (i=0; i<iMiddleWindow-1; i++)
-		pFBuffer[iOffset + i] =  sms_window_spec[i] * pFWaveform[i];
+		pFBuffer[iOffset + i] =  pAnalParams->pFSpectrumWindow[i] * pFWaveform[i];
 	iOffset = iMiddleWindow - 1;
 	for (i=0; i<iMiddleWindow; i++)
-		pFBuffer[i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i];
+		pFBuffer[i] = pAnalParams->pFSpectrumWindow[iOffset + i] * pFWaveform[iOffset + i];
   
-	//realft (pFBuffer, sizeMag, 1);
         sms_rdft(sizeFft, pFBuffer, 1);
   
 	/* convert from rectangular to polar coordinates */
 	for (i = 0; i < sizeMag; i++)
-	{ /*skips pFBuffer[0] because it is always 0 with realft */
+	{ 
 		it2 = i << 1; //even numbers 0-N
 		fReal = pFBuffer[it2]; /*odd numbers 1->N+1 */
 		fImag = pFBuffer[it2+1]; /*even numbers 2->N+2 */
@@ -146,34 +145,6 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
 			pFPhaseSpectrum[i] = atan2 (-fImag, fReal);
 		}
 	}
-
-/* 	if ((pFBuffer = (float *) calloc(sizeFft+1, sizeof(float))) == NULL) */
-/* 		return -1; */
-
-/* 	/\* apply window to waveform and center window around 0 *\/ */
-/* 	iOffset = sizeFft - (iMiddleWindow - 1); */
-/* 	for (i=0; i<iMiddleWindow-1; i++) */
-/* 		pFBuffer[1+(iOffset + i)] =  sms_window_spec[i] * pFWaveform[i]; */
-/* 	iOffset = iMiddleWindow - 1; */
-/* 	for (i=0; i<iMiddleWindow; i++) */
-/* 		pFBuffer[1+i] = sms_window_spec[iOffset + i] * pFWaveform[iOffset + i]; */
-  
-/* 	realft (pFBuffer, sizeMag, 1); */
-/*         //sms_rdft(sizeFft, pFBuffer, -1); */
-  
-/* 	/\* convert from rectangular to polar coordinates *\/ */
-/* 	for (i = 0; i < sizeMag; i++) */
-/* 	{ /\*skips pFBuffer[0] because it is always 0 with realft *\/ */
-/* 		it2 = i << 1; //even numbers 0-N */
-/* 		fReal = pFBuffer[it2+1]; /\*odd numbers 1->N+1 *\/ */
-/* 		fImag = pFBuffer[it2+2]; /\*even numbers 2->N+2 *\/ */
-      
-/* 		if (fReal != 0 || fImag != 0) */
-/* 		{ */
-/* 			pFMagSpectrum[i] = sms_magToDB (sqrt (fReal * fReal + fImag * fImag)); */
-/* 			pFPhaseSpectrum[i] = atan2 (-fImag, fReal); */
-/* 		} */
-/* 	} */
 
 	free (pFBuffer);
 #endif/*FFTW*/
@@ -235,7 +206,7 @@ int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow,
         if (pFPhaseSpectrum)
                 pFPhaseSpectrum[0] = atan2(fImag, fReal);
 
-#else /* using realft */
+#else /* using OOURA */
   
         int it2;
         float *pFBuffer;
@@ -248,7 +219,6 @@ int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow,
                 pFBuffer[i] =  pFWindow[i] * pFWaveform[i];
   
 	/* compute real FFT */
-	//realft (pFBuffer-1, sizeMag, 1);
         sms_rdft(sizeFft, pFBuffer, 1); 
   
 	/* convert from rectangular to polar coordinates */
@@ -298,7 +268,6 @@ int sms_invQuickSpectrum (float *pFMagSpectrum, float *pFPhaseSpectrum,
 		pFBuffer[it2+1] = fPower * sin (pFPhaseSpectrum[i]);
 	}
 	/* compute IFFT */
-	//realft (pFBuffer-1, sizeMag, -1);
         sms_rdft(sizeFft, pFBuffer, -1); 
  
 	/* assume the output array has been taken care off */
@@ -341,7 +310,6 @@ int sms_invQuickSpectrumW (float *pFMagSpectrum, float *pFPhaseSpectrum,
 	}    
 	/* compute IFFT */
         sms_rdft(sizeFft, pFBuffer, -1); 
-        //realft(pFBuffer-1, sizeMag, -1);
 
  	/* assume the output array has been taken care off */
         /* \todo is a seperate pFBuffer necessary here?

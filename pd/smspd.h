@@ -11,6 +11,7 @@ typedef struct _smsbuf
         t_canvas *canvas;
         t_symbol *filename;
         t_symbol *bufname;
+        t_outlet *outlet1;
         int nframes;
         int ready;
         int verbose;

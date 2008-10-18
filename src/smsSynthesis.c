@@ -107,9 +107,9 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
         for(i= sizeMag, k = 0; i < sizeFft; i++, k++)
                 pFBuffer[i] +=  pSynthParams->fftw.pWaveform[k] * pSynthParams->pFDetWindow[i] * 0.5;
 
-#else //using realft (or OOURA)
+#else //using OOURA 
 
-        memset (pSynthParams->realftOut, 0, (sizeFft +1) * sizeof(float));
+        memset (pSynthParams->pFFTBuff, 0, (sizeFft +1) * sizeof(float));
         for (i = 0; i < nTracks; i++)
         {
                 if (((fMag = pSmsData->pFSinAmp[i]) > 0) &&
@@ -134,28 +134,28 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                                 fNewMag = fMag * sms_sinc (fIndex);
                                 if (l > 0 && l < sizeMag)
                                 {
-                                        pSynthParams->realftOut[l*2+1] += fNewMag * fCos;
-                                        pSynthParams->realftOut[l*2] += fNewMag * fSin;
+                                        pSynthParams->pFFTBuff[l*2+1] += fNewMag * fCos;
+                                        pSynthParams->pFFTBuff[l*2] += fNewMag * fSin;
                                 }
                                 else if (l == 0)
                                 {
-                                        pSynthParams->realftOut[0] += 2 * fNewMag * fSin;
+                                        pSynthParams->pFFTBuff[0] += 2 * fNewMag * fSin;
                                 }
                                 else if (l < 0)
                                 {
                                         b = abs(l);
-                                        pSynthParams->realftOut[b*2+1] -= fNewMag * fCos;
-                                        pSynthParams->realftOut[b*2] += fNewMag * fSin;
+                                        pSynthParams->pFFTBuff[b*2+1] -= fNewMag * fCos;
+                                        pSynthParams->pFFTBuff[b*2] += fNewMag * fSin;
                                 }
                                 else if (l > sizeMag)
                                 {
                                         b = sizeMag - (l - sizeMag);
-                                        pSynthParams->realftOut[b*2+1] -= fNewMag * fCos;
-                                        pSynthParams->realftOut[b*2] += fNewMag * fSin;
+                                        pSynthParams->pFFTBuff[b*2+1] -= fNewMag * fCos;
+                                        pSynthParams->pFFTBuff[b*2] += fNewMag * fSin;
                                 }
                                 else if (l == sizeMag)
                                 {
-                                        pSynthParams->realftOut[1] += 2 * fNewMag * fSin;
+                                        pSynthParams->pFFTBuff[1] += 2 * fNewMag * fSin;
                                 }
                         }
                 }
@@ -164,14 +164,12 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                 pSynthParams->prevFrame.pFSinFreq[i] = fFreq;
         }
 
-        sms_rdft(sizeFft, pSynthParams->realftOut, -1);
+        sms_rdft(sizeFft, pSynthParams->pFFTBuff, -1);
 
         for(i = 0, k = sizeMag; i < sizeMag; i++, k++) 
-                pFBuffer[i] += pSynthParams->realftOut[k] * pSynthParams->pFDetWindow[i];
+                pFBuffer[i] += pSynthParams->pFFTBuff[k] * pSynthParams->pFDetWindow[i];
         for(i= sizeMag, k = 0; i < sizeFft; i++, k++) 
-                pFBuffer[i] +=  pSynthParams->realftOut[k] * pSynthParams->pFDetWindow[i];
-
-
+                pFBuffer[i] +=  pSynthParams->pFFTBuff[k] * pSynthParams->pFDetWindow[i];
 
 #endif /* FFTW */
 }
@@ -287,23 +285,6 @@ int sms_synthesize (SMS_Data *pSmsData, float *pFSynthesis,
         memcpy ( pFBuffer, (float *)(pFBuffer+sizeHop), 
                 sizeof(float) * sizeHop);
         memset (pFBuffer+sizeHop, 0, sizeof(float) * sizeHop);
-
-        // RTE DEBUG //////////////////
-/*         static int frame = 0; */
-/*         static float max = 0; */
-/*         int sizeFft = pSynthParams->sizeHop << 1; /\* 50% overlap, so sizeFft is 2x sizeHop *\/ */
-/*         printf("~~FRAME #%d:  \n", frame++); */
-/*         for(i = 0; i < sizeFft; i++) */
-/*         { */
-/*                 //printf("%f, ", pFBuffer[i]); */
-/*                 if(pFBuffer[i] > max) */
-/*                 { */
-/*                         max = pFBuffer[i]; */
-/*                         printf("new max: %f  -- ", max); */
-/*                 }; */
-/*         } */
-/*         printf("\n"); */
-        /////////////////////////////
         
         /* decide which combo of synthesis methods to use */
         if(pSynthParams->iSynthesisType == SMS_STYPE_ALL)

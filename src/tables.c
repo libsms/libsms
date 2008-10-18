@@ -30,9 +30,9 @@ static float fSineScale;
 /*! \brief value to scale the sinc-table-lookup phase */
 static float fSincScale;
 /*! \brief global pointer to the sine table */
-float *sms_tab_sine;
+static float *sms_tab_sine;
 /*! \brief global pointer to the sinc table */
-float *sms_tab_sinc;
+static float *sms_tab_sinc;
 
 /*! \brief prepares the sine table
  * \param  nTableSize    size of table

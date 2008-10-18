@@ -24,6 +24,7 @@ typedef struct _smsanal
         int iSample;
         int iNextSizeRead;
         int verbose;
+        int analyzed;
         int analysisType; /* 0 for file, 1 for array */
         int iFrame;
         t_outlet *outlet_iFrame;
@@ -37,6 +38,16 @@ static void smsanal_sizehop(t_smsanal *x, t_float fSizeHop)
 {
         //what is minimum hopsize?
         post("TODO: set sizeHop and re-init");
+}
+
+static void smsanal_verbose(t_smsanal *x, t_float flag)
+{
+        if(!flag) x->verbose = 0;
+        else
+        {
+                x->verbose = 1;
+                post("smsanal: verbose messages");
+        }
 }
 
 static void smsanal_buffer(t_smsanal *x, t_symbol *bufname)
@@ -57,6 +68,7 @@ static void smsanal_buffer(t_smsanal *x, t_symbol *bufname)
 void *smsanal_childthread(void *zz)
 {
         t_smsanal *x = zz;
+        if(x->analyzed) sms_freeAnalysis(&x->anal_params);
         int i;
         int sizeNewData = 0;
         /* loop for analysis */
@@ -127,14 +139,7 @@ static void smsanal_sf(t_smsanal *x, t_symbol *filename)
         }
         x->smsbuf->ready = 0;
 
-        long iNextSizeRead = 0;
         int i;
-        int iDoAnalysis = 1;
-        int iSample = 0;
-        int iStatus = 0;
-        int iFrame = 0;
-        int sizeNewData = 0;
-        int sizeNextRead = 0;
         long iError;
         t_symbol *fullname;
         pthread_t childthread;
@@ -252,18 +257,8 @@ static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
         }
         x->smsbuf->ready = 0;
 
-        int iNextSizeRead = 0;
         int i;
-        int iDoAnalysis = 1;
-        int iSample = 0;
-        int iStatus = 0;
-        int iFrame = 0;
-        int sizeNewData = 0;
-        int sizeNextRead = 0;
-        long iError;
         t_garray *a;
-	short pSoundData[SMS_MAX_WINDOW];
-	SMS_SndHeader SoundHeader;
         pthread_t childthread;
 
         if(x->smsbuf->nframes != 0)
@@ -761,21 +756,6 @@ static void smsanal_ncoefficients(t_smsanal *x, t_float f)
         x->anal_params.nStochasticCoeff = i;
 }
 
-static t_int *smsanal_perform(t_int *w)
-{
-        t_smsanal *x = (t_smsanal *)(w[1]);
-        t_sample *in = (t_float *)(w[2]);
-
-        int n = (int)(w[3]);
-        return(w+4);
-}
-
-/* dsp indicator */
-static void smsanal_dsp(t_smsanal *x, t_signal **sp)
-{
-        dsp_add(smsanal_perform, 3, x, sp[0]->s_vec, sp[0]->s_n);
-}
-
 /* creator function */
 static void *smsanal_new(t_symbol *s, int argcount, t_atom *argvec)
 {
@@ -787,7 +767,8 @@ static void *smsanal_new(t_symbol *s, int argcount, t_atom *argvec)
         x->canvas = canvas_getcurrent();
         x->ntracks = 30;
         x->smsbuf = NULL;
-        x->verbose = 1;
+        x->verbose = 0;
+        x->analyzed = 0;
   
         sms_initAnalParams (&x->anal_params);
 
@@ -804,20 +785,19 @@ static void *smsanal_new(t_symbol *s, int argcount, t_atom *argvec)
 
 static void smsanal_free(t_smsanal *x)
 {
-        sms_freeAnalysis(&x->anal_params);
+        if(x->analyzed) sms_freeAnalysis(&x->anal_params);
 }
 void smsanal_setup(void)
 {
         smsanal_class = class_new(gensym("smsanal"), (t_newmethod)smsanal_new, 
                                        (t_method)smsanal_free, sizeof(t_smsanal), 0, A_GIMME, 0);
 
-        CLASS_MAINSIGNALIN(smsanal_class, t_smsanal, f);
-        class_addmethod(smsanal_class, (t_method)smsanal_dsp, gensym("dsp"), 0);
-
+        
         class_addmethod(smsanal_class, (t_method)smsanal_buffer, gensym("buffer"), A_DEFSYM, 0);
         class_addmethod(smsanal_class, (t_method)smsanal_sf, gensym("soundfile"), A_DEFSYM, 0);
         class_addmethod(smsanal_class, (t_method)smsanal_array, gensym("array"), A_DEFSYM, A_DEFFLOAT, 0);
         class_addmethod(smsanal_class, (t_method)smsanal_sizehop, gensym("sizehop"), A_DEFFLOAT, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_verbose, gensym("verbose"), A_DEFFLOAT, 0);
         /* analysis parameters */
         class_addmethod(smsanal_class, (t_method)smsanal_debug, gensym("debug"), A_DEFFLOAT, 0);
         class_addmethod(smsanal_class, (t_method)smsanal_format, gensym("format"), A_DEFFLOAT, 0);
