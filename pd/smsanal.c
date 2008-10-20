@@ -61,7 +61,7 @@ static void smsanal_buffer(t_smsanal *x, t_symbol *bufname)
                 pd_error(x, "smsanal: %s was not found", bufname->s_name);
                 return;
         }
-        else post("smsanal is using buffer: %s", bufname->s_name);
+        else if(x->verbose)post("smsanal is using buffer: %s", bufname->s_name);
 
 }
 
@@ -119,13 +119,13 @@ void *smsanal_childthread(void *zz)
 		else if (x->iStatus == -1) /* done */
 		{
 			x->iDoAnalysis = 0;
-			x->smsbuf->smsHeader.nFrames = x->iFrame;
+			x->smsbuf->nframes = x->smsbuf->smsHeader.nFrames = x->iFrame;
 		}
 
 	}
-       post(" smsanal: analyzed %d frames from soundfile.", x->iFrame);
-       x->smsbuf->smsHeader.fResidualPerc = x->anal_params.fResidualPercentage / x->iFrame;
-       x->smsbuf->ready = 1;
+        if(x->verbose) post("smsanal: analyzed %d frames from soundfile.", x->iFrame);
+        x->smsbuf->smsHeader.fResidualPerc = x->anal_params.fResidualPercentage / x->iFrame;
+        x->smsbuf->ready = 1;
 
         pthread_exit(NULL);
 }

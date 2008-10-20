@@ -222,11 +222,32 @@ int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
                 return (SMS_FFTWERR);
         }
 #else        
-        /*debugging realft */
         pSynthParams->pFFTBuff = (float *) calloc(sizeFft+1, sizeof(float));
 #endif
 
         return (SMS_OK);
+}
+
+int sms_changeSynthHop( SMS_SynthParams *pSynthParams, int sizeHop)
+{
+#ifdef FFTW
+        printf("OUUCH: sms_changeSynthHop not yet working with FFTW");
+        return(-1);
+#endif
+        pSynthParams->pFStocWindow = 
+		(float *) realloc(pSynthParams->pFStocWindow, sizeHop * 2 * sizeof(float));
+        sms_getWindow( sizeHop * 2, pSynthParams->pFStocWindow, SMS_WIN_HANNING );
+	pSynthParams->pFDetWindow =
+		(float *) realloc(pSynthParams->pFDetWindow, sizeHop * 2 * sizeof(float));
+        sms_getWindow( sizeHop * 2, pSynthParams->pFDetWindow, SMS_WIN_IFFT );
+
+        /* allocate memory for FFT - big enough for output buffer (new hopsize)*/
+
+        pSynthParams->pFFTBuff = (float *) realloc(pSynthParams->pFFTBuff, (sizeHop << 1) * sizeof(float));
+
+        pSynthParams->sizeHop = sizeHop;
+
+        return(SMS_OK);
 }
 
 /*! \brief free analysis data

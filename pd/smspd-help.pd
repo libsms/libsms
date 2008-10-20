@@ -179,7 +179,7 @@
 #X connect 9 0 8 0;
 #X restore 408 52 pd test;
 #X floatatom 408 76 5 0 0 0 - - -;
-#X obj 451 77 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+#X obj 451 77 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 1
 1;
 #X floatatom 8 257 5 0 0 0 - - -;
 #X obj 50 469 hsl 200 15 0 615 0 0 empty empty empty -2 -8 0 10 -262144
@@ -300,6 +300,7 @@
 #X msg 175 187 buffer;
 #X msg 356 267 sizehop 1024;
 #X msg 413 285 info;
+#X msg 383 245 sizehop 2500;
 #X connect 2 0 6 0;
 #X connect 2 0 6 1;
 #X connect 2 0 8 0;
@@ -348,3 +349,4 @@
 #X connect 51 0 2 0;
 #X connect 52 0 2 0;
 #X connect 53 0 2 0;
+#X connect 54 0 2 0;

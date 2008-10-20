@@ -1,25 +1,15 @@
-#N canvas 490 307 777 525 10;
-#X obj 24 19 smspd;
-#X obj 123 83 smsbuf \$0-blarg;
-#X obj 156 309 smssynth~ \$0-blarg;
-#X msg 124 32 open ../test/sms/flugel.sms;
-#X msg 138 58 info;
-#X floatatom 109 275 5 0 0 0 - - -;
-#X msg 269 284 stocgain \$1;
-#X floatatom 271 263 5 0 0 0 - - -;
-#X msg 270 241 transpose \$1;
-#X floatatom 271 214 5 0 0 0 - - -;
-#X msg 8 92 buffer \$1-blarg;
-#X obj 8 72 \$0;
-#X obj 8 55 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
--1;
-#X obj 8 230 smsanal \$0-blarg;
-#X msg 188 252 buffer \$1-blarg;
-#X obj 188 232 \$0;
-#X obj 188 215 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
--1 -1;
-#X floatatom 301 34 5 0 0 0 - - -;
-#X msg 300 55 printframe \$1;
+#N canvas 438 100 994 768 10;
+#X obj 273 393 smsbuf \$0-blarg;
+#X obj 508 272 smssynth~ \$0-blarg;
+#X msg 343 285 info;
+#X floatatom 518 149 5 0 0 0 - - -;
+#X msg 578 199 stocgain \$1;
+#X floatatom 578 179 5 0 0 0 - - -;
+#X msg 563 149 transpose \$1;
+#X floatatom 563 130 5 0 0 0 - - -;
+#X obj 15 274 smsanal \$0-blarg;
+#X floatatom 350 314 5 0 0 0 - - -;
+#X msg 350 335 printframe \$1;
 #N canvas 250 596 450 300 wavetable 0;
 #N canvas 0 0 450 300 (subpatch) 0;
 #X array audiobuf 44361 float 2;
@@ -36,9 +26,7 @@
 #X connect 5 0 3 0;
 #X connect 6 0 1 0;
 #X restore 14 331 pd wavetable;
-#X msg 30 149 array audiobuf 28800;
-#X msg 30 168 verbose 0;
-#X msg 29 122 soundfile ../test/audio/flugel.wav;
+#X msg 15 193 array audiobuf 28800;
 #N canvas 871 58 450 900 analysis_params 0;
 #X msg 39 49 debug \$1;
 #X obj 39 1065 outlet;
@@ -98,6 +86,7 @@
 #X obj 164 959 hradio 13 1 0 3 empty empty empty 0 -8 0 10 -262144
 -1 -1 0;
 #X floatatom 165 996 5 4 1028 0 - - -;
+#X text 62 5 These are documented in the smsAnal manpage;
 #X connect 0 0 1 0;
 #X connect 2 0 0 0;
 #X connect 3 0 6 0;
@@ -148,22 +137,15 @@
 #X connect 48 0 30 0;
 #X connect 49 0 31 0;
 #X connect 50 0 32 0;
-#X restore 39 196 pd analysis_params;
-#X msg 287 79 save test.sms;
-#X floatatom 8 257 5 0 0 0 - - -;
-#X obj 50 469 hsl 200 15 0 615 0 0 empty empty empty -2 -8 0 10 -262144
--1 -1 0 1;
-#X msg 167 144 soundfile ../test/audio/piano.aiff;
-#X msg 325 201 synthtype \$1;
-#X obj 324 181 hradio 15 1 0 3 empty empty empty 0 -8 0 10 -262144
+#X restore 46 240 pd analysis_params;
+#X msg 347 366 save test.sms;
+#X floatatom 15 301 5 0 0 0 - - -;
+#X msg 580 241 synthtype \$1;
+#X obj 580 222 hradio 15 1 0 3 empty empty empty 0 -8 0 10 -262144
 -1 -1 0;
-#X obj 522 156 smsedit \$0-blarg;
-#X floatatom 521 74 5 0 0 0 - - -;
-#X msg 520 95 printframe \$1;
-#X msg 618 112 buffer \$1-blarg;
-#X obj 618 92 \$0;
-#X obj 618 75 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
--1;
+#X obj 676 655 smsedit \$0-blarg;
+#X floatatom 714 537 5 0 0 0 - - -;
+#X msg 713 558 printframe \$1;
 #N canvas 773 58 450 300 edit-bp 0;
 #X obj 178 243 outlet;
 #X obj 247 155 t b f;
@@ -196,7 +178,7 @@
 #X connect 12 0 14 1;
 #X connect 13 0 14 1;
 #X connect 14 0 10 0;
-#X restore 532 130 pd edit-bp;
+#X restore 725 593 pd edit-bp;
 #N canvas 75 595 688 300 edit-evens 0;
 #X obj 99 220 outlet;
 #X msg 99 147 evens transpose \$1 \$2;
@@ -246,60 +228,85 @@
 #X connect 18 0 0 0;
 #X connect 19 0 16 0;
 #X connect 20 0 19 0;
-#X restore 628 135 pd edit-evens;
-#X msg 581 33 verbose \$1;
-#X obj 583 12 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+#X restore 821 598 pd edit-evens;
+#X msg 793 478 verbose \$1;
+#X msg 339 235 backup;
+#X msg 343 260 switch;
+#X obj 507 322 dak~;
+#X msg 304 187 frames;
+#X floatatom 273 412 5 0 0 0 - - -;
+#X msg 668 245 sizehop 1024;
+#X text 676 223 (currently crashes if you have audio running.. :(;
+#X msg 38 215 verbose 1;
+#X msg 273 163 open \$1;
+#X obj 273 142 openpanel;
+#X obj 273 125 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
+-1 -1;
+#X msg 317 211 verbose 1;
+#X text 14 16 Step 1: analyze some sound using [smsanal]'s array method
+or soundfile method. Alternatively \, load a pre-analyzed sound with
+[smsbuf]'s open method. Either way \, the SMS data is now in [smsbuf]
+and you can look at the header information with the "info" method or
+print frame data with the "printframe" method;
+#X text 497 -3 Step 2: initialize [smssynth~] with the "buffer" method.
+If it has as its first argument the name of the buffer provided to
+smsbuf (like all the sms externals need) \, then all you need to do
+is send it "buffer". Otherwise \, send it the name of the buffer too.
+;
+#X text 496 75 Step 3: tell [smssynth~] what frame to synthesize with
+float arguments. It will interpolate between frames to provide a smooth
+synthesis.;
+#X msg 502 121 buffer;
+#X text 37 490 Manipulations:;
+#X text 37 508 You can transpose what is being synthesized \, or adjust
+the level of the stochastic component \, with arguments to [smssynth~].
+Also \, you can use [smsedit] to hard-edit the data within the [smsbuf]
+buffer.;
+#X text 35 571 Because editing the data will distort the model \, there
+is an option to make a 'backup' in the [smsbuf]. You can then switch
+to the backup at any point during synthesis \, or you can use the "converge"
+method in [smsedit] to gradually move the data back to the original
+(by averaging).;
+#X obj 793 460 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
-#X msg 199 55 backup;
-#X msg 298 10 switch;
-#X obj 336 32 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
--1;
-#X msg 482 24 converge 100 0.1;
-#X obj 155 359 dak~;
-#X msg 132 9 frames;
-#X floatatom 123 102 5 0 0 0 - - -;
-#X obj 160 99 print;
-#X text 197 103 why +4?;
-#X connect 1 0 46 0;
-#X connect 2 0 44 0;
-#X connect 2 0 44 1;
+#X msg 268 100 open ../../test/sms/flugel.sms;
+#X msg 676 487 converge 20 0.1;
+#X msg 688 513 buffer;
+#X msg 674 268 sizehop 2048;
+#X connect 0 0 28 0;
+#X connect 1 0 26 0;
+#X connect 1 0 26 1;
+#X connect 2 0 0 0;
 #X connect 3 0 1 0;
 #X connect 4 0 1 0;
-#X connect 5 0 2 0;
-#X connect 6 0 2 0;
+#X connect 5 0 4 0;
+#X connect 6 0 1 0;
 #X connect 7 0 6 0;
-#X connect 8 0 2 0;
-#X connect 9 0 8 0;
-#X connect 10 0 13 0;
-#X connect 11 0 10 0;
-#X connect 12 0 11 0;
-#X connect 13 0 25 0;
-#X connect 14 0 2 0;
-#X connect 15 0 14 0;
-#X connect 16 0 15 0;
-#X connect 17 0 18 0;
-#X connect 18 0 1 0;
-#X connect 20 0 13 0;
-#X connect 21 0 13 0;
-#X connect 22 0 13 0;
-#X connect 23 0 13 0;
-#X connect 24 0 1 0;
-#X connect 26 0 2 0;
-#X connect 27 0 13 0;
-#X connect 28 0 2 0;
-#X connect 29 0 28 0;
-#X connect 31 0 32 0;
-#X connect 32 0 30 0;
-#X connect 33 0 30 0;
+#X connect 8 0 15 0;
+#X connect 9 0 10 0;
+#X connect 10 0 0 0;
+#X connect 12 0 8 0;
+#X connect 13 0 8 0;
+#X connect 14 0 0 0;
+#X connect 16 0 1 0;
+#X connect 17 0 16 0;
+#X connect 19 0 20 0;
+#X connect 20 0 18 0;
+#X connect 21 0 18 0;
+#X connect 22 0 18 0;
+#X connect 23 0 18 0;
+#X connect 24 0 0 0;
+#X connect 25 0 0 0;
+#X connect 27 0 0 0;
+#X connect 29 0 1 0;
+#X connect 31 0 8 0;
+#X connect 32 0 0 0;
+#X connect 33 0 32 0;
 #X connect 34 0 33 0;
-#X connect 35 0 34 0;
-#X connect 36 0 30 0;
-#X connect 37 0 30 0;
-#X connect 38 0 30 0;
-#X connect 39 0 38 0;
-#X connect 40 0 1 0;
-#X connect 41 0 1 0;
-#X connect 42 0 17 0;
-#X connect 43 0 30 0;
-#X connect 45 0 1 0;
-#X connect 46 0 47 0;
+#X connect 35 0 0 0;
+#X connect 39 0 1 0;
+#X connect 43 0 23 0;
+#X connect 44 0 0 0;
+#X connect 45 0 18 0;
+#X connect 46 0 18 0;
+#X connect 47 0 1 0;

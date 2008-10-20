@@ -17,9 +17,6 @@ SMS Library Work Log
 ** TODO where are inharmonic tracks analyzed/synthesized differently?
 ** TODO there are many members for SMS_Header not currently used
    - such as descriptors
-** TODO make a better random function
-   - should return a floating point random number -1. : 1.
-   - [ ] try implementing the Merseinne Twister algorithm (~/src/SFMT...)
 ** TODO find out if there is any benifit to a dynamic library at one point
 ** plot stochastic coefficients at different rates to see if they are the same for diff sr
 ** changing the framerate in smsAnal makes deterministic component empty. huh?
@@ -164,8 +161,6 @@ SMS Library Work Log
        - timetags? frametag     
 *** DONE [#C] stores the buffer to sms file
 ** [smsanal]
-*** TODO do analysis in audio chain
-    - this should stop the big crunch by slowing the analysis down
 *** TODO [#C] resamples the data to be a desired framerate
 *** DONE reads a pd array and analyzes it
    - also can analyze from file
@@ -177,8 +172,3 @@ SMS Library Work Log
 *** DONE [#A] has access to an [smsbuf] by symbol name
 *** DONE [#A] synthesizes the [smsbuf]
 ** [smsedit]
-*** In order to retain sanity during editing
-    - [ ] make a restore frame method
-    - [ ] make 'resolve' method
-       - averages between old and new some how
-

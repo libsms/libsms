@@ -565,6 +565,8 @@ void sms_initAnalParams (SMS_AnalParams *pAnalParams);
 
 int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams );
 
+int sms_changeSynthHop( SMS_SynthParams *pSynthParams, int sizeHop);
+
 void sms_freeAnalysis (SMS_AnalParams *pAnalParams);
 
 void sms_freeSynth( SMS_SynthParams *pSynthParams );

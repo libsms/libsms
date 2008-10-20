@@ -9,15 +9,31 @@ typedef struct _smsedit
 {
         t_object x_obj; 
         t_smsbuf *smsbuf;
+        t_symbol *bufname;
         int verbose;
 } t_smsedit;
 
 static void smsedit_buffer(t_smsedit *x, t_symbol *bufname)
 {
-        x->smsbuf = smspd_buffer(bufname);
+        if(!*bufname->s_name)
+        {
+                if(!*x->bufname->s_name)
+                {
+                        post("... don't have a bufname");
+                        return;
+                }
+                else if(x->verbose) post("using initial bufname: %s", x->bufname->s_name);
+        }
+        else
+        {
+                if(x->verbose) post("new bufname: %s", bufname->s_name);
+                x->bufname = bufname;
+        }
+        
+        x->smsbuf = smspd_buffer(x->bufname);
         if(!x->smsbuf)
-                pd_error(x, "smsedit_new: smsbuf %s was not found", bufname->s_name);
-        else if(x->verbose)post("smsedit is using buffer: %s", bufname->s_name);
+                pd_error(x, "smsedit_new: smsbuf %s was not found", x->bufname->s_name);
+        else if(x->verbose)post("smsedit is using buffer: %s", x->bufname->s_name);
 }
 
 /* just using this function to check if I have the right pointer to data  */
@@ -220,6 +236,11 @@ static void smsedit_converge( t_smsedit *x, t_float frame, t_float w)
                 pd_error(x, "smsedit: smsbuf is not ready");
                 return;
         }
+        if(!x->smsbuf->smsData2)
+        {
+                pd_error(x, "smsedit: smsbuf does not have a backup");
+                return;
+        }
         if(w <= 0) w =0;
         if(w >= 1) w = 1;
 
@@ -229,7 +250,7 @@ static void smsedit_converge( t_smsedit *x, t_float frame, t_float w)
 
         if(iFrame >= x->smsbuf->nframes || iFrame < 0)
         {
-                post("smsedit_bp: frame out of range");
+                post("smsedit_converge: frame out of range");
                 return;
         }
         
@@ -247,7 +268,12 @@ static void smsedit_converge( t_smsedit *x, t_float frame, t_float w)
 
 static void smsedit_verbose(t_smsedit *x, t_float flag)
 {
-        x->verbose = (int) flag;
+        if(!flag) x->verbose = 0;
+        else
+        {
+                x->verbose = 1;
+                post("smsedit: verbose messages");
+        }
 }
 /* creator function */
 static void *smsedit_new(t_symbol *s, int argcount, t_atom *argvec)
@@ -255,18 +281,18 @@ static void *smsedit_new(t_symbol *s, int argcount, t_atom *argvec)
         t_smsedit *x = (t_smsedit *)pd_new(smsedit_class);
 
         int i;
-        t_symbol *bufname;
-
+/*         t_symbol *bufname; */
+        x->smsbuf = NULL;
         x->verbose = 1;
 
         for (i = 0; i < argcount; i++)
         {
                 if (argvec[i].a_type == A_SYMBOL)
                 {
-                        bufname = argvec[i].a_w.w_symbol;
-                        x->smsbuf = smspd_buffer(bufname);
+                        x->bufname = argvec[i].a_w.w_symbol;
+                        x->smsbuf = smspd_buffer(x->bufname);
                         if(!x->smsbuf)
-                                pd_error(x, "smsedit_new: smsbuf %s was not found", bufname->s_name);
+                                pd_error(x, "smsedit_new: smsbuf %s was not found", x->bufname->s_name);
                 }
         }
 

@@ -197,6 +197,7 @@ static void smsbuf_backup(t_smsbuf *x)
                 sms_allocFrameH (&x->smsHeader,  &x->smsData2[i]);
                 sms_copyFrame(&x->smsData2[i],&x->smsData[i]);
         }
+        if(x->verbose) post("smsbuf: make a backup of %s", x->bufname->s_name);
 }
 
 static void smsbuf_switch(t_smsbuf *x)
@@ -214,8 +215,6 @@ static void smsbuf_switch(t_smsbuf *x)
         int i;
 
         for( i = 0; i < x->nframes; i++ )
-/*                 memcpy((SMS_Data *) &x->smsData[i], (SMS_Data *) &x->smsData2[i], */
-/*                         x->smsData2[i].sizeData); */
                 sms_copyFrame(&x->smsData[i],&x->smsData2[i]);
 
 }

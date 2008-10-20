@@ -2,6 +2,9 @@
 #include "sms.h"
 #include "smspd.h"
 
+#include <unistd.h> /* sleep() */
+#include <pthread.h>
+
 /* ------------------------ smssynth~ ----------------------------- */
 
 #define SOURCE_FLOAT 1
@@ -14,7 +17,7 @@ typedef struct _smssynth
         t_object x_obj; 
         t_canvas *canvas;
         t_symbol *bufname;
-        t_int i_frame, i_frameSource, synthBufPos;
+        t_int i_frame, i_frameSource, synthBufPos, sizehop;
         t_float *synthBuf;
         t_float f; /* dummy for signal inlet */
         t_float transpose, stocgain;
@@ -36,11 +39,11 @@ static void smssynth_buffer(t_smssynth *x, t_symbol *bufname)
                         post("... don't have a bufname");
                         return;
                 }
-                else post("using initial bufname: %s", x->bufname->s_name);
+                else if(x->verbose) post("using initial bufname: %s", x->bufname->s_name);
         }
         else
         {
-                post("new bufname: %s", bufname->s_name);
+                if(x->verbose) post("new bufname: %s", bufname->s_name);
                 x->bufname = bufname;
         }
 
@@ -92,7 +95,6 @@ static t_int *smssynth_perform(t_int *w)
         {
                 float f;
                 int i, iLeftFrame, iRightFrame;
-                //int nFrames = x->smsbuf->smsHeader.nFrames;
                 int nFrames = x->smsbuf->nframes;
                 if(x->synthBufPos >= x->synthParams.sizeHop)
                 {
@@ -108,9 +110,10 @@ static t_int *smssynth_perform(t_int *w)
                                                 &x->interpolatedFrame, x->f - iLeftFrame);
                         
                         sms_synthesize (&x->interpolatedFrame, x->synthBuf, &x->synthParams);
-                        x->synthBufPos = 0;
+                        x->synthBufPos = 0; // samples are loaded
                 }
-                //check when blocksize is larger than hopsize... will probably crash
+                // send out samples in pd blocks
+                //todo: check when blocksize is larger than hopsize... will probably crash
                 for (i = 0; i < n; i++, x->synthBufPos++)
                         out[i] = x->synthBuf[x->synthBufPos];
         }
@@ -118,19 +121,45 @@ static t_int *smssynth_perform(t_int *w)
 
         return (w+5);
 }
+
+/* hmm.. still crashing even when re-initing in a seperate loop.. don't know why yet */
+void *smssynth_threadinit(void *zz)
+{
+        t_smssynth *x = zz;
+        sleep(1); // allows the audio buffer to clear itself
+/*                 x->synthBuf = (t_float *) calloc(x->synthParams.sizeHop, sizeof(t_float)); */
+        post("now doing re-init");
+        x->synthBuf = (t_float *)realloc(x->synthBuf, x->sizehop * sizeof(t_float));
+        memset(x->synthBuf, 0, x->sizehop *sizeof(t_float));
+        sms_changeSynthHop(&x->synthParams, x->sizehop);
+        x->synthBufPos = x->sizehop;
+        x->ready = 1;
+
+        pthread_exit(NULL);
+}
+/* by changing the hopsize, everything related to the FFT has to change as well.
+    so. it is necessary to re-calloc the windows and fft buffer (using sms_initSynth)*/
 static void smssynth_sizehop(t_smssynth *x, t_float f)
 {
+        post("doesn't work yet.");
+        return;
+        pthread_t childthread;
+        int sizehop = sms_power2((int) f);
+        if(x->verbose) post("smssynth: setting sizehop to %d", sizehop);
         /* check if a file has been opened, if so re-init */
         if(x->ready)
         {
-                post("smssynth_open: re-initializing synth");
+                if(x->verbose)post("smssynth_sizehop: re-initializing synth");
                 x->ready = 0;
-                sms_freeSynth(&x->synthParams);
-                sms_freeFrame(&x->interpolatedFrame);
+                x->sizehop = sizehop;
+                /* do the re-init in a seperate thread so the audio loop is not
+                   effected.  Once the synth is re-malloc'ed, x->ready again 
+                   equals 1*/
+                pthread_create(&childthread, 0, smssynth_threadinit, (void *)x);
+
         }
-        
-        x->synthParams.sizeHop = x->synthBufPos = sms_power2((int) f);
-        if(x->ready) smssynth_buffer(x,x->bufname);
+        else x->synthParams.sizeHop = x->synthBufPos = sizehop;
+
 }
 
 static void smssynth_transpose(t_smssynth *x, t_float f)
@@ -204,7 +233,7 @@ static void *smssynth_new(t_symbol *bufname)
 
         x->synthParams.iSynthesisType = SMS_STYPE_ALL;
         x->synthParams.iDetSynthType = SMS_DET_IFFT;
-        x->synthParams.sizeHop = x->synthBufPos = 512;
+        x->synthParams.sizeHop = x->synthBufPos = x->sizehop = 512;
 
         x->synthParams.iSamplingRate = 44100; //should be updated once audio is turned on
         
@@ -217,8 +246,9 @@ static void *smssynth_new(t_symbol *bufname)
 
 static void smssynth_free(t_smssynth *x)
 {
-        if(x->smsbuf->nframes != 0) 
+        if(x->smsbuf->ready) 
         {
+                free(x->synthBuf);
                 sms_freeSynth(&x->synthParams);
                 sms_freeFrame(&x->interpolatedFrame);
         }
