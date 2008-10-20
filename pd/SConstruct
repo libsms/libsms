@@ -27,6 +27,7 @@ sms_libs =  ['m', 'sndfile', 'sms', 'fftw3f', 'pthread']
 
 helpfiles = []
 helpfiles.append('help/smsbuf-help.pd')
+helpfiles.append('help/dak~.pd')
 for x in sources:
     if x == 'smspd.c':
         helpfiles.append('help/sms-help.pd/')
