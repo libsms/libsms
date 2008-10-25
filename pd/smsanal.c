@@ -68,7 +68,6 @@ static void smsanal_buffer(t_smsanal *x, t_symbol *bufname)
 void *smsanal_childthread(void *zz)
 {
         t_smsanal *x = zz;
-        if(x->analyzed) sms_freeAnalysis(&x->anal_params);
         int i;
         int sizeNewData = 0;
         /* loop for analysis */
@@ -98,7 +97,7 @@ void *smsanal_childthread(void *zz)
                         {
                                 pd_error(x, "smsanal_sf: could not read sound frame %d\n", x->iFrame);
                                 pthread_exit(NULL);
-                                break; //return
+                                break; /*i think this is never reached */
                         }
                 }
                 else
@@ -114,7 +113,8 @@ void *smsanal_childthread(void *zz)
 		if (x->iStatus == 1)
 		{
                         outlet_float(x->outlet_iFrame, (float)++x->iFrame);
-                        if(0) post(" %d", x->iFrame);
+                        if(0 && (x->iFrame % 10) == 0)
+                                post(" %0.2f s", (float)x->iFrame / x->smsbuf->smsHeader.iFrameRate);
 		}
 		else if (x->iStatus == -1) /* done */
 		{
@@ -130,47 +130,58 @@ void *smsanal_childthread(void *zz)
         pthread_exit(NULL);
 }
 
-static void smsanal_sf(t_smsanal *x, t_symbol *filename)
+static void smsanal_soundfile(t_smsanal *x, t_symbol *filename)
 {
-        if(!x->smsbuf)
-        {
-                pd_error(x, "smsanal_sf: set the buffer pointer before analysis");
-                return;
-        }
-        x->smsbuf->ready = 0;
-
         int i;
         long iError;
         t_symbol *fullname;
         pthread_t childthread;
 
-        x->filename = gensym(filename->s_name);
-        fullname = getFullPathName(filename, x->canvas);
-
-        if(fullname == NULL)
+        if(!x->smsbuf)
         {
-                pd_error(x, "smsanal_open: cannot find file: %s", filename->s_name);
+                pd_error(x, "smsanal_soundfile: do not have an smsbuf yet");
                 return;
         }
-        else post("file: %s", fullname->s_name);
+        else if(x->verbose) post("smsanal: preparing for analysis from soundfile. The analysis will be stored in smsbuf %s.",
+                                 x->smsbuf->bufname->s_name);
 
-        //check if a file has been opened, close and init if necessary
-        if(x->smsbuf->nframes != 0)
+        /*check if smsbuf already has data */
+        //x->smsbuf->ready = 0;
+        if(x->smsbuf->ready)
         {
-                post("smsanal_open: re-initializing (not doing anything here yet)");
+                if(x->verbose) post("re-initializing smsbuf");
+                x->smsbuf->ready =0;
                 for( i = 0; i < x->smsbuf->nframes; i++)
                         sms_freeFrame(&x->smsbuf->smsData[i]);
 
                 free(x->smsbuf->smsData);
         }
+        /* check if smsanal has done an analysis.  If so, the analParams need to be
+           re-initiailzed */
+        if(x->analyzed)
+        {
+                if(x->verbose) post("re-initializing analysis parameters");
+                sms_freeAnalysis(&x->anal_params);
+        }
 
-	/* open input sound */
+        /* get a posix file name (system independent) of sound file*/
+        x->filename = gensym(filename->s_name);
+        fullname = getFullPathName(filename, x->canvas);
+        if(fullname == NULL)
+        {
+                pd_error(x, "smsanal_open: cannot find file: %s", filename->s_name);
+                return;
+        }
+
+	/* open soundfile */
 	iError = sms_openSF (fullname->s_name , &x->soundHeader);
 	if (iError != SMS_OK)
 	{
                 post("error in sms_openSF: %s", sms_errorString(iError));
                 return;
 	}	    
+        else if(x->verbose) post("reading soundfile %s", fullname->s_name);
+
         x->nSamples = x->soundHeader.nSamples;
 
         x->anal_params.iSamplingRate = x->soundHeader.iSamplingRate;
@@ -231,7 +242,7 @@ static void smsanal_sf(t_smsanal *x, t_symbol *filename)
         for( i = 0; i < x->smsbuf->nframes; i++ )
                 sms_allocFrameH (&x->smsbuf->smsHeader,  &x->smsbuf->smsData[i]);
 
-        x->smsbuf->allocated = 1; // ?? why is this necessary again?
+        //x->smsbuf->allocated = 1; // ?? why is this necessary again?
 
        x->iNextSizeRead = (x->anal_params.iDefaultSizeWindow + 1) * 0.5;
        
@@ -252,7 +263,7 @@ static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
 {
         if(!x->smsbuf)
         {
-                pd_error(x, "smsanal_sf: set the buffer pointer before analysis");
+                pd_error(x, "smsanal_array: set the buffer pointer before analysis");
                 return;
         }
         x->smsbuf->ready = 0;
@@ -285,7 +296,7 @@ static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
 
         if(!x->smsbuf)
         {
-                pd_error(x, "smsanal_sf: set the buffer pointer before analysis");
+                pd_error(x, "smsanal_soundfile: set the buffer pointer before analysis");
                 return;
         }
 
@@ -794,7 +805,7 @@ void smsanal_setup(void)
 
         
         class_addmethod(smsanal_class, (t_method)smsanal_buffer, gensym("buffer"), A_DEFSYM, 0);
-        class_addmethod(smsanal_class, (t_method)smsanal_sf, gensym("soundfile"), A_DEFSYM, 0);
+        class_addmethod(smsanal_class, (t_method)smsanal_soundfile, gensym("soundfile"), A_DEFSYM, 0);
         class_addmethod(smsanal_class, (t_method)smsanal_array, gensym("array"), A_DEFSYM, A_DEFFLOAT, 0);
         class_addmethod(smsanal_class, (t_method)smsanal_sizehop, gensym("sizehop"), A_DEFFLOAT, 0);
         class_addmethod(smsanal_class, (t_method)smsanal_verbose, gensym("verbose"), A_DEFFLOAT, 0);
