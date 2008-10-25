@@ -205,8 +205,7 @@ static void smsanal_soundfile(t_smsanal *x, t_symbol *filename)
         /* need to supply sms header information for incase the analysis 
            will be written to file (by smsbuf) */
 	sms_fillHeader (&x->smsbuf->smsHeader, x->smsbuf->nframes,
-                        &x->anal_params, x->soundHeader.iSamplingRate, 
-                         x->ntracks);
+                        &x->anal_params, x->ntracks);
 
         sprintf (x->smsbuf->param_string,
                  "created by [smsanal] with parameters: format %d, soundType %d, "
@@ -323,8 +322,7 @@ static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
         /* need to supply sms header information for incase the analysis 
            will be written to file (by smsbuf) */
 	sms_fillHeader (&x->smsbuf->smsHeader, x->smsbuf->nframes,
-                        &x->anal_params, x->anal_params.iSamplingRate, 
-                         x->ntracks);
+                        &x->anal_params, x->ntracks);
 
         sprintf (x->smsbuf->param_string,
                  "created by [smsanal] with parameters: format %d, soundType %d, "

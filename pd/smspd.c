@@ -87,7 +87,7 @@ void CopySmsHeader( SMS_Header *pFileHeader, SMS_Header *pBufHeader, char *param
         pBufHeader->iStochasticType = pFileHeader->iStochasticType;
         pBufHeader->nTracks = pFileHeader->nTracks;
         pBufHeader->nStochasticCoeff = pFileHeader->nStochasticCoeff;
-        pBufHeader->iOriginalSRate = pFileHeader->iOriginalSRate;
+        pBufHeader->iAnalSizeHop = pFileHeader->iAnalSizeHop;
    
         pBufHeader->iFrameBSize = sms_frameSizeB(pBufHeader);
 
@@ -273,7 +273,7 @@ static void smsbuf_info(t_smsbuf *x)
                 else if(x->smsHeader.iStochasticType == SMS_STOC_APPROX)
                         post("Stochastic type = line segment magnitude spectrum approximation ");
                 else if(x->smsHeader.iStochasticType == SMS_STOC_NONE) post("Stochastic type = none");
-                post("Original sampling rate = %d", x->smsHeader.iOriginalSRate);  
+                post("Analysis Size Hop = %d", x->smsHeader.iAnalSizeHop);  
 
                 if (x->smsHeader.nTextCharacters > 0)
                         post("ANALISIS ARGUMENTS: %s", x->smsHeader.pChTextCharacters);
