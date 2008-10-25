@@ -106,7 +106,9 @@ static int ReAnalyzeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 	    pAnalParams->iDebugMode == SMS_DBG_ALL)
 		fprintf(stdout, "Frame %d reAnalyze: Freq. deviation %f\n", 
 		       pAnalParams->ppFrames[iCurrentFrame]->iFrameNum, fAvgDeviation);
-  
+
+        /*! \todo mae this a < 0 check, but first make sure sms_fundDeviation does not
+          return values below zero */
 	if (fAvgDeviation == -1)
 		return (-1);
   
