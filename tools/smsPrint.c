@@ -52,9 +52,15 @@ int main (int argc, char *argv[])
 	SMS_Header *pSmsHeader;
 	FILE *pSmsFile;
 	SMS_Data smsData;
-	int iError, i, j, iFormat = 1, iFirstFrame = 0, iLastFrame = -1, 
-		iFirstTrack = 0, iLastTrack = -1;
-        float fInitialTime = 0, fEndTime = 0;
+        char *pChInputSmsFile = NULL;
+	int iError, i, j;
+        int iFormat = PRINT_ALL;
+        int iFirstFrame = 0;
+        int iLastFrame = -1;
+        int iFirstTrack = 0;
+        int iLastTrack = -1;
+        float fInitialTime = 0;
+        float fEndTime = 0;
 
 	for (i=1; i<argc-1; i++) 
 	{
@@ -99,9 +105,11 @@ int main (int argc, char *argv[])
 
 	if (argc <= 1) usage();
 
-	if((iError = sms_getHeader (argv[argc-1], &pSmsHeader, &pSmsFile)) < 0)
+        pChInputSmsFile = argv[argc-1];
+
+	if((iError = sms_getHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile)) != SMS_OK)
     	{
-                printf("error in sms_getHeader: %s", sms_errorString(iError));
+                printf("error in sms_getHeader: %s \n", sms_errorString(iError));
                 exit(EXIT_FAILURE);
 	}	    
 
