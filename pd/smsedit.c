@@ -246,7 +246,6 @@ static void smsedit_converge( t_smsedit *x, t_float frame, t_float w)
 
         int iFrame = (int) frame;
         int i;
-        float transpose;
 
         if(iFrame >= x->smsbuf->nframes || iFrame < 0)
         {

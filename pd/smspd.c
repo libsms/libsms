@@ -100,29 +100,29 @@ void CopySmsHeader( SMS_Header *pFileHeader, SMS_Header *pBufHeader, char *param
 /* ------------------------ smsbuf ----------------------------- */
 
 /* probably will need these to make sure dellocation of buffer only happens once */
-void smsbuf_dealloc(t_smsbuf *x)
-{
-        int i;
-        for( i = 0; i < x->nframes; i++)
-                sms_freeFrame(&x->smsData[i]);
-        free(x->smsData);
-}
+/* void smsbuf_dealloc(t_smsbuf *x) */
+/* { */
+/*         int i; */
+/*         for( i = 0; i < x->nframes; i++) */
+/*                 sms_freeFrame(&x->smsData[i]); */
+/*         free(x->smsData); */
+/* } */
 
 /* a function to allocate the desired number of SMS_Data 
    frames, usable by other externals in the sms library as well */
-void smsbuf_alloc(t_smsbuf *x)
-{
-        if(x->allocated)
-        {
-                if(x->verbose)post("smsbuf already allocated, deallocating");
-                smsbuf_dealloc(x);
-        }
-        int i;
-        /* will this be faster with one malloc? try once everything is setup */
-        x->smsData = calloc(x->nframes, sizeof(SMS_Data));
-        for( i = 0; i < x->nframes; i++ )
-                sms_allocFrameH (&x->smsHeader,  &x->smsData[i]);
-}
+/* void smsbuf_alloc(t_smsbuf *x) */
+/* { */
+/*         if(x->allocated) */
+/*         { */
+/*                 if(x->verbose)post("smsbuf already allocated, deallocating"); */
+/*                 smsbuf_dealloc(x); */
+/*         } */
+/*         int i; */
+/*         /\* will this be faster with one malloc? try once everything is setup *\/ */
+/*         x->smsData = calloc(x->nframes, sizeof(SMS_Data)); */
+/*         for( i = 0; i < x->nframes; i++ ) */
+/*                 sms_allocFrameH (&x->smsHeader,  &x->smsData[i]); */
+/* } */
 
 /* function to open a file and load into the buffer:
  * 1. get fullname in a system independant manner
@@ -154,7 +154,7 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
                         sms_freeFrame(&x->smsData[i]);
         }
 
-        if ((iError = sms_getHeader (fullname->s_name, &pSmsHeader, &x->pSmsFile)) > 0)
+        if ((iError = sms_getHeader (fullname->s_name, &pSmsHeader, &x->pSmsFile)) != SMS_OK)
 	{
                 pd_error(x, "smsbuf_open: %s", sms_errorString(iError));
                 return;
@@ -164,7 +164,7 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
         x->nframes = pSmsHeader->nFrames;
         if(x->verbose)post("nframes: %d ", x->nframes);
 
-        /*Buffer the entire file in smsBuf.  For now, I'm doing this the simplest way possible.*/        
+        /* Buffer the entire file.  For now, I'm doing this the simplest way possible.*/        
         /* will this be faster with one malloc? try once everything is setup */
         x->smsData = calloc(x->nframes, sizeof(SMS_Data));
         for( i = 0; i < x->nframes; i++ )
