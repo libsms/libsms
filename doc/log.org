@@ -1,50 +1,89 @@
 # use emacs org-mode for pretty colors
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SMS Library Work Log
+libsms work log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-* Present Issues (todonow)
-** TODO I don't think bad frames are being re-analyzed
-   - ReAnalyzeFrame is returning a -1 when sms_fundDeviation reports
-   that the deviations is really off, yet nothing is using this return value
-   - there are other return values of -1 as well, none used in sms_analyze
-   - [ ] try manually setting the window size to the size that is settled upon
-         - smsAnal -d9 reports sizeWindow = 1009 until about .05s of flugel.sms
-           then, it switches to 173, which seems to work for the rest of the analysis
-         - this is because the default fundamental was not set. When set with -u587 (D5),
-           the default window size is correctly around 171.  But still get the crunch!
-*** [#B] related to stoc_ big crunch in the beginning?
-** TODO what is smsClean doing differently than the cleaning within smsAnal?
-** TODO where are inharmonic tracks analyzed/synthesized differently?
-** TODO there are many members for SMS_Header not currently used
-   - such as descriptors
-** TODO find out if there is any benifit to a dynamic library at one point
-** plot stochastic coefficients at different rates to see if they are the same for diff sr
-** changing the framerate in smsAnal makes deterministic component empty. huh?
-*** Xavier suggests fund estimate is bad, so specify manually
-*** resample after analysis (delete 3 out of 4 frames)
-** what is calcCorr in tools?
-* Pre-modifications: making analysis/plotting scripts
-** DONE SWIG libsms wrappers for more convenient use in python
-** DONE smsPlot.py for plotting smsData over a spectrogram of audio              
+* Todo list (before 1.0)
+** TODO things to add to main page
+   - [X] copyright information
+   - [ ] thanks?
+   - [ ] info on pd files (reference to readme.txt to install)
+   - [X] info on python
+   - [X] info on tools
+   - [ ] info on tests
+   - [ ] section on this log
+** TODO scons install for pd
+   - [ ] allow for telling scons where the header is located
+   - [ ] make callable from main scons script
+         - possibly automatic if pd header is found
+** TODO pd help files need to be finished
+** TODO an example pd file for good editing
+** TODO make bash scripts for analysis/synthesis
+** TODO make sure [smssynth~] handles changes to smsbuf correctly
+    - [ ] new analysis of different file
+    - [ ] new analysis of same file, different parameters
+** TODO clean svn
+*** what is calcCorr in tools?
+** TODO Doxygen todo list
+* Todo list (after 1.0)
+** TODO comparison of stochastic resynthesis at different samplerates
+   - originally the samplerate was set at 44100
+   - now it is variable
+   - [ ] make plots to compare the coefficients at different samplerates
+   - [ ] determine why certain constants are within StochSynthApprox (smsSynthesis.c)
+** TODO make a high level function for Post-Processing an SMS analysis
+*** should be included in analysis like programs
+    - return a pointer to another smsData structure, or file?
+*** TODO contains a smsResample 
+*** TODO contains smsClean code
+    - iterates over the entire file to connect short tracks
+    - this is different than the built in cleaning in smsAnalysis because it
+      already has the entire analysis
+*** TODO Spectral envelope
+** TODO make python synthesis script with SWIG wrappers
+*** first start by copying smsSynth 
+*** then add time-based manipulations (envelopes, pitch/time adjustments)
+** TODO improve smsPlot.py 
+   - currently just plots deterministic component
+   - [ ] use SWIG wrapper instead of yaml
+** TODO re-analysis
+   - the problem was SMS_ANAL_DELAY was not large enough, so not all of the
+     bad frames were being re-analyzed
+   - [ ] need to make this a member of SMS_AnalParams structur
+** TODO [smssynth~]: fix function for changing sizehop
+** TODO [#C] optimizing
+   - [ ] benchmark FFT's
+   - [ ] change fabs() to fabsf() if they don't need to be doubles
+   - [ ] calloc's/malloc's done per function call
+   - check if they are only done once
+       - most are in if statements, add an else with a print to check
+   - [ ] same with floorf
+   - [ ] store magnitudes in RMS instead of db
+   - [ ] currently uses random() from stdlib.
+          - could there be a better/faster version?
+          - should the random number be filtered?
+* Wish list
+** improvement of inharmonic analysis/synthesis
+   - is it being done right now?
+   - in other analysis programs, one has as many as 500 partials for enharmonic sounds
+   - why is smsAnal only producing < 100?
+** restore Hybridize functions
+*** was previously only used with the MK tool, which isn't available now
+** transient model synthesis
+*** based on the Discrete Cosine Transform
+** get FFTW3 to work with pd externals
+*** current state:
+    - when fft arrays are initialized, the pointers are lost
+    - this only happens in pd, not from the terminal (and not with other fft algos)
+* Things done
+** DONE SWIG Python wrapper
 ** DONE smsToYaml for importing into python
-* to clean:
-** TODO why is iOriginalSRate necessary in SMS_Header?
+** DONE remove iOriginalSRate from SMS_Header
    - it seems that if the synthesis is completely independent of 
    analysis, this shouldn't be.
-   - [ ] is there a better way to achieve the same thing?
-** TODO [#B] research Hybridize functions, organize
-*** was previously only used with the MK tool, which isn't available now
-** TODO check for memory leaks
-   - [X] sine/sinc tables
-   - [ ] stuff in SmsInitAnalysis
-        - especially ANAL_FRAMES
-*** TODO run memory leak detector
-** TODO static variables in smsAnalysis
-*** isn't a problem if the library is always statically compiled
-   - ComputeFrame
-   - Spectrum
-   - GetResidual
-   - static functions in peakDetection.c and peakContinuation.c
+   - now just keeps original hopsize so that stochastic component
+     can be reconstructed
+** DONE run memory leak detector
+   - valgrind reports are good
 ** DONE organize files/functions
 ** DONE update documentation of functions
 ** DONE append sms_ to functions declared in sms.h
@@ -61,42 +100,16 @@ SMS Library Work Log
 *** DONE pFrames/ppFrames
 *** DONE FResidualPerc
         - defined in variousFuntions for now, as SmsInit() is always called.
-** DONE SmsInit() should be a global init before anything
-* Phase 1: Refactoring libsms for usage in real-time and release
-** TODO [#A] add function for changing synth hopsize
-   - along with it other parameters will change, as well as re-inits
-** TODO [#A] Doxygen documentation
-   - [ ] go through To-Do list
-   - [ ] move main page documentation somewhere other than sms.h
-*** things to add to main page
-    - [ ] copyright information
-    - [ ] info on pd files (reference to readme.txt to install)
-    - [ ] info on python
-    - [ ] info on tools
-    - [ ] info on tests
-    - [ ] section on a feature wish-list
-** TODO [#A] scons install for pd
-** TODO [#C] make example python scripts
-** TODO [#C] optimizing
-   - [ ] benchmark FFT's
-   - [ ] change fabs() to fabsf() if they don't need to be doubles
-   - [ ] calloc's/malloc's done per function call
-   - check if they are only done once
-       - most are in if statements, add an else with a print to check
-   - [ ] same with floorf
-   - [ ] store magnitudes in RMS instead of db
-   - [ ] currently uses random() from stdlib.
-          - could there be a better/faster version?
-          - should the random number be filtered?
-** DONE [#C] make soundfile output format variable
-** DONE [#A] convert from short to floating point data
+** DONE sms_init() should be a global init before anything
+** DONE make soundfile output format variable
+** DONE convert from short to floating point data
    - will need this for pd anyway
    - everything is computed in float point, so why range from 0-16000   then?
-** DONE [#C] move smsMod's stochostic gain adjusting to smsSynth
+** DONE move smsMod's stochostic gain adjusting to smsSynth
    - should stocGain be available for all stoc types?
-** DONE [#B] make sure pFStocGain is always set
+** DONE make sure pFStocGain is always set
      - zero if no stoc component, 1 if wave, or val if StocSpectrum
-** DONE [#A] - switch to FFTW3f for fft's
+** DONE FFTW3f for fft's
 *** DONE Spectrum
     - deterministic seems to be handled correctly.. or is it?
     - not stochastic
@@ -108,13 +121,13 @@ SMS Library Work Log
             - SincTab is also hardcoded for index = 0:8
      - [ ] why is the real component obtained by Mag * sin(theta)?
             - shouldn't it be cos(theta)?
-** DONE [#A] switch build scripts to scons
+** DONE switch build scripts to scons
    - [X] get env. exporting/importing fixed
-   - [ ] add install/uninstall functionality
-** DONE [#B] convert README's to manpages.
+   - [X] add install/uninstall functionality
+** DONE convert README's to manpages.
    - [ ] update to fit new parameters
    - [ ] proofread** DONE [#B] update USAGE arguments to tell what different values do
-** DONE [#A] should have the option to store residual in audio samples or STFT frames
+** DONE should have the option to store residual in audio samples or STFT frames
 *** TODO organize analParams to allow for options:
    - [X] sound samples
    - [X] filter approximation
@@ -143,7 +156,7 @@ SMS Library Work Log
     - [ ] make sure it is correctly stored in smsToYaml/smsPrint
 *** TODO modify smsResample to concatenate stocWave data
     - [ ] will take adding iWaveSamples to SMS_DATA
-** DONE [#A] make samplerate independant of analysis/synthesis
+** DONE make samplerate independant of analysis/synthesis
 *** Investigating samplerate/framerate dependencies:
 **** How is resample making the current SMS_DATA frame?
 
@@ -151,24 +164,20 @@ SMS Library Work Log
 **** iLastSample in smsSynth must be replaced with 
         - iNumSamples will be a predefined buffer of samples to synthesis at one time,
           indepenent of synthesis blocksize       
-* Phase 2: building real-time pd externals for analysis/synthesis
-** prototype: [smsSynthFile~]
-** [smsbuf]
-*** DONE [#A] loads an sms file into a buffer
-**** a header/data should live 
-**** data is an array of sms records
-**** what else needs to be buffered?
-       - timetags? frametag     
-*** DONE [#C] stores the buffer to sms file
-** [smsanal]
-*** TODO [#C] resamples the data to be a desired framerate
-*** DONE reads a pd array and analyzes it
-   - also can analyze from file
-*** DONE add analysis parameter classes (lots of them)
-** [smssynth]
-*** TODO fix functino for changing sizehop
-*** TODO re-init the synthesizer when samplerate changes
-    - actually, probably is not necessary -- check
-*** DONE [#A] has access to an [smsbuf] by symbol name
-*** DONE [#A] synthesizes the [smsbuf]
-** [smsedit]
+
+** DONE pd externals
+*** [smsbuf]
+**** DONE [#A] loads an sms file into a buffer
+***** a header/data should live
+***** data is an array of sms records
+***** what else needs to be buffered?
+        - timetags? frametag     
+**** DONE [#C] stores the buffer to sms file
+*** [smsanal]
+**** DONE reads a pd array and analyzes it
+    - also can analyze from file
+**** DONE add analysis parameter classes (lots of them)
+*** [smssynth]
+**** DONE [#A] has access to an [smsbuf] by symbol name
+**** DONE [#A] synthesizes the [smsbuf]
+*** [smsedit]
