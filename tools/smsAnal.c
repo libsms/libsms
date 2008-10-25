@@ -178,108 +178,106 @@ static int GetArguments (char *argv[], int argc, ARGUMENTS *pArguments)
 		{
 			switch (*(argv[i]++)) 
 			{
-				case 'v': if (sscanf(argv[i],"%d", 
-				              &verbose) < 0)
-					printf("GetArguments: Invalid verbose mode");
-					break;
-				case 'd': if (sscanf(argv[i],"%d", 
-				              &pArguments->iDebugMode) < 0)
+                        case 'v': verbose = 1;
+                                break;
+                        case 'd': if (sscanf(argv[i],"%d", 
+                                             &pArguments->iDebugMode) < 0)
 					printf("GetArguments: Invalid debug mode");
-					break;
-				case 'f':  if (sscanf(argv[i],"%d", &pArguments->iFormat) < 1) 
+                                break;
+                        case 'f':  if (sscanf(argv[i],"%d", &pArguments->iFormat) < 1) 
 					printf("GetArguments: Invalid format");
-					break;
-				case 'q': if (sscanf(argv[i],"%d", 
-				              &pArguments->iSoundType) < 0) 
+                                break;
+                        case 'q': if (sscanf(argv[i],"%d", 
+                                             &pArguments->iSoundType) < 0) 
 					printf("GetArguments: Invalid sound type");
-					break;
-				case 'x': if (sscanf(argv[i],"%d", 
-				              &pArguments->iAnalysisDirection) < 0) 
+                                break;
+                        case 'x': if (sscanf(argv[i],"%d", 
+                                             &pArguments->iAnalysisDirection) < 0) 
 					printf("GetArguments: Invalid value for analysis direction");
-					break;
-				case 'i': if (sscanf(argv[i],"%d", 
-				              &pArguments->iWindowType) < 0) 
+                                break;
+                        case 'i': if (sscanf(argv[i],"%d", 
+                                             &pArguments->iWindowType) < 0) 
 					printf("GetArguments: Invalid value for window type");
-					break;
-				case 's': if (sscanf(argv[i],"%f", 
-				              &pArguments->fWindowSize) < 1)
+                                break;
+                        case 's': if (sscanf(argv[i],"%f", 
+                                             &pArguments->fWindowSize) < 1)
 					printf("GetArguments: Invalid window size");
-					break;
-				case 'r':  sscanf(argv[i],"%f", 
-						  &frameRateOrOverlapFactor);
-					break;
-				case 'j': if (sscanf(argv[i],"%f", 
-				              &pArguments->fHighestFreq) < 0) 
+                                break;
+                        case 'r':  sscanf(argv[i],"%f", 
+                                          &frameRateOrOverlapFactor);
+                                break;
+                        case 'j': if (sscanf(argv[i],"%f", 
+                                             &pArguments->fHighestFreq) < 0) 
 					printf("GetArguments: Invalid highestFreq");
-					break;
-				case 'k': if (sscanf(argv[i],"%f", 
-				              &pArguments->fMinPeakMag) < 0) 
+                                break;
+                        case 'k': if (sscanf(argv[i],"%f", 
+                                             &pArguments->fMinPeakMag) < 0) 
 					printf("GetArguments: Invalid minimum peak magnitude");
-					break;
-				case 'y': if (sscanf(argv[i],"%d", 
-				              &pArguments->iRefHarmonic) < 1) 
+                                break;
+                        case 'y': if (sscanf(argv[i],"%d", 
+                                             &pArguments->iRefHarmonic) < 1) 
 					printf("GetArguments: Invalid reference harmonic");
-					break;
-				case 'm': if (sscanf(argv[i],"%f", 
-				              &pArguments->fMinRefHarmMag) < 0) 
+                                break;
+                        case 'm': if (sscanf(argv[i],"%f", 
+                                             &pArguments->fMinRefHarmMag) < 0) 
 					printf("GetArguments: Invalid minimum fundamental magnitude");
-					break;
-				case 'z': if (sscanf(argv[i],"%f", 
-				              &pArguments->fRefHarmMagDiffFromMax) < 0) 
+                                break;
+                        case 'z': if (sscanf(argv[i],"%f", 
+                                             &pArguments->fRefHarmMagDiffFromMax) < 0) 
 					printf("GetArguments: Invalid maximum fundamental magnitude difference \
 								from maximum peak");
-					break;
-				case 'l': if (sscanf(argv[i],"%f",
-				              &pArguments->fLowestFund) < 1) 
+                                break;
+                        case 'l': if (sscanf(argv[i],"%f",
+                                             &pArguments->fLowestFund) < 1) 
 					printf("GetArguments: Invalid lowest fundamental");
-					break;
-				case 'h': if (sscanf(argv[i],"%f",
-				              &pArguments->fHighestFund) < 1) 
+                                break;
+                        case 'h': if (sscanf(argv[i],"%f",
+                                             &pArguments->fHighestFund) < 1) 
 					printf("GetArguments: Invalid highest fundamental");
-					break;
-				case 'u': if (sscanf(argv[i],"%f", 
-				              &pArguments->fDefaultFund) < 1) 
+                                break;
+                        case 'u': if (sscanf(argv[i],"%f", 
+                                             &pArguments->fDefaultFund) < 1) 
 					printf("GetArguments: Invalid default fundamental");
-					break;
-				case 'n': if (sscanf(argv[i],"%d", &pArguments->nGuides) < 1) 
+                                break;
+                        case 'n': if (sscanf(argv[i],"%d", &pArguments->nGuides) < 1) 
 					printf("GetArguments: Invalid number of guides");
-					break;
-				case 'p': if (sscanf(argv[i],"%d", 
-				              &pArguments->nTracks) < 1) 
+                                break;
+                        case 'p': if (sscanf(argv[i],"%d", 
+                                             &pArguments->nTracks) < 1) 
 					printf("GetArguments: Invalid number of tracks");
-					break;
-				case 'w': if (sscanf(argv[i],"%f", 
-				              &pArguments->fFreqDeviation) < 0) 
+                                break;
+                        case 'w': if (sscanf(argv[i],"%f", 
+                                             &pArguments->fFreqDeviation) < 0) 
 					printf("GetArguments: Invalid frequency deviation");
-					break;
-				case 't': if (sscanf(argv[i],"%f",
-				              &pArguments->fPeakContToGuide) < 0) 
+                                break;
+                        case 't': if (sscanf(argv[i],"%f",
+                                             &pArguments->fPeakContToGuide) < 0) 
 					printf("GetArguments: Invalid peak contribution to guide");
-					break;
-				case 'o': if (sscanf(argv[i],"%f", 
-				              &pArguments->fFundContToGuide) < 0) 
+                                break;
+                        case 'o': if (sscanf(argv[i],"%f", 
+                                             &pArguments->fFundContToGuide) < 0) 
 					printf("GetArguments: Invalid fundamental contribution to guide");
-					break;
-				case 'g': if (sscanf(argv[i],"%d", 
-				              &pArguments->iCleanTracks) < 0) 
+                                break;
+                        case 'g': if (sscanf(argv[i],"%d", 
+                                             &pArguments->iCleanTracks) < 0) 
 					printf("GetArguments: Invalid value for CleanTracks");
-					break;
-				case 'a': if (sscanf(argv[i],"%f",
-				              &pArguments->fMinTrackLength) < 0) 
+                                break;
+                        case 'a': if (sscanf(argv[i],"%f",
+                                             &pArguments->fMinTrackLength) < 0) 
 					printf("GetArguments: Invalid minimum track length");
-					break;
-				case 'b': if (sscanf(argv[i],"%f", 
-				              &pArguments->fMaxSleepingTime) < 0) 
+                                break;
+                        case 'b': if (sscanf(argv[i],"%f", 
+                                             &pArguments->fMaxSleepingTime) < 0) 
 					printf("GetArguments: Invalid minimum sleeping time");
-					break;
-				case 'c': if (sscanf(argv[i],"%d",
-				              &pArguments->nStochasticCoeff) < 1) 
+                                break;
+                        case 'c': if (sscanf(argv[i],"%d",
+                                             &pArguments->nStochasticCoeff) < 1) 
 					printf("GetArguments: Invalid number of coefficients");
-					break;
-				case 'e': if (sscanf(argv[i],"%d",
-				              &pArguments->iStochasticType) < 0) 
+                                break;
+                        case 'e': if (sscanf(argv[i],"%d",
+                                             &pArguments->iStochasticType) < 0) 
 					printf("GetArguments: Invalid stochastic type");
-					break;
+                                break;
                         default:   usage();
 			}
 		}
@@ -546,7 +544,7 @@ int main (int argc, char *argv[])
 			smsHeader.nFrames = iFrame;
 		}
 	}
-        printf("\n");
+        if(verbose)printf("\n");
         smsHeader.fResidualPerc = analParams.fResidualPercentage / iFrame;
 
 	/* write an close output files */
@@ -559,6 +557,7 @@ int main (int argc, char *argv[])
         printf("wrote %d analysis frames to %s\n", iFrame, pChOutputSmsFile);
 
         /* cleanup */
+        sms_freeFrame(&smsData);
         sms_freeAnalysis(&analParams);
         sms_free();
 	return 0;	
