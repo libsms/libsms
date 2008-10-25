@@ -28,7 +28,7 @@ char *pChDebugFile = "debug.txt"; /*!< debug text file */
 FILE *pDebug; /*!< pointer to debug file */
 
 /* float *sms_window_spec; */
-float  *sms_tab_sine, *sms_tab_sinc;
+//float  *sms_tab_sine, *sms_tab_sinc;
 
 #define SIZE_TABLES 4096
 
@@ -46,14 +46,15 @@ float  *sms_tab_sine, *sms_tab_sinc;
 int sms_init( void )
 {
         int iError;
-	if (sms_tab_sine == NULL)
+        static int initIsDone = 0;
+	if (!initIsDone)
         {
+                initIsDone = 1;
                 iError = sms_prepSine (SIZE_TABLES);
                 if(iError) return(SMS_MALLOC);
                 iError = sms_prepSinc (SIZE_TABLES);
                 if(iError) return(SMS_MALLOC);
         }
-
         return (SMS_OK);
 }
 
@@ -66,11 +67,6 @@ void sms_free( void )
 {
         sms_clearSine();
         sms_clearSinc();
-
-/* 	if(sms_window_spec) free(sms_window_spec); */
-
-        //fftwf_cleanup();
-
 }
 
 /*! \brief initialize analysis data structure's arrays
@@ -145,12 +141,6 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams)
 #ifdef FFTW
         pAnalParams->fftw.pWaveform = fftwf_malloc(sizeof(float) * SMS_MAX_WINDOW);
         pAnalParams->fftw.pSpectrum = fftwf_malloc(sizeof(fftwf_complex) * (SMS_MAX_WINDOW / 2 + 1));
-
-        /* arg... this crashes and my head isn't clear enough to see why.. */
-/*         if(sms_allocFourierForward( pAnalParams->fftw.pWaveform, pAnalParams->fftw.pSpectrum, */
-/*                                     SMS_MAX_WINDOW) != SMS_OK) */
-/*                 return(-1); */
-                
 #endif
 
 	return (SMS_OK);
@@ -185,7 +175,8 @@ int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
         /* initialize stochastic gain multiplier, 1 is no gain */
 	pSynthParams->fStocGain = 1.0;
 
-        /*! \todo: round sizeHop to power of 2 */
+        /* make sure sizeHop is something to the power of 2 */
+        pSynthParams->sizeHop = sms_power2(pSynthParams->sizeHop);
         int sizeHop = pSynthParams->sizeHop;
 
         pSynthParams->pFStocWindow = 
@@ -601,7 +592,7 @@ float sms_random()
 #ifdef RAND_STDMATH
         f = ((random() - HALF_MAX) * INV_HALF_MAX);
 #else
-        
+        /*! \todo try twister algorithm here */
 #endif
         return(f);
 }
