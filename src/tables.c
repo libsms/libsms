@@ -27,6 +27,8 @@
 
 /*! \brief value to scale the sine-table-lookup phase */
 static float fSineScale;
+/*! \brief inverse of fSineScale - turns a division into multiplication */
+static float fSineIncr;
 /*! \brief value to scale the sinc-table-lookup phase */
 static float fSincScale;
 /*! \brief global pointer to the sine table */
@@ -40,26 +42,27 @@ static float *sms_tab_sinc;
  */
 int sms_prepSine (int nTableSize)
 {
-  register int i;
-  float fTheta;
+        register int i;
+        float fTheta;
   
-  if((sms_tab_sine = (float *)malloc(nTableSize*sizeof(float))) == 0)
-    return (SMS_MALLOC);
-  fSineScale =  (float)(TWO_PI) / (float)(nTableSize - 1);
-  fTheta = 0.0;
-  for(i = 0; i < nTableSize; i++) 
-  {
-    fTheta = fSineScale * (float)i;
-    sms_tab_sine[i] = sin(fTheta);
-  }
-  return (SMS_OK);
+        if((sms_tab_sine = (float *)malloc(nTableSize*sizeof(float))) == 0)
+                return (SMS_MALLOC);
+        fSineScale =  (float)(TWO_PI) / (float)(nTableSize - 1);
+        fSineIncr = 1.0 / fSineScale;
+        fTheta = 0.0;
+        for(i = 0; i < nTableSize; i++) 
+        {
+                fTheta = fSineScale * (float)i;
+                sms_tab_sine[i] = sin(fTheta);
+        }
+        return (SMS_OK);
 }
 /*! \brief clear sine table */
 void sms_clearSine()
 {
-  if(sms_tab_sine)
-    free(sms_tab_sine);
-  sms_tab_sine = 0;
+        if(sms_tab_sine)
+                free(sms_tab_sine);
+        sms_tab_sine = 0;
 }
 
 /*! \brief table-lookup sine method
@@ -68,24 +71,19 @@ void sms_clearSine()
  */
 float sms_sine (float fTheta)
 {
-  float fSign = 1.0, fT;
-  int i;
+        int i;
+        fTheta = fTheta - floor(fTheta * INV_TWO_PI) * TWO_PI;
   
-  fTheta = fTheta - floor(fTheta / TWO_PI) * TWO_PI;
-  
-  if(fTheta < 0)
-  {
-    fSign = -1;
-    fTheta = -fTheta;
-  }
-  
-  i = fTheta / fSineScale + .5;
-  fT = sms_tab_sine[i];
-  
-  if (fSign == 1)
-    return(fT);
-  else
-    return(-fT);
+        if(fTheta < 0)
+        {
+                i =  .5 - (fTheta * fSineIncr);
+                return(-(sms_tab_sine[i]));
+        }
+        else
+        {
+                i = fTheta * fSineIncr + .5;
+                return(sms_tab_sine[i]);
+        }
 }
 
 /*! \brief Sinc method to generate the lookup table
@@ -109,34 +107,34 @@ int sms_prepSinc (int nTableSize)
 	float N = 512.0;
 	float fA[4] = {.35875, .48829, .14128, .01168},
 		fMax = 0;
-	float fTheta = -4.0 * TWO_PI / N, 
-	       fThetaIncr = (8.0 * TWO_PI / N) / (nTableSize);
+                float fTheta = -4.0 * TWO_PI / N, 
+                        fThetaIncr = (8.0 * TWO_PI / N) / (nTableSize);
 
-	if((sms_tab_sinc = (float *) calloc (nTableSize, sizeof(float))) == 0)
-		return (SMS_MALLOC);
+                if((sms_tab_sinc = (float *) calloc (nTableSize, sizeof(float))) == 0)
+                        return (SMS_MALLOC);
 
-	for(i = 0; i < nTableSize; i++) 
-	{
-		for (m = 0; m < 4; m++)
-			sms_tab_sinc[i] +=  -1 * (fA[m]/2) * 
-				(Sinc (fTheta - m * TWO_PI/N, N) + 
-			     Sinc (fTheta + m * TWO_PI/N, N));
-		fTheta += fThetaIncr;
-	}
-	fMax = sms_tab_sinc[(int) nTableSize / 2];
-	for (i = 0; i < nTableSize; i++) 
-		sms_tab_sinc[i] = sms_tab_sinc[i] / fMax;
+                for(i = 0; i < nTableSize; i++) 
+                {
+                        for (m = 0; m < 4; m++)
+                                sms_tab_sinc[i] +=  -1 * (fA[m]/2) * 
+                                        (Sinc (fTheta - m * TWO_PI/N, N) + 
+                                         Sinc (fTheta + m * TWO_PI/N, N));
+                        fTheta += fThetaIncr;
+                }
+                fMax = sms_tab_sinc[(int) nTableSize / 2];
+                for (i = 0; i < nTableSize; i++) 
+                        sms_tab_sinc[i] = sms_tab_sinc[i] / fMax;
 
-        fSincScale = (float) nTableSize / 8.0;
+                fSincScale = (float) nTableSize / 8.0;
 
-	return (SMS_OK);
+                return (SMS_OK);
 }
 /*! \brief clear sine table */
 void sms_clearSinc()
 {
-  if(sms_tab_sinc)
-    free(sms_tab_sinc);
-  sms_tab_sinc = 0;
+        if(sms_tab_sinc)
+                free(sms_tab_sinc);
+        sms_tab_sinc = 0;
 }
 
 /*! \brief global sinc table-lookup method
