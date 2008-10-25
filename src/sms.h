@@ -101,8 +101,7 @@ typedef struct
 	int nTracks;     /*!< number of sinusoidal tracks per frame */
 	int nStochasticCoeff;  /*!< number of stochastic coefficients per frame  */
 	float fAmplitude;      /*!< average amplitude of represented sound.  */
-	float fFrequency;      /*!< average fundamental frequency
-                                \todo what good is this here? should be in SMS_Data */
+	float fFrequency;      /*!< average fundamental frequency */
 	int iOriginalSRate;    /*!< sampling rate of original sound */
 	int iBegSteadyState;   /*!< record number of begining of steady state. */
 	int iEndSteadyState;   /*!< record number of end of steady state. */
@@ -423,14 +422,14 @@ enum SMS_StocSynthType
 /*! \brief Error codes returned by SMS file functions */
 enum SMS_ERRORS
 {
-        SMS_OK,              /*!< no error*/
-        SMS_NOPEN,       /*!< couldn't open file */
-        SMS_NSMS ,        /*!< not a SMS file */
-        SMS_MALLOC,    /*!< couldn't allocate memory */
-        SMS_RDERR,        /*!< read error */
-        SMS_WRERR,       /*!< write error */
-        SMS_FFTWERR,   /*!< FFTW error */
-        SMS_SNDERR        /*!< sound IO error */
+        SMS_OK,              /*!< 0, no error*/
+        SMS_NOPEN,       /*!< 1, couldn't open file */
+        SMS_NSMS ,        /*!< 2, not a SMS file */
+        SMS_MALLOC,    /*!< 3, couldn't allocate memory */
+        SMS_RDERR,        /*!< 4, read error */
+        SMS_WRERR,       /*!< 5, write error */
+        SMS_FFTWERR,   /*!< 6, FFTW error */
+        SMS_SNDERR        /*!< 7, sound IO error */
 };
 
 /*! \brief debug modes 
@@ -498,7 +497,7 @@ enum SMS_WINDOWS
 
 #define SMS_MAX_DEVIATION .01   /*!< maximum deviation allowed */
 /*! number of frames in the past to be looked in possible re-analyze */
-#define SMS_ANAL_DELAY     10   
+#define SMS_ANAL_DELAY     50 /*!< \todo this should be a parameter in AnalParams */  
 /*! total number of delay frames */
 #define SMS_DELAY_FRAMES (SMS_MIN_GOOD_FRAMES + SMS_ANAL_DELAY)
 
