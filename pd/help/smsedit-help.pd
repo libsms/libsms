@@ -1,18 +1,55 @@
-#N canvas 415 559 450 357 10;
-#X msg 256 81 open blarg.txt;
-#X obj 157 36 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
--1;
-#X obj 157 56 openpanel;
-#X msg 157 79 open \$1;
-#X msg 257 38 open ../test/sms/flugel.sms;
-#X msg 257 60 open flugel.sms;
-#X msg 256 102 info;
-#X obj 107 244 print blarg;
-#X obj 107 213 smsbuf blarg;
-#X connect 0 0 8 0;
-#X connect 1 0 2 0;
-#X connect 2 0 3 0;
-#X connect 3 0 8 0;
-#X connect 4 0 8 0;
-#X connect 5 0 8 0;
-#X connect 6 0 8 0;
+#N canvas 415 245 883 671 10;
+#X obj 28 13 smsbuf \$0-blarg;
+#X obj 19 581 smsedit \$0-blarg;
+#X text 133 12 <--- you need this \, it is where the analysis ends
+up. See it's help file for detailed usage.;
+#X obj 772 -9 cnv 15 60 30 empty empty SMS 10 16 1 20 -225295 -262130
+0;
+#X obj 591 609 sms;
+#X text 721 614 RTE - Oct 2008;
+#X text 477 570 [smsedit] is part of a library for using Spectral Model
+Synthesis techniques in pd. For more information and to see how the
+analysis/synthesis externals work together \, see the main help file
+-->;
+#X msg 20 123 buffer;
+#X msg 39 190 buffer other-buffer;
+#X text 74 115 <-- once data is loaded into smsbuf \, you need to send
+a buffer command in order to initialize the synthesizer based on the
+model's parameters. If [smsedit] does not have the buffer name as it's
+first argument \, you will need to provide it as an argument with the
+"buffer" message;
+#X msg 102 242 bp add freq 10 5 20;
+#X text 232 242 <-- change an individual breakpoint within the model.
+This will edit one partial at one particular point in time. It needs
+the following arguments: 1 operation (set \, add \, scale) 2 component
+(freq \, amp) 3 frame # 4 track # 5 value to edit the data (will be
+set \, added \, or scaled by this factor);
+#X msg 93 361 evens transpose 10 2;
+#X text 233 363 <-- change all the even partials of a specified frame.
+The arguments are: 1 operation (transpose \, ampmod \, ampdev \, freqdev)
+2 frame # 3 value to edit. This does something different for each operation.
+;
+#X text 503 68 [smsedit] is an external for editing the data stored
+within an [smsbuf]. It will change the model \, permenantly \, so it
+might be a good idea to make a backup of the model using [smsnbuf]'s
+"backup" message (stores a duplicate) before editing. You can then
+use the "switch" message to [smsbuf] or the converge message to [smsedit]
+to get the data back to normal.;
+#X msg 96 466 converge 10 0.1;
+#X text 202 469 <-- if your [smsbuf] has a backup of the data \, you
+can slowly average between the two until you have the original again.
+arguments: 1 frame # 2 weight of original (0-1.0);
+#X msg 96 552 verbose \$1;
+#X obj 96 532 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+1;
+#X text 167 552 <-- more information printed;
+#X text 502 161 There could be many more useful methods to [smsedit]
+\, which can be coded in the c file or you can make higher level abstractions
+for editing many partials/frames with one command.;
+#X connect 7 0 1 0;
+#X connect 8 0 1 0;
+#X connect 10 0 1 0;
+#X connect 12 0 1 0;
+#X connect 15 0 1 0;
+#X connect 17 0 1 0;
+#X connect 18 0 17 0;

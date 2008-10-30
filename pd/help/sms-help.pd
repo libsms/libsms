@@ -10,10 +10,10 @@
 #X obj 15 274 smsanal \$0-blarg;
 #X floatatom 350 314 5 0 0 0 - - -;
 #X msg 350 335 printframe \$1;
-#N canvas 250 596 450 300 wavetable 1;
+#N canvas 250 596 450 300 wavetable 0;
 #N canvas 0 0 450 300 (subpatch) 0;
-#X array audiobuf 155948 float 2;
-#X coords 0 1 155948 -1 200 140 1;
+#X array audiobuf 1000 float 2;
+#X coords 0 1 1000 -1 200 140 1;
 #X restore 237 144 graph;
 #X obj 36 143 soundfiler;
 #X floatatom 36 166 0 0 0 0 - - -;
@@ -272,7 +272,6 @@ method in [smsedit] to gradually move the data back to the original
 (by averaging).;
 #X obj 793 460 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
-#X msg 268 100 open ../../test/sms/flugel.sms;
 #X msg 676 487 converge 20 0.1;
 #X msg 688 513 buffer;
 #X msg 674 268 sizehop 2048;
@@ -335,9 +334,11 @@ method in [smsedit] to gradually move the data back to the original
 #X floatatom 478 412 5 0 0 0 - - -;
 #X msg 273 431 \; timebar range 0 \$1;
 #X msg 27 103 soundfile ../../test/audio/flugel.wav;
+#X msg 197 463 open ../../test/audio/flugel.wav;
+#X msg 268 100 open ../../test/sms/flugel.sms;
 #X connect 0 0 27 0;
-#X connect 1 0 47 0;
-#X connect 1 0 47 1;
+#X connect 1 0 46 0;
+#X connect 1 0 46 1;
 #X connect 2 0 0 0;
 #X connect 3 0 1 0;
 #X connect 4 0 1 0;
@@ -360,7 +361,7 @@ method in [smsedit] to gradually move the data back to the original
 #X connect 24 0 0 0;
 #X connect 25 0 0 0;
 #X connect 26 0 0 0;
-#X connect 27 0 53 0;
+#X connect 27 0 52 0;
 #X connect 28 0 1 0;
 #X connect 30 0 8 0;
 #X connect 31 0 0 0;
@@ -369,13 +370,14 @@ method in [smsedit] to gradually move the data back to the original
 #X connect 34 0 0 0;
 #X connect 38 0 1 0;
 #X connect 42 0 23 0;
-#X connect 43 0 0 0;
+#X connect 43 0 18 0;
 #X connect 44 0 18 0;
-#X connect 45 0 18 0;
-#X connect 46 0 1 0;
-#X connect 48 0 8 0;
+#X connect 45 0 1 0;
+#X connect 47 0 8 0;
+#X connect 48 0 47 0;
 #X connect 49 0 48 0;
-#X connect 50 0 49 0;
-#X connect 51 0 1 0;
-#X connect 51 0 52 0;
-#X connect 54 0 8 0;
+#X connect 50 0 1 0;
+#X connect 50 0 51 0;
+#X connect 53 0 8 0;
+#X connect 54 0 0 0;
+#X connect 55 0 0 0;

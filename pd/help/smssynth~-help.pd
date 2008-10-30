@@ -1,21 +1,106 @@
-#N canvas 630 391 471 541 10;
-#X obj 46 426 smssynth~ \$0-blarg;
-#X msg 59 301 stocgain \$1;
-#X floatatom 61 280 5 0 0 0 - - -;
-#X msg 60 258 transpose \$1;
-#X floatatom 61 231 5 0 0 0 - - -;
-#X msg 75 358 synthtype \$1;
-#X obj 74 338 hradio 15 1 0 3 empty empty empty 0 -8 0 10 -262144 -1
+#N canvas 630 336 703 617 10;
+#X obj 46 486 smssynth~ \$0-blarg;
+#X msg 59 331 stocgain \$1;
+#X floatatom 61 310 5 0 0 0 - - -;
+#X msg 60 288 transpose \$1;
+#X floatatom 61 261 5 0 0 0 - - -;
+#X msg 79 377 synthtype \$1;
+#X obj 78 357 hradio 15 1 0 3 empty empty empty 0 -8 0 10 -262144 -1
 -1 0;
-#X obj 34 93 smsbuf \$0-blarg;
-#X msg 34 67 open \$1;
-#X obj 34 46 openpanel;
-#X obj 34 26 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+#X obj 14 93 smsbuf \$0-blarg;
+#X msg 14 67 open \$1;
+#X obj 14 46 openpanel;
+#X obj 14 26 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
 -1;
-#X msg 13 150 buffer;
-#X msg 28 179 buffer other-buffer;
-#X msg 74 209 info;
-#X msg 163 243 sizeHop 1024;
+#X msg 9 142 buffer;
+#X msg 28 209 buffer other-buffer;
+#X msg 45 239 info;
+#X msg 89 403 sizeHop 1024;
+#X obj 622 -19 cnv 15 60 30 empty empty SMS 10 16 1 20 -225295 -262130
+0;
+#X obj 451 559 sms;
+#X text 581 564 RTE - Oct 2008;
+#X text 337 520 [smsanal] is part of a library for using Spectral Model
+Synthesis techniques in pd. For more information and how the analysis/synthesis
+externals work together \, see the main help file -->;
+#N canvas 0 0 702 491 dac 0;
+#X obj 216 271 t b;
+#X obj 216 218 f;
+#X obj 216 296 f;
+#X msg 330 295 0;
+#X obj 216 248 moses 1;
+#X obj 330 267 t b f;
+#X obj 296 228 moses 1;
+#X obj -110 -26 dbtorms;
+#X obj -110 47 line~;
+#X obj -75 119 *~;
+#X obj -110 4 pack 0 50;
+#X obj 140 157 bng 15 250 50 0 empty mute m 5 8 0 9 -262144 -1 -1;
+#X obj -38 119 *~;
+#X floatatom 126 136 4 0 120 0 dB - -;
+#X obj 159 103 vsl 15 68 0 110 0 1 empty empty empty 0 -8 0 8 -262144
+-1 -1 4900 0;
+#X obj -12 -5 inlet~;
+#X obj 54 -8 inlet~;
+#X obj -77 156 dac~ 1 2;
+#X text -30 -90 Modified output~ to catch in stereo \, with dsp control
+;
+#X obj -4 217 env~ 8092;
+#X obj -5 186 *~ 0.5;
+#X connect 0 0 2 0;
+#X connect 1 0 4 0;
+#X connect 2 0 14 0;
+#X connect 3 0 14 0;
+#X connect 4 0 0 0;
+#X connect 4 1 5 0;
+#X connect 5 0 3 0;
+#X connect 6 1 2 1;
+#X connect 7 0 10 0;
+#X connect 8 0 9 0;
+#X connect 8 0 12 0;
+#X connect 9 0 17 0;
+#X connect 9 0 20 0;
+#X connect 10 0 8 0;
+#X connect 11 0 1 0;
+#X connect 12 0 17 1;
+#X connect 12 0 20 0;
+#X connect 14 0 7 0;
+#X connect 14 0 6 0;
+#X connect 14 0 1 1;
+#X connect 15 0 9 1;
+#X connect 16 0 12 1;
+#X connect 19 0 13 0;
+#X connect 20 0 19 0;
+#X coords 0 -1 1 1 75 75 1 100 100;
+#X restore 7 513 pd dac;
+#X text 118 91 <--- you need this \, it is where the analysis ends
+up. See it's help file for detailed usage.;
+#X text 240 -5 [smssynth] will synthesize a spectral model stored in
+an [smsbuf] object. The data is stored in successive 'frames' that
+are targeted by sending a float value to [smssynth~]. It will interpolate
+from frame to frame \, and also between adjacent frames if you provide
+it non-integer value (ex. 40.5 will create a new frame half way between
+SMS_Data frame 40 and 41).;
+#X text 177 404 currently not working.. but would be nice to be able
+to change hopsize on the fly.;
+#X text 63 134 <-- once data is loaded into smsbuf \, you need to send
+a buffer command in order to initialize the synthesizer based on the
+model's parameters. If [smssynth~] does not have the buffer name as
+it's first argument \, you will need to provide it as an argument with
+the "buffer" message;
+#X text 90 238 <-- see currently loaded synthesis parameters;
+#X text 106 262 <-- transpose the deterministic based on the equal
+tempered scale;
+#X text 139 328 <-- multiply the stochastic component's amplitude by
+a constant;
+#X text 167 357 <--- choose which part to synthesize (all \, deterministic
+\, stochastic);
+#X msg 123 457 verbose \$1;
+#X obj 123 439 hradio 15 1 0 2 empty empty empty 0 -8 0 10 -262144
+-1 -1 0;
+#X text 199 453 print lots of stuff;
+#X connect 0 0 19 0;
+#X connect 0 0 19 1;
 #X connect 1 0 0 0;
 #X connect 2 0 1 0;
 #X connect 3 0 0 0;
@@ -27,4 +112,7 @@
 #X connect 10 0 9 0;
 #X connect 11 0 0 0;
 #X connect 12 0 0 0;
+#X connect 13 0 0 0;
 #X connect 14 0 0 0;
+#X connect 28 0 0 0;
+#X connect 29 0 28 0;
