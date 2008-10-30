@@ -147,9 +147,10 @@ static void smsbuf_open(t_smsbuf *x, t_symbol *filename)
         }
         else if(x->verbose) post("file: %s", fullname->s_name);
         //check if a file has been opened, close and init if necessary
-        if(x->nframes != 0)
+        if(x->ready)
         {
                 if(x->verbose) post("smsbuf_open: re-initializing");
+                x->ready=0;
                 for( i = 0; i < x->nframes; i++)
                         sms_freeFrame(&x->smsData[i]);
         }
@@ -343,7 +344,7 @@ static void *smsbuf_new(t_symbol *bufname)
 static void smsbuf_free(t_smsbuf *x)
 {
         int i;
-        sms_free();
+        //sms_free(); This is a problem in pd, if there is more than one smsbuf
 
         //smsbuf_dealloc(x);
         if(x->allocated)
