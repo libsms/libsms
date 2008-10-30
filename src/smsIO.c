@@ -68,12 +68,10 @@ void sms_initHeader (SMS_Header *pSmsHeader)
  * \param pSmsHeader    header for SMS file (to be stored)
  * \param nFrames           number of frames in analysis
  * \param pAnalParams   structure of analysis parameters
- * \param iOriginalSRate  samplerate of original input sound file
  * \param nTracks           number of sinusoidal tracks in the analysis
  */
 void sms_fillHeader (SMS_Header *pSmsHeader, 
-                          int nFrames, SMS_AnalParams *pAnalParams,
-                    int iOriginalSRate, int nTracks)
+                          int nFrames, SMS_AnalParams *pAnalParams, int nTracks)
 {
         sms_initHeader (pSmsHeader);
 
@@ -86,23 +84,9 @@ void sms_fillHeader (SMS_Header *pSmsHeader,
 		pSmsHeader->nStochasticCoeff = 0;
         else
                 pSmsHeader->nStochasticCoeff = pAnalParams->nStochasticCoeff;
-        pSmsHeader->iOriginalSRate = iOriginalSRate;
+        pSmsHeader->iAnalSizeHop = pAnalParams->sizeHop;
         pSmsHeader->iFrameBSize = sms_frameSizeB(pSmsHeader);
 }
-
-/* void sms_initFrame (SMS_Data *pSmsFrame) */
-/* { */
-/* 	pSmsFrame->pSmsData = NULL; */
-/* 	pSmsFrame->pFSinFreq = NULL; */
-/* 	pSmsFrame->pFSinAmp = NULL; */
-/* 	pSmsFrame->pFSinPha = NULL; */
-/* 	pSmsFrame->pFStocCoeff = NULL; */
-/* 	pSmsFrame->pFStocGain = NULL; */
-/* 	pSmsFrame->nTracks = 0; */
-/* 	pSmsFrame->nCoeff = 0; */
-/* 	pSmsFrame->sizeData = 0; */
-/* } */
-
 
 /*! \brief write SMS header to file
  *

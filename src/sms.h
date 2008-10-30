@@ -21,45 +21,6 @@
 /*! \file sms.h
  * \brief header file to be included in all SMS application
  */
-/*! \mainpage libsms
- *
- * libsms in an open source C library that implements SMS techniques for the analysis,
- * transformation and synthesis of musical sounds based on a sinusoidal plus residual model.
- * It is derived from the original code of Xavier Serra, as part of his PhD thesis.  You can read
- * about this and many things related to SMS at the sms homepage:
- * http://mtg.upf.edu/technologies/sms/
- *
- * Since Janurary 2009, the code Serra wrote, originally for NextStep, has undergone changes to make
- * it useful on modern day platforms.  The goal of this library is to be usable in real-time audio
- * applications for performing high-fidelity synthesis of sound models. It should work on most 
- * platforms available, although Linux is the only one tested so far. 
- *         - Richard Thomas Eakin - reakin [at] iua [dot] upf [dot] edu
- *
- * \par Info about the coding style used in this library:
- * - all functions used globally throughout the library are prepended with sms_ and are of the form
- *   sms_camelCase
- * - all data structures are prepended with SMS_ and are of the form SMS_CamelCase
- * - all global typedefs and defines are prepended with SMS_ and are capitalized
- * - there are various other static functions within the library that are not of this format, but are not
- *   meant to be used globally. Even still, there are some functions that are gobally defined that do
- *   not need to be.. but there are other fish to fry at the moment.
- *
- * \par Terminology Used:
- * - tracks vs. trajectories: Throughout various implementations and writings on Spectral Modeling
- *   Synthesis, these two terms are used interchangeably for the partial sinusoidal components of a
- *   sound, or deterministic sinusoidal decompositinon.  In this code only the term 'track' is used for
- *   clarity and universality.
- *
- * \par Third Party Libraries Used:
- * - libsndfile: http://www.mega-nerd.com/libsndfile/ - soundfile input and output in various formats
- * - FFTW3 (floating point) http://www.fftw.org/ - an optional compilation flag allows the library to
- *   use FFTW to compute fast fourier transforms.  It is much faster, but is messy in its current 
- *  stage and the pd externals crash with it (I do not know why, other than pointers to memory
- *  are getting mixed up).
- *
- * \todo note about tools and tests here
- */
-
 #ifndef _SMS_H
 #define _SMS_H
 
@@ -94,6 +55,7 @@ typedef struct
 	int iSmsMagic;         /*!< identification constant */
 	int iHeadBSize;        /*!< size in bytes of header */
 	int nFrames;	         /*!< number of data frames */
+        int iAnalSizeHop;     /*!< hopsize used in analysis (samples progressed in each frame */
 	int iFrameBSize;      /*!< size in bytes of each data frame */
 	int iFormat;           /*!< type of data format \see SMS_Format */
 	int iFrameRate;        /*!< rate in Hz of data frames */
@@ -102,7 +64,6 @@ typedef struct
 	int nStochasticCoeff;  /*!< number of stochastic coefficients per frame  */
 	float fAmplitude;      /*!< average amplitude of represented sound.  */
 	float fFrequency;      /*!< average fundamental frequency */
-	int iOriginalSRate;    /*!< sampling rate of original sound */
 	int iBegSteadyState;   /*!< record number of begining of steady state. */
 	int iEndSteadyState;   /*!< record number of end of steady state. */
 	float fResidualPerc;   /*!< percentage of the residual to original */
@@ -279,9 +240,8 @@ typedef struct
 	int iSynthesisType;        /*!< type of synthesis to perform \see SMS_SynthType */
         int iDetSynthType;         /*!< method for synthesizing deterministic component
                                                  \see SMS_DetSynthType */
-	int iOriginalSRate;  /*!< samplerate of the sound model source \todo this should not be necessary, 
-                                             it is only used to create other parameters... should just use that param
-                                             here instead */
+	int iOriginalSRate;  /*!< samplerate of the sound model source.  I used to determine the stochastic
+                               synthesis approximation */
 	int iSamplingRate;         /*!< synthesis samplerate */
 	SMS_Data prevFrame; /*!< previous data frame, used for smooth interpolation between frames */
 	int sizeHop;                   /*!< number of samples to synthesis for each frame */
@@ -594,7 +554,6 @@ int sms_sizeNextWindow (int iCurrentFrame, SMS_AnalParams *pAnalParams);
 
 float sms_fundDeviation (SMS_AnalParams *pAnalParams, int iCurrentFrame);
 
-
 int sms_detectPeaks (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag, 
                    SMS_Peak *pSpectralPeaks, SMS_AnalParams *pAnalParams);
 
@@ -641,8 +600,7 @@ int sms_getHeader (char *pChFileName, SMS_Header **ppSmsHeader,
                   	FILE **ppInputFile);
 
 void sms_fillHeader (SMS_Header *pSmsHeader, 
-                          int nFrames, SMS_AnalParams *pAnalParams,
-                    int iOriginalSRate, int nTracks);
+                          int nFrames, SMS_AnalParams *pAnalParams, int nTracks);
 
 int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader, 
                     FILE **ppOutSmsFile);
@@ -692,9 +650,6 @@ int sms_createSF (char *pChOutputSoundFile, int iSamplingRate, int iType);
 void sms_writeSound (float *pFBuffer, int sizeBuffer);
 
 void sms_writeSF ();
-
-/*! \todo remove realft() once fftw is completely implemented */
-void realft (float *data, int n, int isign); /* \todo remove me */
 
 #ifdef FFTW
 /* int sms_allocFourierForward( float *pWaveform, fftwf_complex *pSpectrum, int sizeFft); */
