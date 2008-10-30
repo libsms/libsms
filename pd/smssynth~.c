@@ -28,6 +28,16 @@ typedef struct _smssynth
         t_int ready;
 } t_smssynth;
 
+static void smssynth_verbose(t_smssynth *x, t_float flag)
+{
+        if(!flag) x->verbose = 0;
+        else
+        {
+                x->verbose = 1;
+                post("smsanal: verbose messages");
+        }
+}
+
 static void smssynth_buffer(t_smssynth *x, t_symbol *bufname)
 {
         long iError;
@@ -81,6 +91,7 @@ static void smssynth_buffer(t_smssynth *x, t_symbol *bufname)
                            x->smsbuf->smsHeader.iStochasticType);
 
         x->ready = 1;
+        if(x->verbose) post("smssynth is ready for synthesis");
 }
 
 /* the signal in is not currently used; is there a benifit to control the synthesis by signal rate? */
@@ -117,26 +128,37 @@ static t_int *smssynth_perform(t_int *w)
                 for (i = 0; i < n; i++, x->synthBufPos++)
                         out[i] = x->synthBuf[x->synthBufPos];
         }
-        else  while(n--) *out++ = 0;
+        else
+        {
+                while(n--) *out++ = 0;
+                /* if the buffer is turned off for some reason, turn off the synth too. It will need to be re-initialized. */
+                if(x->ready && !x->smsbuf->ready)
+                {
+                        x->ready = 0;
+                        if(x->verbose) post("smssynth_open: re-initializing synth");
+                        sms_freeSynth(&x->synthParams);
+                        sms_freeFrame(&x->interpolatedFrame);
+                }
+        }
 
         return (w+5);
 }
 
 /* hmm.. still crashing even when re-initing in a seperate loop.. don't know why yet */
-void *smssynth_threadinit(void *zz)
-{
-        t_smssynth *x = zz;
-        sleep(1); // allows the audio buffer to clear itself
-/*                 x->synthBuf = (t_float *) calloc(x->synthParams.sizeHop, sizeof(t_float)); */
-        post("now doing re-init");
-        x->synthBuf = (t_float *)realloc(x->synthBuf, x->sizehop * sizeof(t_float));
-        memset(x->synthBuf, 0, x->sizehop *sizeof(t_float));
-        sms_changeSynthHop(&x->synthParams, x->sizehop);
-        x->synthBufPos = x->sizehop;
-        x->ready = 1;
+/* void *smssynth_threadinit(void *zz) */
+/* { */
+/*         t_smssynth *x = zz; */
+/*         sleep(1); // allows the audio buffer to clear itself */
+/* /\*                 x->synthBuf = (t_float *) calloc(x->synthParams.sizeHop, sizeof(t_float)); *\/ */
+/*         post("now doing re-init"); */
+/*         x->synthBuf = (t_float *)realloc(x->synthBuf, x->sizehop * sizeof(t_float)); */
+/*         memset(x->synthBuf, 0, x->sizehop *sizeof(t_float)); */
+/*         sms_changeSynthHop(&x->synthParams, x->sizehop); */
+/*         x->synthBufPos = x->sizehop; */
+/*         x->ready = 1; */
 
-        pthread_exit(NULL);
-}
+/*         pthread_exit(NULL); */
+/* } */
 /* by changing the hopsize, everything related to the FFT has to change as well.
     so. it is necessary to re-calloc the windows and fft buffer (using sms_initSynth)*/
 static void smssynth_sizehop(t_smssynth *x, t_float f)
@@ -155,7 +177,7 @@ static void smssynth_sizehop(t_smssynth *x, t_float f)
                 /* do the re-init in a seperate thread so the audio loop is not
                    effected.  Once the synth is re-malloc'ed, x->ready again 
                    equals 1*/
-                pthread_create(&childthread, 0, smssynth_threadinit, (void *)x);
+                //pthread_create(&childthread, 0, smssynth_threadinit, (void *)x);
 
         }
         else x->synthParams.sizeHop = x->synthBufPos = sizehop;
@@ -170,7 +192,6 @@ static void smssynth_transpose(t_smssynth *x, t_float f)
 
 static void smssynth_stocgain(t_smssynth *x, t_float f)
 {
-/*         x->stocgain = f; */
         x->synthParams.fStocGain = f;
         if(x->verbose) post("stochastic gain: %fx", x->synthParams.fStocGain);
 }
@@ -227,7 +248,7 @@ static void *smssynth_new(t_symbol *bufname)
         outlet_new(&x->x_obj, gensym("signal"));
         
         x->bufname = bufname;
-        x->verbose = 1;
+        x->verbose = 0;
         x->smsbuf = NULL;
         x->ready = 0;
 
@@ -237,7 +258,7 @@ static void *smssynth_new(t_symbol *bufname)
 
         x->synthParams.iSamplingRate = 44100; //should be updated once audio is turned on
         
-        sms_init();
+        sms_init(); /* probably already accomplished by a smsbuf, but what the hey */
     
         x->synthBuf = (t_float *) calloc(x->synthParams.sizeHop, sizeof(t_float));
         
@@ -246,7 +267,7 @@ static void *smssynth_new(t_symbol *bufname)
 
 static void smssynth_free(t_smssynth *x)
 {
-        if(x->smsbuf->ready) 
+        if(x->smsbuf && x->smsbuf->ready) 
         {
                 free(x->synthBuf);
                 sms_freeSynth(&x->synthParams);
@@ -261,6 +282,7 @@ void smssynth_tilde_setup(void)
         class_addmethod(smssynth_class, (t_method)smssynth_dsp, gensym("dsp"), 0);
         class_addmethod(smssynth_class, (t_method)smssynth_buffer, gensym("buffer"), A_DEFSYM, 0);
         class_addmethod(smssynth_class, (t_method)smssynth_info, gensym("info"),  0);
+        class_addmethod(smssynth_class, (t_method)smssynth_verbose, gensym("verbose"), A_DEFFLOAT, 0);
         class_addmethod(smssynth_class, (t_method)smssynth_sizehop, gensym("sizehop"), A_DEFFLOAT, 0);
         class_addmethod(smssynth_class, (t_method)smssynth_transpose, gensym("transpose"), A_DEFFLOAT, 0);
         class_addmethod(smssynth_class, (t_method)smssynth_stocgain, gensym("stocgain"), A_DEFFLOAT, 0);
