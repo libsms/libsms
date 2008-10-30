@@ -61,7 +61,6 @@ int sms_init( void )
 /*! \brief free global data
  *
  * deallocates memory allocated to global arrays (windows and tables)
- *
  */
 void sms_free( void )
 {
@@ -164,10 +163,13 @@ int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
 {
 
         /* set synthesis parameters from arguments and header */
-	pSynthParams->iOriginalSRate = pSmsHeader->iOriginalSRate;
-	pSynthParams->origSizeHop = pSynthParams->iOriginalSRate / pSmsHeader->iFrameRate;
+/* 	pSynthParams->iOriginalSRate = pSmsHeader->iOriginalSRate; */
+/* 	pSynthParams->origSizeHop = pSynthParams->iOriginalSRate / pSmsHeader->iFrameRate; */
+        pSynthParams->origSizeHop = pSmsHeader->iAnalSizeHop;
 	pSynthParams->iStochasticType = pSmsHeader->iStochasticType;
-        if(pSynthParams->iSamplingRate <= 0)  pSynthParams->iSamplingRate = pSynthParams->iOriginalSRate;
+        pSynthParams->iOriginalSRate = pSmsHeader->nFrames * pSmsHeader->iAnalSizeHop;
+        if(pSynthParams->iSamplingRate <= 0)
+                pSynthParams->iSamplingRate = pSynthParams->iOriginalSRate;
 
         /*initialize transposing value to 1, no transpose */
         pSynthParams->fTranspose = 1.0;
@@ -224,17 +226,17 @@ int sms_changeSynthHop( SMS_SynthParams *pSynthParams, int sizeHop)
 #ifdef FFTW
         printf("OUUCH: sms_changeSynthHop not yet working with FFTW");
         return(-1);
+#else
+        /* allocate memory for FFT - big enough for output buffer (new hopsize)*/
+        pSynthParams->pFFTBuff = (float *) realloc(pSynthParams->pFFTBuff, (sizeHop << 1) * sizeof(float));
 #endif
+
         pSynthParams->pFStocWindow = 
 		(float *) realloc(pSynthParams->pFStocWindow, sizeHop * 2 * sizeof(float));
         sms_getWindow( sizeHop * 2, pSynthParams->pFStocWindow, SMS_WIN_HANNING );
 	pSynthParams->pFDetWindow =
 		(float *) realloc(pSynthParams->pFDetWindow, sizeHop * 2 * sizeof(float));
         sms_getWindow( sizeHop * 2, pSynthParams->pFDetWindow, SMS_WIN_IFFT );
-
-        /* allocate memory for FFT - big enough for output buffer (new hopsize)*/
-
-        pSynthParams->pFFTBuff = (float *) realloc(pSynthParams->pFFTBuff, (sizeHop << 1) * sizeof(float));
 
         pSynthParams->sizeHop = sizeHop;
 
@@ -603,13 +605,13 @@ float sms_random()
  */
 int sms_power2( int n)
 {
-        int pow = -1;
+        int p = -1;
         while(n)
         {
                 n >>= 1;
-                pow++;
+                p++;
         }
-        return(1<<pow);
+        return(1<<p);
 }
 
 
