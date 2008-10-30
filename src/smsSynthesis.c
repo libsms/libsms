@@ -107,7 +107,7 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
         for(i= sizeMag, k = 0; i < sizeFft; i++, k++)
                 pFBuffer[i] +=  pSynthParams->fftw.pWaveform[k] * pSynthParams->pFDetWindow[i] * 0.5;
 
-#else //using OOURA 
+#else //using OOURA fft routines 
 
         memset (pSynthParams->pFFTBuff, 0, (sizeFft +1) * sizeof(float));
         for (i = 0; i < nTracks; i++)
@@ -115,6 +115,8 @@ static void SineSynthIFFT (SMS_Data *pSmsData, float *pFBuffer,
                 if (((fMag = pSmsData->pFSinAmp[i]) > 0) &&
                     ((fFreq = (pSmsData->pFSinFreq[i]) * pSynthParams->fTranspose) < iHalfSamplingRate))
                 {
+                        /* \todo maybe this check can be removed if the SynthParams->prevFrame gets random
+                           phases in sms_initSynth? */
                         if (pSynthParams->prevFrame.pFSinAmp[i] <= 0)
                                 pSynthParams->prevFrame.pFSinPha[i] = TWO_PI * sms_random();
 
