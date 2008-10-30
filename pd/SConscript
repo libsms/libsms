@@ -1,11 +1,9 @@
 # -*- python -*-
-# Top-level scons script for libsms and tools
+# SConscript for pd externals - called from main directory with the command "scons pd"
 
 import os
 
 Import('*')
-
-print "libraries importing: ", env.Dump('LIBS')
 
 smspd_sources =  Split("""
                                             smspd.c 
@@ -13,38 +11,31 @@ smspd_sources =  Split("""
                                             smssynth~.c
                                             smsedit.c
 """ )
-    
-sms_srcpath = '../src '
 
-# if int(debug_mode):
-#     sms_cflags = '-Wall -g'
-# else:
-#     sms_cflags = ' -O2 -funroll-loops -fomit-frame-pointer \
-#         -Wall -W -Wshadow  \
-#         -Wno-unused -Wno-parentheses -Wno-switch '
+help_dir = prefix + '/pd/doc/5.reference'
+extra_dir = prefix + '/pd/extra'
 
+helpfiles = []
+helpfiles.append('help/smsbuf-help.pd')
+for x in smspd_sources:
+    if x == 'smspd.c':
+        helpfiles.append('help/sms-help.pd')
+    else:
+        helpfiles.append('help/' + os.path.splitext(os.path.basename(x))[0] + '-help.pd')
 
-#sms_libs =  ['m', 'sndfile', 'sms', 'fftw3f', 'pthread']
+print "helpfiles:", helpfiles
 
-#env = Environment( ENV = os.environ, CCFLAGS = sms_cflags , CPPPATH = sms_srcpath, CPPDEFINES= 'PD')
-#env.Append( LIBPATH = sms_srcpath, LIBS = sms_libs )
-env.Append(CPPPATH = sms_srcpath, CPPDEFINES= 'PD' )
-#env.Append( LIBPATH = sms_srcpath, LIBS = 'sms' )
-env = env.Clone( LIBS = ['m', 'sndfile', 'sms', 'pthread'])
-#env = env.Clone( SHLIBPREFIX = '')
-env = env.Clone( SHLIBPREFIX = '', LIBPARTH = '../src ', CPPPATH = '../src ')
+env.Append(CPPDEFINES= 'PD' )
+
+env = env.Clone( SHLIBPREFIX = '')
 
 conf = Configure(env)
-
-print "LIBPATH: ", env.Dump('LIBPATH')
-
 if not conf.CheckLibWithHeader('pthread','pthread.h','c'):
        print 'cannot find libpthread'
        Exit(1)
-
 env = conf.Finish()
 
-print "libraries compiling into externals: ", env.Dump('LIBS')
+print "libraries linking into externals: ", env.Dump('LIBS')
 
 print "compiling for:" , os.name 
 if  os.name == 'posix' :
@@ -56,7 +47,9 @@ elif os.name == 'nt':
 else:
     print "scons error: only linux, mac, and nt are covered so far"
 
-
-smspd = env.LoadableModule( target = "smspd", source = smspd_sources)
-Depends(smspd, '../src/libsms.a')
-
+pdlib = env.LoadableModule( target = "sms", source = smspd_sources)
+Depends(pdlib, '../src/libsms.a')
+env.Install(extra_dir, pdlib)
+env.Alias('install', extra_dir)
+env.Install(help_dir, helpfiles)
+env.Alias('install', help_dir)
