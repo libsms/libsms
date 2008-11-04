@@ -163,10 +163,10 @@ int main (int argc, char *argv[])
                 printf("stochastic gain factor: %f \n", synthParams.fStocGain);
                 printf("frequency transpose factor: %f \n", synthParams.fTranspose);
                 printf("__header info__\n");
-                printf("fOriginalSRate: %d, iFrameRate: %d, origSizeHop: %d\n", 
-                       pSmsHeader->iOriginalSRate, pSmsHeader->iFrameRate, synthParams.origSizeHop);
-                printf("original file length: %f seconds \n", (float)  pSmsHeader->nFrames * 
-                       synthParams.origSizeHop / pSmsHeader->iOriginalSRate );
+                printf("original samplingrate: %d, iFrameRate: %d, origSizeHop: %d\n", pSmsHeader->iSamplingRate,
+                       pSmsHeader->iFrameRate, synthParams.origSizeHop);
+                printf("original file length: %f seconds \n",
+                       pSmsHeader->nFrames / (float) pSmsHeader->iFrameRate);
                 if(!iSoundFileType) printf("output soundfile type: wav \n");
                 else  printf("output soundfile type: aiff \n");
         }
@@ -187,10 +187,6 @@ int main (int argc, char *argv[])
                 exit(0);
         }
 
-        #ifdef FFTW
-        printf("## using fftw3 ##  \n");
-        #endif
-
          /* set modifiers */
         synthParams.fTranspose = TEMPERED_TO_FREQ( fTranspose );
         synthParams.fStocGain = stocGain;
@@ -198,13 +194,13 @@ int main (int argc, char *argv[])
 	iSample = 0;
         /* number of samples is a factor of the ratio of samplerates */
         /* multiply by timeFactor to increase samples to desired file length */
-        fFsRatio = (float) synthParams.iSamplingRate / pSmsHeader->iOriginalSRate;
+        /* pSmsHeader->iSamplingRate is from original analysis */
+        fFsRatio = (float) synthParams.iSamplingRate / pSmsHeader->iSamplingRate;
 	nSamples = pSmsHeader->nFrames * synthParams.origSizeHop * timeFactor * fFsRatio;
 
         /* divide timeFactor out to get the correct frame */
-        fLocIncr = pSmsHeader->iOriginalSRate / 
+        fLocIncr = pSmsHeader->iSamplingRate / 
                 ( synthParams.origSizeHop * synthParams.iSamplingRate * timeFactor); 
-
 
 	while (iSample < nSamples)
 	{

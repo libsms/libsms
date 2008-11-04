@@ -189,7 +189,7 @@ int main (int argc, char *argv[])
 	OutSmsHeader.iStochasticType = pInSmsHeader->iStochasticType;
 	OutSmsHeader.nTracks = iGoodTraj;
 	OutSmsHeader.nStochasticCoeff = pInSmsHeader->nStochasticCoeff;
-	OutSmsHeader.iOriginalSRate = pInSmsHeader->iOriginalSRate;
+	OutSmsHeader.iSamplingRate = pInSmsHeader->iSamplingRate;
 	OutSmsHeader.nTextCharacters = pInSmsHeader->nTextCharacters;
 	OutSmsHeader.pChTextCharacters = pInSmsHeader->pChTextCharacters;
 

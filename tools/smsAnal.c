@@ -156,7 +156,7 @@ static int InitArguments (ARGUMENTS *pArguments)
 	pArguments->fMinTrackLength = .1;
 	pArguments->fMaxSleepingTime = .1;
 	pArguments->iStochasticType =SMS_STOC_APPROX;
-	pArguments->nStochasticCoeff = 32;
+	pArguments->nStochasticCoeff = 64;
 	return (1);
 }
 
@@ -308,7 +308,7 @@ static int GetArguments (char *argv[], int argc, ARGUMENTS *pArguments)
  * ARGUMENTS arguments;		user arguments
  *
  */
-char pChTextString[1024]; // RTE TODO: encapsulate this somehow
+char pChTextString[1024]; 
 
 static int FillSmsHeader (SMS_Header *pSmsHeader, 
                           int nFrames, ARGUMENTS arguments,
@@ -326,7 +326,7 @@ static int FillSmsHeader (SMS_Header *pSmsHeader,
 		pSmsHeader->nStochasticCoeff = 0;
         else
                 pSmsHeader->nStochasticCoeff = arguments.nStochasticCoeff;
-        pSmsHeader->iOriginalSRate = iOriginalSRate;
+        pSmsHeader->iSamplingRate = iOriginalSRate;
         pSmsHeader->iFrameBSize = sms_frameSizeB(pSmsHeader);
 
         sprintf (pChTextString, 
@@ -450,7 +450,7 @@ int main (int argc, char *argv[])
 
 	if (iError != SMS_OK)
 	{
-                printf("error in sms_openSF: %s", sms_errorString(iError));
+                printf("error in sms_openSF: %s \n", sms_errorString(iError));
                 exit(EXIT_FAILURE);
 	}	    
 

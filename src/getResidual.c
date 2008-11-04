@@ -30,7 +30,7 @@
  * \param pFb        pointer to denominator coefficients
  * \param nCoeff    number of coefficients
  * \param fInput     input sample
- * \param pD          pointer to filter coefficients \todo I'm not sure what a better description of this value is (was undocumented)
+ * \param pD          pointer to filter coefficients 
  * \return value is the  filtered sample 
  */
 static float ZeroPoleFilter (float *pFa, float *pFb, int nCoeff, float fInput,

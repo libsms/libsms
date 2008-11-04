@@ -205,7 +205,7 @@ static void smsanal_soundfile(t_smsanal *x, t_symbol *filename)
         /* need to supply sms header information for incase the analysis 
            will be written to file (by smsbuf) */
 	sms_fillHeader (&x->smsbuf->smsHeader, x->smsbuf->nframes,
-                        &x->anal_params, x->ntracks);
+                        &x->anal_params, x->ntracks, x->soundHeader.iSamplingRate);
 
         sprintf (x->smsbuf->param_string,
                  "created by [smsanal] with parameters: format %d, soundType %d, "
@@ -322,7 +322,7 @@ static void smsanal_array(t_smsanal *x, t_symbol *arrayname, t_float samplerate)
         /* need to supply sms header information for incase the analysis 
            will be written to file (by smsbuf) */
 	sms_fillHeader (&x->smsbuf->smsHeader, x->smsbuf->nframes,
-                        &x->anal_params, x->ntracks);
+                        &x->anal_params, x->ntracks, x->anal_params.iSamplingRate);
 
         sprintf (x->smsbuf->param_string,
                  "created by [smsanal] with parameters: format %d, soundType %d, "
@@ -380,7 +380,7 @@ static void smsanal_debug(t_smsanal *x, t_float debugMode)
         {
         case SMS_DBG_NONE: post("debug mode: disabled");
                 break;
-        case SMS_DBG_INIT: post("debug mode: initialization functions");
+        case SMS_DBG_DET: post("debug mode: deterministic analysis");
                 break;
         case SMS_DBG_PEAK_DET: post("debug mode: peak detection function");
                 break;
@@ -636,8 +636,9 @@ static void smsanal_nguides(t_smsanal *x, t_float f)
                 post("smsanal_nguides: cannot be less than 1");
                 return;
         }
-        if(x->verbose) post("smsanal: set the number of guides to %d ", i);
+        if(i < x->ntracks) i = x->ntracks;
         x->anal_params.nGuides = i;
+        if(x->verbose) post("smsanal: set the number of guides to %d ", i);
 }
 
 static void smsanal_ntracks(t_smsanal *x, t_float f)

@@ -116,21 +116,20 @@ int main (int argc, char *argv[])
 	sms_allocFrameH (pSmsHeader, &smsData);
 
 	printf("\nHEADER INFORMATION:\n");
-	printf("Number of records = %d\n", pSmsHeader->nFrames);
+	printf("Number of frames = %d\n", pSmsHeader->nFrames);
 	printf("Frame rate (Hz) = %d\n", pSmsHeader->iFrameRate);
 	printf("Number of tracks = %d\n", pSmsHeader->nTracks);
 	printf("Number of stochastic coefficients = %d\n",
     	   pSmsHeader->nStochasticCoeff);
-        if(pSmsHeader->iFormat == 1) printf("Format = harmonic\n");
-        else if(pSmsHeader->iFormat == 2) printf("Format = inharmonic\n");
-        else if(pSmsHeader->iFormat == 3) printf("Format = harmonic with phase\n");
-        else if(pSmsHeader->iFormat == 4) printf("Format = inharmonic with phase\n");
-	if(pSmsHeader->iStochasticType == 0) printf("Stochastic type = waveform\n");
-	else if(pSmsHeader->iStochasticType == 1) printf("Stochastic type = STFT\n");
-	else if(pSmsHeader->iStochasticType == 2)
-                printf("Stochastic type = line segment magnitude spectrum approximation \n");
-	else if(pSmsHeader->iStochasticType == 3) printf("Stochastic type = none\n");
-	printf("Original sampling rate = %d\n", pSmsHeader->iOriginalSRate);  
+        if(pSmsHeader->iFormat == SMS_FORMAT_H) printf("Format = harmonic\n");
+        else if(pSmsHeader->iFormat == SMS_FORMAT_IH) printf("Format = inharmonic\n");
+        else if(pSmsHeader->iFormat == SMS_FORMAT_HP) printf("Format = harmonic with phase\n");
+        else if(pSmsHeader->iFormat == SMS_FORMAT_IHP) printf("Format = inharmonic with phase\n");
+	if(pSmsHeader->iStochasticType == SMS_STOC_IFFT) printf("Stochastic type = IFFT\n");
+	else if(pSmsHeader->iStochasticType == SMS_STOC_APPROX)
+                printf("Stochastic type = spectrum approximation IFFT\n");
+	else if(pSmsHeader->iStochasticType == SMS_STOC_NONE) printf("Stochastic type = none\n");
+	printf("Analysis Signal Sampling Rate = %d\n", pSmsHeader->iSamplingRate);  
 
 	if (pSmsHeader->nTextCharacters > 0)
 	{

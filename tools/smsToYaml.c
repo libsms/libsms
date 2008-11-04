@@ -25,8 +25,6 @@
 #define PRINT_STOC 3
 #define PRINT_HDR 4
 
-#define USAGE "Usage: smsToYaml [-t type-format][-i initial-time][-e end-time] <smsFile> <yamlFile>"
-
 void usage (void)
 {
         fprintf (stderr, "\n"
@@ -46,12 +44,6 @@ void usage (void)
         
         exit(1);
 }
-
-
-//short MaxDelayFrames;
-//float FResidualPerc;
-//SMS_SndBuffer soundBuffer, synthBuffer;
-//SMS_AnalFrame **ppFrames, *pFrames;
 
 int main (int argc, char *argv[])
 {
@@ -97,9 +89,10 @@ int main (int argc, char *argv[])
                }
           }
      }
-     if((iError = sms_getHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile)) < 0)
+     if((iError = sms_getHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile)) != SMS_OK)
      {
-             printf("error in sms_getHeader: %s", sms_errorString(iError));
+             printf("error in sms_getHeader: %s \n", sms_errorString(iError));
+             printf("failed when trying to open file %s \n", pChInputSmsFile );
              exit(EXIT_FAILURE);
      }	    
      
@@ -130,8 +123,7 @@ int main (int argc, char *argv[])
           fprintf(fp,"approx\n");
      else if(pSmsHeader->iStochasticType == SMS_STOC_NONE) 
           fprintf(fp,"none\n");
-     fprintf(fp,"    iOriginalSRate   : %d\n", pSmsHeader->iOriginalSRate);  
-
+     fprintf(fp,"    iSamplingRate   : %d\n", pSmsHeader->iSamplingRate);  
 
      //:::::::::::: Write Analysis Arguments :::::::::::::::
      if (pSmsHeader->nTextCharacters > 0)

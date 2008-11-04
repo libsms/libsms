@@ -27,6 +27,7 @@ for t in tools:
 	t_man = '../man/' + t +'.1'
 	tool =env.Program( target = t, source = t_src)
         Depends(tool, '../src/libsms.a')
+#        Depends(tool, '../src/libsms.so')
         #install tool
         env.Install(tools_prefix, t)
         env.Alias('install', tools_prefix)

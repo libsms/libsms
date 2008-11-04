@@ -27,8 +27,10 @@
 
 /*! \brief window to be used in the IFFT synthesis
  * 
- * contains both an inverse Blackman-Harris and triangular
- * \todo improve this documentation with references and explanations
+ * contains both an inverse Blackman-Harris and triangular window.
+ *
+ * \todo read X. Rodet, Ph. Depalle, "Spectral Envelopes and Inverse FFT
+ * Synthesis." Proc. 93rd AES Convention, October 1992
  * \param sizeWindow the size of the window
  * \param pFWindow pointer to an array that will hold the window
  */
@@ -39,7 +41,7 @@ void IFFTwindow (int sizeWindow, float *pFWindow)
 	float a0 = .35875, a1 = .48829, a2 = .14128, a3 = .01168;
 	double fConst = TWO_PI / sizeWindow, fIncr = 2.0 /sizeWindow, fVal = 0;
 
-	/* compute inverse of window */
+	/* compute inverse of Blackman-Harris 92dB window */
 	for(i = 0; i < sizeWindow; i++) 
 	{
 		pFWindow[i] = 1 / (a0 - a1 * cos(fConst * i) +

@@ -69,9 +69,11 @@ void sms_initHeader (SMS_Header *pSmsHeader)
  * \param nFrames           number of frames in analysis
  * \param pAnalParams   structure of analysis parameters
  * \param nTracks           number of sinusoidal tracks in the analysis
+ * \param iOriginalSRate  sampling rate of analysis signal
  */
 void sms_fillHeader (SMS_Header *pSmsHeader, 
-                          int nFrames, SMS_AnalParams *pAnalParams, int nTracks)
+                          int nFrames, SMS_AnalParams *pAnalParams,
+                     int nTracks, int iOriginalSRate)
 {
         sms_initHeader (pSmsHeader);
 
@@ -80,11 +82,11 @@ void sms_fillHeader (SMS_Header *pSmsHeader,
         pSmsHeader->iFrameRate = pAnalParams->iFrameRate;
         pSmsHeader->iStochasticType = pAnalParams->iStochasticType;
         pSmsHeader->nTracks = nTracks;
+        pSmsHeader->iSamplingRate = iOriginalSRate;
 	if(pAnalParams->iStochasticType != SMS_STOC_APPROX)
 		pSmsHeader->nStochasticCoeff = 0;
         else
                 pSmsHeader->nStochasticCoeff = pAnalParams->nStochasticCoeff;
-        pSmsHeader->iAnalSizeHop = pAnalParams->sizeHop;
         pSmsHeader->iFrameBSize = sms_frameSizeB(pSmsHeader);
 }
 
@@ -217,7 +219,7 @@ int sms_writeFrame (FILE *pSmsFile, SMS_Header *pSmsHeader,
                     SMS_Data *pSmsFrame)
 {  
 	if (fwrite ((void *)pSmsFrame->pSmsData, 1, pSmsHeader->iFrameBSize, 
-	            pSmsFile) < pSmsHeader->iFrameBSize)
+	            pSmsFile) < (unsigned int) pSmsHeader->iFrameBSize)
                 return(SMS_WRERR);
 	else return (SMS_OK);			
 }
@@ -307,7 +309,7 @@ int sms_getHeader (char *pChFileName, SMS_Header **ppSmsHeader,
 
 	/* read header */
 	rewind (*ppSmsFile);
-	if (fread ((void *) (*ppSmsHeader), 1, iHeadBSize, *ppSmsFile) < iHeadBSize)
+	if (fread ((void *) (*ppSmsHeader), 1, iHeadBSize, *ppSmsFile) < (unsigned int) iHeadBSize)
 		return (SMS_RDERR);
 
 	/* set pointers to variable part of header */

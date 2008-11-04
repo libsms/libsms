@@ -1,3 +1,5 @@
+## This file is used to create the information on the main doxygen page, index.html
+
 /*! \mainpage libsms
  *
  * libsms in an open source C library that implements SMS techniques for the analysis,
@@ -6,12 +8,15 @@
  * about this and many things related to SMS at the sms homepage:
  * http://mtg.upf.edu/technologies/sms/
  *
- * Since Janurary 2009, the code Serra wrote, originally for NextStep, has undergone changes to make
+ * Since Janurary 2008, the code Serra wrote, originally for NextStep, has undergone changes to make
  * it useful on modern day platforms.  The goal of this library is to be usable in real-time audio
  * applications for performing high-fidelity synthesis of sound models. It should work on most 
- * platforms available, although Linux is the only one tested so far. 
- *         - Richard Thomas Eakin - reakin [at] iua.upf.edu
- *
+ * platforms available, although Linux is the only one tested so far. Although the code is in good working
+ * order (and quite fast), the algorithms have not been looked at in many years and there is probably
+ * many ways to improve them since 1991.  So, it will be an ongoing effort to improve this library in many
+ * ways: optimizing, improving/verifying the algorithms, adding high-level descriptors, the list goes on and on..
+ * If you would like to comment, suggest, or contribute in any way, send to the following email:
+ *         Rich Eakin - reakin [at] iua.upf.edu
  *
  * \section use Using libsms and the included tools
  *
@@ -21,11 +26,11 @@
  * The main idea behind Spectral Modeling Synthesis is that you can seperate different components of 
  * a sound that have distinctive spectral components.  These components can then be analyzed in 
  * a manner more appropriate to their characteristics. To date, there are three main components that
- * can be seperated and represented in a spectral model, 2 of which are accomplished by this library ( and
- * the third should also be included in due time):
+ * can be seperated and represented in a spectral model, 2 of which are accomplished by this library ( hopefully
+ * the third will be implemented in due time):
  * - deterministic: spectra that is well modeled by evolving sinusoidal tracks
  * - stochastic: spectra that has a random phase, which is characteristic of noise.
- * - transients: spectra that begins stochastic but quickly resonates into a deterministic model.  This component
+ * - transients: spectra that begins stochastic but evolves into a deterministic signal.  This component
  *   is not yet implemented in this library, but is nonetheless important to note, as it is analyzed along with
  *   the rest of sound you are attempting to model.  
  *
@@ -37,6 +42,8 @@
  * analysis is hardly ever automatic.  For this reason, one may have to try several sets of parameters
  * on a given sound type before a good analysis is found.  It is also advisable to make every attempt to
  * obtain a good deterministic analysis before expecting anything decent from a stochastic model.
+ *
+ * sms.h has all the global declarations and needs to be included in whatever c code will use the library.
  *
  * \subsection building Building and Installing
  *
@@ -59,10 +66,14 @@
  * \subsection pd Externals for Pure Data (pd)
  *
  * There is a pd external library in the folder "pd" within the main libsms package.  The externals attempt to implement SMS 
- * analysis/synthesis and manipulations in a real-time, modular fashion that can easily be extended.  The documentation for
- * these externals is in the form of pd help files, which will install, along with the library, into "/PATH/TO/PD/doc/5.reference/sms".
+ * analysis/synthesis and manipulations in a real-time, modular style that can easily be extended because they all act on.
+ * a central buffer of SMS_Data.  
  *
- * \todo document how to build and install the library once the scons script is fixed
+ * Currently there are the following externals: [smsbuf], [smsanal], [smssynth~], and [smsedit].  The documentation for these 
+ * externals is in the form of pd help files.
+ *
+ * To compile type in main directory: "scons pd". To install type: "sudo scons pd install", which will default to installing
+ * the files into /usr/local/lib/pd (if your pd is somewhere else, provide the parent directory to scons with "prefix=DIR")
  *
  * \subsection python Python Module
  *
@@ -112,14 +123,19 @@
  * the original analysis.  Of course, in synthesis it is not necessary to go frame-by-frame because
  * the synthesiser will interpolate between whatever two frames it is given in succession.
  *
- * \subsection Third Party Libraries Used:
+ * \subsection libs Third Party Libraries Used:
  * - libsndfile: http://www.mega-nerd.com/libsndfile/ - soundfile input and output in various formats
  * - FFTW3 (floating point) http://www.fftw.org/ - an optional compilation flag allows the library to
  *   use FFTW to compute fast fourier transforms.  It is much faster, but is messy in its current 
  *  stage and the pd externals crash with it (I do not know why, other than pointers to memory
  *  are getting mixed up).
  *
+ * \section doxy Generating this Documentation
+ * To regenerate this documentation using doxymacs, type "scons doxygen" from the the main
+ * directory. You should then get html documentation in the folder "doc/html/".
+ *
  * \section copyright Copying
+ *
  * Copyright (c) 2008 MUSIC TECHNOLOGY GROUP (MTG)
  *                         UNIVERSITAT POMPEU FABRA 
  * 
@@ -138,6 +154,5 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
- *
  */
 

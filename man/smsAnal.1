@@ -86,7 +86,7 @@ default fundamental frequency in Hz. This is the frequency that is used to set t
 .TP 8
 .BI -l " lowestFund"
 .B (default 50) [20 <-> 5000]
-lowest fundamental frequency in Hz to be searched for. Only used in harmonic sounds. In the case of inharmonic sounds this value is used as the lowest frequency to track. No peak are found below this value.
+In harmonic signals, this is the lowest fundamental frequency in Hz to be searched for. In the case of inharmonic sounds this value is used as the lowest frequency to track. No peak is found below this value.
 .TP 8
 .BI -h " highestFund"
 .B (default 1000) [20 <-> 5000]
@@ -138,7 +138,7 @@ The first time the analysis is done it is useful to set this to 3 (this will let
 (2) is not currently implemented and defaults to (1)
 .TP 8
 .BI -c " nStocCoeff"
-.B (default 32) [min 4]
-When the stochastic type is set to 1(line segments on magnitude spectrum), this number corresponds to the number of inflexion points (will be interpolated to the necessary number of bins for the stochastic IFFT).
+.B (default 64) [min 4]
+When the stochastic type is set to 1(line segments on magnitude spectrum), this number corresponds to the number of inflexion points (will be interpolated to the necessary number of bins for the stochastic IFFT). The actual number of coefficients is limited to 1/2 the size of the FFT used  to create the spectrum ( samperate / framerate, roundup up to a power of 2).
 .SH SEE ALSO
 smsSynth(1), smsClean(1), smsPrint(1), smsResample(1), smsToYaml(1)

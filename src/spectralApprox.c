@@ -57,10 +57,14 @@ int sms_spectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
  
 	/* calculate the hop size */
 	if (sizeSpec1 != sizeSpec1Used)
-		fHopSize = (float) sizeSpec1Used / nCoefficients;
+                fHopSize = (float) sizeSpec1Used / nCoefficients;
 	else //why is this here, would be the same as sizeSpec1Used / nCoefficients
 		fHopSize = (float) sizeSpec1 / nCoefficients;
-	
+        if(nCoefficients > sizeSpec1)
+                nCoefficients = sizeSpec1;
+
+        fHopSize = (float) sizeSpec1Used / nCoefficients;
+        
 	/* approximate by linear interpolation */
 	if (fHopSize > 1)
 	{
@@ -93,7 +97,7 @@ int sms_spectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 	else
 	{
 		free (pFEnvelope);
-		printf ("SpectralApprox: sizeSpec1 has too many nCoefficients\n");
+		printf ("BLAHHH SpectralApprox: sizeSpec1 has too many nCoefficients\n"); /* \todo need to increase the frequency? */
 		return -1;
 	}
 

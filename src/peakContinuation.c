@@ -31,7 +31,6 @@
 
 #define MAX_CONT_CANDIDATES 5  /*!< maximum number of peak continuation
                                   candidates */
-
 /*! \brief function to get the next closest peak from a guide
  *
  * \param fGuideFreq		guide's frequency
@@ -297,7 +296,6 @@ static int GetBestPeak (SMS_Guide *pGuides, int iGuide, SMS_Peak *pSpectralPeaks
 static int GetNextMax (SMS_Peak *pSpectralPeaks, float *pFCurrentMax)
 {
 	float fPeakMag;
-//        float fMaxMag = SMS_MIN_MAG;
         float fMaxMag = 0.;
 	int iPeak, iMaxPeak = -1;
   

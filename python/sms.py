@@ -64,6 +64,9 @@ class SMS_Header(_object):
     __swig_setmethods__["nFrames"] = _sms.SMS_Header_nFrames_set
     __swig_getmethods__["nFrames"] = _sms.SMS_Header_nFrames_get
     if _newclass:nFrames = _swig_property(_sms.SMS_Header_nFrames_get, _sms.SMS_Header_nFrames_set)
+    __swig_setmethods__["iAnalSizeHop"] = _sms.SMS_Header_iAnalSizeHop_set
+    __swig_getmethods__["iAnalSizeHop"] = _sms.SMS_Header_iAnalSizeHop_get
+    if _newclass:iAnalSizeHop = _swig_property(_sms.SMS_Header_iAnalSizeHop_get, _sms.SMS_Header_iAnalSizeHop_set)
     __swig_setmethods__["iFrameBSize"] = _sms.SMS_Header_iFrameBSize_set
     __swig_getmethods__["iFrameBSize"] = _sms.SMS_Header_iFrameBSize_get
     if _newclass:iFrameBSize = _swig_property(_sms.SMS_Header_iFrameBSize_get, _sms.SMS_Header_iFrameBSize_set)
@@ -88,9 +91,6 @@ class SMS_Header(_object):
     __swig_setmethods__["fFrequency"] = _sms.SMS_Header_fFrequency_set
     __swig_getmethods__["fFrequency"] = _sms.SMS_Header_fFrequency_get
     if _newclass:fFrequency = _swig_property(_sms.SMS_Header_fFrequency_get, _sms.SMS_Header_fFrequency_set)
-    __swig_setmethods__["iOriginalSRate"] = _sms.SMS_Header_iOriginalSRate_set
-    __swig_getmethods__["iOriginalSRate"] = _sms.SMS_Header_iOriginalSRate_get
-    if _newclass:iOriginalSRate = _swig_property(_sms.SMS_Header_iOriginalSRate_get, _sms.SMS_Header_iOriginalSRate_set)
     __swig_setmethods__["iBegSteadyState"] = _sms.SMS_Header_iBegSteadyState_set
     __swig_getmethods__["iBegSteadyState"] = _sms.SMS_Header_iBegSteadyState_get
     if _newclass:iBegSteadyState = _swig_property(_sms.SMS_Header_iBegSteadyState_get, _sms.SMS_Header_iBegSteadyState_set)
@@ -451,9 +451,9 @@ class SMS_SynthParams(_object):
     __swig_setmethods__["fTranspose"] = _sms.SMS_SynthParams_fTranspose_set
     __swig_getmethods__["fTranspose"] = _sms.SMS_SynthParams_fTranspose_get
     if _newclass:fTranspose = _swig_property(_sms.SMS_SynthParams_fTranspose_get, _sms.SMS_SynthParams_fTranspose_set)
-    __swig_setmethods__["realftOut"] = _sms.SMS_SynthParams_realftOut_set
-    __swig_getmethods__["realftOut"] = _sms.SMS_SynthParams_realftOut_get
-    if _newclass:realftOut = _swig_property(_sms.SMS_SynthParams_realftOut_get, _sms.SMS_SynthParams_realftOut_set)
+    __swig_setmethods__["pFFTBuff"] = _sms.SMS_SynthParams_pFFTBuff_set
+    __swig_getmethods__["pFFTBuff"] = _sms.SMS_SynthParams_pFFTBuff_get
+    if _newclass:pFFTBuff = _swig_property(_sms.SMS_SynthParams_pFFTBuff_get, _sms.SMS_SynthParams_pFFTBuff_set)
     def __init__(self, *args): 
         this = _sms.new_SMS_SynthParams(*args)
         try: self.this.append(this)
@@ -620,6 +620,7 @@ sms_free = _sms.sms_free
 sms_initAnalysis = _sms.sms_initAnalysis
 sms_initAnalParams = _sms.sms_initAnalParams
 sms_initSynth = _sms.sms_initSynth
+sms_changeSynthHop = _sms.sms_changeSynthHop
 sms_freeAnalysis = _sms.sms_freeAnalysis
 sms_freeSynth = _sms.sms_freeSynth
 sms_fillSndBuffer = _sms.sms_fillSndBuffer
@@ -645,6 +646,7 @@ sms_clearSinc = _sms.sms_clearSinc
 sms_sine = _sms.sms_sine
 sms_sinc = _sms.sms_sinc
 sms_random = _sms.sms_random
+sms_power2 = _sms.sms_power2
 sms_synthesize = _sms.sms_synthesize
 sms_sineSynthFrame = _sms.sms_sineSynthFrame
 sms_initHeader = _sms.sms_initHeader
@@ -670,7 +672,6 @@ sms_getSound = _sms.sms_getSound
 sms_createSF = _sms.sms_createSF
 sms_writeSound = _sms.sms_writeSound
 sms_writeSF = _sms.sms_writeSF
-realft = _sms.realft
 sms_rdft = _sms.sms_rdft
 sms_createResSF = _sms.sms_createResSF
 sms_writeResSound = _sms.sms_writeResSound

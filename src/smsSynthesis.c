@@ -215,6 +215,8 @@ static int StocSynthApprox (SMS_Data *pSmsData, float *pFBuffer,
                 pSynthParams->iOriginalSRate;
         /* sizeSpec1Used cannot be more than what is available  \todo check by graph */
         if(sizeSpec1Used  > sizeSpec1) sizeSpec1Used = sizeSpec1;
+        //printf("iSamplingRate: %d, iOriginalSRate: %d, sizeSpec1: %d, sizeSpec1Used: %d, sizeSpec2: %d \n",
+//               pSynthParams->iSamplingRate, pSynthParams->iOriginalSRate, sizeSpec1, sizeSpec1Used, sizeSpec2);
         sms_spectralApprox (pSmsData->pFStocCoeff, sizeSpec1, sizeSpec1Used,
                         pFMagSpectrum, sizeSpec2, sizeSpec1Used);
 
@@ -323,7 +325,8 @@ int sms_synthesize (SMS_Data *pSmsData, float *pFSynthesis,
         else /* pSynthParams->iSynthesisType == SMS_STYPE_STOC */
                 StocSynthApprox(pSmsData, pFBuffer, pSynthParams);
 
-     
+        /*!< \todo use a comb filter of harmonics to better combine the signal here */
+
         /* de-emphasize the sound and normalize*/
         for(i = 0; i < sizeHop; i++)
                 pFSynthesis[i] = sms_deEmphasis(pFBuffer[i]);

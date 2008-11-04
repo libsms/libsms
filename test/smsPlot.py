@@ -14,7 +14,7 @@ except ImportError:
     from yaml import Loader, Dumper
 
 soundFilename = 'audio/flugel.wav'
-yamlFilename = 'flugel.yaml'
+yamlFilename = '../tools/flugel.yaml'
 
 sf = sndfile.open(soundFilename, 'r')
 sfinfo = sf.get_info()

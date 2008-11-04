@@ -291,7 +291,7 @@ method in [smsedit] to gradually move the data back to the original
 #X obj -38 119 *~;
 #X floatatom 126 136 4 0 120 0 dB - -;
 #X obj 159 103 vsl 15 68 0 110 0 1 empty empty empty 0 -8 0 8 -262144
--1 -1 4900 0;
+-1 -1 5900 0;
 #X obj -12 -5 inlet~;
 #X obj 54 -8 inlet~;
 #X obj -77 156 dac~ 1 2;
@@ -329,13 +329,16 @@ method in [smsedit] to gradually move the data back to the original
 #X obj 22 142 openpanel;
 #X obj 22 125 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
 -1;
-#X obj 481 392 hsl 200 15 0 2159 0 0 empty timebar empty -2 -8 0 10
--262144 -1 -1 0 0;
+#X obj 481 392 hsl 200 15 0 1181 0 0 empty timebar empty -2 -8 0 10
+-262144 -1 -1 19900 0;
 #X floatatom 478 412 5 0 0 0 - - -;
 #X msg 273 431 \; timebar range 0 \$1;
 #X msg 27 103 soundfile ../../test/audio/flugel.wav;
 #X msg 197 463 open ../../test/audio/flugel.wav;
 #X msg 268 100 open ../../test/sms/flugel.sms;
+#X obj 477 461 line;
+#X obj 474 438 pack f 20;
+#X floatatom 525 418 5 0 0 0 - - -;
 #X connect 0 0 27 0;
 #X connect 1 0 46 0;
 #X connect 1 0 46 1;
@@ -376,8 +379,11 @@ method in [smsedit] to gradually move the data back to the original
 #X connect 47 0 8 0;
 #X connect 48 0 47 0;
 #X connect 49 0 48 0;
-#X connect 50 0 1 0;
 #X connect 50 0 51 0;
+#X connect 50 0 57 0;
 #X connect 53 0 8 0;
 #X connect 54 0 0 0;
 #X connect 55 0 0 0;
+#X connect 56 0 1 0;
+#X connect 57 0 56 0;
+#X connect 58 0 57 1;

@@ -163,14 +163,11 @@ int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
 {
 
         /* set synthesis parameters from arguments and header */
-/* 	pSynthParams->iOriginalSRate = pSmsHeader->iOriginalSRate; */
-/* 	pSynthParams->origSizeHop = pSynthParams->iOriginalSRate / pSmsHeader->iFrameRate; */
-        pSynthParams->origSizeHop = pSmsHeader->iAnalSizeHop;
+	pSynthParams->iOriginalSRate = pSmsHeader->iSamplingRate;
+	pSynthParams->origSizeHop = pSynthParams->iOriginalSRate / pSmsHeader->iFrameRate;
 	pSynthParams->iStochasticType = pSmsHeader->iStochasticType;
-        pSynthParams->iOriginalSRate = pSmsHeader->nFrames * pSmsHeader->iAnalSizeHop;
         if(pSynthParams->iSamplingRate <= 0)
                 pSynthParams->iSamplingRate = pSynthParams->iOriginalSRate;
-
         /*initialize transposing value to 1, no transpose */
         pSynthParams->fTranspose = 1.0;
 
@@ -318,7 +315,7 @@ void sms_initAnalParams (SMS_AnalParams *pAnalParams)
 	pAnalParams->iFormat = SMS_FORMAT_H;
 	pAnalParams->iFrameRate = 400;
 	pAnalParams->iStochasticType =SMS_STOC_APPROX;
-	pAnalParams->nStochasticCoeff = 32;
+	pAnalParams->nStochasticCoeff = 64;
 	pAnalParams->fLowestFundamental = 50;
 	pAnalParams->fHighestFundamental = 1000;
 	pAnalParams->fDefaultFundamental = 100;

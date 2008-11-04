@@ -5,7 +5,7 @@ Import('*')
 
 lib_prefix = prefix+'/lib'
 env.Alias('install', lib_prefix);
- 
+
 sms_sources = Split("""
                 sms.c 
                 smsAnalysis.c 
@@ -29,4 +29,5 @@ sms_sources = Split("""
 """)
 
 lib = env.Library( 'libsms', sms_sources )
+#lib = env.SharedLibrary( 'libsms', sms_sources )
 env.Install(lib_prefix, lib) 

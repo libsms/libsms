@@ -45,6 +45,12 @@
  *  The header also contains variable components for additional information
  *  that may be stored along with the analysis, such as descriptors or text.
  *  
+ *  The first four members of the Header are necessary in this order to correctly
+ *  open the .sms files created by this library.
+ *
+ *  iSampleRate contains the samplerate of the analysis signal because it is
+ *  necessary to know this information to recreate the residual spectrum.
+ *  
  *  In the first release, the descriptors are not used, but are here because they
  *  were implemented in previous versions of this code (in the 90's).  With time,
  *  the documentation will be updated to reflect which members of the header
@@ -55,21 +61,21 @@ typedef struct
 	int iSmsMagic;         /*!< identification constant */
 	int iHeadBSize;        /*!< size in bytes of header */
 	int nFrames;	         /*!< number of data frames */
-        int iAnalSizeHop;     /*!< hopsize used in analysis (samples progressed in each frame */
 	int iFrameBSize;      /*!< size in bytes of each data frame */
+        int iSamplingRate;     /*!< samplerate of analysis signal (necessary to recreate residual spectrum */
 	int iFormat;           /*!< type of data format \see SMS_Format */
+	int nTracks;     /*!< number of sinusoidal tracks per frame */
 	int iFrameRate;        /*!< rate in Hz of data frames */
 	int iStochasticType;   /*!< type stochastic representation */
-	int nTracks;     /*!< number of sinusoidal tracks per frame */
 	int nStochasticCoeff;  /*!< number of stochastic coefficients per frame  */
 	float fAmplitude;      /*!< average amplitude of represented sound.  */
 	float fFrequency;      /*!< average fundamental frequency */
 	int iBegSteadyState;   /*!< record number of begining of steady state. */
 	int iEndSteadyState;   /*!< record number of end of steady state. */
 	float fResidualPerc;   /*!< percentage of the residual to original */
-	int nLoopRecords;      /*< number of loop records specified. */
-	int nSpecEnvelopePoints; /*< number of breakpoints in spectral envelope */
-	int nTextCharacters;   /*< number of text characters */
+	int nLoopRecords;      /*!< number of loop records specified. */
+	int nSpecEnvelopePoints; /*!< number of breakpoints in spectral envelope */
+	int nTextCharacters;   /*!< number of text characters */
 	/* variable part */
 	int *pILoopRecords;    /*!< array of record numbers of loop points */
 	float *pFSpectralEnvelope; /*!< spectral envelope of partials */
@@ -180,14 +186,22 @@ typedef struct
  * Each analysis needs one of these, which contains all settings,
  * sound data, deterministic synthesis data, and every other 
  * piece of data that needs to be shared between functions.
+ *
+ * There is an array of already analyzed frames (hardcoded to 50 right now -
+ * \todo make it variable - you would want this very small in real-time analysis)
+ *  that are accumulated for good harmonic detection
+ * and partial tracking. For instance, once the fundamental frequency of a 
+ * harmonic signal is located (after a few frames), the harmonic analysis 
+ * and peak detection/continuation process can be re-computed with more accuracy.
+ * 
  */
 typedef struct 
 {
 	int iDebugMode; /*!< debug codes enumerated by SMS_DBG \see SMS_DBG */
 	int iFormat;          /*!< analysis format code defined by SMS_Format \see SMS_Format */
+	int iSoundType;            /*!< type of sound to be analyzed \see SMS_SOUND_TYPE */	
+	int iStochasticType;      /*!<  type of stochastic model defined by SMS_StocSynthType \see SMS_StocSynthType */
 	int iFrameRate;        /*!< rate in Hz of data frames */
-	int iStochasticType;      /*!<  type of stochastic model defined by SMS_StocSynthType 
-                                                     \see SMS_StocSynthType */
 	int nStochasticCoeff;  /*!< number of stochastic coefficients per frame  */
 	float fLowestFundamental; /*!< lowest fundamental frequency in Hz */
 	float fHighestFundamental;/*!< highest fundamental frequency in Hz */
@@ -199,7 +213,7 @@ typedef struct
 	int iDefaultSizeWindow;   /*!< default size of analysis window in samples */
 	int sizeHop;              /*!< hop size of analysis window in samples */
 	float fSizeWindow;       /*!< size of analysis window in number of periods */
-	int nGuides;              /*!< number of guides used \todo explain */
+	int nGuides;              /*!< number of guides used for peak detection and continuation \see SMS_Guide */
 	int iCleanTracks;           /*!< whether or not to clean sinusoidal tracks */
 	float fMinRefHarmMag;     /*!< minimum magnitude in dB for reference peak */
 	float fRefHarmMagDiffFromMax; /*!< maximum magnitude difference from reference peak to highest peak */
@@ -208,30 +222,29 @@ typedef struct
 	int iMaxSleepingTime;	   /*!< maximum sleeping time for a track */
 	float fHighestFreq;        /*!< highest frequency to be searched */
 	float fMinPeakMag;         /*!< minimum magnitude in dB for a good peak */	
-	int iSoundType;            /*!< type of sound to be analyzed emumerated by SMS_SOUND_TYPE 
-                                                   \see SMS_SOUND_TYPE */	
 	int iAnalysisDirection;    /*!< analysis direction, direct or reverse */	
 	int iSizeSound;             /*!< total size of sound to be analyzed in samples */	 	
-	int iWindowType;            /*!< type of analysis window enumerated by SMS_WINDOWS 
-                                                       \see SMS_WINDOWS */			  	 			 
+	int iWindowType;            /*!< type of FFT analysis window \see SMS_WINDOWS */			  	 			 
         int iMaxDelayFrames;     /*!< maximum number of frames to delay before peak continuation */
-        /*! below is all data storage that needs to travel with the analysis */
         SMS_Data prevFrame;   /*!< the previous analysis frame  */
-        SMS_SndBuffer soundBuffer;    /*!< samples to be analyzed */
-        SMS_SndBuffer synthBuffer; /*!< resynthesized samples needed to get the residual */
-        SMS_AnalFrame *pFrames;  /*!< \todo is AnalFrame is necessary here? */
-        SMS_AnalFrame **ppFrames; /*!< \todo explain why this double pointer is necessary */
+        SMS_SndBuffer soundBuffer;    /*!< signal to be analyzed */
+        SMS_SndBuffer synthBuffer; /*!< resynthesized signal used to create the residual */
+        SMS_AnalFrame *pFrames;  /*!< an array of frames that have already been analyzed */
+        SMS_AnalFrame **ppFrames; /*!< pointers to the frames analyzed (it is circular-shifted once the array is full */
         float fResidualPercentage; /*!< accumalitive residual percentage */
-        float *pFSpectrumWindow; /*< the window used during spectrum analysis */
+        float *pFSpectrumWindow; /*!< the window used during spectrum analysis */
 #ifdef FFTW
         SMS_Fourier fftw; /*!< structure of data used by the FFTW library (floating point) */
 #endif
 } SMS_AnalParams;
 
 /*! \struct SMS_SynthParams
- * \brief structure with useful information for synthesis functions
+ * \brief structure with information for synthesis functions
  *
- * \todo details
+ * This structure contains all the necessary settings for different types of synthesis.
+ * It also holds arrays for windows and the inverse-FFT, as well as the previously
+ * synthesized frame.
+ *
  */
 typedef struct
 {
@@ -243,15 +256,13 @@ typedef struct
 	int iOriginalSRate;  /*!< samplerate of the sound model source.  I used to determine the stochastic
                                synthesis approximation */
 	int iSamplingRate;         /*!< synthesis samplerate */
-	SMS_Data prevFrame; /*!< previous data frame, used for smooth interpolation between frames */
 	int sizeHop;                   /*!< number of samples to synthesis for each frame */
         int origSizeHop;            /*!< original number of samples used to create each analysis frame */
-	float *pFDetWindow;    /*!< array to hold the window used for deterministic synthesis
-                                                \todo explain which window this is */
-        float *pFStocWindow; /*!< array to hold the window used for stochastic synthesis
-                                                \todo explain which window this is */
         float fStocGain;            /*!< gain multiplied to the stachostic component */
         float fTranspose;          /*!< frequency transposing value multiplied by each frequency */
+	float *pFDetWindow;    /*!< array to hold the window used for deterministic synthesis  \see SMS_WIN_IFFT */
+        float *pFStocWindow; /*!< array to hold the window used for stochastic synthesis (Hanning) */
+	SMS_Data prevFrame; /*!< previous data frame, used for smooth interpolation between frames */
 #ifdef FFTW
         SMS_Fourier fftw; /*!< structure of data used by the FFTW library (floating point) */
 #else
@@ -259,13 +270,12 @@ typedef struct
 #endif
 } SMS_SynthParams;
 
-//#define SMS_MIN_MAG     .3      /*!< \brief minimum magnitude to be searched */
-#define SMS_MIN_MAG     .01      /*!< \brief minimum magnitude to be searched */
-                                    
 /*! \struct SMS_HarmCandidate
  * \brief structure to hold information about a harmonic candidate 
  *
- * \todo details, and maybe move to harmDetection.c
+ * This structure provides storage for accumimlated statistics when
+ * trying to decide which track is the fundamental frequency, during
+ * harmonic detection.
  */
 typedef struct 
 {
@@ -279,33 +289,40 @@ typedef struct
 /*! \struct SMS_ContCandidate
  * \brief structure to hold information about a continuation candidate 
  *
- * \todo details, and maybe move to harmDetection.c
+ * This structure holds statistics about the guides, which is used to
+ * decide the status of the guide
  */
 typedef struct
 {
 	float fFreqDev;       /*!< frequency deviation from guide */
 	float fMagDev;        /*!< magnitude deviation from guide */
-	int iPeak;                /* peak number */
+	int iPeak;                /*!< peak number (organized according to frequency)*/
 } SMS_ContCandidate;        
 
 /*! \struct SMS_Guide
  * \brief information attached to a guide
  *
- * used in peak continuation    
- * \todo details, possibly move
+ * This structure is used to organize the detected peaks into time-varying
+ * trajectories, or sinusoidal tracks.  As the analysis progresses, previous 
+ * guides may be updated according to new information in the peak continuation
+ * of new frames (two-way mismatch). 
  */
 typedef struct
 {
 	float fFreq;          /*!< frequency of guide */
 	float fMag;           /*!< magnitude of guide */
 	int iStatus;          /*!< status of guide: DEAD, SLEEPING, ACTIVE */
-	int iPeakChosen;    /*!< peak number chosen by the guide (was a short) */
+	int iPeakChosen;    /*!< peak number chosen by the guide */
 } SMS_Guide;
 
 
 /*!  \brief analysis format
  *
- *   \todo explain how this is important for the analysis
+ * Is the signal is known to be harmonic, using format harmonic (with out without
+ * phase) will give more accuracy to the peak continuation algorithm.  If the signal
+ * is known to be inharmonic, then it is best to use one of the inharmonic settings
+ * to tell the peak continuation algorithm to just look at the peaks and connect them,
+ * instead of trying to look for peaks at specific frequencies (harmonic partials).
  */
 enum SMS_Format
 {
@@ -324,7 +341,7 @@ enum SMS_Format
  */
 enum SMS_SynthType
 {
-        SMS_STYPE_ALL, /*!< both components combined */
+        SMS_STYPE_ALL,      /*!< both components combined */
         SMS_STYPE_DET,      /*!< deterministic component alone */
         SMS_STYPE_STOC    /*!< stochastic component alone */
 };
@@ -354,22 +371,16 @@ enum SMS_DetSynthType
  * coefficients are randomly generated, according to the theory that a
  * stochastic spectrum consists of random phases.
  * 
- * Waveform samples simply stores the residual component to file. During
- * resynthesis, the samples are looped in order to fit the specified 
- * hopsize. 
- *
- * The Inverse FFT method is not implemented, but holds the idea of storing
- * the exact spectrum and phases of the residual component to file.  During
- * synthesis, it may be possible to achieve higher fidelity by interpolating this
- * data, instead of approximating the phases
+ * The Inverse FFT method is not implemented, but is based on the idea of storing
+ * the exact spectrum and phases of the residual component to file. Synthesis
+ * could then be an exact reconstruction of the original signal, provided
+ * interpolation is not necessary.
  *
  * No stochastic component can also be specified in order to skip the this
  * time consuming process altogether.  This is especially useful when 
  * performing multiple analyses to fine tune parameters pertaining to the 
  * determistic component; once that is achieved, the stochastic component
  * will be much better as well.
- *  
- * \todo update docs
  */
 enum SMS_StocSynthType
 {
@@ -399,7 +410,7 @@ enum SMS_ERRORS
 enum SMS_DBG
 {
         SMS_DBG_NONE,                    /*!< 0, no debugging */
-        SMS_DBG_INIT,                       /*!< 1, initialitzation functions \todo currently not doing anything */
+        SMS_DBG_DET,                       /*!< 1, not yet implemented \todo make this show main information to look at for  discovering the correct deterministic parameters*/
         SMS_DBG_PEAK_DET,	          /*!< 2, peak detection function */
         SMS_DBG_HARM_DET,	  /*!< 3, harmonic detection function */
         SMS_DBG_PEAK_CONT,        /*!< 4, peak continuation function */
@@ -428,7 +439,9 @@ enum SMS_SOUND_TYPE
 
 /* \brief direction of analysis
  *
- * \todo explain when to use reverse 
+ * Sometimes a signal can be clearer at the end than at
+ * the beginning.  If the signal is very harmonic at the end then
+ * doing the analysis in reverse could provide better results.
  */
 enum SMS_DIRECTION
 {
@@ -437,8 +450,6 @@ enum SMS_DIRECTION
 };
 
 /* \brief window selection
- *
- * \todo verify terminolgy and usage 
  */
 enum SMS_WINDOWS
 {
@@ -448,7 +459,8 @@ enum SMS_WINDOWS
         SMS_WIN_BH_74,            /*!< blackman-harris, 74dB cutoff */ 
         SMS_WIN_BH_92,             /*!< blackman-harris, 92dB cutoff */ 
         SMS_WIN_HANNING,      /*!< hanning */ 		
-        SMS_WIN_IFFT              /*!< combination \todo reference docs */ 		
+        SMS_WIN_IFFT              /*!< window for deterministic synthesis based on the Inverse-FFT algorithm.
+                                   This is a combination of an inverse Blackman-Harris 92dB and a triangular window. */ 		
 };
 
 /* re-analyze and clean tracks */
@@ -457,7 +469,7 @@ enum SMS_WINDOWS
 
 #define SMS_MAX_DEVIATION .01   /*!< maximum deviation allowed */
 /*! number of frames in the past to be looked in possible re-analyze */
-#define SMS_ANAL_DELAY     50 /*!< \todo this should be a parameter in AnalParams */  
+#define SMS_ANAL_DELAY     100 /*!< \todo this should be a parameter in AnalParams */  
 /*! total number of delay frames */
 #define SMS_DELAY_FRAMES (SMS_MIN_GOOD_FRAMES + SMS_ANAL_DELAY)
 
@@ -600,7 +612,8 @@ int sms_getHeader (char *pChFileName, SMS_Header **ppSmsHeader,
                   	FILE **ppInputFile);
 
 void sms_fillHeader (SMS_Header *pSmsHeader, 
-                          int nFrames, SMS_AnalParams *pAnalParams, int nTracks);
+                          int nFrames, SMS_AnalParams *pAnalParams,
+                     int nTracks, int iOriginalSRate);
 
 int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader, 
                     FILE **ppOutSmsFile);
@@ -678,7 +691,7 @@ void sms_writeDebugFile ();
 
 /*! \struct SMS_HybParams
  * \brief structure for hybrid program 
- * \todo detailed documentation
+ * \todo documentation ... but needs to be re-implemented first
  */
 typedef struct
 {

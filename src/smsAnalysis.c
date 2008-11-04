@@ -290,7 +290,7 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
                                 printf("sms_analyze: error allocating memory for pFResidual \n");
                                 return -1;
                         }
-
+                        //printf("sizeBuffer: %d \n", sizeData);
 			/* obtain residual sound from original and synthesized sounds */
 			sms_residual (pAnalParams->synthBuffer.pFBuffer, pFData, pFResidual, sizeData, 
 			             pAnalParams);

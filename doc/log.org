@@ -2,34 +2,48 @@
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 libsms work log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-* Todo list (before 1.0)
-** TODO things to add to main page
+* Todo list (0.9)
+** TODO things to add to main doc page
    - [X] copyright information
-   - [ ] thanks?
-   - [ ] info on pd files (reference to readme.txt to install)
+   - [X] info on pd files 
    - [X] info on python
    - [X] info on tools
-   - [ ] info on tests
-   - [ ] section on this log
-** TODO scons install for pd
+   - [ ] info on examples
+   - [X] section on this log
+** TODO scons install for pd and mac os x 10.4
    - [ ] allow for telling scons where the header is located
-   - [ ] make callable from main scons script
-         - possibly automatic if pd header is found
-** TODO pd help files need to be finished
+   - [X] make callable from main scons script
+** DONE pd help files need to be finished
 ** TODO an example pd file for good editing
 ** TODO make bash scripts for analysis/synthesis
+** TODO smsanal
+   - [ ] analyzing piano.aiff crashes
+   - [ ] make sure analyzing 2 sounds (one after other) works
 ** TODO make sure [smssynth~] handles changes to smsbuf correctly
     - [ ] new analysis of different file
     - [ ] new analysis of same file, different parameters
 ** TODO clean svn
 *** what is calcCorr in tools?
-** TODO Doxygen todo list
+** TODO why does yaml file show partials with negative db?!
+   - see guitarchord-debugme.yaml in examples dir
 * Todo list (after 1.0)
-** TODO comparison of stochastic resynthesis at different samplerates
-   - originally the samplerate was set at 44100
-   - now it is variable
-   - [ ] make plots to compare the coefficients at different samplerates
-   - [ ] determine why certain constants are within StochSynthApprox (smsSynthesis.c)
+** TODO Doxygen todo list
+   - pretty good for now, but many more things that could use better docs
+** TODO resynthesize with only 1 fft
+   - in the current implementation, the stochastic and deterministic are inverse-fft'ed
+     seperately
+   - will need to mulitply the stochastic spectrum by the inverse blackmann harris
+     window because the deterministic part uses this (see DAFX pg 36)
+** TODO stochastic resynthesis needs a closer look
+*** TODO make sure different samplerates produce similar spectrums
+    - originally the samplerate was set at 44100
+    -  now it is variable
+    - [ ] make plots to compare the coefficients at different samplerates
+    - [ ] determine why certain constants are within StochSynthApprox (smsSynthesis.c)
+*** TODO make sure nStocCoeff is set right for different framerates
+    - right now, coefficients are limited to SR / FR, rounded up to the nearest pow2
+    - when nCoeff is set higher than this, artifacts are appearing in the residual synthesis
+    - [ ] need to check at the beginning and limit the coeffcients
 ** TODO make a high level function for Post-Processing an SMS analysis
 *** should be included in analysis like programs
     - return a pointer to another smsData structure, or file?
@@ -42,25 +56,24 @@ libsms work log
 ** TODO make python synthesis script with SWIG wrappers
 *** first start by copying smsSynth 
 *** then add time-based manipulations (envelopes, pitch/time adjustments)
-** TODO improve smsPlot.py 
-   - currently just plots deterministic component
-   - [ ] use SWIG wrapper instead of yaml
+** TODO set of python plotting tools
+    - [ ] use SWIG wrapper instead of yaml
 ** TODO re-analysis
    - the problem was SMS_ANAL_DELAY was not large enough, so not all of the
      bad frames were being re-analyzed
    - [ ] need to make this a member of SMS_AnalParams structur
 ** TODO [smssynth~]: fix function for changing sizehop
+** TODO make framerate of analysis specifieble by milleseconds instead of hz
 ** TODO [#C] optimizing
    - [ ] benchmark FFT's
    - [ ] change fabs() to fabsf() if they don't need to be doubles
+     - [ ] same with floorf
    - [ ] calloc's/malloc's done per function call
    - check if they are only done once
        - most are in if statements, add an else with a print to check
-   - [ ] same with floorf
-   - [ ] store magnitudes in RMS instead of db
+   - [ ] use table lookup for dB conversion
    - [ ] currently uses random() from stdlib.
-          - could there be a better/faster version?
-          - should the random number be filtered?
+          - try merseinne twister / other generator
 * Wish list
 ** improvement of inharmonic analysis/synthesis
    - is it being done right now?
