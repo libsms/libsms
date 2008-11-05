@@ -28,7 +28,8 @@ for x in smspd_sources:
 env.Append(CPPDEFINES= 'PD' )
 if os.name == 'mac':
     env.Append(CPPPATH=prefix+'/include')
-    print "appended CPPPATH: ", prefix + '/include'
+    newpath = prefix + '/include'
+    print "appended CPPPATH: ",newpath
 
 env = env.Clone( SHLIBPREFIX = '')
 
@@ -36,6 +37,7 @@ conf = Configure(env)
 if not conf.CheckLibWithHeader('pthread','pthread.h','c'):
     print 'cannot find libpthread'
     Exit(1)
+
 if not conf.CheckCHeader('m_pd.h')
     print 'cannot find m_pd.h pd header'
     Exit(1)
