@@ -13,8 +13,8 @@ try:
 except ImportError:
     from yaml import Loader, Dumper
 
-soundFilename = 'audio/flugel.wav'
-yamlFilename = '../tools/flugel.yaml'
+soundFilename = 'ocarina.wav'
+yamlFilename = 'ocarina.yaml'
 
 sf = sndfile.open(soundFilename, 'r')
 sfinfo = sf.get_info()

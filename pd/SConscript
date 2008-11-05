@@ -23,8 +23,6 @@ for x in smspd_sources:
     else:
         helpfiles.append('help/' + os.path.splitext(os.path.basename(x))[0] + '-help.pd')
 
-print "helpfiles:", helpfiles
-
 env.Append(CPPDEFINES= 'PD' )
 
 env = env.Clone( SHLIBPREFIX = '')

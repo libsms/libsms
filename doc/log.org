@@ -3,12 +3,13 @@
 libsms work log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 * Todo list (0.9)
-** TODO things to add to main doc page
+** TODO seperate pd externals from libsms?
+** DONE things to add to main doc page
    - [X] copyright information
    - [X] info on pd files 
    - [X] info on python
    - [X] info on tools
-   - [ ] info on examples
+   - [X] info on examples
    - [X] section on this log
 ** TODO scons install for pd and mac os x 10.4
    - [ ] allow for telling scons where the header is located
@@ -44,14 +45,15 @@ libsms work log
     - right now, coefficients are limited to SR / FR, rounded up to the nearest pow2
     - when nCoeff is set higher than this, artifacts are appearing in the residual synthesis
     - [ ] need to check at the beginning and limit the coeffcients
-** TODO make a high level function for Post-Processing an SMS analysis
+** TODO make Post-Processing functions
 *** should be included in analysis like programs
     - return a pointer to another smsData structure, or file?
 *** TODO contains a smsResample 
 *** TODO contains smsClean code
-    - iterates over the entire file to connect short tracks
-    - this is different than the built in cleaning in smsAnalysis because it
-      already has the entire analysis
+    - [ ] remove unused tracks
+     - iterates over the entire file to connect short tracks
+     - this is different than the built in cleaning in smsAnalysis because it
+       already has the entire analysis
 *** TODO Spectral envelope
 ** TODO make python synthesis script with SWIG wrappers
 *** first start by copying smsSynth 

@@ -35,10 +35,6 @@ for x in sources:
 
 env = Environment( ENV = os.environ, CCFLAGS = sms_cflags , CPPPATH = sms_srcpath, CPPDEFINES= 'PD')
 env.Append( LIBPATH = sms_srcpath, LIBS = sms_libs )
-#if 'pdheader=PATH' is given as an argument, use it. Otherwise check for a global m_pd.h
-# pdheader_loc = ARGUMENTS.get('pdheader', '/usr/local/include/')
-# env.Append(CPPPATH = pdheader_loc)
-# print "appended the following header location to search for m_pd.h:", pdheader_loc
 
 env = env.Clone( SHLIBPREFIX = '')
 

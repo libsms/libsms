@@ -63,6 +63,12 @@
  * - smsToYaml: a .sms file to YAML text format.  In can then easily be read, or converted to other formats that understand YAML
  * - smsResample: adjust the framerate of *.sms file
  *
+ * \subsection examples Examples
+ *
+ * In the examples folder, there are some bash scripts that show analysis and synthesis of different types of sounds.
+ * The samples were downloaded from http://www.freesound.org and the url for the sample used is included with each script.  They should help
+ * you get started with knowing what parameters to use for different characteristic sounds.
+ * 
  * \subsection pd Externals for Pure Data (pd)
  *
  * There is a pd external library in the folder "pd" within the main libsms package.  The externals attempt to implement SMS 
