@@ -26,7 +26,7 @@ for x in smspd_sources:
         helpfiles.append('help/' + os.path.splitext(os.path.basename(x))[0] + '-help.pd')
 
 env.Append(CPPDEFINES= 'PD' )
-if os.name = 'mac':
+if os.name == 'mac':
     env.Append(CPPPATH=prefix+'/include')
     print "appended CPPPATH: ", prefix + '/include'
 
