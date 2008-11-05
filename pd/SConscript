@@ -33,7 +33,7 @@ conf = Configure(env)
 if not conf.CheckLibWithHeader('pthread','pthread.h','c'):
     print 'cannot find libpthread'
     Exit(1)
-if not conf.CheckCHeader('m_pd.h'):
+if not conf.CheckCHeader('m_pd.h') or conf.CheckCHeader('include/m_pd.h'):
     print 'cannot find m_pd.h pd header'
     Exit(1)
 
