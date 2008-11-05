@@ -28,8 +28,8 @@ for x in smspd_sources:
 env.Append(CPPDEFINES= 'PD' )
 if os.name == 'mac':
     env.Append(CPPPATH=prefix+'/include')
-    newpath = prefix + '/include'
-    print "appended CPPPATH: ",newpath
+#    newpath = prefix + '/include'
+ #   print "appended CPPPATH: ", newpath
 
 env = env.Clone( SHLIBPREFIX = '')
 
