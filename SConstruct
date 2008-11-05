@@ -18,6 +18,7 @@ The following building commands are available:
 opts = Options()
 opts.AddOptions(
     PathOption('prefix', 'Directory of architecture independant files.', '/usr/local'),
+    PathOption('pdfolder', 'Directory to where main pd folders are (doc,extra,include,etc).', '/usr/local'),
     BoolOption('debug', 'Build with debugging information', False),
     BoolOption('fftw', 'Use FFTW3 library.', False)
 )
@@ -54,7 +55,7 @@ if not conf.CheckLibWithHeader('sndfile','sndfile.h','c'):
         print 'cannot find libsndfile'
         Exit(1)
 
-buildpd = conf.CheckCHeader('m_pd.h')
+# buildpd = conf.CheckCHeader('m_pd.h')
 
 if int(ARGUMENTS.get('fftw', 0)):
     if not conf.CheckLibWithHeader('fftw3f','fftw3.h','c'):
@@ -66,11 +67,10 @@ env = conf.Finish()
 
 prefix = ARGUMENTS.get('prefix', '/usr/local')
 
-Export( ['env','prefix'] )
+Export( ['env','prefix', 'commands'] )
 
 SConscript('src/SConscript')
 SConscript('tools/SConscript')
-if buildpd and 'pd' in commands:
-        print "*** pd header was found, now building pd externals"
-        SConscript('pd/SConscript')
+if 'pd' in commands:
+    SConscript('pd/SConscript')
 

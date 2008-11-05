@@ -15,6 +15,8 @@ smspd_sources =  Split("""
 help_dir = prefix + '/pd/doc/5.reference'
 extra_dir = prefix + '/pd/extra'
 
+prefix = ARGUMENTS.get('pdfolder','/usr/local')
+
 helpfiles = []
 helpfiles.append('help/smsbuf-help.pd')
 for x in smspd_sources:
@@ -29,8 +31,12 @@ env = env.Clone( SHLIBPREFIX = '')
 
 conf = Configure(env)
 if not conf.CheckLibWithHeader('pthread','pthread.h','c'):
-       print 'cannot find libpthread'
-       Exit(1)
+    print 'cannot find libpthread'
+    Exit(1)
+if not conf.CheckCHeader('m_pd.h'):
+    print 'cannot find m_pd.h pd header'
+    Exit(1)
+
 env = conf.Finish()
 
 print "libraries linking into externals: ", env.Dump('LIBS')
