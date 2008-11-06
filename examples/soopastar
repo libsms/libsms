@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# soopastar - singing voice
+# http://www.freesound.org/download/4228/4228_NoiseCollector_soopastar11.wav
+
+#parameters explained:
+# -u250: lowest fundamental frequency
+# -c128: stochastic coefficients set to 128
+smsAnal -d0 -c128 soopastar.wav soopastar.sms ;
+smsPrint -t4 soopastar.sms ;
+smsSynth soopastar.sms soopastar.synth.wav ;
+smsSynth -s1 soopastar.sms soopastar.det.wav ;
+# the residual still seems to be louder than it should be..
+# transposing down kind of sounds like some R&B
+smsSynth -x-9 -g.3 soopastar.sms soopastar.randb.wav ;
+# while transposing up is like a baby almost
+smsSynth -t1.618 -x4 -g.3 soopastar.sms soopastar.baby.wav ;
+# here is the unvoiced part - a whisper
+smsSynth -s2 soopastar.sms soopastar.stoc.wav
