@@ -34,7 +34,9 @@
 #include <fftw3.h>
 #endif
 
-#define SMS_MAX_NPEAKS      200    /*!< \brief maximum number of peaks  */
+#define SMS_VERSION 1.0 /*!< \brief version control number */
+
+#define SMS_MAX_NPEAKS 400    /*!< \brief maximum number of peaks  */
 
 /*! \struct SMS_Header 
  *  \brief structure for the header of an SMS file 
