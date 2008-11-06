@@ -1,7 +1,27 @@
 # -*- python -*-
 # Top-level scons script for libsms and tools
 
-import os
+import os, sys
+
+# ::::::::::::::: Help :::::::::::::::::::
+Help("""
+---- smspd  ----
+The following building commands are available:
+'scons' to build smspd
+'scons install' install binary external library and help files
+'scons -c to remove object files / uninstall
+""")
+
+# ::::::::::::::: Command-line options :::::::::::::::::::
+opts = Options()
+opts.AddOptions(
+    PathOption('sms', 'directory to find libsms.a', '/usr/local/lib'),
+    PathOption('smsheader', 'directory to look for sms.h', '/usr/local/include'),
+    PathOption('pdheader', 'directory to look for m_pd.h', '/usr/local/include'),
+    PathOption('pd', 'Directory to where main pd folders are (doc,extra,include,etc).', '/usr/local/lib'),
+    BoolOption('debug', 'Build with debugging information', False),
+    BoolOption('fftw', 'Use FFTW3 library.', False)
+)
 
 sources =  Split("""
                                             smspd.c 
@@ -11,19 +31,17 @@ sources =  Split("""
 """ )
 
 debug_mode = ARGUMENTS.get('debug',0 )
-prefix = ARGUMENTS.get('prefix','/usr/local/lib')
     
 if int(debug_mode):
-    sms_cflags = '-Wall -g'
+    cflags = '-Wall -g'
 else:
-    sms_cflags = ' -O2 -funroll-loops -fomit-frame-pointer \
+    cflags = ' -O2 -funroll-loops -fomit-frame-pointer \
         -Wall -W -Wshadow  \
         -Wno-unused -Wno-parentheses -Wno-switch '
 
-sms_srcpath = '../src'
-help_dir = prefix + '/pd/doc/5.reference'
-extra_dir = prefix + '/pd/extra'
-sms_libs =  ['m', 'sndfile', 'sms', 'fftw3f', 'pthread']
+pdpath = ARGUMENTS.get("pd","/usr/local/lib/pd")
+help_dir = pdpath + '/doc/5.reference'
+extra_dir = pdpath + '/extra'
 
 helpfiles = []
 helpfiles.append('help/smsbuf-help.pd')
@@ -33,37 +51,57 @@ for x in sources:
     else:
         helpfiles.append('help/' + os.path.splitext(os.path.basename(x))[0] + '-help.pd')
 
-env = Environment( ENV = os.environ, CCFLAGS = sms_cflags , CPPPATH = sms_srcpath, CPPDEFINES= 'PD')
-env.Append( LIBPATH = sms_srcpath, LIBS = sms_libs )
+env = Environment( ENV = os.environ, CCFLAGS = cflags , CPPDEFINES= 'PD', SHLIBPREFIX = '')
 
-env = env.Clone( SHLIBPREFIX = '')
+smspath = ARGUMENTS.get('sms','/usr/local/lib')
+env.Append( LIBPATH = smspath)
+smsheader = ARGUMENTS.get('smsheader',' /usr/local/include')
+env.Append(CPPPATH = smsheader)
+pdheader = ARGUMENTS.get('pdheader',' /usr/local/include')
+env.Append(CPPPATH = pdheader)
+
+print "CPPPATH:", env.Dump("CPPPATH")
 
 conf = Configure(env)
-
-
-if not conf.CheckCHeader('m_pd.h'):
-    print 'cannot find pd header m_pd.h'
-    Exit(1)
 
 if not conf.CheckLibWithHeader('m','math.h','c'):
         print 'cannot find libmath'
         Exit(1)
 
+if not conf.CheckLibWithHeader('sndfile','sndfile.h','c'):
+        print 'cannot find libsndfile'
+        Exit(1)
+
+if not conf.CheckLibWithHeader('pthread','pthread.h','c'):
+    print 'cannot find libpthread'
+    Exit(1)
+
+if not conf.CheckCHeader('m_pd.h'):
+    print 'cannot find pd header m_pd.h'
+    Exit(1)
+
+if int(ARGUMENTS.get('fftw', 0)):
+    if not conf.CheckLibWithHeader('fftw3f','fftw3.h','c'):
+        print 'cannot find fft3w, using realft()'
+    else:
+        env.Append(CCFLAGS = ' -DFFTW ')
+
+
 env = conf.Finish()
 
-print "compiling for:" , os.name 
-if  os.name == 'posix' :
+print "building for:" , sys.platform 
+if  sys.platform == 'linux2' :
     env = env.Clone( SHLIBSUFFIX = '.pd_linux' ) 
-elif os.name == 'mac':
+elif sys.platform == 'darwin':
     env = env.Clone( SHLIBSUFFIX = '.pd_darwin' ) 
-elif os.name == 'nt':
+elif sys.platform == 'nt':
     env = env.Clone( SHLIBSUFFIX = '.pd_nt' ) 
 else:
     print "scons error: only linux, mac, and nt are covered so far"
 
 
 pdlib = env.LoadableModule( target = "sms", source = sources)
-Depends(pdlib, '../src/libsms.a')
+
 env.Install(extra_dir, pdlib)
 env.Alias('install', extra_dir)
 env.Install(help_dir, helpfiles)

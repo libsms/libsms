@@ -2,35 +2,18 @@
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 libsms work log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-* Todo list (0.9)
-** TODO seperate pd externals from libsms?
-** DONE things to add to main doc page
-   - [X] copyright information
-   - [X] info on pd files 
-   - [X] info on python
-   - [X] info on tools
-   - [X] info on examples
-   - [X] section on this log
-** TODO scons install for pd and mac os x 10.4
-   - [ ] allow for telling scons where the header is located
-   - [X] make callable from main scons script
-** DONE pd help files need to be finished
-** TODO an example pd file for good editing
-** TODO make bash scripts for analysis/synthesis
-** TODO smsanal
-   - [ ] analyzing piano.aiff crashes
-   - [ ] make sure analyzing 2 sounds (one after other) works
-** TODO make sure [smssynth~] handles changes to smsbuf correctly
-    - [ ] new analysis of different file
-    - [ ] new analysis of same file, different parameters
+* Todo list (1.0)
+** TODO finish bash scripts for analysis/synthesis
+   - [ ] make sure url's are included
+   - [ ] get one for voice
 ** TODO clean svn
 *** what is calcCorr in tools?
+* Todo list (after 1.0)
 ** TODO why does yaml file show partials with negative db?!
    - see guitarchord-debugme.yaml in examples dir
-* Todo list (after 1.0)
 ** TODO Doxygen todo list
    - pretty good for now, but many more things that could use better docs
-** TODO resynthesize with only 1 fft
+** TODO resynthesize det+res with only 1 fft
    - in the current implementation, the stochastic and deterministic are inverse-fft'ed
      seperately
    - will need to mulitply the stochastic spectrum by the inverse blackmann harris
@@ -64,7 +47,6 @@ libsms work log
    - the problem was SMS_ANAL_DELAY was not large enough, so not all of the
      bad frames were being re-analyzed
    - [ ] need to make this a member of SMS_AnalParams structur
-** TODO [smssynth~]: fix function for changing sizehop
 ** TODO make framerate of analysis specifieble by milleseconds instead of hz
 ** TODO [#C] optimizing
    - [ ] benchmark FFT's
@@ -85,10 +67,6 @@ libsms work log
 *** was previously only used with the MK tool, which isn't available now
 ** transient model synthesis
 *** based on the Discrete Cosine Transform
-** get FFTW3 to work with pd externals
-*** current state:
-    - when fft arrays are initialized, the pointers are lost
-    - this only happens in pd, not from the terminal (and not with other fft algos)
 * Things done
 ** DONE SWIG Python wrapper
 ** DONE smsToYaml for importing into python
@@ -180,19 +158,3 @@ libsms work log
         - iNumSamples will be a predefined buffer of samples to synthesis at one time,
           indepenent of synthesis blocksize       
 
-** DONE pd externals
-*** [smsbuf]
-**** DONE [#A] loads an sms file into a buffer
-***** a header/data should live
-***** data is an array of sms records
-***** what else needs to be buffered?
-        - timetags? frametag     
-**** DONE [#C] stores the buffer to sms file
-*** [smsanal]
-**** DONE reads a pd array and analyzes it
-    - also can analyze from file
-**** DONE add analysis parameter classes (lots of them)
-*** [smssynth]
-**** DONE [#A] has access to an [smsbuf] by symbol name
-**** DONE [#A] synthesizes the [smsbuf]
-*** [smsedit]

@@ -4,6 +4,8 @@
 Import('*')
 
 lib_prefix = prefix+'/lib'
+header_prefix = prefix+'/include'
+header = "sms.h"
 env.Alias('install', lib_prefix);
 
 sms_sources = Split("""
@@ -31,3 +33,5 @@ sms_sources = Split("""
 lib = env.Library( 'libsms', sms_sources )
 #lib = env.SharedLibrary( 'libsms', sms_sources )
 env.Install(lib_prefix, lib) 
+env.Install(header_prefix, header)
+env.Alias('install', header_prefix)

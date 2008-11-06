@@ -69,18 +69,6 @@
  * The samples were downloaded from http://www.freesound.org and the url for the sample used is included with each script.  They should help
  * you get started with knowing what parameters to use for different characteristic sounds.
  * 
- * \subsection pd Externals for Pure Data (pd)
- *
- * There is a pd external library in the folder "pd" within the main libsms package.  The externals attempt to implement SMS 
- * analysis/synthesis and manipulations in a real-time, modular style that can easily be extended because they all act on.
- * a central buffer of SMS_Data.  
- *
- * Currently there are the following externals: [smsbuf], [smsanal], [smssynth~], and [smsedit].  The documentation for these 
- * externals is in the form of pd help files.
- *
- * To compile type in main directory: "scons pd". To install type: "sudo scons pd install", which will default to installing
- * the files into /usr/local/lib/pd (if your pd is somewhere else, provide the parent directory to scons with "prefix=DIR")
- *
  * \subsection python Python Module
  *
  * Although still largely untested, a SWIG interface file is in the subfolder 'python', which can be used to build python wrappers
@@ -96,8 +84,6 @@
  * There is a log at doc/log.org, within the main package.  It contains many things done, things to-do, and a wish list
  * of things that would be really nice to-do. 
  *
- * \todo tests and examples
- *
  * \section lib_structure Structure of libsms 
  *
  * Here are the main structures for analysis, synthesis, and getting from one to the other:
@@ -108,7 +94,8 @@
  * SMS_SynthParams - everything to compute synthesis \n
  * SMS_Data - where the analysis data ends up
  *
- * The main file for analysis routines is smsAnalysis.c. For synthesis, see smsSynthesis.c
+ * The main file for analysis routines is smsAnalysis.c. For synthesis, see smsSynthesis.c. From these two files (any by 
+ * looking at how they are prepared in the command line tools), you can follow different functions of the code.
  *
  * \subsection coding_style Info about the coding style used in this library:
  * - all functions used globally throughout the library are prepended with sms_ and are of the form

@@ -1,14 +1,28 @@
 ~~~~~~~~~ SMS for Puredata (Pd) ~~~~~~~~~~~~~~~
 
-This is the start of a set of externals for SMS analysis/synthesis
-in Pd.  It is far from complete... 
-
-- Richie Eakin Feb 11, 2008 reakinator@gmail.com
-
-::: Updates :::
-
-June 2, 2008:
-- smsSynthFile~ is here.  It is a proof-of-concept external; it reads a file created
-  by smsAnal and synthesizes an interpolated frame in real-time.  The frmae is
-  chosen by a float at its inlet.  See the help pd file for details.
-
+ * FINISH ME
+ *
+ * testing the building system on other systems still.. well, actually just Mac.  Don't care about anyone else :)
+ *
+ *  WRITE ABOUT LIBSMS AND HOMEPAGE
+ *
+ * Currently there are the following externals: [smsbuf], [smsanal], [smssynth~], and [smsedit].  The documentation for these 
+ * externals is in the form of pd help files.
+ *
+ * ---- BUILD INSTRUCTIONS ----
+ * To compile type in main directory: "scons". To install type: "sudo scons pd install", which will default to installing
+ * the files into /usr/local/lib/pd 
+ *
+ * TODO: provide information about building for mac
+ *
+ * scons needs to know where libsms.a is, if it is not in a system wide location (like /usr/local/lib) then you can provide
+ * the location by typing "scons sms=/PATH/TO/LIB". Likewise, scons also needs to know where sms.h is.  If you installed
+ * libsms with default settings and a "sudo scons install", everything should be okay. 
+ *
+ * Of course, scons also needs to be able
+ * to find the pd header (m_pd.h) as well as the following 3rd party libraries:
+ * - libsndfile  ( http://www.mega-nerd.com/libsndfile/ )
+ * - libpthread (WEBSITE)
+ * - libfftw (www.fftw.org) <-- this is only if you compile libsms with support for fftw (and even then it is buggy in pd)
+ *
+ * MAKE A COPYRIGHT NOTICE

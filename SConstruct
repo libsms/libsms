@@ -5,9 +5,7 @@ import os, sys
 
 # ::::::::::::::: Help :::::::::::::::::::
 Help("""
----- libsms pre-release ----
-Scons will look for python and pd, and if found, build the corresponding
-modules. 
+---- libsms ----
 The following building commands are available:
 'scons' to build libsms and the command line tools
 'scons pd' to build the pd externals
@@ -18,7 +16,6 @@ The following building commands are available:
 opts = Options()
 opts.AddOptions(
     PathOption('prefix', 'Directory of architecture independant files.', '/usr/local'),
-    PathOption('pdfolder', 'Directory to where main pd folders are (doc,extra,include,etc).', '/usr/local'),
     BoolOption('debug', 'Build with debugging information', False),
     BoolOption('fftw', 'Use FFTW3 library.', False)
 )
@@ -55,8 +52,6 @@ if not conf.CheckLibWithHeader('sndfile','sndfile.h','c'):
         print 'cannot find libsndfile'
         Exit(1)
 
-# buildpd = conf.CheckCHeader('m_pd.h')
-
 if int(ARGUMENTS.get('fftw', 0)):
     if not conf.CheckLibWithHeader('fftw3f','fftw3.h','c'):
         print 'cannot find fft3w, using realft()'
@@ -71,6 +66,4 @@ Export( ['env','prefix', 'commands'] )
 
 SConscript('src/SConscript')
 SConscript('tools/SConscript')
-if 'pd' in commands:
-    SConscript('pd/SConscript')
 
