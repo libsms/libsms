@@ -1,0 +1,38 @@
+# use emacs org-mode for pretty colors
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+smspd work log
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+* Todo list (1.0)
+** DONE pd help files need to be finished
+** TODO an example pd file for good editing
+** TODO smsanal
+   - [ ] analyzing piano.aiff crashes
+   - [ ] make sure analyzing 2 sounds (one after other) works
+** TODO make sure [smssynth~] handles changes to smsbuf correctly
+    - [ ] new analysis of different file
+    - [ ] new analysis of same file, different parameters
+** TODO scons install for mac os x 10.4
+   - [ ] allow for telling scons where the header is located
+* Todo list (after 1.0)
+** TODO [smssynth~]: fix function for changing sizehop
+** get FFTW3 to work with pd externals
+*** current state:
+    - when fft arrays are initialized, the pointers are lost
+    - this only happens in pd, not from the terminal (and not with other fft algos)
+* Things Done
+** DONE pd externals
+*** [smsbuf]
+**** DONE [#A] loads an sms file into a buffer
+***** a header/data should live
+***** data is an array of sms records
+***** what else needs to be buffered?
+        - timetags? frametag     
+**** DONE [#C] stores the buffer to sms file
+*** [smsanal]
+**** DONE reads a pd array and analyzes it
+    - also can analyze from file
+**** DONE add analysis parameter classes (lots of them)
+*** [smssynth]
+**** DONE [#A] has access to an [smsbuf] by symbol name
+**** DONE [#A] synthesizes the [smsbuf]
+*** [smsedit]
