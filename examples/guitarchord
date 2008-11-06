@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# a guitar chord is inharmonic containing three independant notes,
+# so trying to improve partial tracking by depending on a an overall
+# harmonic structure is useless.  Instead, just track peaks from frame to frame.
+# TRY: different windows (bh92)
+
+# ---- questions ---
+# analysis parameters:
+# -f2: format inharmonic
+# -q1: soundtype single note (turns off pitch detection
+# -r300: framerate is 300hz, large enough to allow 128 stochastic coefficients
+# -l85: lowest frequency 85 hertz, right below the low E of a guitar
+# -u88: sets the main window size to be large enough for 88 hertz
+# -p200: 200 partials (seems that more the better in inharmonic sounds)
+# -n300: 300 guides, probably not necessary
+# -t1: set peakToContGuide to full so that new peaks get full contribution
+# -c128: 128 stochastic coefficients (fft bins)
+# -a.0001: minimum track length is veeerry short
+smsAnal -f2 -q1 -r300 -l85 -u88 -p200 -n300 -t1 -c128 -a.0001 guitarchord.wav guitarchord.sms ;
+smsPrint -t4 guitarchord.sms ;
+smsSynth -s1 guitarchord.sms guitarchord.det.wav ;
+# turning the residual down a little because it is quite noisy
+smsSynth -g.15 guitarchord.sms guitarchord.synth.wav ;
+smsToYaml -t2 guitarchord.sms guitarchord.yaml

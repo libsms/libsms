@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# a saxaphone melody.  
+#parameters explained:
+# -r300: framerate is set to 300 hz
+# -u250: lowest fundamental frequency
+# -c128: stochastic coefficients set to 128
+smsAnal -d0 -r300 -u250 -c128 sax.wav sax.sms ;
+smsPrint -t4 sax.sms ;
+smsSynth sax.sms sax.synth.wav ;
+# here the synthesis is both faster and a 4th tone lower 
+smsSynth -t.7 -x-7 sax.sms sax.mod.wav ;

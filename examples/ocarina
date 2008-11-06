@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# parameters:
+# -r300: framerate is set to 300 hz
+# -c128: stochastic coefficients set to 128
+smsAnal -r300 -c128 ocarina.wav ocarina.sms ;
+smsPrint -t4 ocarina.sms ;
+smsSynth ocarina.sms ocarina.synth.wav ;
+smsSynth -s1 ocarina.sms ocarina.det.wav ;
+smsSynth -s2 ocarina.sms ocarina.stoc.wav ;
+# here the synthesis is 10 times longer than the orignal
+smsSynth -t10 ocarina.sms ocarina.10x.wav ;
