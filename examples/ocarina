@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# - ocarina note - 
+# http://www.freesound.org/download/21678/21678_madjad_Ocarina_Note_4_.wav
+# (converted to mono)
+
 # parameters:
 # -r300: framerate is set to 300 hz
 # -c128: stochastic coefficients set to 128

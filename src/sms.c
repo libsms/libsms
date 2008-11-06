@@ -313,7 +313,7 @@ void sms_initAnalParams (SMS_AnalParams *pAnalParams)
 {
 	pAnalParams->iDebugMode = 0;
 	pAnalParams->iFormat = SMS_FORMAT_H;
-	pAnalParams->iFrameRate = 400;
+	pAnalParams->iFrameRate = 300;
 	pAnalParams->iStochasticType =SMS_STOC_APPROX;
 	pAnalParams->nStochasticCoeff = 64;
 	pAnalParams->fLowestFundamental = 50;

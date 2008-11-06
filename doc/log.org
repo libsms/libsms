@@ -19,6 +19,7 @@ libsms work log
    - will need to mulitply the stochastic spectrum by the inverse blackmann harris
      window because the deterministic part uses this (see DAFX pg 36)
 ** TODO stochastic resynthesis needs a closer look
+*** TODO always turns out louder than the original
 *** TODO make sure different samplerates produce similar spectrums
     - originally the samplerate was set at 44100
     -  now it is variable

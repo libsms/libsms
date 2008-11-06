@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#- E minor Acoustic Guitar Chord
+# http://www.freesound.org/download/8492/8492_SpeedY_Emin_full.wav
+# (I chopped off all but the first few seconds of the sample)
+
 # a guitar chord is inharmonic containing three independant notes,
 # so trying to improve partial tracking by depending on a an overall
 # harmonic structure is useless.  Instead, just track peaks from frame to frame.

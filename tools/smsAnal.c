@@ -138,7 +138,7 @@ static int InitArguments (ARGUMENTS *pArguments)
 	pArguments->iAnalysisDirection = SMS_DIR_FWD;
 	pArguments->fWindowSize = 3.5;
 	pArguments->iWindowType = SMS_WIN_BH_62; 
-	pArguments->iFrameRate = 400;
+	pArguments->iFrameRate = 300;
 	pArguments->fHighestFreq = 12000.;
 	pArguments->fMinPeakMag = 0.;
 	pArguments->fFreqDeviation = .45;

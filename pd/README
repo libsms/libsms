@@ -22,7 +22,7 @@
  * Of course, scons also needs to be able
  * to find the pd header (m_pd.h) as well as the following 3rd party libraries:
  * - libsndfile  ( http://www.mega-nerd.com/libsndfile/ )
- * - libpthread (WEBSITE)
+ * - libpthread (standard on posix systems)
  * - libfftw (www.fftw.org) <-- this is only if you compile libsms with support for fftw (and even then it is buggy in pd)
  *
  * MAKE A COPYRIGHT NOTICE

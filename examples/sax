@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # a saxaphone melody.  
+# http://www.freesound.org/download/46798/46798_uauaua_mec7.wav
+
 #parameters explained:
 # -r300: framerate is set to 300 hz
 # -u250: lowest fundamental frequency
