@@ -147,6 +147,9 @@ int main (int argc, char *argv[])
  
         sms_init();
         sms_initSynth( pSmsHeader, &synthParams );
+         /* set modifiers */
+        synthParams.fTranspose = TEMPERED_TO_FREQ( fTranspose );
+        synthParams.fStocGain = stocGain;
 
         if(verboseMode)
         {
@@ -186,10 +189,6 @@ int main (int argc, char *argv[])
                 printf ("Could not allocate memory for pFSynthesis");
                 exit(0);
         }
-
-         /* set modifiers */
-        synthParams.fTranspose = TEMPERED_TO_FREQ( fTranspose );
-        synthParams.fStocGain = stocGain;
 
 	iSample = 0;
         /* number of samples is a factor of the ratio of samplerates */

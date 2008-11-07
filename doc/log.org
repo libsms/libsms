@@ -3,11 +3,9 @@
 libsms work log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 * Todo list (1.0)
-** TODO finish bash scripts for analysis/synthesis
-   - [ ] make sure url's are included
-   - [ ] get one for voice
-** TODO clean svn
-*** what is calcCorr in tools?
+** TODO how to make terminal tools/manpages in os x recognized globally?
+   - probably add usr/local/bin to somewhere
+   - is there a better place to install where they will automatically be seen?
 * Todo list (after 1.0)
 ** TODO why does yaml file show partials with negative db?!
    - see guitarchord-debugme.yaml in examples dir
@@ -66,6 +64,9 @@ libsms work log
    - why is smsAnal only producing < 100?
 ** restore Hybridize functions
 *** was previously only used with the MK tool, which isn't available now
+** repetive analysis using machine learning
+   - can automate some parameters this way
+      - window size, harmonic /inharmpic, melody/note
 ** transient model synthesis
 *** based on the Discrete Cosine Transform
 * Things done

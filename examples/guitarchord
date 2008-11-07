@@ -21,9 +21,9 @@
 # -t1: set peakToContGuide to full so that new peaks get full contribution
 # -c128: 128 stochastic coefficients (fft bins)
 # -a.0001: minimum track length is veeerry short
-smsAnal -f2 -q1 -r300 -l85 -u88 -p200 -n300 -t1 -c128 -a.0001 guitarchord.wav guitarchord.sms ;
+smsAnal -f2 -q1 -r300 -i4 -l85 -h20000 -u88 -p200 -n300 -t1 -c128 -a.0001 guitarchord.wav guitarchord.sms ;
 smsPrint -t4 guitarchord.sms ;
 smsSynth -s1 guitarchord.sms guitarchord.det.wav ;
-# turning the residual down a little because it is quite noisy
+# turning the residual down a little because it is too noisy
 smsSynth -g.15 guitarchord.sms guitarchord.synth.wav ;
 smsToYaml -t2 guitarchord.sms guitarchord.yaml
