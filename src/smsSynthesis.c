@@ -251,6 +251,7 @@ static int StocSynthApprox (SMS_Data *pSmsData, float *pFBuffer,
  
 #else /* using realft */        
 
+        /*\todo the stochastic resynthesis seems to be too loud here */
         /* adjust gain */
         for( i = 1; i < sizeSpec2; i++)
                 pFMagSpectrum[i] *= pSynthParams->fStocGain;

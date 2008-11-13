@@ -9,6 +9,8 @@ libsms work log
 * Todo list (after 1.0)
 ** TODO why does yaml file show partials with negative db?!
    - see guitarchord-debugme.yaml in examples dir
+** TODO add option in synthesis for transpotion while maintaing spectral shape
+*** TODO need to calculate and store spectral shapes
 ** TODO Doxygen todo list
    - pretty good for now, but many more things that could use better docs
 ** TODO resynthesize det+res with only 1 fft
@@ -41,6 +43,8 @@ libsms work log
 *** first start by copying smsSynth 
 *** then add time-based manipulations (envelopes, pitch/time adjustments)
 ** TODO set of python plotting tools
+    - [ ] plot waveform/spectral centroid combination
+         - like freesound.org
     - [ ] use SWIG wrapper instead of yaml
 ** TODO re-analysis
    - the problem was SMS_ANAL_DELAY was not large enough, so not all of the

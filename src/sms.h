@@ -512,7 +512,7 @@ enum SMS_FRAME_STATUS
 float sms_magToDB(float x);
 float sms_dBToMag(float x);
 
-#define TEMPERED_TO_FREQ( x ) (powf(1.0594630943592953, x)) /*!< \todo doc */
+#define TEMPERED_TO_FREQ( x ) (powf(1.0594630943592953, x)) /*!< raise frequency to the 12th root of 2 */
 
 #ifndef MAX
 /*! \brief returns the maximum of a and b */
