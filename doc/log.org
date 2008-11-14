@@ -3,9 +3,10 @@
 libsms work log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 * Todo list (1.0)
-** TODO how to make terminal tools/manpages in os x recognized globally?
-   - probably add usr/local/bin to somewhere
-   - is there a better place to install where they will automatically be seen?
+** DONE how to make terminal tools/manpages in os x recognized globally?
+   - [ ]detect os x and install where everything should go
+    - [ ] manpages in /usr/local/share (for max at least)
+   - [X] make pd externals names similar to how you do it with os x
 * Todo list (after 1.0)
 ** TODO why does yaml file show partials with negative db?!
    - see guitarchord-debugme.yaml in examples dir

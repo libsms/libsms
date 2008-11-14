@@ -8,18 +8,11 @@ tools = Split(' smsAnal smsSynth smsClean \
         	smsPrint smsResample \
         	smsToYaml' )
 
-#def install_manpages():
-#        for name in tools:
-#                manpage ='../man/'+ name +'.1'
-                
-
 #where to install tools and manpages
 tools_prefix = prefix+'/bin'
 man_prefix = '/usr/share/man/man1'
-#env.Alias('install', tools_prefix, "install_manpages")
 
 env.Append(LIBS = 'sms',  CPPPATH = '../src', LIBPATH = '../src')
-
 
 #build each tool
 for t in tools:
