@@ -85,7 +85,8 @@ static void SinePhaSynth (float fFreq, float fMag, float fPhase,
 			pLastFrame->pFSinFreq[iTrack] * i + 
 			fAlpha * i * i + fBeta * i * i * i;
 
-    pFWaveform[i] += sms_dBToMag(fInstMag) * sms_sine(fInstPhase + PI_2);
+/*     pFWaveform[i] += sms_dBToMag(fInstMag) * sms_sine(fInstPhase + PI_2); */
+    pFWaveform[i] += sms_dBToMag(fInstMag) * sinf(fInstPhase + PI_2);
   }
   /* save current values into buffer */
   pLastFrame->pFSinFreq[iTrack] = fFreq;
