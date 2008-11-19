@@ -50,8 +50,13 @@ if sys.platform == 'linux2':
 elif sys.platform == 'darwin':
     env.Append(LIBPATH=['/opt/local/lib','/usr/local/lib','/usr/lib'])
     env.Append(CPPPATH=['/opt/local/include','/usr/local/include','/usr/include'])
+elif sys.platform == 'win32':
+    print "scons error: don't know how to deal with win32 yet."
+    print "add the flags in this SConstruct to find the correct libraries."
+    Exit(1)
 else:
     print "problem: do not know how to build for architecture", os.platform
+    Exit(1)
 
 #add whatever paths are specified at the command line    
 env.Append(LIBPATH = ARGUMENTS.get('libpath', '' ))
