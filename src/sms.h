@@ -91,6 +91,7 @@ typedef struct {
     int nSamples;       /*!< Number of samples in the sound */
     int iSamplingRate;   /*!< The sampling rate */
     int channelCount;  /*!< The number of channels */
+    int iReadChannel;  /*!< the channel to read from */
     int sizeHeader;	     /*!< size of sound header in bytes */
 } SMS_SndHeader;
 
@@ -589,15 +590,15 @@ int sms_prepSine (int nTableSize);
 
 int sms_prepSinc (int nTableSize);
 
-void sms_clearSine();
+void sms_clearSine( void );
 
-void sms_clearSinc();
+void sms_clearSinc( void );
 
 float sms_sine (float fTheta);
 
 float sms_sinc (float fTheta);
 
-float sms_random ();
+float sms_random ( void );
 
 int sms_power2(int n);
 
@@ -664,7 +665,7 @@ int sms_createSF (char *pChOutputSoundFile, int iSamplingRate, int iType);
 
 void sms_writeSound (float *pFBuffer, int sizeBuffer);
 
-void sms_writeSF ();
+void sms_writeSF ( void );
 
 #ifdef FFTW
 /* int sms_allocFourierForward( float *pWaveform, fftwf_complex *pSpectrum, int sizeFft); */
@@ -678,14 +679,14 @@ int sms_createResSF (int iSamplingRate);
 
 int sms_writeResSound (float *pFBuffer, int sizeBuffer);
 
-void sms_writeResSF ();
+void sms_writeResSF ( void );
 
 int sms_createDebugFile (SMS_AnalParams *pAnalParams);
 
 void sms_writeDebugData (float *pFBuffer1, float *pFBuffer2, 
                              float *pFBuffer3, int sizeBuffer);
 
-void sms_writeDebugFile ();
+void sms_writeDebugFile ( void );
 
 /***********************************************************************************/
 /************ things for hybrid program that are not currently used **********************/
