@@ -105,7 +105,7 @@ int main (int argc, char *argv[])
      fprintf(fp,"smsHeader:\n");
      fprintf(fp,"    nFrames         : %d\n", pSmsHeader->nFrames);
      fprintf(fp,"    iFrameRate       : %d\n", pSmsHeader->iFrameRate);
-     fprintf(fp,"    nTrajectories    : %d\n", pSmsHeader->nTracks);
+     fprintf(fp,"    nTracks    : %d\n", pSmsHeader->nTracks);
      fprintf(fp,"    nStochasticCoeff : %d\n", pSmsHeader->nStochasticCoeff);
      fprintf(fp,"    iFormat          : ");
      if(pSmsHeader->iFormat == SMS_FORMAT_H) 
