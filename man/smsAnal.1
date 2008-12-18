@@ -31,8 +31,8 @@ or visit the SMS homepage at:
 0 no debug, 1 debug initialitzation functions, 2 debug peak detection function, 3 debug harmonic detection function, 4 debug peak continuation function, 5 debug clean trajectories function, 6 debug sine synthesis function, 7 debug stochastic analysis function, 8 debug stochastic synthesis function, 9 debug top level analysis function, 10 debug everything, 11 write residual into a file (residual.snd), 12 write original, synthesis and residual to a text file (debug.txt).
 .TP 8
 .BI -f " format"  
-.B (default 1) [1,2,3,4] 
-format of the representation: 1 harmonic, 2 inharmonic, 3 harmonic with phase, 4 inharmonic with phase.
+.B (default 1) [0,1,2,3] 
+format of the representation: 0 harmonic, 1 inharmonic, 2 harmonic with phase, 3 inharmonic with phase.
 .TP 8
 .BI -q " soundType"
 .B (default 0) [0,1]
@@ -53,7 +53,7 @@ number of periods of fundamental frequency to use in the analysis window. The ac
 type of analysis window to use. 0: Hamming, 1: Blackman-Harris 62 dB, 2: Blackman-Harris 70 dB, 3: Blackman-Harris 74 dB, 4: Blackman-Harris 92 dB.
 .TP 8
 .BI -r " frameRate"
-.B (default 400) [50 <-> 600]
+.B (default 300) [50 <-> 600]
 number of analysis windows per second (Hz). This will determine the hop size of the analysis window. If given as a negative number this value will be the overlap factor, and the frame rate will be calculated from that.
 .TP 8
 .B Peak detection parameters
