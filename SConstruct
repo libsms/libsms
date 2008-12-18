@@ -20,13 +20,14 @@ opts.AddOptions(
     PathOption('cpath', 'Directory to look for c headers (adds to defaults).', '/usr/local/include'),
     BoolOption('debug', 'Build with debugging information', False),
     BoolOption('fftw', 'Use FFTW3 library.', False),
+    BoolOption('twister', 'Use SIMD-oriented Fast Mersenne Twister algorithm for random number generation.', False),
     BoolOption('verbose','print verbose environment information', False)
 )
 
 if int(ARGUMENTS.get('debug', 0 )):
     sms_cflags = '-Wall -g -Wshadow'
 else:
-    sms_cflags = ' -O2 -funroll-loops -fomit-frame-pointer -Wall -W -Wno-unused -Wno-parentheses -Wno-switch '
+    sms_cflags = ' -O2 -funroll-loops -fomit-frame-pointer -Wall -W -Wno-unused -Wno-parentheses -Wno-switch -fno-strict-aliasing'
 
 env = Environment( ENV = os.environ, options = opts, CCFLAGS=sms_cflags)
 
@@ -85,10 +86,16 @@ if int(ARGUMENTS.get('fftw', 0)):
 
 env = conf.Finish()
 
+if int(ARGUMENTS.get('twister', 0)):
+    env.Append(CCFLAGS = ' -DMERSENNE_TWISTER ')
+
 prefix = ARGUMENTS.get('prefix', '/usr/local')
 
+env.Append(CPPPATH= '#src', LIBPATH= '#src')
 Export( ['env','prefix', 'commands'] )
 
 SConscript('src/SConscript')
+
+# append the src path for static library and header path
 SConscript('tools/SConscript')
 
