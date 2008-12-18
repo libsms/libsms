@@ -157,8 +157,8 @@ int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum,
  * \param pFWaveform	       pointer to input waveform
  * \param pFWindow	       pointer to analysis window 
  * \param sizeWindow	       size of analysis window
- * \param pFMagSpectrum     pointer to output spectrum 
- * \param pFPhaseSpectrum  pointer to output spectrum
+ * \param pFMagSpectrum     pointer to output magnitude spectrum 
+ * \param pFPhaseSpectrum  pointer to output phase spectrum
  * \param sizeFft		       size of FFT 
  * \return the size of the complex spectrum
  */
@@ -222,24 +222,15 @@ int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow,
         sms_rdft(sizeFft, pFBuffer, 1); 
   
 	/* convert from rectangular to polar coordinates */
-	for (i=0; i<sizeMag; i++)
-	{
-		it2 = i << 1;
-		fReal = pFBuffer[it2];
-		fImag = pFBuffer[it2+1];
-      
-		if (fReal != 0 || fImag != 0)
-		{
- 			pFMagSpectrum[i] = sqrt(fReal * fReal + fImag * fImag);
-			if (pFPhaseSpectrum)
-				pFPhaseSpectrum[i] = atan2(fImag, fReal);
-		}
-	}
+        sms_spectrumRtoP(sizeMag, pFBuffer, pFMagSpectrum, pFPhaseSpectrum);
+
 	free(pFBuffer);
+
 #endif /* FFTW */
   
 	return (sizeMag);
 }
+
 
 /*! \todo fix for alternative fft along with hybridize..
  * function to perform the inverse FFT
@@ -322,4 +313,50 @@ int sms_invQuickSpectrumW (float *pFMagSpectrum, float *pFPhaseSpectrum,
   
 	return (sizeMag);
 }
- 
+/*! \brief convert spectrum from Rectangular to Polar coordinates
+ *              
+ * \param sizeMag	       size of 
+ * \param pFReal	       pointer to input FFT real array (real/imag floats)
+ * \param pFMAg	       pointer to float array of magnitude spectrum
+ * \param pFPhase	       pointer to float array of phase spectrum
+ */ 
+void sms_spectrumRtoP( int sizeMag, float *pFReal, float *pFMag, float *pFPhase)
+{
+        int i, it2;
+        float fReal, fImag;
+
+	for (i=0; i<sizeMag; i++)
+	{
+		it2 = i << 1;
+		fReal = pFReal[it2];
+		fImag = pFReal[it2+1];
+      
+                pFMag[i] = sqrtf(fReal * fReal + fImag * fImag);
+                if (pFPhase)
+                        pFPhase[i] = atan2f(fImag, fReal);
+	}
+
+
+}
+
+/*! \brief compute magnitude spectrum of a DFT
+ *              
+ * \param sizeMag	       size of 
+ * \param pFReal	       pointer to input FFT real array (real/imag floats)
+ * \param pFMAg	       pointer to float array of magnitude spectrum
+ */
+void sms_spectrumMag( int sizeMag, float *pFReal, float *pFMag)
+{
+        int i, it2;
+        float fReal, fImag;
+
+	for (i=0; i<sizeMag; i++)
+	{
+		it2 = i << 1;
+		fReal = pFReal[it2];
+		fImag = pFReal[it2+1];
+      
+                pFMag[i] = sqrtf(fReal * fReal + fImag * fImag);
+	}
+
+}
