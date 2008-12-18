@@ -3,19 +3,19 @@
 from distutils.core import setup, Extension
 
 
-sms_module = Extension('_sms',
-                       sources=['sms_wrap.c'],
+pysms_module = Extension('_pysms',
+                       sources=['pysms_wrap.c'],
                        include_dirs=['../src'],
                        library_dirs=['../src'],
                        libraries = ["sndfile", "sms"] #should libsms be in here?
                        )
 
-setup (name = 'sms',
-       version = '0.1',
+setup (name = 'pysms',
+       version = '0.2',
        author      = "Rich Eakin, MTG",
        author_email      = "reakin@iua.upf.edu",
-       url = "www.sms.org",
+       url = "http://mtg.upf.edu/static/libsms",
        description = """TODO: write a description""",
-       ext_modules = [sms_module],
-       py_modules = ["sms"],
+       ext_modules = [pysms_module],
+       py_modules = ["pysms"],
        )
