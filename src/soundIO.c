@@ -26,8 +26,14 @@
 SNDFILE *pSNDStream, *pOutputSNDStream, *pResidualSNDStream;
 SF_INFO sfSoundHeader, sfResidualHeader, sfOutputSoundHeader;
 const char *pChResidualFile = "residual.aiff";
+#define MAX_SAMPLES 10000
 
 /*! \brief open a sound file and check its header
+ *
+ * Defualt channel to read is 1. If the user wishes to
+ * read from a different channel when calling sms_getSound,
+ * they need to set SMS_SndHeader->iReadChannel to the
+ * desired channel number.
  *
  * \param pChInputSoundFile    name of soundfile
  * \param pSoundHeader    information of the sound
@@ -43,43 +49,59 @@ int sms_openSF (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader)
         return(SMS_SNDERR);
     }
 
-    if (sfSoundHeader.channels > 1)
-    {
-	  printf ("sms_openSF: multi-channel soundfile  unsupported\n");
-          return(SMS_SNDERR);
-    }
-   pSoundHeader->channelCount = sfSoundHeader.channels;
-   pSoundHeader->iSamplingRate = sfSoundHeader.samplerate;
-   pSoundHeader->nSamples = sfSoundHeader.frames; 
-   pSoundHeader->sizeHeader = 0; 
-   return (SMS_OK);
+    pSoundHeader->channelCount = sfSoundHeader.channels;
+    pSoundHeader->iReadChannel = 0;
+    pSoundHeader->iSamplingRate = sfSoundHeader.samplerate;
+    pSoundHeader->nSamples = sfSoundHeader.frames; 
+    pSoundHeader->sizeHeader = 0; 
+    return (SMS_OK);
 }
-
 /*! \brief get a chunk of sound from input file 
+ *
+ * This function will copy to pSoundData samples from
+ * the channel specified by SMS_SndHeader->iReadChannel,
+ * which is by default the first channel.
  *
  * \param pSoundHeader       sound header information to hold extracted information
  * \param pSoundData             buffer for samples read
  * \param sizeSound               number of samples read
- * \param offset                      where to start reading in the file
+ * \param offset                      which sound frame to start reading from
  * \return error code \see SMS_SNDERR in SMS_ERRORS
  */
 int sms_getSound (SMS_SndHeader *pSoundHeader, float *pSoundData, long sizeSound,
                   long offset) 
 {
-	int nSamples;
+	int nFrames;
+        int i;
+        int iChannelCount = pSoundHeader->channelCount;
+        int iReadChannel = pSoundHeader->iReadChannel;
+        static float *pFSampleBuffer = NULL;
+
+        if(pFSampleBuffer == NULL)
+        {
+                if((pFSampleBuffer = (float *) calloc(MAX_SAMPLES, sizeof(float))) == NULL)
+                        return(SMS_MALLOC);
+        }
+
 	if (sf_seek(pSNDStream,  offset , SEEK_SET) < 0)
 	{
 		printf ("sms_getSound: could not seek to the sound location %ld\n", 
 		         offset);
 		return (SMS_SNDERR);
 	}
-	if ((nSamples = sf_readf_float( pSNDStream, pSoundData, sizeSound ))
+	if ((nFrames = sf_readf_float( pSNDStream, pFSampleBuffer, sizeSound ))
 	    != sizeSound)
 	{
-	    printf ("sms_getSound: could not read %ld samples, it read %d\n", 
-			 sizeSound, nSamples);
+	    printf ("sms_getSound: could not read %ld frames, it read %d\n", 
+			 sizeSound, nFrames);
 	    return (SMS_SNDERR);
 	}
+        /* now need to sift through interleaved frames to build one channel
+           of samples -- this should work even with one channel*/
+        for( i = 0; i < nFrames; i++)
+                pSoundData[i] = pFSampleBuffer[i*iChannelCount +iReadChannel];
+        
+
 	return (SMS_OK);
 }
 
