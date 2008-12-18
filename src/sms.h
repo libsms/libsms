@@ -671,7 +671,11 @@ void sms_writeSF ( void );
 /* int sms_allocFourierForward( float *pWaveform, fftwf_complex *pSpectrum, int sizeFft); */
 #endif
 
-void sms_rdft(   int sizeFft, float *pRealArray, int direction );
+void sms_rdft(int sizeFft, float *pFReal, int direction );
+
+void sms_spectrumRtoP( int sizeMag, float *pFReal, float *pFMag, float *pFPhase);
+
+void sms_spectrumMag( int sizeMag, float *pFReal, float *pFMag);
 
 /***********************************************************************************/
 /************* debug functions: ******************************************************/
