@@ -50,9 +50,6 @@ int sms_prepSine (int nTableSize)
         fSineScale =  (float)(TWO_PI) / (float)(nTableSize - 1);
         fSineIncr = 1.0 / fSineScale;
         fTheta = 0.0;
-        /* DEBUG =========== */
-        printf("\n preparing sine table with n=%d \n", nTableSize);
-        /* ================= */
         for(i = 0; i < nTableSize; i++) 
         {
                 fTheta = fSineScale * (float)i;
