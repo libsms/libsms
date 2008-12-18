@@ -2,16 +2,25 @@
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 libsms work log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-* Todo list (1.0)
-** DONE how to make terminal tools/manpages in os x recognized globally?
-   - [ ]detect os x and install where everything should go
-    - [ ] manpages in /usr/local/share (for max at least)
-   - [X] make pd externals names similar to how you do it with os x
 * Todo list (after 1.0)
+** TODO double check smsAnal man/documentation, update smsSynth man
+   - [ ] limit on nStocCoeff
+** TODO double check example parameters used
+** TODO fix documentation for smspd scons pd= option
+** TODO SWIG / Python:
+   - [ ] use Numpy SWIG typemaps for converting c arrays to numpy arrays
+      - http://www.scipy.org/Cookbook/SWIG_and_NumPy
+      - http://matt.eifelle.com/2008/11/04/exposing-an-array-interface-with-swig-for-a-cc-structure/
+** TODO remove un-updated/used tools (smsToLisp, smsSynthDet, etc)
 ** TODO why does yaml file show partials with negative db?!
    - see guitarchord-debugme.yaml in examples dir
 ** TODO add option in synthesis for transpotion while maintaing spectral shape
 *** TODO need to calculate and store spectral shapes
+** TODO clean/re-organize spectrum.c
+   - some calles pass a null pointer to a non-existent phase spectrum
+   ( because phases are not stored in the model)
+   - these calls should call a different function, thereby avoiding the 
+   if check for every sample
 ** TODO Doxygen todo list
    - pretty good for now, but many more things that could use better docs
 ** TODO resynthesize det+res with only 1 fft
@@ -30,6 +39,12 @@ libsms work log
     - right now, coefficients are limited to SR / FR, rounded up to the nearest pow2
     - when nCoeff is set higher than this, artifacts are appearing in the residual synthesis
     - [ ] need to check at the beginning and limit the coeffcients
+** TODO Residual Resynthesis 
+*** to start, just store output DFT from getResidual
+      - make a check if the synthesis DFT is the same size as analysis 
+      - if it is, synthesize using original phases
+      - if it isn't, generate new random phases
+      - from here, will have to think of how to deal with interpolation
 ** TODO make Post-Processing functions
 *** should be included in analysis like programs
     - return a pointer to another smsData structure, or file?
@@ -41,6 +56,7 @@ libsms work log
        already has the entire analysis
 *** TODO Spectral envelope
 ** TODO make python synthesis script with SWIG wrappers
+*** TODO even firster, redo printWindow in python
 *** first start by copying smsSynth 
 *** then add time-based manipulations (envelopes, pitch/time adjustments)
 ** TODO set of python plotting tools
@@ -62,6 +78,10 @@ libsms work log
    - [ ] use table lookup for dB conversion
    - [ ] currently uses random() from stdlib.
           - try merseinne twister / other generator
+* Bugs
+  - [ ] changing framerate in barbarie.wav (amp exam) causes seg fault
+  - [ ] large analysis files
+  ex. the 30 second long nightinggale sample
 * Wish list
 ** improvement of inharmonic analysis/synthesis
    - is it being done right now?
@@ -69,99 +89,9 @@ libsms work log
    - why is smsAnal only producing < 100?
 ** restore Hybridize functions
 *** was previously only used with the MK tool, which isn't available now
-** repetive analysis using machine learning
+** repetive analysis using dictionary storage of params / machine learning techniques
    - can automate some parameters this way
-      - window size, harmonic /inharmpic, melody/note
+      - window size, harmonic /inharmpic, melody/note 
 ** transient model synthesis
 *** based on the Discrete Cosine Transform
 * Things done
-** DONE SWIG Python wrapper
-** DONE smsToYaml for importing into python
-** DONE remove iOriginalSRate from SMS_Header
-   - it seems that if the synthesis is completely independent of 
-   analysis, this shouldn't be.
-   - now just keeps original hopsize so that stochastic component
-     can be reconstructed
-** DONE run memory leak detector
-   - valgrind reports are good
-** DONE organize files/functions
-** DONE update documentation of functions
-** DONE append sms_ to functions declared in sms.h
-** DONE export functions in smsAnal to library
-     - ARGUMENTS will only be for smsAnal, but an initAnalParams
-        function is made that does something similar to fillArguments
-** DONE make a function for returning a string to the error
-   - right now it is necessary to cop/paste a large block of code to do this
-   - should replace the 'quit' function, and shouldn't exit by default
-** DONE Globals:
-*** DONE Tables
-    - declare them in sms.h
-    - allocate in SmsInit()
-*** DONE pFrames/ppFrames
-*** DONE FResidualPerc
-        - defined in variousFuntions for now, as SmsInit() is always called.
-** DONE sms_init() should be a global init before anything
-** DONE make soundfile output format variable
-** DONE convert from short to floating point data
-   - will need this for pd anyway
-   - everything is computed in float point, so why range from 0-16000   then?
-** DONE move smsMod's stochostic gain adjusting to smsSynth
-   - should stocGain be available for all stoc types?
-** DONE make sure pFStocGain is always set
-     - zero if no stoc component, 1 if wave, or val if StocSpectrum
-** DONE FFTW3f for fft's
-*** DONE Spectrum
-    - deterministic seems to be handled correctly.. or is it?
-    - not stochastic
-       - PeakDetection is producing different results
-       - so, Spectrum must not be right identical yet
-*** DONE start with SineSynthIFFT until it sounds right
-**** questions about SineSynthIFFT()
-     - [ ] why is nBins set to 8?
-            - SincTab is also hardcoded for index = 0:8
-     - [ ] why is the real component obtained by Mag * sin(theta)?
-            - shouldn't it be cos(theta)?
-** DONE switch build scripts to scons
-   - [X] get env. exporting/importing fixed
-   - [X] add install/uninstall functionality
-** DONE convert README's to manpages.
-   - [ ] update to fit new parameters
-   - [ ] proofread** DONE [#B] update USAGE arguments to tell what different values do
-** DONE should have the option to store residual in audio samples or STFT frames
-*** TODO organize analParams to allow for options:
-   - [X] sound samples
-   - [X] filter approximation
-   - [X] no stachostic component
-*** TODO reorganization of SmsSynthesis
-**** possible types
-***** Deterministic only, OSC
-***** Deterministic only, IFFT
-***** Stoc only, IFFT
-***** Stoc only, waveform
-***** Stoc only, Approx
-***** Deterministic + Stoc, IFFT
-***** Deterministic + Stoc, IFFT + Approx
-***** Deterministic + Stoc, IFFT + Waveform
-***** Deterministic + Stoc, OSC + IFFT
-***** Deterministic + Stoc, OSC + Approx
-***** Deterministic + Stoc, OSC + Waveform
-
-*** TODO Store Residual as STFT 
-    - does imag need to be stored?
-       - yes, it is cheaper to store/recall than to make a random one
-    - [ ] allocate memory
-    - [X] need sizeDFT in SMS_HEADER (i think)
-    - should this be 2x hopsize because there is overlap of 50%?
-    - [ ] store in stochAnalysis (probably should be somewhere else..)
-    - [ ] make sure it is correctly stored in smsToYaml/smsPrint
-*** TODO modify smsResample to concatenate stocWave data
-    - [ ] will take adding iWaveSamples to SMS_DATA
-** DONE make samplerate independant of analysis/synthesis
-*** Investigating samplerate/framerate dependencies:
-**** How is resample making the current SMS_DATA frame?
-
-*** In order for real-time synthesis:
-**** iLastSample in smsSynth must be replaced with 
-        - iNumSamples will be a predefined buffer of samples to synthesis at one time,
-          indepenent of synthesis blocksize       
-
