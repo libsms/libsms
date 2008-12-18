@@ -97,7 +97,7 @@ int sms_spectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 	else
 	{
 		free (pFEnvelope);
-		printf ("BLAHHH SpectralApprox: sizeSpec1 has too many nCoefficients\n"); /* \todo need to increase the frequency? */
+		printf ("SpectralApprox: sizeSpec1 has too many nCoefficients\n"); /* \todo need to increase the frequency? */
 		return -1;
 	}
 
