@@ -23,6 +23,7 @@
  */
 
 #include "sms.h"
+#include "SFMT.h"
 
 char *pChDebugFile = "debug.txt"; /*!< debug text file */
 FILE *pDebug; /*!< pointer to debug file */
@@ -32,7 +33,6 @@ FILE *pDebug; /*!< pointer to debug file */
 
 #define SIZE_TABLES 4096
 
-#define RAND_STDMATH 1
 #define HALF_MAX 1073741823.5  /*!< half the max of a 32-bit word */
 #define INV_HALF_MAX (1.0 / HALF_MAX)
 
@@ -40,6 +40,9 @@ FILE *pDebug; /*!< pointer to debug file */
  *
  * Currently, just generating the sine and sinc tables.
  * This is necessary before both analysis and synthesis.
+ *
+ * If using the Mersenne Twister algorithm for random number
+ * generation, initialize (seed) it.
  *
  * \return error code \see SMS_MALLOC or SMS_OK in SMS_ERRORS
  */
@@ -55,6 +58,11 @@ int sms_init( void )
                 iError = sms_prepSinc (SIZE_TABLES);
                 if(iError) return(SMS_MALLOC);
         }
+
+#ifdef MERSENNE_TWISTER
+        init_gen_rand(1234);
+#endif
+
         return (SMS_OK);
 }
 
@@ -587,13 +595,15 @@ const char* sms_errorString(int iError)
  */
 float sms_random()
 {
-        float f;
-#ifdef RAND_STDMATH
-        f = ((random() - HALF_MAX) * INV_HALF_MAX);
+//        float f;
+#ifdef MERSENNE_TWISTER
+        return(genrand_real1()); // \todo this is 0:1, need -1:1?
+        /* but then again, what is the difference between the two
+           in terms of random phase generation? */
 #else
-        /*! \todo try twister algorithm here */
+//        f = ((float)(random() - HALF_MAX) * INV_HALF_MAX);
+        return(((float)(random() - HALF_MAX) * INV_HALF_MAX));
 #endif
-        return(f);
 }
 
 /*! \brief make sure a number is a power of 2
