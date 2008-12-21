@@ -12,7 +12,7 @@ tools = Split(' smsAnal smsSynth smsClean \
 tools_prefix = prefix+'/bin'
 man_prefix = '/usr/share/man/man1'
 
-env.Append(LIBS = 'sms',  CPPPATH = '../src', LIBPATH = '../src')
+env.Prepend(LIBS = 'sms',  CPPPATH = '#src', LIBPATH = '#src')
 
 #build each tool
 for t in tools:

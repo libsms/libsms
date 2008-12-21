@@ -20,7 +20,7 @@ opts.AddOptions(
     PathOption('cpath', 'Directory to look for c headers (adds to defaults).', '/usr/local/include'),
     BoolOption('debug', 'Build with debugging information', False),
     BoolOption('fftw', 'Use FFTW3 library.', False),
-    BoolOption('twister', 'Use SIMD-oriented Fast Mersenne Twister algorithm for random number generation.', False),
+    BoolOption('twister', 'Use SIMD-oriented Fast Mersenne Twister algorithm for random number generation.', True),
     BoolOption('verbose','print verbose environment information', False)
 )
 
@@ -86,12 +86,11 @@ if int(ARGUMENTS.get('fftw', 0)):
 
 env = conf.Finish()
 
-if int(ARGUMENTS.get('twister', 0)):
+if int(ARGUMENTS.get('twister', 1)):
     env.Append(CCFLAGS = ' -DMERSENNE_TWISTER ')
 
 prefix = ARGUMENTS.get('prefix', '/usr/local')
 
-env.Append(CPPPATH= '#src', LIBPATH= '#src')
 Export( ['env','prefix', 'commands'] )
 
 SConscript('src/SConscript')
