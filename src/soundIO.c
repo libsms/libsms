@@ -37,7 +37,7 @@ const char *pChResidualFile = "residual.aiff";
  *
  * \param pChInputSoundFile    name of soundfile
  * \param pSoundHeader    information of the sound
- * \return error code \see SMS_SNDERR in SMS_ERRORS
+ * \return 0 on success, -1 on failure
  */
 int sms_openSF (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader)
 {
@@ -45,8 +45,9 @@ int sms_openSF (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader)
 
     if(!(pSNDStream = sf_open (pChInputSoundFile, SFM_READ, &sfSoundHeader)))
     {
-        printf("sms_openSF: can't open %s \n", pChInputSoundFile);  
-        return(SMS_SNDERR);
+            //printf("sms_openSF: can't open %s \n", pChInputSoundFile);  
+            sms_error("cannot open soundfile");  
+            return(-1);
     }
 
     pSoundHeader->channelCount = sfSoundHeader.channels;
@@ -54,21 +55,21 @@ int sms_openSF (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader)
     pSoundHeader->iSamplingRate = sfSoundHeader.samplerate;
     pSoundHeader->nSamples = sfSoundHeader.frames; 
     pSoundHeader->sizeHeader = 0; 
-    return (SMS_OK);
+    return (0);
 }
 /*! \brief get a chunk of sound from input file 
  *
- * This function will copy to pSoundData samples from
- * the channel specified by SMS_SndHeader->iReadChannel,
+ * This function will copy to samples from
+ * the channel specified by SMS_SndHeader->iReadChannel to an array,
  * which is by default the first channel.
  *
  * \param pSoundHeader       sound header information to hold extracted information
- * \param pSoundData             buffer for samples read
  * \param sizeSound               number of samples read
+ * \param pSound             buffer for samples read
  * \param offset                      which sound frame to start reading from
- * \return error code \see SMS_SNDERR in SMS_ERRORS
+ * \return 0 on success, -1 on failure
  */
-int sms_getSound (SMS_SndHeader *pSoundHeader, float *pSoundData, long sizeSound,
+int sms_getSound (SMS_SndHeader *pSoundHeader, long sizeSound, float *pSound,
                   long offset) 
 {
 	int nFrames;
@@ -85,24 +86,21 @@ int sms_getSound (SMS_SndHeader *pSoundHeader, float *pSoundData, long sizeSound
 
 	if (sf_seek(pSNDStream,  offset , SEEK_SET) < 0)
 	{
-		printf ("sms_getSound: could not seek to the sound location %ld\n", 
-		         offset);
-		return (SMS_SNDERR);
+		sms_error ("failure trying to seek to the sound location (sf_seek)");
+		return (-1);
 	}
 	if ((nFrames = sf_readf_float( pSNDStream, pFSampleBuffer, sizeSound ))
 	    != sizeSound)
 	{
-	    printf ("sms_getSound: could not read %ld frames, it read %d\n", 
-			 sizeSound, nFrames);
-	    return (SMS_SNDERR);
+	    sms_error("could not read the requested number of frames");
+	    return (-1);
 	}
         /* now need to sift through interleaved frames to build one channel
            of samples -- this should work even with one channel*/
         for( i = 0; i < nFrames; i++)
-                pSoundData[i] = pFSampleBuffer[i*iChannelCount +iReadChannel];
-        
+                pSound[i] = pFSampleBuffer[i*iChannelCount +iReadChannel];
 
-	return (SMS_OK);
+	return (0);
 }
 
 /*! \brief function to create an output sound file 
@@ -110,7 +108,7 @@ int sms_getSound (SMS_SndHeader *pSoundHeader, float *pSoundData, long sizeSound
  * \param pChOutputSoundFile   name of output file
  * \param iSamplingRate  sampling rate of synthesis
  * \param iType output file format (0 is wav, 1 is aiff, or other is libsndfile specific)
- * \return error code \see SMS_SNDERR in SMS_ERRORS
+ * \return 0 on success, -1 on failure
  */
 int sms_createSF ( char *pChOutputSoundFile, int iSamplingRate, int iType)
 {
@@ -126,10 +124,10 @@ int sms_createSF ( char *pChOutputSoundFile, int iSamplingRate, int iType)
     
     if( !(pOutputSNDStream = sf_open (pChOutputSoundFile, SFM_WRITE, &sfOutputSoundHeader)))
     {
-        printf("CreatOutputSoundFile: can't open %s for writing.\n", pChOutputSoundFile);
-        return(SMS_SNDERR);
+        sms_error("cannot open file for writing (sf_open).");
+        return(-1);
     }
-    return (SMS_OK);
+    return (0);
 }
 
 /*! \brief write to the sound file data 
@@ -163,16 +161,16 @@ int sms_createResSF (int iSamplingRate)
     int err = sf_format_check (&sfResidualHeader);
     if(err == 0)
     {
-        printf("sms_createResSF: invalid file format.");
-        return(SMS_SNDERR);
+        sms_error("invalid file format.");
+        return(-1);
     }
     if( !(pResidualSNDStream = sf_open (pChResidualFile, SFM_WRITE, &sfResidualHeader)))
     {
         err = sf_error(pResidualSNDStream);
-        printf("sms_createResSF: can't open %s for writing; SNDFILE ERR: %d, %s.\n", pChResidualFile, err,  sf_error_number(err));  
-        return(SMS_SNDERR);;
+        sms_error("cannot open file for writing");
+        return(-1);;
     }
-    return (SMS_OK);
+    return (0);
 }
 
 /*! \brief function to write to the residual sound file 
@@ -206,14 +204,14 @@ void sms_writeResSF ()
 
 /*! \brief fill the sound buffer
  *
+ * \param sizeWaveform        size of input data
  * \param pWaveform           input data
- * \param sizeNewData        size of input data
  * \param pAnalParams        pointer to structure of analysis parameters
  */
-void sms_fillSndBuffer (float *pWaveform, long sizeNewData, SMS_AnalParams *pAnalParams)
+void sms_fillSoundBuffer (int sizeWaveform, float *pWaveform, SMS_AnalParams *pAnalParams)
 {
 	int i;
-  
+        long sizeNewData = (long) sizeWaveform;
 	/* leave space for new data */
 	memcpy ( pAnalParams->soundBuffer.pFBuffer,  pAnalParams->soundBuffer.pFBuffer+sizeNewData, 
                  sizeof(float) * (pAnalParams->soundBuffer.sizeBuffer - sizeNewData));
