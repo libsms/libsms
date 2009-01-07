@@ -11,8 +11,8 @@ env.Alias('install', header_prefix)
 
 sms_sources = Split("""
                 sms.c 
-                smsAnalysis.c 
-		smsSynthesis.c 
+                analysis.c 
+		synthesis.c 
                 sineSynth.c 
 		peakDetection.c 
                 harmDetection.c 
@@ -26,7 +26,7 @@ sms_sources = Split("""
                 filters.c 
                 tables.c 
                 windows.c 
-                smsIO.c 
+                fileIO.c 
 		soundIO.c 
                 hybridize.c
                 OOURA.c
