@@ -27,41 +27,33 @@
 #include "sms.h"
 #include "OOURA.h"
 
-/* -_-_-_-_-_-_-_-_-_-_-_- FFTW3 Floating Point -_-_-_-_-_-_-_-_-_-_-_- */
-/* FFTW3 is currently working for terminal-based programs, but not in the pd externals. */
-#ifdef FFTW
-/* hmm.. still crashing.. */
-int sms_allocFourierForward( float *pWaveform, fftwf_complex *pSpectrum, int sizeFft ) 
-{
-        if((pWaveform = fftwf_malloc(sizeof(float) * sizeFft)) == NULL)
-        {
-                printf("\n sms_allocFourierForward: could not allocate spectrum array for fftw \n");
-                return (SMS_FFTWERR);
-        }
-        if((pSpectrum = fftwf_malloc(sizeof(fftwf_complex) * (sizeFft/2 + 1))) == NULL)
-        {
-                printf("\n sms_allocFourierForward: could not allocate spectrum array for fftw \n");
-                return (SMS_FFTWERR);
-        }
-        return(SMS_OK);
-}
-#endif /* FFTW */
+static int ip[NMAXSQRT +2];
+static float w[NMAX * 5 / 4];
 
-
-
-/*! \brief main call to Fast Fourier Transform
+/*! \brief Forward Fast Fourier Transform
  *
- * Currently, this function calls the OOURA routines to calculate
- * either a forward or backward FFT.
+ * function to call the OOURA routines to calculate
+ * the forward FFT.  Operation is in place.
+ * \todo if sizeFft != power of 2, there is a silent crash :( no bueno
  *
  * \param sizeFft         size of the FFT in samples (must be a power of 2 >= 2)
- * \param pFReal pointer to real array (n >= 2, n = power of 2)
- * \param direction    direction of transform. 1 for forward, -1 for reverse
+ * \param pArray         pointer to real array (n >= 2, n = power of 2)
  */
-void sms_rdft(  int sizeFft, float *pFReal, int direction )
+void sms_fft(  int sizeFft, float *pArray)
 { 
-        static int ip[NMAXSQRT +2];
-        static float w[NMAX * 5 / 4];
-
-        rdft( sizeFft, direction, pFReal, ip, w);
+        rdft( sizeFft, 1, pArray, ip, w);
 }
+
+/*! \brief Inverse Forward Fast Fourier Transform
+ *
+ * function to call the OOURA routines to calculate
+ * the Inverse FFT.  Operation is in place.
+ *
+ * \param sizeFft         size of the FFT in samples (must be a power of 2 >= 2)
+ * \param pArray         pointer to real array (n >= 2, n = power of 2)
+ */
+void sms_ifft(  int sizeFft, float *pArray)
+{ 
+        rdft( sizeFft, -1, pArray, ip, w);
+}
+

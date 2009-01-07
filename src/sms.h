@@ -30,9 +30,6 @@
 #include <memory.h>
 #include <strings.h>
 #include <sndfile.h>
-#ifdef FFTW
-#include <fftw3.h>
-#endif
 
 #define SMS_VERSION 1.0 /*!< \brief version control number */
 
@@ -112,7 +109,7 @@ typedef struct
 	float *pSmsData;        /*!< pointer to all SMS data */
 	int sizeData;               /*!< size of all the data */
 	float *pFSinFreq;       /*!< frequency of sinusoids */
-	float *pFSinAmp;       /*!< magnitude of sinusoids */
+	float *pFSinAmp;       /*!< magnitude of sinusoids (stored in dB) */
 	float *pFSinPha;        /*!< phase of sinusoids */
 	int nTracks;                     /*!< number of sinusoidal tracks in frame */
 	float *pFStocGain;     /*!< gain of stochastic component */
@@ -169,19 +166,6 @@ typedef struct
                        \see SMS_FRAME_STATUS */
 } SMS_AnalFrame;
 
-#ifdef FFTW
-/*! \struct SMS_Fourier
- * \brief structure for fast fourier transform via FFTW
- *
- */
-typedef struct
-{
-        float *pWaveform; /*!< array of samples */
-        fftwf_complex *pSpectrum; /*!< complex array of spectra */
-        fftwf_plan plan; /*!< plan for FFTW's fourier transform functions, floating point */
-        int flags; /*!< planner flags bitwise OR'ed together */ 
-} SMS_Fourier;
-#endif /* FFTW */
 
 /*! \struct SMS_AnalParams
  * \brief structure with useful information for analysis functions
@@ -229,6 +213,7 @@ typedef struct
 	int iSizeSound;             /*!< total size of sound to be analyzed in samples */	 	
 	int iWindowType;            /*!< type of FFT analysis window \see SMS_WINDOWS */			  	 			 
         int iMaxDelayFrames;     /*!< maximum number of frames to delay before peak continuation */
+        int sizeNextRead;;     /*!< size of samples to read from sound file next analysis */
         SMS_Data prevFrame;   /*!< the previous analysis frame  */
         SMS_SndBuffer soundBuffer;    /*!< signal to be analyzed */
         SMS_SndBuffer synthBuffer; /*!< resynthesized signal used to create the residual */
@@ -236,9 +221,6 @@ typedef struct
         SMS_AnalFrame **ppFrames; /*!< pointers to the frames analyzed (it is circular-shifted once the array is full */
         float fResidualPercentage; /*!< accumalitive residual percentage */
         float *pFSpectrumWindow; /*!< the window used during spectrum analysis */
-#ifdef FFTW
-        SMS_Fourier fftw; /*!< structure of data used by the FFTW library (floating point) */
-#endif
 } SMS_AnalParams;
 
 /*! \struct SMS_SynthParams
@@ -265,12 +247,12 @@ typedef struct
         float fTranspose;          /*!< frequency transposing value multiplied by each frequency */
 	float *pFDetWindow;    /*!< array to hold the window used for deterministic synthesis  \see SMS_WIN_IFFT */
         float *pFStocWindow; /*!< array to hold the window used for stochastic synthesis (Hanning) */
-	SMS_Data prevFrame; /*!< previous data frame, used for smooth interpolation between frames */
-#ifdef FFTW
-        SMS_Fourier fftw; /*!< structure of data used by the FFTW library (floating point) */
-#else
-        float *pFFTBuff;  /*!< an array for an inplace inverse FFT transform */
-#endif
+        float *pSynthBuff;  /*!< an array for keeping samples during overlap-add (2x sizeHop) */
+        float *pMagBuff;  /*!< an array for keeping magnitude spectrum for stochastic synthesis */
+        float *pPhaseBuff;  /*!< an array for keeping phase spectrum for stochastic synthesis */
+	SMS_Data prevFrame; /*!< previous data frame, for interpolation between frames */
+        float *pFFTBuff; /*!< array for in-place FFT transform */
+
 } SMS_SynthParams;
 
 /*! \struct SMS_HarmCandidate
@@ -329,10 +311,10 @@ typedef struct
  */
 enum SMS_Format
 {
-        SMS_FORMAT_H, /*!< format harmonic */
-        SMS_FORMAT_IH,      /*!< format inharmonic */
-        SMS_FORMAT_HP,     /*!< format harmonic with phase */
-        SMS_FORMAT_IHP    /*!< format inharmonic with phase */
+        SMS_FORMAT_H, /*!< 0, format harmonic */
+        SMS_FORMAT_IH,      /*!< 1, format inharmonic */
+        SMS_FORMAT_HP,     /*!< 2, format harmonic with phase */
+        SMS_FORMAT_IHP    /*!< 3, format inharmonic with phase */
 };
 
 /*! \brief synthesis types
@@ -402,7 +384,6 @@ enum SMS_ERRORS
         SMS_MALLOC,    /*!< 3, couldn't allocate memory */
         SMS_RDERR,        /*!< 4, read error */
         SMS_WRERR,       /*!< 5, write error */
-        SMS_FFTWERR,   /*!< 6, FFTW error */
         SMS_SNDERR        /*!< 7, sound IO error */
 };
 
@@ -436,8 +417,8 @@ enum SMS_DBG
  */
 enum SMS_SOUND_TYPE
 {
-        SMS_SOUND_TYPE_MELODY,    /*!< sound composed of several notes */
-        SMS_SOUND_TYPE_NOTE          /*!< sound composed of a single note */
+        SMS_SOUND_TYPE_MELODY,    /*!< 0, sound composed of several notes */
+        SMS_SOUND_TYPE_NOTE          /*!< 1, sound composed of a single note */
 };
 
 /* \brief direction of analysis
@@ -505,13 +486,16 @@ enum SMS_FRAME_STATUS
 #define PI 3.141592653589793238462643    /*!< pi */
 #define TWO_PI 6.28318530717958647692 /*!< pi * 2 */
 #define INV_TWO_PI (1 / TWO_PI) /*!< 1 / ( pi * 2) */
-#define PI_2 1.57079632679489661923        /*< pi / 2 */
-//#define HALF_MAX 1073741823.5  /*!< half the max of a 32-bit word */
-#define LOG2 0.69314718 /*!< \todo write this in mathematical terms */
-#define LOG10 2.302585092994
+#define PI_2 1.57079632679489661923        /*!< pi / 2 */
+#define LOG2 0.69314718055994529 /*!< natural logarithm of 2 */
+#define LOG10 2.3025850929940459  /*!< natural logarithm of 10 */
 
-float sms_magToDB(float x);
+float sms_magToDB(float x); 
 float sms_dBToMag(float x);
+float sms_sine (float fTheta);
+float sms_sinc (float fTheta);
+float sms_random ( void );
+int sms_power2(int n);
 
 #define TEMPERED_TO_FREQ( x ) (powf(1.0594630943592953, x)) /*!< raise frequency to the 12th root of 2 */
 
@@ -526,8 +510,8 @@ float sms_dBToMag(float x);
 /*! \} */
 
 /* function declarations */ 
-int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsFrame,
-                 SMS_AnalParams *pAnalParams, int *pINextSizeRead);
+int sms_analyze (int sizeWaveform, float *pWaveform, SMS_Data *pSmsFrame,
+                 SMS_AnalParams *pAnalParams);
 
 int sms_init( void );  
 
@@ -545,11 +529,11 @@ void sms_freeAnalysis (SMS_AnalParams *pAnalParams);
 
 void sms_freeSynth( SMS_SynthParams *pSynthParams );
 
-void sms_fillSndBuffer (float *pWaveform, long sizeNewData, SMS_AnalParams *pAnalParams);
+void sms_fillSoundBuffer (int sizeWaveform, float *pWaveform,  SMS_AnalParams *pAnalParams);
 
 void sms_getWindow (int sizeWindow, float *pFWindow, int iWindowType);
 
- int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum, 
+int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum, 
               float *pFPhaseSpectrum, SMS_AnalParams *pAnalParams);
 
 int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow, 
@@ -594,14 +578,6 @@ void sms_clearSine( void );
 
 void sms_clearSinc( void );
 
-float sms_sine (float fTheta);
-
-float sms_sinc (float fTheta);
-
-float sms_random ( void );
-
-int sms_power2(int n);
-
 int sms_synthesize (SMS_Data *pSmsFrame, float*pFSynthesis, 
                   SMS_SynthParams *pSynthParams);
                 
@@ -645,8 +621,6 @@ void sms_copyFrame (SMS_Data *pCopySmsFrame, SMS_Data *pOriginalSmsFrame);
 
 int sms_frameSizeB (SMS_Header *pSmsHeader);
 
-const char* sms_errorString( int iError);
-
 int sms_residual (float *pFSynthesis, float *pFOriginal,  
                  float *pFResidual, int sizeWindow, SMS_AnalParams *pAnalParams);
 
@@ -658,7 +632,7 @@ void sms_interpolateFrames (SMS_Data *pSmsFrame1, SMS_Data *pSmsFrame2,
 
 int sms_openSF (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader);
 
-int sms_getSound (SMS_SndHeader *pSoundHeader, float *pSoundData, long sizeSound,
+int sms_getSound (SMS_SndHeader *pSoundHeader, long sizeSound, float *pSound,
                   long offset);
 
 int sms_createSF (char *pChOutputSoundFile, int iSamplingRate, int iType);
@@ -667,11 +641,9 @@ void sms_writeSound (float *pFBuffer, int sizeBuffer);
 
 void sms_writeSF ( void );
 
-#ifdef FFTW
-/* int sms_allocFourierForward( float *pWaveform, fftwf_complex *pSpectrum, int sizeFft); */
-#endif
+void sms_fft(int sizeFft, float *pArray);
 
-void sms_rdft(int sizeFft, float *pFReal, int direction );
+void sms_ifft(int sizeFft, float *pArray);
 
 void sms_spectrumRtoP( int sizeMag, float *pFReal, float *pFMag, float *pFPhase);
 
@@ -691,6 +663,10 @@ void sms_writeDebugData (float *pFBuffer1, float *pFBuffer2,
                              float *pFBuffer3, int sizeBuffer);
 
 void sms_writeDebugFile ( void );
+
+void sms_error( char *pErrorMessage );
+
+char* sms_errorString( void );
 
 /***********************************************************************************/
 /************ things for hybrid program that are not currently used **********************/

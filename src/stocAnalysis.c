@@ -44,22 +44,16 @@ int sms_stocAnalysis (float *pFResidual, int sizeBuffer,
         static float *pFWindow = NULL;
 
         /* allocate buffers */    
+        /*!< \todo remove calloc */
         if ((pFMagSpectrum = (float *) calloc(sizeMag, sizeof(float))) == NULL)
                 return -1;
 
         if (pFWindow == NULL)
         {
+                /*!< \todo remove calloc */
                 if ((pFWindow = (float *) calloc(sizeBuffer, sizeof(float))) == NULL)
                         return -1;
                 sms_getWindow(sizeBuffer, pFWindow, SMS_WIN_HAMMING);
-#ifdef FFTW
-                /* \todo memory leak here.. */
-                static SMS_Fourier fftData;
-                fftData.pWaveform = fftwf_malloc(sizeof(float) * sizeFft);
-                fftData.pSpectrum = fftwf_malloc(sizeof(fftwf_complex) * (sizeFft / 2 + 1));
-                fftData.plan =  fftwf_plan_dft_r2c_1d( sizeFft, fftData.pWaveform,
-                                                       fftData.pSpectrum, FFTW_ESTIMATE);
-#endif // FFTW
         }
 
         sms_quickSpectrum (pFResidual, pFWindow, sizeBuffer, pFMagSpectrum, 

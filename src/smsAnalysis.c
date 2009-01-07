@@ -155,15 +155,15 @@ static int ReAnalyzeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams)
  *
  * The input is a section of the sound, the output is the SMS data
  *
+ * \param sizeWaveform	     size of input waveform data
  * \param pWaveform	     pointer to input waveform data
- * \param sizeNewData	     the size of input data
  * \param pSmsData          pointer to output SMS data
  * \param pAnalParams   pointer to analysis parameters
- * \param pINextSizeRead size of next data to read
+ * \param sizeNextRead size of next data to read
  * \return \todo sort out return meanings
  */
-int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData, 
-                 SMS_AnalParams *pAnalParams, int *pINextSizeRead)
+int sms_analyze (int sizeWaveform, float *pWaveform, SMS_Data *pSmsData, 
+                 SMS_AnalParams *pAnalParams)
 {    
 	static int sizeWindow = 0;      /* size of current analysis window */ //RTE ?: shouldn't this just be initilalized outside?
 
@@ -180,8 +180,8 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
 		sizeWindow = pAnalParams->iDefaultSizeWindow;
   
 	/* fill the input sound buffer and perform pre-emphasis */
-	if (sizeNewData > 0)
-		sms_fillSndBuffer (pWaveform, sizeNewData, pAnalParams);
+	if (sizeWaveform > 0)
+		sms_fillSoundBuffer (sizeWaveform, pWaveform, pAnalParams);
     
 	/* move analysis data one frame back */
 	pTmpAnalFrame = pAnalParams->ppFrames[0];
@@ -201,10 +201,10 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
       
 		if (pAnalParams->iDebugMode == SMS_DBG_SMS_ANAL || 
 		    pAnalParams->iDebugMode == SMS_DBG_ALL)
-			fprintf (stdout, "Frame %d (%.3fs): sizeWindow %d, sizeNewData %ld, firstSampleBuffer %d, centerSample %d\n",
+			fprintf (stdout, "Frame %d (%.3fs): sizeWindow %d, sizeWaveform %d, firstSampleBuffer %d, centerSample %d\n",
 			         pAnalParams->ppFrames[iCurrentFrame]->iFrameNum, 
                                  pAnalParams->ppFrames[iCurrentFrame]->iFrameNum / (float) pAnalParams->iFrameRate,
-			         sizeWindow, sizeNewData, pAnalParams->soundBuffer.iMarker,
+			         sizeWindow, sizeWaveform, pAnalParams->soundBuffer.iMarker,
 		           pAnalParams->ppFrames[iCurrentFrame]->iFrameSample);
 
 		/* if single note use the default fundamental as reference */
@@ -228,7 +228,7 @@ int sms_analyze (float *pWaveform, long sizeNewData, SMS_Data *pSmsData,
 		iExtraSamples = 
 			(pAnalParams->soundBuffer.iMarker + pAnalParams->soundBuffer.sizeBuffer) -
 			(pAnalParams->ppFrames[iCurrentFrame]->iFrameSample + pAnalParams->sizeHop);
-		*pINextSizeRead = MAX (0, (sizeWindow+1)/2 - iExtraSamples);
+		pAnalParams->sizeNextRead = MAX (0, (sizeWindow+1)/2 - iExtraSamples);
 
 		/* check again the previous frames and recompute if necessary */
                 /*! \todo when deviation is really off, this function returns -1, yet it 
