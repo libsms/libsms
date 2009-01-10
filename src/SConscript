@@ -18,7 +18,7 @@ sms_sources = Split("""
                 harmDetection.c 
                 peakContinuation.c 
 		stocAnalysis.c 
-		getResidual.c 
+		residual.c 
                 spectralApprox.c 
 		spectrum.c 
                 fixTracks.c 
@@ -28,7 +28,6 @@ sms_sources = Split("""
                 windows.c 
                 fileIO.c 
 		soundIO.c 
-                hybridize.c
                 OOURA.c
                 SFMT.c
 """)
