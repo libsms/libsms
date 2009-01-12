@@ -1,6 +1,8 @@
 #! /bin/bash
 # script to build pysms python module
 
+#./doxy2swig.py ../doc/xml/sms_8h.xml sms_doxy.i &&
 swig -python -module pysms pysms.i &&
 python setup.py build_ext --inplace
+#python setup.py build_ext --inplace --debug
 
