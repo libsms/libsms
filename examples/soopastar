@@ -4,9 +4,9 @@
 # http://www.freesound.org/download/4228/4228_NoiseCollector_soopastar11.wav
 
 #parameters explained:
-# -u250: lowest fundamental frequency
-# -c128: stochastic coefficients set to 128
-smsAnal -d0 -c128 soopastar.wav soopastar.sms ;
+# well, for this one (and lots of voice signals) the defaults seem to work quite nicely :)
+# except the stochastic gain is not yet matching the original
+smsAnal soopastar.wav soopastar.sms ;
 smsPrint -t4 soopastar.sms ;
 smsSynth soopastar.sms soopastar.synth.wav ;
 smsSynth -s1 soopastar.sms soopastar.det.wav ;
