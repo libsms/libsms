@@ -2,34 +2,68 @@
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 libsms work log
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-* Todo list (after 1.0)
-** TODO double check smsAnal man/documentation, update smsSynth man
-   - [ ] limit on nStocCoeff
-** TODO double check example parameters used
-** TODO fix documentation for smspd scons pd= option
+* Todo list
+** TODO make testing scripts
+    - calls different functions with various types of soundfiles
+    - either plot old and new or does a quick envelope check
+    - should be short ones (fast) and long ones (robust)
+    - writes output files to /tmp so things don't get cluttered
 ** TODO SWIG / Python:
-   - [ ] use Numpy SWIG typemaps for converting c arrays to numpy arrays
-      - http://www.scipy.org/Cookbook/SWIG_and_NumPy
-      - http://matt.eifelle.com/2008/11/04/exposing-an-array-interface-with-swig-for-a-cc-structure/
-** TODO remove un-updated/used tools (smsToLisp, smsSynthDet, etc)
-** TODO why does yaml file show partials with negative db?!
-   - see guitarchord-debugme.yaml in examples dir
-** TODO add option in synthesis for transpotion while maintaing spectral shape
-*** TODO need to calculate and store spectral shapes
-** TODO clean/re-organize spectrum.c
+*** TODO tie soundIO functions to SMS_Sound stuct
+*** TODO make a function for returning a list of SMS_Data frames
+      - [ ] optional arguments to start with: start, stop frames, residual=True/False
+*** TODO draw a map of where pAnalParams goes throughout sms_analysis
+    - [ ] determine if it is best to pass this pointer or a pointer in the nested structure
+        - ex. SMS_PeakParams or SMS_AnalParams
+*** TODO find out how to access arrays in structures
+    - helper functions within structure?
+*** TODO find out how to add doc strings
+*** TODO find out how to use exceptions
+    - [ ] with functions that return an err integer, can I check this in the inlined code, then
+        call an exception there? would reduce lots of python code
+        - but the current error checking will not conflict with this if it is changed
+          ( will just always return nothing and error checking will depend on the exceptions)
+** VERIFY [#A] remove all calloc's from looping functions
+   - there are many in the analysis, work on one at a time and test
+   - can push them into SMS_AnalParams 
+   - can do some transfers in place (waveform-> spectrum)
+** DONE make function for calculating rms energy of an array
+** TODO organization of main analysis routines :anal:
+*** functions in analysis.c:
+    - seems 4 functions will fit:
+**** analyzeDet - just the sinusoids (peaks + harm detection)  of one frame
+**** analyzeRes - just residual, needs analyzeDet first
+**** analyzeFrame - will do the two above for one frame of data
+**** analyze -  circular buffer /w adaptive window size
+         - continuation done here?
+         - should reAnalyze code just be in here, 
+           thereby calling analyzeFrame 2x (if necessary)?
+** TODO pull out fResidualPercentage into its own function
+   - no reason why it should be in sms_residual if it will not be used
+      - its not being used right now
+** TODO convert error checking statements to use sms_error()
+   - [ ] remove the SMS_ERRORS typedefs - this system if cumbersome
+   - [ ] remove int returns (now can check for an error with sms_errorCheck())
+** TODO documentation 
+*** VERIFY double check smsAnal man/documentation, update smsSynth man
+    - [ ] limit on nStocCoeff
+*** VERIFY double check example parameters used
+** TODO used standarzed db conversion
+   - standard: db = 20*log10(x)
+   - can then make a function to normalize to 0, 100, etc 
+** VERIFY clean/re-organize spectrum.c
    - some calles pass a null pointer to a non-existent phase spectrum
    ( because phases are not stored in the model)
    - these calls should call a different function, thereby avoiding the 
    if check for every sample
 ** TODO Doxygen todo list
    - pretty good for now, but many more things that could use better docs
-** TODO resynthesize det+res with only 1 fft
-   - in the current implementation, the stochastic and deterministic are inverse-fft'ed
-     seperately
-   - will need to mulitply the stochastic spectrum by the inverse blackmann harris
-     window because the deterministic part uses this (see DAFX pg 36)
-** TODO stochastic resynthesis needs a closer look
+** TODO stochastic resynthesis needs a closer look :synth:
 *** TODO always turns out louder than the original
+    - it appears pSmsData->pFStocGain is getting multiplied through twice
+    - this multiplier needs work
+    - [ ] also, why is it a floating-point pointer instead of just a float?
+*** TODO Hamming() is messed up,  see Bugs below
 *** TODO make sure different samplerates produce similar spectrums
     - originally the samplerate was set at 44100
     -  now it is variable
@@ -39,13 +73,20 @@ libsms work log
     - right now, coefficients are limited to SR / FR, rounded up to the nearest pow2
     - when nCoeff is set higher than this, artifacts are appearing in the residual synthesis
     - [ ] need to check at the beginning and limit the coeffcients
-** TODO Residual Resynthesis 
+** TODO Residual Resynthesis
 *** to start, just store output DFT from getResidual
       - make a check if the synthesis DFT is the same size as analysis 
       - if it is, synthesize using original phases
       - if it isn't, generate new random phases
       - from here, will have to think of how to deal with interpolation
-** TODO make Post-Processing functions
+** TODO harmonic Dection :anal:
+     - don't think it is actually two-way mismatch
+*** TODO [#A] organize so different f0 detection algos can be used
+        - [ ] organize so error statistic values can be found from outside
+            - can then be plotted, for comparison to other algos
+*** TODO [#A] make an init function and SMS_HarmParams struct
+*** TODO [#B] port TWN algo from Octave code
+** TODO make Post-Processing functions :anal:
 *** should be included in analysis like programs
     - return a pointer to another smsData structure, or file?
 *** TODO contains a smsResample 
@@ -67,31 +108,68 @@ libsms work log
    - the problem was SMS_ANAL_DELAY was not large enough, so not all of the
      bad frames were being re-analyzed
    - [ ] need to make this a member of SMS_AnalParams structur
-** TODO make framerate of analysis specifieble by milleseconds instead of hz
-** TODO [#C] optimizing
-   - [ ] benchmark FFT's
-   - [ ] change fabs() to fabsf() if they don't need to be doubles
-     - [ ] same with floorf
-   - [ ] calloc's/malloc's done per function call
-   - check if they are only done once
-       - most are in if statements, add an else with a print to check
-   - [ ] use table lookup for dB conversion
-   - [ ] currently uses random() from stdlib.
-          - try merseinne twister / other generator
+** TODO sort out track length terms 
+      - some are seconds, some samples, some frames
+      - [ ] make framerate of analysis specifieble by milleseconds instead of hz
+** TODO optimizing
+*** TODO resynthesize det+res with only 1 fft
+    - in the current implementation, the stochastic and deterministic are inverse-fft'ed
+      seperately
+    - will need to mulitply the stochastic spectrum by the inverse blackmann harris
+      window because the deterministic part uses this (see DAFX pg 36)
+*** TODO change standard math routines to floating point doubles
+      - should maybe wrap them in inlined function calls?
+      - could move all math functions to an inlined header file
+*** TODO remove all calloc's/malloc's happening per function call
+         - wrap them using the static int check
+*** TODO  table lookup for dB conversion
+* Questions
+** why is nFrames nSamples/iHopsize + 3? why + 3?
+** what is the best way to convert from mag to db?
+   - 0:1 -> 0:100?
+   - normalize maximum to 0?
+      - if this is the case, should there be a loudness measurement too?
+** why not approximate residual spectrum in dB?
+** Why is pre-emphasis built into sms_fillSoundBuffer?
+     - is this a high-pass filter? what is this pre-emphasis / de-emphasis?
 * Bugs
-  - [ ] changing framerate in barbarie.wav (amp exam) causes seg fault
-  - [ ] large analysis files
-  ex. the 30 second long nightinggale sample
+** Python sms_getSound() cannot load arrays 
+   - [ ] first check what sizes do not load
+   - [ ] then make a similar command line program to do the same, see if it crashes
+         and where
+** Hamming() makes the hamming window with max amplitude 0.016.
+       - this should be 1.0, but if it is 1.0, then the stochastic component is waaayyyy
+         too loud.
+** changing framerate in barbarie.wav (amp exam) causes seg fault
+** large analysis files
+    - ex. the 30 second long nightinggale sample
 * Wish list
+** transpotion while maintaing spectral shape
 ** improvement of inharmonic analysis/synthesis
    - is it being done right now?
    - in other analysis programs, one has as many as 500 partials for enharmonic sounds
    - why is smsAnal only producing < 100?
-** restore Hybridize functions
-*** was previously only used with the MK tool, which isn't available now
+** Spectral Envelope computation
+   - Scharz '97
+   - Discrete Cestrum analysis seems to be a good choice
+   - can represent as both spectrum coefficeints and (spline) breakpoints
+** multiple analyses using machine learning
 ** repetive analysis using dictionary storage of params / machine learning techniques
    - can automate some parameters this way
       - window size, harmonic /inharmpic, melody/note 
+** make analysis macros
+   - reduces the number of parameters one must set
+   - will have to do an in-depth analysis of the relationship of different parameters
 ** transient model synthesis
 *** based on the Discrete Cosine Transform
-* Things done
+* Done list
+** DONE moved synthesis buffers into pSynthParams
+   - some were happening every frame
+   - some weren't checking if sizeHop changed
+** DONE remove un-updated/used tools (smsToLisp, smsSynthDet, etc)
+** DONE fix documentation for smspd scons pd= option
+** DONE deal with multi-channel soundfiles
+   - channels are interleaved
+   - [ ] include an integer in SMS_SoundFile for # of channels
+   - [ ] include an integer in SMS_SoundFile for the channel you want (if > 1)
+   - [ ] in read function, check these and only read the channel you want
