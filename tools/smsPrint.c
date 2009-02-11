@@ -107,9 +107,9 @@ int main (int argc, char *argv[])
 
         pChInputSmsFile = argv[argc-1];
 
-	if((iError = sms_getHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile)) != SMS_OK)
+	if(sms_getHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile))
     	{
-                printf("error in sms_getHeader: %s \n", sms_errorString(iError));
+                printf("error in sms_getHeader: %s \n", sms_errorString());
                 exit(EXIT_FAILURE);
 	}	    
 

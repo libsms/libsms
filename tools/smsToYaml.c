@@ -91,7 +91,7 @@ int main (int argc, char *argv[])
      }
      if((iError = sms_getHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile)) != SMS_OK)
      {
-             printf("error in sms_getHeader: %s \n", sms_errorString(iError));
+             printf("error in sms_getHeader: %s \n", sms_errorString());
              printf("failed when trying to open file %s \n", pChInputSmsFile );
              exit(EXIT_FAILURE);
      }	    

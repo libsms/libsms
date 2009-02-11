@@ -57,7 +57,7 @@ int main (int argc, char *argv[])
 	if ((iError = sms_getHeader (pChInputSmsFile, &pSmsHeader,
 	                            &pInSmsFile)) < 0)
 	{
-                printf("error in sms_getHeader: %s", sms_errorString(iError));
+                printf("error in sms_getHeader: %s", sms_errorString());
                 exit(EXIT_FAILURE);
 	}	    
   

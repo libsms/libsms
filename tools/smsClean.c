@@ -144,7 +144,7 @@ int main (int argc, char *argv[])
 	if ((iError = sms_getHeader (pChInputSmsFile, &pInSmsHeader, 
 	                            &pInSmsFile)) < 0)
 	{
-                printf("error in sms_getHeader: %s", sms_errorString(iError));
+                printf("error in sms_getHeader: %s", sms_errorString());
                 exit(EXIT_FAILURE);
 	}	    
   
@@ -152,13 +152,13 @@ int main (int argc, char *argv[])
 	     (float *) calloc (pInSmsHeader->nTracks, sizeof (float))) == 
 		 NULL)
         {
-                printf("error allocating memory for pFFreq: %s", sms_errorString(iError));
+                printf("error allocating memory for pFFreq: %s", sms_errorString());
                 exit(EXIT_FAILURE);
         }
 	if ((pIGoodRecords =  
 	     (int *) calloc (pInSmsHeader->nTracks, sizeof (int))) == NULL)
         {
-                printf("error allocating memory for plGoodRecords: %s", sms_errorString(iError));
+                printf("error allocating memory for plGoodRecords: %s", sms_errorString());
                 exit(EXIT_FAILURE);
         }
 
@@ -197,7 +197,7 @@ int main (int argc, char *argv[])
 	if ((pITrajOrder =  
 	     (int *) calloc (OutSmsHeader.nTracks, sizeof (int))) == NULL)
         {
-                printf("error allocating memory for pITrajOrder: %s", sms_errorString(iError));
+                printf("error allocating memory for pITrajOrder: %s", sms_errorString());
                 exit(EXIT_FAILURE);
         }
 

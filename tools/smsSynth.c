@@ -71,7 +71,7 @@ int main (int argc, char *argv[])
 	synthParams.iSynthesisType = SMS_STYPE_ALL;
         synthParams.iDetSynthType = SMS_DET_IFFT;
 	synthParams.sizeHop = SMS_MIN_SIZE_FRAME;
-	synthParams.iSamplingRate = 44100;
+	synthParams.iSamplingRate = 0; /* if this is not set by an argument, the original value is used */
 
 	if (argc > 3) 
 	{
@@ -141,7 +141,7 @@ int main (int argc, char *argv[])
 
 	if (iError != SMS_OK)
 	{
-                printf("error in sms_getHeader: %s", sms_errorString(iError));
+                printf("error in sms_getHeader: %s", sms_errorString());
                 exit(EXIT_FAILURE);
 	}	    
  
