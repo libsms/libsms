@@ -94,7 +94,7 @@
  * SMS_SynthParams - everything to compute synthesis \n
  * SMS_Data - where the analysis data ends up
  *
- * The main file for analysis routines is smsAnalysis.c. For synthesis, see smsSynthesis.c. From these two files (any by 
+ * The main file for analysis routines is analysis.c. For synthesis, see synthesis.c. From these two files (any by 
  * looking at how they are prepared in the command line tools), you can follow different functions of the code.
  *
  * \subsection coding_style Info about the coding style used in this library:
