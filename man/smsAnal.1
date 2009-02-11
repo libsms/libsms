@@ -26,12 +26,15 @@ or visit the SMS homepage at:
 .SH OPTIONS
 .B Description of parameters
 .TP 8
+.BI -v " verbose mode"
+Print out lots of information about parameters and what is going on.
+.TP 8
 .BI -d " debugMode"
 .B (default 0) [1,2,3,4,5,6,7,8,9,10,11,12]
 0 no debug, 1 debug initialitzation functions, 2 debug peak detection function, 3 debug harmonic detection function, 4 debug peak continuation function, 5 debug clean trajectories function, 6 debug sine synthesis function, 7 debug stochastic analysis function, 8 debug stochastic synthesis function, 9 debug top level analysis function, 10 debug everything, 11 write residual into a file (residual.snd), 12 write original, synthesis and residual to a text file (debug.txt).
 .TP 8
 .BI -f " format"  
-.B (default 1) [0,1,2,3] 
+.B (default 0) [0,1,2,3] 
 format of the representation: 0 harmonic, 1 inharmonic, 2 harmonic with phase, 3 inharmonic with phase.
 .TP 8
 .BI -q " soundType"
@@ -45,7 +48,7 @@ direction of the analysis. 0: direct, 1: reverse. Reverse is very useful for per
 .B STFT parameters
 .TP 8
 .BI -s " windowSize"
-.B (default 3.5) [3 <-> 7]
+.B (default 3.5) [>=1]
 number of periods of fundamental frequency to use in the analysis window. The actual window size in seconds will be this value divided by the fundamental frequency found at every given moment.
 .TP 8
 .BI -i " windowType"
@@ -63,14 +66,14 @@ number of analysis windows per second (Hz). This will determine the hop size of 
 highest frequency in Hz of the peaks to be detected. Therefore no partials higher than this frequency will be detected. It will never be higher than half the sampling-rate.
 .TP 8
 .BI -k " minPeakMag"
-.B (default 0) [0 <-> 20]
-minimum magnitude in dB of a peak. Peak softer than this dB value will not have any chance to be considered part of the deterministic component, that is, of the partials. This value should not be smaller than 0 since 0 is the noise threshold used in the analysis.
+.B (default -100) [-100 <-> 0]
+minimum magnitude in decibels of a peak. Peak softer than this dB value will not have any chance to be considered part of the deterministic component, that is, of the partials. This value should not be smaller than 0 since 0 is the noise threshold used in the analysis.
 .TP 8
 .B Harmonic detection parameters
 .TP 8
 .BI -y " refHarmonic"
 .B (default 1) [0,1,2,3 ...]
-number of the harmonic used for reference, 1 is the fundamental. The are some sounds, like many piano sounds, that have a very soft fundamental. In these cases it is helpful to find the fundamental frequency by looking for a harmonic other than the actual fundamental.
+number of the harmonic used for reference, 1 is the fundamental. There are some sounds, like many piano sounds, that have a very soft fundamental. In these cases it is helpful to find the fundamental frequency by looking for a harmonic other than the actual fundamental.
 .TP 8
 .BI -m " minRefHarmMag"
 .B (default 30) [5 <-> 60]
@@ -102,7 +105,7 @@ number of guides to be used in analysis. These guides will be used to track the 
 .B (default 60) [1 <-> 500]
 maximum number of trajectories, or partials, to be found. This will be the output number of trajectories. 
 .TP 8
-.BI -v " freqDeviation"
+.BI -w " freqDeviation"
 .B (default .45) [.1 <-> .5]
 maximum deviation that is permitted from the "guide frequency" to the continuation peak of the guide. In the case of harmonic sounds the deviation in Hz is the product of this value times the fundamental frequency. In the case of inharmonic sounds the deviation in Hz is this value times the guide frequency.
 .TP 8
