@@ -19,7 +19,6 @@ opts.AddOptions(
     PathOption('libpath', 'Directory to look for libraries (adds to defaults).', '/usr/local/lib'),
     PathOption('cpath', 'Directory to look for c headers (adds to defaults).', '/usr/local/include'),
     BoolOption('debug', 'Build with debugging information', False),
-    BoolOption('fftw', 'Use FFTW3 library.', False),
     BoolOption('twister', 'Use SIMD-oriented Fast Mersenne Twister algorithm for random number generation.', True),
     BoolOption('verbose','print verbose environment information', False)
 )
@@ -77,12 +76,6 @@ if not conf.CheckLibWithHeader('m','math.h','c'):
 if not conf.CheckLibWithHeader('sndfile','sndfile.h','c'):
         print 'cannot find libsndfile'
         Exit(1)
-
-if int(ARGUMENTS.get('fftw', 0)):
-    if not conf.CheckLibWithHeader('fftw3f','fftw3.h','c'):
-        print 'cannot find fft3w, using realft()'
-    else:
-        env.Append(CCFLAGS = ' -DFFTW ')
 
 env = conf.Finish()
 
