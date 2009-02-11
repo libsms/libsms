@@ -40,16 +40,15 @@
  * \param nHarm              number of harmonic
  * \param pSpectralPeaks   pointer to all the peaks
  * \param pICurrentPeak     pointer to the last peak taken
- * \param pAnalParams    pointer to analysis parameters
+ * \param pPeakParams    pointer to analysis parameters
  * \return the number of the closest peak or -1 if not found  
  */
 static int GetClosestPeak (int iPeakCandidate, int nHarm, SMS_Peak *pSpectralPeaks,
-                           int *pICurrentPeak, SMS_AnalParams *pAnalParams)
+                           int *pICurrentPeak, int iRefHarmonic)
 {
 	int iBestPeak = *pICurrentPeak + 1, iNextPeak;
 	float fBestPeakFreq = pSpectralPeaks[iBestPeak].fFreq,
-		fHarmFreq = (1 + nHarm) * pSpectralPeaks[iPeakCandidate].fFreq / 
-			pAnalParams->iRefHarmonic, 
+		fHarmFreq = (1 + nHarm) * pSpectralPeaks[iPeakCandidate].fFreq / iRefHarmonic, 
 		fMinDistance = fabs(fHarmFreq - fBestPeakFreq),
 		fMaxPeakDev = .5 * fHarmFreq / (nHarm + 1), fDistance;
   
@@ -82,11 +81,11 @@ static int GetClosestPeak (int iPeakCandidate, int nHarm, SMS_Peak *pSpectralPea
  * \param fRefHarmMag      magnitude of possible fundamental
  * \param pSpectralPeaks   all the peaks
  * \param nCand              number of existing candidates
- * \param pAnalParams    pointer to analysis parameters
+ * \param pPeakParams    pointer to analysis parameters
  * \return 1 if big peak, -1 if too small , otherwise return 0 
  */
 static int ComparePeak (float fRefHarmMag, SMS_Peak *pSpectralPeaks, int nCand, 
-                        SMS_AnalParams *pAnalParams)
+                        float fRefHarmMagDiffFromMax)
 {
 	int iPeak;
 	float fMag = 0;
@@ -100,8 +99,7 @@ static int ComparePeak (float fRefHarmMag, SMS_Peak *pSpectralPeaks, int nCand,
 	/* if too small forget it */
 	for (iPeak = 0; iPeak < N_FUND_HARM; iPeak++)
 		if (pSpectralPeaks[iPeak].fMag > 0 &&
-		    fRefHarmMag - pSpectralPeaks[iPeak].fMag < 
-		    -pAnalParams->fRefHarmMagDiffFromMax)
+		    fRefHarmMag - pSpectralPeaks[iPeak].fMag < - fRefHarmMagDiffFromMax)
 			return (-1);
   
 	/* if it is much bigger than rest take it */
@@ -147,14 +145,14 @@ int CheckIfHarmonic (float fFundFreq, SMS_HarmCandidate *pCHarmonic, int nCand)
  * \param pSpectralPeaks     all the peaks
  * \param pCHarmonic  all the candidates
  * \param nCand                 candidate number that is to be filled
- * \param pAnalParams    analysis parameters
+ * \param pPeakParams    analysis parameters
  * \param fRefFundamental     previous fundamental
  * \return -1 if not good enough for a candidate, return 0 if reached
  * the top frequency boundary, return -2 if stop checking because it 
  * found a really good one, return 1 if the peak is a good candidate 
  */
-int GoodCandidate (int iPeak, SMS_Peak *pSpectralPeaks, SMS_HarmCandidate *pCHarmonic,
-                   int nCand, SMS_AnalParams *pAnalParams, float fRefFundamental)
+static int GoodCandidate (int iPeak, SMS_Peak *pSpectralPeaks, SMS_HarmCandidate *pCHarmonic,
+                   int nCand, SMS_PeakParams *pPeakParams, float fRefFundamental)
 {
 	float fHarmFreq, fRefHarmFreq, fRefHarmMag, fTotalMag = 0, fTotalDev = 0, 
 		fTotalMaxMag = 0, fAvgMag = 0, fAvgDev = 0, fHarmRatio = 0;
@@ -167,20 +165,21 @@ int GoodCandidate (int iPeak, SMS_Peak *pSpectralPeaks, SMS_HarmCandidate *pCHar
 	fTotalMag = fRefHarmMag;
   
 	/* check if magnitude is big enough */
+        /*! \bug float comparison to 0 */
 	if (((fRefFundamental > 0) && 
-        (fRefHarmMag < pAnalParams->fMinRefHarmMag - 10)) ||
-        ((fRefFundamental <= 0) && 
-        (fRefHarmMag < pAnalParams->fMinRefHarmMag)))
+             (fRefHarmMag < pPeakParams->fMinRefHarmMag - 10)) ||
+            ((fRefFundamental <= 0) &&
+             (fRefHarmMag < pPeakParams->fMinRefHarmMag)))
 		return (-1);
-  
-	/* check that is not a harmonic of a previous candidate */
+        
+	/* check that it is not a harmonic of a previous candidate */
 	if (nCand > 0 &&
-		CheckIfHarmonic (fRefHarmFreq / pAnalParams->iRefHarmonic, pCHarmonic, 
+		CheckIfHarmonic (fRefHarmFreq / pPeakParams->iRefHarmonic, pCHarmonic, 
 			             nCand))
 		return (-1);
   
 	/* check if it is very big or very small */
-	iPeakComp = ComparePeak (fRefHarmMag, pSpectralPeaks, nCand, pAnalParams);
+	iPeakComp = ComparePeak (fRefHarmMag, pSpectralPeaks, nCand, pPeakParams->fRefHarmMagDiffFromMax);
 	/* too small */
 	if (iPeakComp == -1)
 		return (-1);
@@ -196,17 +195,17 @@ int GoodCandidate (int iPeak, SMS_Peak *pSpectralPeaks, SMS_HarmCandidate *pCHar
 	}
   
 	/* get a weight on the peak by comparing its harmonic series   */
-	/* with the existing peaks                                     */
-	if (pAnalParams->iSoundType != SMS_SOUND_TYPE_NOTE)
+	/* with the existing peaks */
+	if (pPeakParams->iSoundType != SMS_SOUND_TYPE_NOTE)
 	{
 		fHarmFreq = fRefHarmFreq;
 		iCurrentPeak = iPeak;
 		nGoodHarm = 0;
-		for (iHarm = pAnalParams->iRefHarmonic; iHarm < N_FUND_HARM; iHarm++)
+		for (iHarm = pPeakParams->iRefHarmonic; iHarm < N_FUND_HARM; iHarm++)
 		{
-			fHarmFreq += fRefHarmFreq / pAnalParams->iRefHarmonic;
+			fHarmFreq += fRefHarmFreq / pPeakParams->iRefHarmonic;
 			iChosenPeak = GetClosestPeak(iPeak, iHarm, pSpectralPeaks, 
-			                             &iCurrentPeak, pAnalParams); 
+			                             &iCurrentPeak, pPeakParams->iRefHarmonic); 
 			if (iChosenPeak > 0)
 			{
 				fTotalDev += 
@@ -223,15 +222,14 @@ int GoodCandidate (int iPeak, SMS_Peak *pSpectralPeaks, SMS_HarmCandidate *pCHar
 		fAvgDev = fTotalDev / (iHarm + 1);
 		fAvgMag = fTotalMag / fTotalMaxMag;
 		fHarmRatio = (float) nGoodHarm / (N_FUND_HARM - 1);
+
 	}
 
-	if (pAnalParams->iDebugMode == SMS_DBG_HARM_DET ||
-	    pAnalParams->iDebugMode == SMS_DBG_ALL)
-		fprintf(stdout, 
-		        "Harmonic Candidate: frq: %f mag: %f frqDev: %f magPrc: %f harmDev %f\n",
-		        fRefHarmFreq, fRefHarmMag, fAvgDev, fAvgMag, fHarmRatio);
+/*         fprintf(stdout,  */
+/*                 "Harmonic Candidate: frq: %f mag: %f frqDev: %f magPrc: %f harmDev %f\n", */
+/*                 fRefHarmFreq, fRefHarmMag, fAvgDev, fAvgMag, fHarmRatio); */
   
-	if (pAnalParams->iSoundType != SMS_SOUND_TYPE_NOTE)
+	if (pPeakParams->iSoundType != SMS_SOUND_TYPE_NOTE)
 	{
 		if (fRefFundamental > 0)
 		{
@@ -245,6 +243,9 @@ int GoodCandidate (int iPeak, SMS_Peak *pSpectralPeaks, SMS_HarmCandidate *pCHar
 			    fHarmRatio < HARM_RATIO_THRES)
 				return (-1);
 		}
+
+
+
 	}
 	pCHarmonic[nCand].fFreq = fRefHarmFreq;
 	pCHarmonic[nCand].fMag = fRefHarmMag;
@@ -258,14 +259,13 @@ int GoodCandidate (int iPeak, SMS_Peak *pSpectralPeaks, SMS_HarmCandidate *pCHar
 /*! \brief  choose the best fundamental out of all the candidates
  *
  * \param pCHarmonic               array of candidates
- * \param pAnalParams             analysis parameters
+ * \param pPeakParams             analysis parameters
  * \param nGoodPeaks              number of candiates
  * \param fPrevFund                   reference fundamental
  * \return the integer number of the best candidate
  */
 static int GetBestCandidate (SMS_HarmCandidate *pCHarmonic, 
-                             SMS_AnalParams *pAnalParams,
-                             int nGoodPeaks, float fPrevFund)
+                             int iRefHarmonic, int nGoodPeaks, float fPrevFund)
 {
 	int iBestCandidate = 0, iPeak;
 	float fBestFreq, fHarmFreq, fDev;
@@ -274,24 +274,21 @@ static int GetBestCandidate (SMS_HarmCandidate *pCHarmonic,
 	if (fPrevFund > 0)
 		for (iPeak = 1; iPeak < nGoodPeaks; iPeak++)
 		{
-			if (fabs (fPrevFund - pCHarmonic[iPeak].fFreq /
-				      pAnalParams->iRefHarmonic) <
-			    fabs(fPrevFund - pCHarmonic[iBestCandidate].fFreq / 
-			         pAnalParams->iRefHarmonic))
+			if (fabs (fPrevFund - pCHarmonic[iPeak].fFreq / iRefHarmonic) <
+			    fabs(fPrevFund - pCHarmonic[iBestCandidate].fFreq / iRefHarmonic))
 				iBestCandidate = iPeak;
 		}
 	else
 		/* try to find the best candidate */
 		for (iPeak = 1; iPeak < nGoodPeaks; iPeak++)
 		{
-			fBestFreq = pCHarmonic[iBestCandidate].fFreq / 
-				pAnalParams->iRefHarmonic;
+			fBestFreq = pCHarmonic[iBestCandidate].fFreq / iRefHarmonic;
 			fHarmFreq = fBestFreq * 
 				floor (.5 + 
-				       (pCHarmonic[iPeak].fFreq / pAnalParams->iRefHarmonic) / 
+				       (pCHarmonic[iPeak].fFreq / iRefHarmonic) / 
 			           fBestFreq);
 			fDev = fabs (fHarmFreq - (pCHarmonic[iPeak].fFreq / 
-			             pAnalParams->iRefHarmonic)) / fHarmFreq;
+			             iRefHarmonic)) / fHarmFreq;
 	
 			/* if candidate is far from harmonic from best candidate and */
 			/* bigger, take it */
@@ -322,18 +319,22 @@ static int GetBestCandidate (SMS_HarmCandidate *pCHarmonic,
  *
  * \param pFrame                     pointer to current frame
  * \param fRefFundamental       frequency of previous frame
- * \param pAnalParams           pointer to analysis parameters
+ * \param pPeakParams           pointer to analysis parameters
+ * \todo is it possible to use pSpectralPeaks instead of SMS_AnalFrame?
+ * \todo move pCHarmonic array to SMS_AnalFrame structure
+  - this will allow for analysis of effectiveness from outside this file
+ * This really should only be for sms_analyzeFrame
  */
 void sms_harmDetection (SMS_AnalFrame *pFrame, float fRefFundamental,
-                    SMS_AnalParams *pAnalParams)
+                    SMS_PeakParams *pPeakParams)
 {
 	int iPeak = -1, nGoodPeaks = 0, iCandidate, iBestCandidate;
 	float fLowestFreq, fHighestFreq, fPeakFreq=0;
 	SMS_HarmCandidate pCHarmonic[N_HARM_PEAKS];
 
 	/* find all possible candidates to use as harmonic reference */
-	fLowestFreq = pAnalParams->fLowestFundamental * pAnalParams->iRefHarmonic;
-	fHighestFreq = pAnalParams->fHighestFundamental * pAnalParams->iRefHarmonic;
+	fLowestFreq = pPeakParams->fLowestFreq * pPeakParams->iRefHarmonic; 
+	fHighestFreq = pPeakParams->fHighestFundamental * pPeakParams->iRefHarmonic;
 	while (fPeakFreq < fHighestFreq)
 	{
 		iPeak++;
@@ -342,7 +343,7 @@ void sms_harmDetection (SMS_AnalFrame *pFrame, float fRefFundamental,
 			break;
 
 		/* no more peaks */
-		if (pFrame->pSpectralPeaks[iPeak].fMag <= 0)
+		if (pFrame->pSpectralPeaks[iPeak].fMag <= 0) /*!< \bug float comparison to zero */
 			break;
     
 		/* peak too low */
@@ -351,14 +352,15 @@ void sms_harmDetection (SMS_AnalFrame *pFrame, float fRefFundamental,
 
 		/* if previous fundamental look only around it */
 		if (fRefFundamental > 0 && 
-			fabs(fPeakFreq - (pAnalParams->iRefHarmonic * fRefFundamental)) / 
+			fabs(fPeakFreq - (pPeakParams->iRefHarmonic * fRefFundamental)) / 
 				fRefFundamental > .5)
 			continue;
       
 		iCandidate = GoodCandidate (iPeak, pFrame->pSpectralPeaks, 
-		                            pCHarmonic, nGoodPeaks, pAnalParams,
+		                            pCHarmonic, nGoodPeaks, pPeakParams,
 		                            fRefFundamental);
-		/* good candiate found */
+	
+                /* good candiate found */
 		if (iCandidate == 1)
 			nGoodPeaks++;
 		/* a perfect candiate found */
@@ -377,13 +379,13 @@ void sms_harmDetection (SMS_AnalFrame *pFrame, float fRefFundamental,
 	else 
 		if (nGoodPeaks == 1)
 			pFrame->fFundamental = pCHarmonic[0].fFreq /
-				pAnalParams->iRefHarmonic;
+				pPeakParams->iRefHarmonic;
 	/* if more than one candidate choose the best one */
 	else
 	{
-		iBestCandidate = GetBestCandidate (pCHarmonic, pAnalParams, nGoodPeaks, 
+		iBestCandidate = GetBestCandidate (pCHarmonic, pPeakParams->iRefHarmonic, nGoodPeaks, 
 		                                  fRefFundamental);
 		pFrame->fFundamental = pCHarmonic[iBestCandidate].fFreq / 
-			pAnalParams->iRefHarmonic;
+			pPeakParams->iRefHarmonic;
 	}
 }

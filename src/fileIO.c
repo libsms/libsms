@@ -31,6 +31,8 @@
  */
 #define SMS_MAGIC 767  
 
+static char pChTextString[1000]; /*!< string to store analysis parameters in sms header */
+
 /*! \brief initialize the header structure of an SMS file
  *
  * \param pSmsHeader	header for SMS file
@@ -65,29 +67,57 @@ void sms_initHeader (SMS_Header *pSmsHeader)
  * so an SMS file can be stored and correctly synthesized at a later
  * time. This is somewhat of a convenience function.
  *
+ * sms_initAnal() should be done first to properly set everything.
+ *
  * \param pSmsHeader    header for SMS file (to be stored)
  * \param nFrames           number of frames in analysis
  * \param pAnalParams   structure of analysis parameters
  * \param nTracks           number of sinusoidal tracks in the analysis
  * \param iOriginalSRate  sampling rate of analysis signal
  */
-void sms_fillHeader (SMS_Header *pSmsHeader, 
-                          int nFrames, SMS_AnalParams *pAnalParams,
-                     int nTracks, int iOriginalSRate)
+
+void sms_fillHeader (SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams,
+                     char *pProgramString)
 {
         sms_initHeader (pSmsHeader);
-
-        pSmsHeader->nFrames = nFrames;
+        pSmsHeader->nFrames = pAnalParams->nFrames;
         pSmsHeader->iFormat = pAnalParams->iFormat;
         pSmsHeader->iFrameRate = pAnalParams->iFrameRate;
         pSmsHeader->iStochasticType = pAnalParams->iStochasticType;
-        pSmsHeader->nTracks = nTracks;
-        pSmsHeader->iSamplingRate = iOriginalSRate;
+        pSmsHeader->nTracks = pAnalParams->nTracks;
+        pSmsHeader->iSamplingRate = pAnalParams->iSamplingRate;
 	if(pAnalParams->iStochasticType != SMS_STOC_APPROX)
 		pSmsHeader->nStochasticCoeff = 0;
         else
                 pSmsHeader->nStochasticCoeff = pAnalParams->nStochasticCoeff;
         pSmsHeader->iFrameBSize = sms_frameSizeB(pSmsHeader);
+
+        sprintf (pChTextString, 
+                 "created by %s with parameters: format %d, soundType %d, "
+                 "analysisDirection %d, windowSize %.2f,"
+                 " windowType %d, frameRate %d, highestFreq %.2f, minPeakMag %.2f,"
+                 " refHarmonic %d, minRefHarmMag %.2f, refHarmMagDiffFromMax %.2f,"
+                 " defaultFund %.2f, lowestFund %.2f, highestFund %.2f, nGuides %d,"
+                 " nTracks %d, freqDeviation %.2f, peakContToGuide %.2f,"
+                 " fundContToGuide %.2f, cleanTracks %d, iMinTrackLength %d,"
+                 "iMaxSleepingTime %d, stochasticType %d, nStocCoeff %d\n", 	
+                 pProgramString,
+                 pAnalParams->iFormat, pAnalParams->iSoundType,
+                 pAnalParams->iAnalysisDirection, pAnalParams->fSizeWindow, 
+                 pAnalParams->iWindowType, pAnalParams->iFrameRate,
+                 pAnalParams->fHighestFreq, pAnalParams->fMinPeakMag,
+                 pAnalParams->iRefHarmonic, pAnalParams->fMinRefHarmMag, 
+                 pAnalParams->fRefHarmMagDiffFromMax,  
+                 pAnalParams->fDefaultFundamental, pAnalParams->fLowestFundamental,
+                 pAnalParams->fHighestFundamental, pAnalParams->nGuides,
+                 pAnalParams->nTracks, pAnalParams->fFreqDeviation, 
+                 pAnalParams->fPeakContToGuide, pAnalParams->fFundContToGuide,
+                 pAnalParams->iCleanTracks, pAnalParams->iMinTrackLength,
+                 pAnalParams->iMaxSleepingTime,  pAnalParams->iStochasticType,
+                 pAnalParams->nStochasticCoeff);
+       
+        pSmsHeader->nTextCharacters = strlen (pChTextString) + 1;
+        pSmsHeader->pChTextCharacters = (char *) pChTextString;
 }
 
 /*! \brief write SMS header to file
@@ -103,10 +133,15 @@ int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader,
 	int iVariableSize = 0;
 
 	if (pSmsHeader->iSmsMagic != SMS_MAGIC)
-		return(SMS_NSMS);
+	{
+                sms_error("not an SMS file");
+                return(-1);
+        }
 	if ((*ppSmsFile = fopen (pChFileName, "w+")) == NULL)
-		return(SMS_NOPEN);
-	
+        {
+                sms_error("cannot open file for writing");
+		return(-1);
+        }	
 	/* check variable size of header */
 	iVariableSize = sizeof (int) * pSmsHeader->nLoopRecords +
 		sizeof (float) * pSmsHeader->nSpecEnvelopePoints +
@@ -117,8 +152,10 @@ int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader,
 	/* write header */
 	if (fwrite((void *)pSmsHeader, (size_t)1, (size_t)sizeof(SMS_Header),
 	    *ppSmsFile) < (size_t)sizeof(SMS_Header))
-                return(SMS_WRERR);
-	
+        {
+                sms_error("cannot write output file");
+                return(-1);
+        }	
 	/* write variable part of header */
 	if (pSmsHeader->nLoopRecords > 0)
 	{
@@ -127,7 +164,10 @@ int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader,
     
 		if (fwrite ((void *)pChStart, (size_t)1, (size_t)iSize, *ppSmsFile) < 
 		    (size_t)iSize)
-                        return(SMS_WRERR);
+                {
+                        sms_error("cannot write output file (nLoopRecords)");
+                        return(-1);
+                }	
 
 	}
 	if (pSmsHeader->nSpecEnvelopePoints > 0)
@@ -137,7 +177,10 @@ int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader,
     
 		if (fwrite ((void *)pChStart, (size_t)1, (size_t)iSize, *ppSmsFile) < 
 		    (size_t)iSize)
-                        return(SMS_WRERR);
+                {
+                        sms_error("cannot write output file (nSpecEnvelopePoints)");
+                        return(-1);
+                }	
 	}
 	if (pSmsHeader->nTextCharacters > 0)
 	{
@@ -146,9 +189,12 @@ int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader,
     
 		if (fwrite ((void *)pChStart, (size_t)1, (size_t)iSize, *ppSmsFile) < 
 		    (size_t)iSize)
-                        return(SMS_WRERR);
+                {
+                        sms_error("cannot write output file (nTextCharacters)");
+                        return(-1);
+                }	
 	}
-	return (SMS_OK);
+	return (0);
 }
 
 /*! \brief rewrite SMS header and close file
@@ -173,7 +219,10 @@ int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader)
 	/* write header */
 	if (fwrite((void *)pSmsHeader, (size_t)1, (size_t)sizeof(SMS_Header),
 	    pSmsFile) < (size_t)sizeof(SMS_Header))
-		return(SMS_WRERR);
+                {
+                        sms_error("cannot write output file (header)");
+                        return(-1);
+                }	
 	
 	/* write variable part of header */
 	if (pSmsHeader->nLoopRecords > 0)
@@ -183,7 +232,10 @@ int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader)
     
 		if (fwrite ((void *)pChStart, (size_t)1, (size_t)iSize, pSmsFile) < 
 		    (size_t)iSize)
-			return(SMS_WRERR);
+                {
+                        sms_error("cannot write output file (nLoopRecords)");
+                        return(-1);
+                }	
 	}
 	if (pSmsHeader->nSpecEnvelopePoints > 0)
 	{
@@ -192,7 +244,10 @@ int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader)
     
 		if (fwrite ((void *)pChStart, (size_t)1, (size_t)iSize, pSmsFile) < 
 		    (size_t)iSize)
-			return(SMS_WRERR);
+                {
+                        sms_error("cannot write output file (nSpecEnvelopePoints)");
+                        return(-1);
+                }	
 	}
 	if (pSmsHeader->nTextCharacters > 0)
 	{
@@ -201,11 +256,14 @@ int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader)
     
 		if (fwrite ((void *)pChStart, (size_t)1, (size_t)iSize, pSmsFile) < 
 		    (size_t)iSize)
-			return(SMS_WRERR);
+                {
+                        sms_error("cannot write output file (nTextCharacters)");
+                        return(-1);
+                }	
 	}
 
 	fclose(pSmsFile);
-	return (SMS_OK);
+	return (0);
 }
 
 /*! \brief write SMS frame
@@ -213,15 +271,18 @@ int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader)
  * \param pSmsFile	        pointer to SMS file
  * \param pSmsHeader  pointer to SMS header
  * \param pSmsFrame   pointer to SMS data frame
- * \return error code \see SMS_WRERR in SMS_ERRORS 
+ * \return 0 on success, -1 on failure
  */
 int sms_writeFrame (FILE *pSmsFile, SMS_Header *pSmsHeader, 
                     SMS_Data *pSmsFrame)
 {  
 	if (fwrite ((void *)pSmsFrame->pSmsData, 1, pSmsHeader->iFrameBSize, 
 	            pSmsFile) < (unsigned int) pSmsHeader->iFrameBSize)
-                return(SMS_WRERR);
-	else return (SMS_OK);			
+                {
+                        sms_error("cannot write frame to output file");
+                        return(-1);
+                }	
+	else return (0);			
 }
 
 
@@ -236,18 +297,18 @@ int sms_frameSizeB (SMS_Header *pSmsHeader)
   
 	if (pSmsHeader->iFormat == SMS_FORMAT_H ||
 	    pSmsHeader->iFormat == SMS_FORMAT_IH)
-		nDet = 2;// freq, mag
-        else nDet = 3; // freq, mag, phase
+		nDet = 2;/* freq, mag */
+        else nDet = 3; /* freq, mag, phase */
 
 	iSize = sizeof (float) * (nDet * pSmsHeader->nTracks);
 
         if(pSmsHeader->iStochasticType == SMS_STOC_APPROX)
-        {       //stocCoeff + 1 (gain)
+        {       /* stocCoeff + 1 (gain) */
                 iSize += sizeof(float) * (pSmsHeader->nStochasticCoeff + 1);
         }
         else if(pSmsHeader->iStochasticType == SMS_STOC_IFFT)
         {
-                //sizeFFT*2
+                /* sizeFFT*2 */
         }
 
 	return(iSize);
@@ -269,48 +330,80 @@ int sms_getHeader (char *pChFileName, SMS_Header **ppSmsHeader,
     
 	/* open file for reading */
 	if ((*ppSmsFile = fopen (pChFileName, "r")) == NULL)
-		return (SMS_NOPEN);
-            
+        {
+		sms_error("could not open SMS header");
+                return (-1);
+        }
 	/* read magic number */
 	if (fread ((void *) &iMagicNumber, (size_t) sizeof(int), (size_t)1, 
 	           *ppSmsFile) < (size_t)1)
-		return (SMS_RDERR);
+        {
+		sms_error("could not read SMS header");
+		return (-1);
+        }
 	
 	if (iMagicNumber != SMS_MAGIC)
-		return (SMS_NSMS);
+        {
+		sms_error("not an SMS file");
+		return (-1);
+        }
 
 	/* read size of of header */
 	if (fread ((void *) &iHeadBSize, (size_t) sizeof(int), (size_t)1, 
 		*ppSmsFile) < (size_t)1)
-		return (SMS_RDERR);
+        {
+		sms_error("could not read SMS header (iHeadBSize)");
+		return (-1);
+        }
 	
 	if (iHeadBSize <= 0)
-		return (SMS_RDERR);
+        {
+		sms_error("bad SMS header size");
+                return (-1);
+        }
      
         /* read number of data Frames */
         if (fread ((void *) &nFrames, (size_t) sizeof(int), (size_t)1, 
                    *ppSmsFile) < (size_t)1)
-		return (SMS_RDERR);
+        {
+		sms_error("could not read SMS number of frames");
+                return (-1);
+        }
         
 	if (nFrames <= 0)
-		return (SMS_RDERR);
+        {
+		sms_error("number of frames <= 0");
+                return (-1);
+        }
         
         /* read size of data Frames */
 	if (fread ((void *) &iFrameBSize, (size_t) sizeof(int), (size_t)1, 
 	           *ppSmsFile) < (size_t)1)
-		return (SMS_RDERR);
+        {
+		sms_error("could not read size of SMS data");
+		return (-1);
+        }
         
 	if (iFrameBSize <= 0)
-		return (SMS_RDERR);
+        {
+		sms_error("size bytes of frames <= 0");
+		return (-1);
+        }
 
 	/* allocate memory for header */
 	if (((*ppSmsHeader) = (SMS_Header *)malloc (iHeadBSize)) == NULL)
-		return (SMS_MALLOC);
+        {
+		sms_error("cannot allocate memory for header");
+		return (-1);
+        }
 
 	/* read header */
 	rewind (*ppSmsFile);
 	if (fread ((void *) (*ppSmsHeader), 1, iHeadBSize, *ppSmsFile) < (unsigned int) iHeadBSize)
-		return (SMS_RDERR);
+        {
+		sms_error("cannot read header of SMS file");
+                return (-1);
+        }
 
 	/* set pointers to variable part of header */
 	if ((*ppSmsHeader)->nLoopRecords > 0)
@@ -328,7 +421,7 @@ int sms_getHeader (char *pChFileName, SMS_Header **ppSmsHeader,
 			sizeof(int) * (*ppSmsHeader)->nLoopRecords +
 			sizeof(float) * (*ppSmsHeader)->nSpecEnvelopePoints);
 
-	return (SMS_OK);			
+	return (0);			
 }
 
 /*! \brief read an SMS data frame
@@ -337,8 +430,7 @@ int sms_getHeader (char *pChFileName, SMS_Header **ppSmsHeader,
  * \param pSmsHeader	   pointer to SMS header
  * \param iFrame               frame number
  * \param pSmsFrame       pointer to SMS frame
- * \return  SMS_OK if it could read the data, -1 if not
- *	
+ * \return  0 on sucess, -1 on error
  */
 int sms_getFrame (FILE *pSmsFile, SMS_Header *pSmsHeader, int iFrame,
                   SMS_Data *pSmsFrame)
@@ -346,8 +438,7 @@ int sms_getFrame (FILE *pSmsFile, SMS_Header *pSmsHeader, int iFrame,
 	if (fseek (pSmsFile, pSmsHeader->iHeadBSize + iFrame * 
 	                     pSmsHeader->iFrameBSize, SEEK_SET) < 0)
 	{
-		printf ("sms_getFrame: could not seek to the sms frame %d\n", 
-		         iFrame);
+		sms_error ("cannot seek to the SMS frame");
 		return (-1);
 	}
 	if ((pSmsHeader->iFrameBSize = 
@@ -355,14 +446,11 @@ int sms_getFrame (FILE *pSmsFile, SMS_Header *pSmsHeader, int iFrame,
 	              (size_t)pSmsHeader->iFrameBSize, pSmsFile))
 	    != pSmsHeader->iFrameBSize)
 	{
-		printf ("sms_getFrame: could not read sms frame %d\n", 
-		         iFrame);
+		sms_error ("cannot read SMS frame");
 		return (-1);
 	}
-	return (SMS_OK);			
+	return (0);			
 }
-
-
 
 /*! \brief  allocate memory for a frame of SMS data
  *
@@ -371,7 +459,7 @@ int sms_getFrame (FILE *pSmsFile, SMS_Header *pSmsHeader, int iFrame,
  * \param nCoeff		      number of stochastic coefficients in frame
  * \param iPhase		      whether phase information is in the frame
  * \param stochType           stochastic resynthesis type
- * \return error code \see SMS_MALLOC in SMS_ERRORS
+ * \return  0 on success, -1 on error
  */
 int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase,
                                        int stochType)
@@ -384,7 +472,10 @@ int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase,
 	if (nCoeff > 0) sizeData += (nCoeff + 1) * sizeof(float);
 	/* allocate memory for data */
 	if ((pSmsFrame->pSmsData = (float *) malloc (sizeData)) == NULL)
-		return (SMS_MALLOC);
+        {
+		sms_error("cannot allocate memory for SMS frame data");
+                return (-1);
+        }
 
 	/* set the variables in the structure */
 	pSmsFrame->nTracks = nTracks;
@@ -413,7 +504,7 @@ int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase,
                 pSmsFrame->pFStocCoeff = NULL;
                 pSmsFrame->pFStocGain = NULL;
         }
-	return (SMS_OK);			
+	return (0);			
 }
 
 /*! \brief  function to allocate an SMS data frame using an SMS_Header
@@ -423,7 +514,7 @@ int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase,
  *
  * \param pSmsHeader	   pointer to SMS header
  * \param pSmsFrame     pointer to SMS frame
- * \return  error code \see SMS_OK and SMS_MALLOC  in SMS_ERRORS 
+ * \return  0 on success, -1 on error
  */
 int sms_allocFrameH (SMS_Header *pSmsHeader, SMS_Data *pSmsFrame)
 {
@@ -550,5 +641,3 @@ void sms_interpolateFrames (SMS_Data *pSmsFrame1, SMS_Data *pSmsFrame2,
                         (pSmsFrame2->pFStocCoeff[i] - pSmsFrame1->pFStocCoeff[i]);
 
 }
-
- 

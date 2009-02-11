@@ -57,9 +57,11 @@ static float PeakInterpolation (float fMaxVal, float fLeftBinVal,
  * \param pAnalParams	        analysis parameters
  * \return the bin location of the maximum  
 */
+/* static int FindNextMax (float *pFMagSpectrum, int iHighBinBound,  */
+/*                         int *pICurrentLoc, float *pFMaxVal,  */
+/*                         SMS_AnalParams *pAnalParams) */
 static int FindNextMax (float *pFMagSpectrum, int iHighBinBound, 
-                        int *pICurrentLoc, float *pFMaxVal, 
-                        SMS_AnalParams *pAnalParams)
+                        int *pICurrentLoc, float *pFMaxVal, float fMinPeakMag)
 {
 	int iCurrentBin = *pICurrentLoc;
 	float fPrevVal = pFMagSpectrum[iCurrentBin - 1],
@@ -70,7 +72,7 @@ static int FindNextMax (float *pFMagSpectrum, int iHighBinBound,
 	/* try to find a local maximum */
 	while (iCurrentBin <= iHighBinBound)
 	{
-		if (fCurrentVal > pAnalParams->fMinPeakMag &&
+		if (fCurrentVal > fMinPeakMag &&
 		   fCurrentVal >= fPrevVal &&
 		   fCurrentVal >= fNextVal)
 			break;
@@ -98,14 +100,14 @@ static int FindNextMax (float *pFMagSpectrum, int iHighBinBound,
  */
 static int FindNextPeak (float *pFMagSpectrum, int iHighBinBound, 
                          int *pICurrentLoc, float *pFPeakMag, float *pFPeakLoc,
-                         SMS_AnalParams *pAnalParams)
+                         float fMinPeakMag)
 {
 	int iMaxBin = 0;		/* location of the local maximum */
 	float fMaxVal = 0;
   
 	/* keep trying to find a good peak while inside the freq range */
 	while ((iMaxBin = FindNextMax(pFMagSpectrum, iHighBinBound, 
-	       pICurrentLoc, &fMaxVal, pAnalParams)) 
+	       pICurrentLoc, &fMaxVal, fMinPeakMag)) 
 	       <= iHighBinBound)
 	{
 		/* get the neighboring samples */
@@ -154,40 +156,56 @@ static float GetPhaseVal (float *pAPhaSpectrum, float fPeakLoc)
  * 
  * uses a dB spectrum
  *
- * \param pFMagSpectrum     pointer to power spectrum
- * \param pAPhaSpectrum     pointer to phase spectrum
- * \param sizeMag              size of magnitude spectrum
+ * \param sizeSpec              size of magnitude spectrum
+ * \param pMag     pointer to power spectrum
+ * \param pPhase     pointer to phase spectrum
  * \param pSpectralPeaks	 pointer to array of peaks
- * \param pAnalParams      analysis parameters
+ * \param pPeakParams      peak detection parameters
  * \return the number of peaks found
  */
-int sms_detectPeaks (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag, 
-                   SMS_Peak *pSpectralPeaks, SMS_AnalParams *pAnalParams)
+int sms_detectPeaks (int sizeSpec, float *pMag, float *pPhase,
+                   SMS_Peak *pSpectralPeaks, SMS_PeakParams *pPeakParams)
 {
+        static int iFirstBin, iHighestBin, sizeFft;
+        static float  fInvSizeFft;
+        static int sizeSpecStatic = 0;
+
+        //printf("sizeSpec: %d \n", sizeSpec);
+
+        if(sizeSpecStatic != sizeSpec)
+        {
+                sizeSpecStatic = sizeSpec;
+                //printf("sizeSpecStatic: %d \n", sizeSpecStatic);
+                sizeFft = sizeSpec << 1;
+                fInvSizeFft = 1.0 / sizeFft;
+                /* set iCurrentLoc to starting bin */
+                iFirstBin = MAX (2, sizeFft * pPeakParams->fLowestFreq /
+	                          pPeakParams->iSamplingRate);
+                iHighestBin  = MIN (sizeSpec-1,
+                                    sizeFft * pPeakParams->fHighestFreq /
+                                    pPeakParams->iSamplingRate);
+        }
+        int iCurrentLoc = iFirstBin;
 	int iPeak = 0;		/* index for spectral search */
-	int sizeFft = sizeMag * 2;
-	int iCurrentLoc = MAX (2, sizeFft * pAnalParams->fLowestFundamental / 
-	                          pAnalParams->iSamplingRate); 
-	int iHighestBin  = MIN (sizeMag-1, 
-	                        sizeFft * pAnalParams->fHighestFreq / 
-	                        pAnalParams->iSamplingRate);
-  	float fPeakMag = 0;		/* magnitude of peak */
-	float fPeakLoc = 0;		/* location of peak */
+  	float fPeakMag = 0.0;		/* magnitude of peak */
+	float fPeakLoc = 0.0;		/* location of peak */
         
+/*         printf("sizeSpec: %d, sizeFft: %d, iCurrentLoc: %d, iHighestBin: %d \n", sizeSpec, sizeFft, */
+/*                iCurrentLoc, iHighestBin); */
 	/* clear peak structure */
-	memset (pSpectralPeaks, 0, SMS_MAX_NPEAKS * sizeof(SMS_Peak));
+	memset (pSpectralPeaks, 0, pPeakParams->iMaxPeaks * sizeof(SMS_Peak));
   
 	/* find peaks */
-	while ((iPeak < SMS_MAX_NPEAKS) &&
-	       (FindNextPeak(pFMagSpectrum, iHighestBin,
-	                     &iCurrentLoc, &fPeakMag, &fPeakLoc, pAnalParams)
+	while ((iPeak < pPeakParams->iMaxPeaks) &&
+	       (FindNextPeak(pMag, iHighestBin,
+	                     &iCurrentLoc, &fPeakMag, &fPeakLoc, pPeakParams->fMinPeakMag)
 	        == 1))
 	{
 		/* store peak values */
-		pSpectralPeaks[iPeak].fFreq = pAnalParams->iSamplingRate * fPeakLoc / 
-			sizeFft;
+		pSpectralPeaks[iPeak].fFreq = pPeakParams->iSamplingRate * fPeakLoc *
+			fInvSizeFft;
 		pSpectralPeaks[iPeak].fMag = fPeakMag;
-		pSpectralPeaks[iPeak].fPhase = GetPhaseVal(pAPhaSpectrum, fPeakLoc);
+		pSpectralPeaks[iPeak].fPhase = GetPhaseVal(pPhase, fPeakLoc);
 		iPeak++;
 	}
 

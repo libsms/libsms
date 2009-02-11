@@ -232,3 +232,28 @@ void sms_fillSoundBuffer (int sizeWaveform, float *pWaveform, SMS_AnalParams *pA
 
 }
 
+/*! \brief apply a window and center around sample 0
+ *
+ * function to center a waveform around sample 0, also known
+ * as 'zero-phase windowing'.  Half the samples are at the beginning,
+ * half at the end, with the remaining samples  (sizeFft-sizeWindow) 
+ * in the middle (zero-padding for an interpolated spectrum).
+ *
+ * \todo do I need to garuntee that sizeWindow is odd-lengthed?
+ *
+ * \param sizeWaveform        size of input data
+ * \param pWaveform           input data
+ * \param pAnalParams        pointer to structure of analysis parameters
+ */
+void sms_windowCentered (int sizeWindow, float *pWaveform, float *pWindow, int sizeFft, float *pFftBuffer)
+{
+        int i, iOffset, iMiddleWindow;
+        
+        iMiddleWindow = (sizeWindow+1) >> 1; 
+	iOffset = sizeFft - (iMiddleWindow - 1);
+	for (i=0; i<iMiddleWindow-1; i++)
+		pFftBuffer[iOffset + i] =  pWindow[i] * pWaveform[i];
+	iOffset = iMiddleWindow - 1;
+	for (i=0; i<iMiddleWindow; i++)
+		pFftBuffer[i] = pWindow[iOffset + i] * pWaveform[iOffset + i];
+}

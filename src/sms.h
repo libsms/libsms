@@ -31,7 +31,7 @@
 #include <strings.h>
 #include <sndfile.h>
 
-#define SMS_VERSION 1.0 /*!< \brief version control number */
+#define SMS_VERSION 1.03 /*!< \brief version control number */
 
 #define SMS_MAX_NPEAKS 400    /*!< \brief maximum number of peaks  */
 
@@ -158,7 +158,7 @@ typedef struct
                                corresponds to the middle of the frame */
 	int iFrameSize;           /*!< number of samples used in the frame */
 	int iFrameNum;            /*!< frame number */
-	SMS_Peak pSpectralPeaks[SMS_MAX_NPEAKS];  /*!< spectral peaks found in frame */
+	SMS_Peak *pSpectralPeaks;  /*!< spectral peaks found in frame */
 	int nPeaks;               /*!< number of peaks found */
 	float fFundamental;       /*!< fundamental frequency in frame */
 	SMS_Data deterministic;   /*!< deterministic data */
@@ -166,6 +166,24 @@ typedef struct
                        \see SMS_FRAME_STATUS */
 } SMS_AnalFrame;
 
+/*! \struct SMS_PeakParams
+ * \brief structure with useful information for peak detection and continuation
+ *
+ */
+typedef struct 
+{
+        float fLowestFreq; /*!< the first bin to look for a peak */
+        float fHighestFreq; /*!< the last bin to look for a peak */
+        float fMinPeakMag; /*!< mininum magnitude to consider as a peak */
+        int iSamplingRate; /*!< sampling rate of analysis signal */
+        int iMaxPeaks; /*!< maximum number of spectral peaks to look for */
+        int nPeaksFound; /*!< the number of peaks found in each analysis */
+	float fHighestFundamental;/*!< highest fundamental frequency in Hz */
+	int iRefHarmonic;   /*!< reference harmonic to use in the fundamental detection */
+	float fMinRefHarmMag;     /*!< minimum magnitude in dB for reference peak */
+	float fRefHarmMagDiffFromMax; /*!< maximum magnitude difference from reference peak to highest peak */
+	int iSoundType;            /*!< type of sound to be analyzed \see SMS_SOUND_TYPE */	
+} SMS_PeakParams;
 
 /*! \struct SMS_AnalParams
  * \brief structure with useful information for analysis functions
@@ -175,8 +193,7 @@ typedef struct
  * piece of data that needs to be shared between functions.
  *
  * There is an array of already analyzed frames (hardcoded to 50 right now -
- * \todo make it variable - you would want this very small in real-time analysis)
- *  that are accumulated for good harmonic detection
+ * \todo make it variable) that are accumulated for good harmonic detection
  * and partial tracking. For instance, once the fundamental frequency of a 
  * harmonic signal is located (after a few frames), the harmonic analysis 
  * and peak detection/continuation process can be re-computed with more accuracy.
@@ -200,6 +217,7 @@ typedef struct
 	int iDefaultSizeWindow;   /*!< default size of analysis window in samples */
 	int sizeHop;              /*!< hop size of analysis window in samples */
 	float fSizeWindow;       /*!< size of analysis window in number of periods */
+	int nTracks;                     /*!< number of sinusoidal tracks in frame */
 	int nGuides;              /*!< number of guides used for peak detection and continuation \see SMS_Guide */
 	int iCleanTracks;           /*!< whether or not to clean sinusoidal tracks */
 	float fMinRefHarmMag;     /*!< minimum magnitude in dB for reference peak */
@@ -208,19 +226,20 @@ typedef struct
 	int iMinTrackLength;	       /*!< minimum length in samples of a given track */
 	int iMaxSleepingTime;	   /*!< maximum sleeping time for a track */
 	float fHighestFreq;        /*!< highest frequency to be searched */
-	float fMinPeakMag;         /*!< minimum magnitude in dB for a good peak */	
+	float fMinPeakMag;         /*!< minimum magnitude in dB for a good peak */     
 	int iAnalysisDirection;    /*!< analysis direction, direct or reverse */	
 	int iSizeSound;             /*!< total size of sound to be analyzed in samples */	 	
+	int nFrames;             /*!< total number of frames that will be analyzed */
 	int iWindowType;            /*!< type of FFT analysis window \see SMS_WINDOWS */			  	 			 
         int iMaxDelayFrames;     /*!< maximum number of frames to delay before peak continuation */
-        int sizeNextRead;;     /*!< size of samples to read from sound file next analysis */
+        float fResidualAccumPerc; /*!< accumalitive residual percentage */
+        int sizeNextRead;     /*!< size of samples to read from sound file next analysis */
+        SMS_PeakParams peakParams; /*!< structure with parameters for spectral peaks */
         SMS_Data prevFrame;   /*!< the previous analysis frame  */
         SMS_SndBuffer soundBuffer;    /*!< signal to be analyzed */
         SMS_SndBuffer synthBuffer; /*!< resynthesized signal used to create the residual */
         SMS_AnalFrame *pFrames;  /*!< an array of frames that have already been analyzed */
         SMS_AnalFrame **ppFrames; /*!< pointers to the frames analyzed (it is circular-shifted once the array is full */
-        float fResidualPercentage; /*!< accumalitive residual percentage */
-        float *pFSpectrumWindow; /*!< the window used during spectrum analysis */
 } SMS_AnalParams;
 
 /*! \struct SMS_SynthParams
@@ -251,7 +270,7 @@ typedef struct
         float *pMagBuff;  /*!< an array for keeping magnitude spectrum for stochastic synthesis */
         float *pPhaseBuff;  /*!< an array for keeping phase spectrum for stochastic synthesis */
 	SMS_Data prevFrame; /*!< previous data frame, for interpolation between frames */
-        float *pFFTBuff; /*!< array for in-place FFT transform */
+        float *pSpectra; /*!< array for in-place FFT transform */
 
 } SMS_SynthParams;
 
@@ -437,13 +456,13 @@ enum SMS_DIRECTION
  */
 enum SMS_WINDOWS
 {
-        SMS_WIN_HAMMING,     /*!< hamming */ 		
-        SMS_WIN_BH_62,            /*!< blackman-harris, 62dB cutoff */ 		
-        SMS_WIN_BH_70,            /*!< blackman-harris, 70dB cutoff */ 	
-        SMS_WIN_BH_74,            /*!< blackman-harris, 74dB cutoff */ 
-        SMS_WIN_BH_92,             /*!< blackman-harris, 92dB cutoff */ 
-        SMS_WIN_HANNING,      /*!< hanning */ 		
-        SMS_WIN_IFFT              /*!< window for deterministic synthesis based on the Inverse-FFT algorithm.
+        SMS_WIN_HAMMING,     /*!< 0: hamming */ 		
+        SMS_WIN_BH_62,            /*!< 1: blackman-harris, 62dB cutoff */ 		
+        SMS_WIN_BH_70,            /*!< 2: blackman-harris, 70dB cutoff */ 	
+        SMS_WIN_BH_74,            /*!< 3: blackman-harris, 74dB cutoff */ 
+        SMS_WIN_BH_92,             /*!< 4: blackman-harris, 92dB cutoff */ 
+        SMS_WIN_HANNING,      /*!< 5: hanning */ 		
+        SMS_WIN_IFFT              /*!< 6: window for deterministic synthesis based on the Inverse-FFT algorithm.
                                    This is a combination of an inverse Blackman-Harris 92dB and a triangular window. */ 		
 };
 
@@ -492,12 +511,21 @@ enum SMS_FRAME_STATUS
 
 float sms_magToDB(float x); 
 float sms_dBToMag(float x);
+void sms_arrayMagToDB(int sizeArray, float *pArray);
+void sms_arrayDBToMag(int sizeArray, float *pArray);
+float sms_rms ( int sizeArray, float *pArray );
 float sms_sine (float fTheta);
 float sms_sinc (float fTheta);
 float sms_random ( void );
 int sms_power2(int n);
+//float sms_temperedToFreq( float x ); /*!< raise frequency to the 12th root of 2 */
+//inline float sms_temperedToFreq( float x ){ return(powf(1.0594630943592953, x)); }
 
+/*! \todo think of a better name for this - it is a multiplier, not converter. Also, make it a function
+  so it is usable in python */
 #define TEMPERED_TO_FREQ( x ) (powf(1.0594630943592953, x)) /*!< raise frequency to the 12th root of 2 */
+
+
 
 #ifndef MAX
 /*! \brief returns the maximum of a and b */
@@ -513,11 +541,13 @@ int sms_power2(int n);
 int sms_analyze (int sizeWaveform, float *pWaveform, SMS_Data *pSmsFrame,
                  SMS_AnalParams *pAnalParams);
 
+void sms_analyzeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, float fRefFundamental );
+
 int sms_init( void );  
 
 void sms_free( void );  
 
-int sms_initAnalysis (  SMS_AnalParams *pAnalParams);
+int sms_initAnalysis (  SMS_AnalParams *pAnalParams, SMS_SndHeader *pSoundHeader);
 
 void sms_initAnalParams (SMS_AnalParams *pAnalParams);
 
@@ -531,33 +561,36 @@ void sms_freeSynth( SMS_SynthParams *pSynthParams );
 
 void sms_fillSoundBuffer (int sizeWaveform, float *pWaveform,  SMS_AnalParams *pAnalParams);
 
-void sms_getWindow (int sizeWindow, float *pFWindow, int iWindowType);
+void sms_windowCentered (int sizeWindow, float *pWaveform, float *pWindow, int sizeFft, float *pFftBuffer);
 
-int sms_spectrum (float *pFWaveform, int sizeWindow, float *pFMagSpectrum, 
-              float *pFPhaseSpectrum, SMS_AnalParams *pAnalParams);
+void sms_getWindow (int sizeWindow, float *pWindow, int iWindowType);
 
-int sms_quickSpectrum (float *pFWaveform, float *pFWindow, int sizeWindow, 
-                       float *pFMagSpectrum, float *pFPhaseSpectrum, int sizeFft);
+int sms_spectrum (int sizeWindow, float *pWaveform, float *pWindow, int sizeMag, 
+                  float *pMag, float *pPhase);
 
-int sms_invQuickSpectrum (float *pFMagSpectrum, float *pFPhaseSpectrum, 
-                           int sizeFft, float *pFWaveform, int sizeWave);
+int sms_invSpectrum (int sizeWaveform, float *pWaveform, float *pWindow ,
+                     int sizeMag, float *pMag, float *pPhase);
 
+/* \todo remove this once invSpectrum is completely implemented */
 int sms_invQuickSpectrumW (float *pFMagSpectrum, float *pFPhaseSpectrum, 
-                           int sizeFft, float *pFWaveform, int sizeWave, 
+                           int sizeFft, float *pFWaveform, int sizeWave,
                            float *pFWindow);
 
-int sms_spectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
-                    float *pFSpec2, int sizeSpec2, int nCoefficients);
+int sms_spectralApprox (float *pSpec1, int sizeSpec1, int sizeSpec1Used,
+                    float *pSpec2, int sizeSpec2, int nCoefficients);
+
+int sms_spectrumMag (int sizeWindow, float *pWaveform, float *pWindow,  
+                     int sizeMag, float *pMag);
 		  
 int sms_sizeNextWindow (int iCurrentFrame, SMS_AnalParams *pAnalParams);
 
 float sms_fundDeviation (SMS_AnalParams *pAnalParams, int iCurrentFrame);
 
-int sms_detectPeaks (float *pFMagSpectrum, float *pAPhaSpectrum, int sizeMag, 
-                   SMS_Peak *pSpectralPeaks, SMS_AnalParams *pAnalParams);
+int sms_detectPeaks (int sizeSpec, float *pFMag, float *pPhase,
+                     SMS_Peak *pSpectralPeaks, SMS_PeakParams *pPeakParams);
 
 void sms_harmDetection (SMS_AnalFrame *pFrame, float fRefFundamental,
-                    SMS_AnalParams *pAnalParams);
+                    SMS_PeakParams *pPeakParams);
 
 int sms_peakContinuation (int iFrame, SMS_AnalParams *pAnalParams);
 
@@ -567,8 +600,8 @@ float sms_deEmphasis (float fInput);
 
 void sms_cleanTracks (int iCurrentFrame, SMS_AnalParams *pAnalParams);
 
-void sms_scaleDet (float *pFSynthBuffer, float *pFOriginalBuffer,
-                         float *pFSinAmp, SMS_AnalParams *pAnalParams, int nTracks);
+void sms_scaleDet (float *pSynthBuffer, float *pOriginalBuffer,
+                         float *pSinAmp, SMS_AnalParams *pAnalParams, int nTracks);
 			
 int sms_prepSine (int nTableSize);
 
@@ -578,10 +611,10 @@ void sms_clearSine( void );
 
 void sms_clearSinc( void );
 
-int sms_synthesize (SMS_Data *pSmsFrame, float*pFSynthesis, 
+int sms_synthesize (SMS_Data *pSmsFrame, float*pSynthesis, 
                   SMS_SynthParams *pSynthParams);
                 
-void sms_sineSynthFrame (SMS_Data *pSmsFrame, float *pFBuffer, 
+void sms_sineSynthFrame (SMS_Data *pSmsFrame, float *pBuffer, 
                     int sizeBuffer, SMS_Data *pLastFrame,
                     int iSamplingRate);
 
@@ -590,11 +623,10 @@ void sms_initHeader (SMS_Header *pSmsHeader);
 int sms_getHeader (char *pChFileName, SMS_Header **ppSmsHeader,
                   	FILE **ppInputFile);
 
-void sms_fillHeader (SMS_Header *pSmsHeader, 
-                          int nFrames, SMS_AnalParams *pAnalParams,
-                     int nTracks, int iOriginalSRate);
+void sms_fillHeader (SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams,
+                     char *pProgramString);
 
-int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader, 
+int sms_writeHeader (char *pFileName, SMS_Header *pSmsHeader, 
                     FILE **ppOutSmsFile);
 
 int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader);
@@ -621,11 +653,14 @@ void sms_copyFrame (SMS_Data *pCopySmsFrame, SMS_Data *pOriginalSmsFrame);
 
 int sms_frameSizeB (SMS_Header *pSmsHeader);
 
-int sms_residual (float *pFSynthesis, float *pFOriginal,  
-                 float *pFResidual, int sizeWindow, SMS_AnalParams *pAnalParams);
+/* int sms_residual (float *pSynthesis, float *pOriginal,   */
+/*                  float *pResidual, int sizeWindow, SMS_AnalParams *pAnalParams); */
+int sms_residual ( int sizeWindow, float *pSynthesis, float *pOriginal, float *pResidual, float *pWindow);
 
-int sms_stocAnalysis (float *pFResidual, int sizeWindow, 
-                  SMS_Data *pSmsFrame, SMS_AnalParams *pAnalParams);
+void sms_filterHighPass ( int sizeResidual, float *pResidual, int iSamplingRate);
+
+int sms_stocAnalysis ( int sizeWindow, float *pResidual, float *pWindow,
+                  SMS_Data *pSmsFrame);
 
 void sms_interpolateFrames (SMS_Data *pSmsFrame1, SMS_Data *pSmsFrame2,
                            SMS_Data *pSmsFrameOut, float fInterpFactor);
@@ -637,7 +672,7 @@ int sms_getSound (SMS_SndHeader *pSoundHeader, long sizeSound, float *pSound,
 
 int sms_createSF (char *pChOutputSoundFile, int iSamplingRate, int iType);
 
-void sms_writeSound (float *pFBuffer, int sizeBuffer);
+void sms_writeSound (float *pBuffer, int sizeBuffer);
 
 void sms_writeSF ( void );
 
@@ -645,26 +680,30 @@ void sms_fft(int sizeFft, float *pArray);
 
 void sms_ifft(int sizeFft, float *pArray);
 
-void sms_spectrumRtoP( int sizeMag, float *pFReal, float *pFMag, float *pFPhase);
+void sms_RectToPolar( int sizeSpec, float *pReal, float *pMag, float *pPhase);
 
-void sms_spectrumMag( int sizeMag, float *pFReal, float *pFMag);
+void sms_PolarToRect( int sizeSpec, float *pReal, float *pMag, float *pPhase);
+
+void sms_spectrumRMS( int sizeMag, float *pReal, float *pMag);
 
 /***********************************************************************************/
 /************* debug functions: ******************************************************/
 int sms_createResSF (int iSamplingRate);
 
-int sms_writeResSound (float *pFBuffer, int sizeBuffer);
+int sms_writeResSound (float *pBuffer, int sizeBuffer);
 
 void sms_writeResSF ( void );
 
 int sms_createDebugFile (SMS_AnalParams *pAnalParams);
 
-void sms_writeDebugData (float *pFBuffer1, float *pFBuffer2, 
-                             float *pFBuffer3, int sizeBuffer);
+void sms_writeDebugData (float *pBuffer1, float *pBuffer2, 
+                             float *pBuffer3, int sizeBuffer);
 
 void sms_writeDebugFile ( void );
 
 void sms_error( char *pErrorMessage );
+
+int sms_errorCheck( void );
 
 char* sms_errorString( void );
 
@@ -672,24 +711,23 @@ char* sms_errorString( void );
 /************ things for hybrid program that are not currently used **********************/
 /* (this is because they were utilized with the MusicKit package that is out of date now) */
 
-/*! \struct SMS_HybParams
- * \brief structure for hybrid program 
- * \todo documentation ... but needs to be re-implemented first
- */
-typedef struct
-{
-  int nCoefficients;
-  float fGain;
-  float fMagBalance;
-  int iSmoothOrder;
-  float *pCompressionEnv;
-  int sizeCompressionEnv;
-} SMS_HybParams;
+/* /\*! \struct SMS_HybParams */
+/*  * \brief structure for hybrid program  */
+/*  *\/ */
+/* typedef struct */
+/* { */
+/*   int nCoefficients; */
+/*   float fGain; */
+/*   float fMagBalance; */
+/*   int iSmoothOrder; */
+/*   float *pCompressionEnv; */
+/*   int sizeCompressionEnv; */
+/* } SMS_HybParams; */
 
-void sms_hybridize (float *pFWaveform1, int sizeWave1, float *pFWaveform2, 
-               int sizeWave2, float *pFWaveform, SMS_HybParams *pHybParams);
+/* void sms_hybridize (float *pFWaveform1, int sizeWave1, float *pFWaveform2,  */
+/*                int sizeWave2, float *pFWaveform, SMS_HybParams *pHybParams); */
 
-void sms_filterArray (float *pFArray, int size1, int size2, float *pFOutArray);
+/* void sms_filterArray (float *pFArray, int size1, int size2, float *pFOutArray); */
 
 #endif /* _SMS_H */
 

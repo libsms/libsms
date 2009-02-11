@@ -15,7 +15,7 @@
  * 
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, M  02111-1307  USA
  * 
  */
 /*! \file stocAnalysis.c
@@ -23,59 +23,59 @@
  */
 #include "sms.h"
 
-#define ENV_THRESHOLD     .01
+#define ENV_THRESHOLD     .01 /* \todo was this value for type shorts?? */
 
 /*! \brief main function for the stochastic analysis
- * \param pFResidual      pointer to residual signal
- * \param sizeBuffer         size of buffer
+ * \param sizeWindow         size of buffer
+ * \param pResidual      pointer to residual signal
+ * \param pWindow      pointer to windowing array
  * \param pSmsData        pointer to output SMS data
- * \param pAnalParams   pointer to structure of analysis parameters
- * \return -1 if no representation, 1 if got a representation
+ * \return 0 on success, -1 on error
  */
-int sms_stocAnalysis (float *pFResidual, int sizeBuffer, 
-                      SMS_Data *pSmsData, SMS_AnalParams *pAnalParams)
+
+int sms_stocAnalysis ( int sizeWindow, float *pResidual, float *pWindow, SMS_Data *pSmsData)
 {
-	int iError = 1;
         int i;
-        int sizeFft = (int) pow(2.0, (float)(1+(floor(log((float) sizeBuffer) / LOG2))));
-        int sizeMag = sizeFft >> 1;
-        float  *pFMagSpectrum;
         float fMag = 0.0;
-        static float *pFWindow = NULL;
 
-        /* allocate buffers */    
-        /*!< \todo remove calloc */
-        if ((pFMagSpectrum = (float *) calloc(sizeMag, sizeof(float))) == NULL)
-                return -1;
-
-        if (pFWindow == NULL)
+        static float *pMagSpectrum;
+        static int sizeWindowStatic = 0;
+        static int sizeFft = 0;
+        static int sizeMag = 0;
+        /* update array sizes if sizeWindow is new */
+        if (sizeWindowStatic != sizeWindow)
         {
-                /*!< \todo remove calloc */
-                if ((pFWindow = (float *) calloc(sizeBuffer, sizeof(float))) == NULL)
+                if(sizeWindowStatic != 0) free(pMagSpectrum);
+                sizeWindowStatic = sizeWindow;
+                sizeFft = sms_power2(sizeWindow);
+                sizeMag = sizeFft >> 1;
+                if((pMagSpectrum = (float *) calloc(sizeMag, sizeof(float))) == NULL)
+                {
+                        sms_error("sms_stocAnalysis: error allocating memory for pMagSpectrum");
                         return -1;
-                sms_getWindow(sizeBuffer, pFWindow, SMS_WIN_HAMMING);
+                }
         }
 
-        sms_quickSpectrum (pFResidual, pFWindow, sizeBuffer, pFMagSpectrum, 
-                           (float *) NULL, sizeFft);
+        sms_spectrumMag (sizeWindow, pResidual, pWindow, sizeMag, pMagSpectrum);
  
-        sms_spectralApprox (pFMagSpectrum, sizeMag, sizeMag, pSmsData->pFStocCoeff, 
+        sms_spectralApprox (pMagSpectrum, sizeMag, sizeMag, pSmsData->pFStocCoeff, 
                             pSmsData->nCoeff, pSmsData->nCoeff);
   
         /* get energy of spectrum  */
         for (i = 0; i < sizeMag; i++)
-                fMag += pFMagSpectrum[i];
+                fMag += pMagSpectrum[i];
  
-        *pSmsData->pFStocGain = MAX (fMag / sizeMag, ENV_THRESHOLD);
+        //*pSmsData->pFStocGain = MAX (fMag / sizeMag, ENV_THRESHOLD);
+        *pSmsData->pFStocGain = fMag / sizeMag;
+
+/*         printf("pFStocGain: %f, fmag: %f, sizeMag: %d, ratio: %f \n", *pSmsData->pFStocGain,  */
+/*                fMag, sizeMag, fMag/sizeMag); */
 
         /* normalize envelope */
         for (i = 0; i <  pSmsData->nCoeff; i++)
                 pSmsData->pFStocCoeff[i] /= *pSmsData->pFStocGain;
     
         *pSmsData->pFStocGain = sms_magToDB (*pSmsData->pFStocGain);
-        free ((char *) pFMagSpectrum);
-        return (1);
-
-	return iError;
+	return(0);
 }
 
