@@ -79,6 +79,9 @@ if not conf.CheckLibWithHeader('sndfile','sndfile.h','c'):
 
 env = conf.Finish()
 
+# ?? what happens on a computer without gsl-config here?
+env.ParseConfig('gsl-config --cflags --libs')
+
 if int(ARGUMENTS.get('twister', 1)):
     env.Append(CCFLAGS = ' -DMERSENNE_TWISTER ')
 
