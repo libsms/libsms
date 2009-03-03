@@ -21,6 +21,7 @@ sms_sources = Split("""
 		residual.c 
                 spectralApprox.c 
 		spectrum.c 
+                cepstrum.c
                 fixTracks.c 
                 transforms.c 
                 filters.c 
