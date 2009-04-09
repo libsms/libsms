@@ -19,7 +19,7 @@ pysms_module = Extension('_pysms',
                        sources=['pysms_wrap.c'],
                        include_dirs=['../src', '/usr/lib/python2.5/site-packages/numpy/core/include/'],
                        library_dirs=['../src'],
-                       libraries = ["sndfile", "sms"] #should libsms be in here?
+                       libraries = ["sndfile", "gsl", "gslcblas", "sms"] #should libsms be in here?
                        )
 
 setup (name = 'pysms',
