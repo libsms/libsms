@@ -61,8 +61,9 @@ libsms work log
    - these calls should call a different function, thereby avoiding the 
    if check for every sample
 ** TODO Doxygen todo list
-   - fix name changes, etc.
-   - talk about sfloat in API and sms_error()
+*** TODO version number
+*** TODO  name changes, etc.
+*** TODO  talk about sfloat in API and sms_error()
 ** TODO stochastic resynthesis needs a closer look :synth:
 *** TODO always turns out louder than the original
     - it appears pSmsData->pFStocGain is getting multiplied through twice
