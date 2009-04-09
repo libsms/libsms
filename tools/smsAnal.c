@@ -209,7 +209,6 @@ static int GetArguments (char *argv[], int argc, SMS_AnalParams *pAnalParams)
 
 int main (int argc, char *argv[])
 {
-	//ARGUMENTS arguments;
 	SMS_AnalParams analParams;
 
 	FILE *pOutputSmsFile; 
@@ -229,7 +228,6 @@ int main (int argc, char *argv[])
         sms_initAnalParams(&analParams);
 	/* get user arguments */
 	if (argc > 3) 
-		//GetArguments (argv, argc, &arguments);
 		GetArguments (argv, argc, &analParams);
 	else if (argc < 2 || !strcmp( argv[1], "--help"))
                 usage();
@@ -344,7 +342,7 @@ int main (int argc, char *argv[])
                 printf("\n");
                 printf("residual percentage: %f \n", smsHeader.fResidualPerc);
         }                
-        if(smsHeader.nFrames != analParams.nFrames)
+        if(smsHeader.nFrames != analParams.nFrames && verbose)
                 printf("warning: wrong number of analyzed frames: analParams: %d, smsHeader: %d \n", 
                        analParams.nFrames, smsHeader.nFrames); 
 	/* write an close output files */
