@@ -25,7 +25,7 @@
 
 
 /*! \brief pointer to the window array for sms_spectrum */
-//float *sms_window_spec;
+//sfloat *sms_window_spec;
 
 /*! \brief compute a complex spectrum from a waveform 
  *              
@@ -35,15 +35,15 @@
  * \param pFPhaseSpectrum     pointer to output phase spectrum 
  * \return 0 on success, -1 on error
  */
-int sms_spectrum (int sizeWindow, float *pWaveform, float *pWindow, int sizeMag, 
-                  float *pMag, float *pPhase)
+int sms_spectrum (int sizeWindow, sfloat *pWaveform, float *pWindow, int sizeMag, 
+                  sfloat *pMag, float *pPhase)
 {
 	int sizeFft = sizeMag << 1;
         int i, it2;
         int err = 0;
-        float fReal, fImag;
+        sfloat fReal, fImag;
   
-        static float *pFftBuffer;
+        static sfloat *pFftBuffer;
         static int sizeFftArray = 0;
 
         if(sizeFftArray != sizeFft)
@@ -55,13 +55,13 @@ int sms_spectrum (int sizeWindow, float *pWaveform, float *pWindow, int sizeMag,
                         sms_error("bad fft size, incremented to power of 2");
                         err = -1;
                 }
-                if ((pFftBuffer = (float *) malloc(sizeFft * sizeof(float))) == NULL)
+                if ((pFftBuffer = (sfloat *) malloc(sizeFft * sizeof(float))) == NULL)
                 {
                         sms_error("could not allocate memory for fft array");
                         return(-1);
                 }
         }
-        memset(pFftBuffer, 0, sizeFft * sizeof(float));
+        memset(pFftBuffer, 0, sizeFft * sizeof(sfloat));
 
 	/* apply window to waveform and center window around 0 (zero-phase windowing)*/
         sms_windowCentered(sizeWindow, pWaveform, pWindow, sizeFft, pFftBuffer);
@@ -99,15 +99,15 @@ int sms_spectrum (int sizeWindow, float *pWaveform, float *pWindow, int sizeMag,
  * \param pMag     pointer to output magnitude spectrum 
  * \return 0 on success, -1 on error
  */
-int sms_spectrumMag (int sizeWindow, float *pWaveform, float *pWindow,  
-                     int sizeMag, float *pMag)
+int sms_spectrumMag (int sizeWindow, sfloat *pWaveform, sfloat *pWindow,  
+                     int sizeMag, sfloat *pMag)
 {
 	int i,it2;
         int sizeFft = sizeMag << 1;
         int err = 0;
-	float fReal, fImag;
+	sfloat fReal, fImag;
 
-        static float *pFftBuffer;
+        static sfloat *pFftBuffer;
         static int sizeFftArray = 0;
 
         if(sizeFftArray != sizeFft)
@@ -119,14 +119,14 @@ int sms_spectrumMag (int sizeWindow, float *pWaveform, float *pWindow,
                         sms_error("bad fft size, incremented to power of 2");
                         err = -1;
                 }
-                if ((pFftBuffer = (float *) malloc(sizeFft * sizeof(float))) == NULL)
+                if ((pFftBuffer = (sfloat *) malloc(sizeFft * sizeof(float))) == NULL)
                 {
                         sms_error("could not allocate memory for fft array");
                         return(-1);
                 }
         }
 	/* apply window to waveform, zero the rest of the array */
-        //memset(pFftBuffer, 0, sizeFft * sizeof(float));
+        //memset(pFftBuffer, 0, sizeFft * sizeof(sfloat));
 	for (i = 0; i < sizeWindow; i++)
                 pFftBuffer[i] =  pWindow[i] * pWaveform[i];
         for(i = sizeWindow; i < sizeFft; i++)
@@ -155,20 +155,20 @@ int sms_spectrumMag (int sizeWindow, float *pWaveform, float *pWindow,
  *  sms_spectrum above.
  *
  * function to perform the inverse FFT, windowing the output
- * float *pFMagSpectrum        input magnitude spectrum
- * float *pFPhaseSpectrum      input phase spectrum
+ * sfloat *pFMagSpectrum        input magnitude spectrum
+ * sfloat *pFPhaseSpectrum      input phase spectrum
  * int sizeFft		       size of FFT
- * float *pFWaveform	       output waveform
+ * sfloat *pFWaveform	       output waveform
  * int sizeWave                size of output waveform
- * float *pFWindow	       synthesis window
+ * sfloat *pFWindow	       synthesis window
  */
-int sms_invSpectrum (int sizeWaveform, float *pWaveform, float *pWindow ,
-                     int sizeMag, float *pMag, float *pPhase)
+int sms_invSpectrum (int sizeWaveform, sfloat *pWaveform, float *pWindow ,
+                     int sizeMag, sfloat *pMag, float *pPhase)
 {
 	int i;
         int sizeFft = sizeMag << 1;
         int err = 0;
-        static float *pFftBuffer;
+        static sfloat *pFftBuffer;
         static int sizeFftArray = 0;
 
         if(sizeFftArray != sizeFft)
@@ -180,7 +180,7 @@ int sms_invSpectrum (int sizeWaveform, float *pWaveform, float *pWindow ,
                         sms_error("bad fft size, incremented to power of 2");
                         err = -1;
                 }
-                if ((pFftBuffer = (float *) malloc(sizeFft * sizeof(float))) == NULL)
+                if ((pFftBuffer = (sfloat *) malloc(sizeFft * sizeof(float))) == NULL)
                 {
                         sms_error("could not allocate memory for fft array");
                         return(-1);
@@ -202,22 +202,22 @@ int sms_invSpectrum (int sizeWaveform, float *pWaveform, float *pWindow ,
 }
 /*! \brief function for a quick inverse spectrum, windowed
  * function to perform the inverse FFT, windowing the output
- * float *pFMagSpectrum        input magnitude spectrum
- * float *pFPhaseSpectrum      input phase spectrum
+ * sfloat *pFMagSpectrum        input magnitude spectrum
+ * sfloat *pFPhaseSpectrum      input phase spectrum
  * int sizeFft		       size of FFT
- * float *pFWaveform	       output waveform
+ * sfloat *pFWaveform	       output waveform
  * int sizeWave                size of output waveform
- * float *pFWindow	       synthesis window
+ * sfloat *pFWindow	       synthesis window
  */
-int sms_invQuickSpectrumW (float *pFMagSpectrum, float *pFPhaseSpectrum, 
-                           int sizeFft, float *pFWaveform, int sizeWave,
-                           float *pFWindow)
+int sms_invQuickSpectrumW (sfloat *pFMagSpectrum, float *pFPhaseSpectrum, 
+                           int sizeFft, sfloat *pFWaveform, int sizeWave,
+                           sfloat *pFWindow)
 {
 	int sizeMag = sizeFft >> 1, i, it2;
-	float *pFBuffer, fPower;
+	sfloat *pFBuffer, fPower;
   
 	/* allocate buffer */    
-	if ((pFBuffer = (float *) calloc(sizeFft, sizeof(float))) == NULL)
+	if ((pFBuffer = (sfloat *) calloc(sizeFft, sizeof(float))) == NULL)
 		return -1;
 
 	/* convert from polar coordinates to rectangular  */
@@ -247,13 +247,13 @@ int sms_invQuickSpectrumW (float *pFMagSpectrum, float *pFPhaseSpectrum,
  *              
  * \param sizeSpec	       size of spectrum (pMag and pPhase arrays)
  * \param pRect	       pointer output spectrum in rectangular form (2x sizeSpec)
- * \param pMag	       pointer to float array of magnitude spectrum
- * \param pPhase	       pointer to float array of phase spectrum
+ * \param pMag	       pointer to sfloat array of magnitude spectrum
+ * \param pPhase	       pointer to sfloat array of phase spectrum
  */ 
-void sms_RectToPolar( int sizeMag, float *pFReal, float *pFMag, float *pFPhase)
+void sms_RectToPolar( int sizeMag, sfloat *pFReal, float *pFMag, float *pFPhase)
 {
         int i, it2;
-        float fReal, fImag;
+        sfloat fReal, fImag;
 
 	for (i=0; i<sizeMag; i++)
 	{
@@ -273,13 +273,13 @@ void sms_RectToPolar( int sizeMag, float *pFReal, float *pFMag, float *pFPhase)
  *              
  * \param sizeSpec	       size of spectrum (pMag and pPhase arrays)
  * \param pRect	       pointer output spectrum in rectangular form (2x sizeSpec)
- * \param pMag	       pointer to float array of magnitude spectrum
- * \param pPhase	       pointer to float array of phase spectrum
+ * \param pMag	       pointer to sfloat array of magnitude spectrum
+ * \param pPhase	       pointer to sfloat array of phase spectrum
  */ 
-void sms_PolarToRect( int sizeSpec, float *pRect, float *pMag, float *pPhase)
+void sms_PolarToRect( int sizeSpec, sfloat *pRect, float *pMag, float *pPhase)
 {
         int i, it2;
-        float fMag;
+        sfloat fMag;
 
 	for (i = 0; i<sizeSpec; i++)
 	{
@@ -293,13 +293,13 @@ void sms_PolarToRect( int sizeSpec, float *pRect, float *pMag, float *pPhase)
 /*! \brief compute magnitude spectrum of a DFT
  *              
  * \param sizeMag	       size of output Magnitude (half of input real FFT)
- * \param pFReal	       pointer to input FFT real array (real/imag floats)
- * \param pFMAg	       pointer to float array of magnitude spectrum
+ * \param pFReal	       pointer to input FFT real array (real/imag sfloats)
+ * \param pFMAg	       pointer to sfloat array of magnitude spectrum
  */
-void sms_spectrumRMS( int sizeMag, float *pInRect, float *pOutMag)
+void sms_spectrumRMS( int sizeMag, sfloat *pInRect, float *pOutMag)
 {
         int i, it2;
-        float fReal, fImag;
+        sfloat fReal, fImag;
 
 	for (i=0; i<sizeMag; i++)
 	{
@@ -313,20 +313,20 @@ void sms_spectrumRMS( int sizeMag, float *pInRect, float *pOutMag)
 
 /*! \brief convert from Polar spectrum to waveform
  * function to perform the inverse FFT
- * float *pFMagSpectrum        input magnitude spectrum
- * float *pFPhaseSpectrum      input phase spectrum
+ * sfloat *pFMagSpectrum        input magnitude spectrum
+ * sfloat *pFPhaseSpectrum      input phase spectrum
  * int sizeFft                 size of FFT
- * float *pFWaveform           output waveform
+ * sfloat *pFWaveform           output waveform
  * int sizeWave                size of output waveform
  */
-/* int sms_invSpectrum (float *pFMagSpectrum, float *pFPhaseSpectrum, */
-/*                           int sizeFft, float *pFWaveform, int sizeWave) */
+/* int sms_invSpectrum (sfloat *pFMagSpectrum, float *pFPhaseSpectrum, */
+/*                           int sizeFft, sfloat *pFWaveform, int sizeWave) */
 /* { */
 /* 	int sizeMag = sizeFft >> 1, i, it2; */
-/* 	float *pFBuffer, fPower; */
+/* 	sfloat *pFBuffer, fPower; */
   
 /* 	/\* allocate buffer *\/ */
-/* 	if ((pFBuffer = (float *) calloc(sizeFft+1, sizeof(float))) == NULL) */
+/* 	if ((pFBuffer = (sfloat *) calloc(sizeFft+1, sizeof(float))) == NULL) */
 /* 		return -1; */
    
 /* 	/\* convert from polar coordinates to rectangular  *\/ */

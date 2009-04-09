@@ -36,11 +36,11 @@ static void SineSynthIFFT (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
         int nBins = 8;
         int nTracks = pSmsData->nTracks;
         int iFirstBin, k, i, l, b;
-        float fMag=0.0, fFreq=0.0, fPhase=0.0, fLoc, fSin, fCos, fBinRemainder, 
+        sfloat fMag=0.0, fFreq=0.0, fPhase=0.0, fLoc, fSin, fCos, fBinRemainder, 
                 fTmp, fNewMag,  fIndex;
-        float fSamplingPeriod = 1.0 / pSynthParams->iSamplingRate;
+        sfloat fSamplingPeriod = 1.0 / pSynthParams->iSamplingRate;
 
-        memset (pSynthParams->pSpectra, 0, (sizeFft +1) * sizeof(float));
+        memset (pSynthParams->pSpectra, 0, (sizeFft +1) * sizeof(sfloat));
         for (i = 0; i < nTracks; i++)
         {
                 if (((fMag = pSmsData->pFSinAmp[i]) > 0) &&
@@ -119,11 +119,11 @@ void sms_deterministic (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
         int nBins = 8;
         int nTracks = pSmsData->nTracks;
         int iFirstBin, k, i, l, b;
-        float fMag=0.0, fFreq=0.0, fPhase=0.0, fLoc, fSin, fCos, fBinRemainder, 
+        sfloat fMag=0.0, fFreq=0.0, fPhase=0.0, fLoc, fSin, fCos, fBinRemainder, 
                 fTmp, fNewMag,  fIndex;
-        float fSamplingPeriod = 1.0 / pSynthParams->iSamplingRate;
+        sfloat fSamplingPeriod = 1.0 / pSynthParams->iSamplingRate;
 
-        //memset (pSynthParams->pSpectra, 0, (sizeFft +1) * sizeof(float));
+        //memset (pSynthParams->pSpectra, 0, (sizeFft +1) * sizeof(sfloat));
         for (i = 0; i < nTracks; i++)
         {
                 if (((fMag = pSmsData->pFSinAmp[i]) > 0) &&
@@ -339,16 +339,16 @@ int sms_stochastic (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
  * \param pSynthParams   synthesis parameters
  * \return 0 on success, -1 on error
  */
-int sms_synthesize (SMS_Data *pSmsData, float *pFSynthesis,  
+int sms_synthesize (SMS_Data *pSmsData, sfloat *pFSynthesis,  
                   SMS_SynthParams *pSynthParams)
 {
         int i, k;
         int sizeHop = pSynthParams->sizeHop;
         int sizeFft = sizeHop << 1;
   
-        memcpy ( pSynthParams->pSynthBuff, (float *)(pSynthParams->pSynthBuff+sizeHop), 
-                sizeof(float) * sizeHop);
-        memset (pSynthParams->pSynthBuff+sizeHop, 0, sizeof(float) * sizeHop);
+        memcpy ( pSynthParams->pSynthBuff, (sfloat *)(pSynthParams->pSynthBuff+sizeHop), 
+                sizeof(sfloat) * sizeHop);
+        memset (pSynthParams->pSynthBuff+sizeHop, 0, sizeof(sfloat) * sizeHop);
         
         /* decide which combo of synthesis methods to use */
         if(pSynthParams->iSynthesisType == SMS_STYPE_ALL)
@@ -357,7 +357,7 @@ int sms_synthesize (SMS_Data *pSmsData, float *pFSynthesis,
                    pSynthParams->iStochasticType == SMS_STOC_IFFT)
 //                   pSynthParams->iStochasticType == SMS_STOC_APPROX)
                 {
-                        memset (pSynthParams->pSpectra, 0, sizeFft  * sizeof(float));
+                        memset (pSynthParams->pSpectra, 0, sizeFft  * sizeof(sfloat));
                         sms_deterministic(pSmsData, pSynthParams);
                         //sms_stochastic(pSmsData, pSynthParams);
                         printf("hassdsds ");

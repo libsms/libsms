@@ -34,11 +34,11 @@
  * \param sizeWindow the size of the window
  * \param pFWindow pointer to an array that will hold the window
  */
-void IFFTwindow (int sizeWindow, float *pFWindow)
+void IFFTwindow (int sizeWindow, sfloat *pFWindow)
 {
 
 	int     i;
-	float a0 = .35875, a1 = .48829, a2 = .14128, a3 = .01168;
+	sfloat a0 = .35875, a1 = .48829, a2 = .14128, a3 = .01168;
 	double fConst = TWO_PI / sizeWindow, fIncr = 2.0 /sizeWindow, fVal = 0;
 
 	/* compute inverse of Blackman-Harris 92dB window */
@@ -67,12 +67,12 @@ void IFFTwindow (int sizeWindow, float *pFWindow)
  * \param sizeWindow the size of the window
  * \param pFWindow pointer to an array that will hold the window
  */
-void BlackmanHarris62 (int sizeWindow, float *pFWindow)
+void BlackmanHarris62 (int sizeWindow, sfloat *pFWindow)
 {
 	int     i;
 	double fSum = 0;
 	/* for 3 term -62.05 */
-	float a0 = .44959, a1 = .49364, a2 = .05677; 
+	sfloat a0 = .44959, a1 = .49364, a2 = .05677; 
 	double fConst = TWO_PI / sizeWindow;
   
 	/* compute window */
@@ -95,12 +95,12 @@ void BlackmanHarris62 (int sizeWindow, float *pFWindow)
  * \param sizeWindow the size of the window
  * \param pFWindow pointer to an array that will hold the window
  */
-void BlackmanHarris70 (int sizeWindow, float *pFWindow)
+void BlackmanHarris70 (int sizeWindow, sfloat *pFWindow)
 {
 	int     i;
 	double fSum = 0;
 	/* for 3 term -70.83 */
-	float a0 = .42323, a1 = .49755, a2 = .07922;
+	sfloat a0 = .42323, a1 = .49755, a2 = .07922;
 	double fConst = TWO_PI / sizeWindow;
 
 	/* compute window */
@@ -124,12 +124,12 @@ void BlackmanHarris70 (int sizeWindow, float *pFWindow)
  * \param sizeWindow the size of the window
  * \param pFWindow pointer to an array that will hold the window
  */
-void BlackmanHarris74 (int sizeWindow, float *pFWindow)
+void BlackmanHarris74 (int sizeWindow, sfloat *pFWindow)
 {
 	int     i;
 	double fSum = 0;
 	/* for -74dB  from the Nuttall paper */
-	float a0 = .40217, a1 = .49703, a2 = .09892, a3 = .00188;
+	sfloat a0 = .40217, a1 = .49703, a2 = .09892, a3 = .00188;
 	double fConst = TWO_PI / sizeWindow;
   
 	/* compute window */
@@ -152,12 +152,12 @@ void BlackmanHarris74 (int sizeWindow, float *pFWindow)
  * \param sizeWindow the size of the window
  * \param pFWindow pointer to an array that will hold the window
  */
-void BlackmanHarris92 (int sizeWindow, float *pFWindow)
+void BlackmanHarris92 (int sizeWindow, sfloat *pFWindow)
 {
 	int     i;
 	double fSum = 0;
 	/* for -92dB */
-	float a0 = .35875, a1 = .48829, a2 = .14128, a3 = .01168;
+	sfloat a0 = .35875, a1 = .48829, a2 = .14128, a3 = .01168;
 	double fConst = TWO_PI / sizeWindow;
   
 	/* compute window */
@@ -180,7 +180,7 @@ void BlackmanHarris92 (int sizeWindow, float *pFWindow)
  * \param sizeWindow the size of the window
  * \param pFWindow pointer to an array that will hold the window
  */
-void BlackmanHarris (int sizeWindow, float *pFWindow)
+void BlackmanHarris (int sizeWindow, sfloat *pFWindow)
 {
 	 BlackmanHarris70 (sizeWindow, pFWindow);
 }
@@ -190,14 +190,14 @@ void BlackmanHarris (int sizeWindow, float *pFWindow)
  * \param sizeWindow   window size
  * \param pFWindow      window array
  */
-void Hamming (int sizeWindow, float *pFWindow)
+void Hamming (int sizeWindow, sfloat *pFWindow)
 {
 	int     i;
-	float fSum = 0;
+	sfloat fSum = 0;
 
         // DEBUG::
-/*         static float maxA = 0.; */
-/*         static float maxB = 0.; */
+/*         static sfloat maxA = 0.; */
+/*         static sfloat maxB = 0.; */
 
 	for(i = 0; i < sizeWindow; i++) 
         {
@@ -222,7 +222,7 @@ void Hamming (int sizeWindow, float *pFWindow)
  * \param sizeWindow   window size
  * \param pFWindow      window array
  */
-void Hanning (int sizeWindow, float *pFWindow)
+void Hanning (int sizeWindow, sfloat *pFWindow)
 {
   int i;
 
@@ -237,7 +237,7 @@ void Hanning (int sizeWindow, float *pFWindow)
  * \param pFWindow      window array
  * \param iWindowType the desired window type defined by #SMS_WINDOWS 
  */
-void sms_getWindow (int sizeWindow, float *pFWindow, int iWindowType)
+void sms_getWindow (int sizeWindow, sfloat *pFWindow, int iWindowType)
 {
 	switch (iWindowType)
 	{

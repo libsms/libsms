@@ -144,7 +144,7 @@ int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader,
         }	
 	/* check variable size of header */
 	iVariableSize = sizeof (int) * pSmsHeader->nLoopRecords +
-		sizeof (float) * pSmsHeader->nSpecEnvelopePoints +
+		sizeof (sfloat) * pSmsHeader->nSpecEnvelopePoints +
 		sizeof(char) * pSmsHeader->nTextCharacters;
 
 	pSmsHeader->iHeadBSize = sizeof(SMS_Header) + iVariableSize;
@@ -173,7 +173,7 @@ int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader,
 	if (pSmsHeader->nSpecEnvelopePoints > 0)
 	{
 		char *pChStart = (char *) pSmsHeader->pFSpectralEnvelope;
-		int iSize = sizeof (float) * pSmsHeader->nSpecEnvelopePoints;
+		int iSize = sizeof (sfloat) * pSmsHeader->nSpecEnvelopePoints;
     
 		if (fwrite ((void *)pChStart, (size_t)1, (size_t)iSize, *ppSmsFile) < 
 		    (size_t)iSize)
@@ -211,7 +211,7 @@ int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader)
 
 	/* check variable size of header */
 	iVariableSize = sizeof (int) * pSmsHeader->nLoopRecords +
-		sizeof (float) * pSmsHeader->nSpecEnvelopePoints +
+		sizeof (sfloat) * pSmsHeader->nSpecEnvelopePoints +
 		sizeof(char) * pSmsHeader->nTextCharacters;
 
 	pSmsHeader->iHeadBSize = sizeof(SMS_Header) + iVariableSize;
@@ -240,7 +240,7 @@ int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader)
 	if (pSmsHeader->nSpecEnvelopePoints > 0)
 	{
 		char *pChStart = (char *) pSmsHeader->pFSpectralEnvelope;
-		int iSize = sizeof (float) * pSmsHeader->nSpecEnvelopePoints;
+		int iSize = sizeof (sfloat) * pSmsHeader->nSpecEnvelopePoints;
     
 		if (fwrite ((void *)pChStart, (size_t)1, (size_t)iSize, pSmsFile) < 
 		    (size_t)iSize)
@@ -300,11 +300,11 @@ int sms_frameSizeB (SMS_Header *pSmsHeader)
 		nDet = 2;/* freq, mag */
         else nDet = 3; /* freq, mag, phase */
 
-	iSize = sizeof (float) * (nDet * pSmsHeader->nTracks);
+	iSize = sizeof (sfloat) * (nDet * pSmsHeader->nTracks);
 
         if(pSmsHeader->iStochasticType == SMS_STOC_APPROX)
         {       /* stocCoeff + 1 (gain) */
-                iSize += sizeof(float) * (pSmsHeader->nStochasticCoeff + 1);
+                iSize += sizeof(sfloat) * (pSmsHeader->nStochasticCoeff + 1);
         }
         else if(pSmsHeader->iStochasticType == SMS_STOC_IFFT)
         {
@@ -412,14 +412,14 @@ int sms_getHeader (char *pChFileName, SMS_Header **ppSmsHeader,
 						
 	if ((*ppSmsHeader)->nSpecEnvelopePoints > 0)
 		(*ppSmsHeader)->pFSpectralEnvelope = 
-			(float *) ((char *)(*ppSmsHeader) + sizeof(SMS_Header) + 
+			(sfloat *) ((char *)(*ppSmsHeader) + sizeof(SMS_Header) + 
 			           sizeof(int) * (*ppSmsHeader)->nLoopRecords);
 			
 	if ((*ppSmsHeader)->nTextCharacters > 0)
 		(*ppSmsHeader)->pChTextCharacters = 
 			(char *) ((char *)(*ppSmsHeader) + sizeof(SMS_Header) + 
 			sizeof(int) * (*ppSmsHeader)->nLoopRecords +
-			sizeof(float) * (*ppSmsHeader)->nSpecEnvelopePoints);
+			sizeof(sfloat) * (*ppSmsHeader)->nSpecEnvelopePoints);
 
 	return (0);			
 }
@@ -464,14 +464,14 @@ int sms_getFrame (FILE *pSmsFile, SMS_Header *pSmsHeader, int iFrame,
 int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase,
                                        int stochType)
 {
-        float *dataPos;  /* a marker to locate specific data witin smsData */
+        sfloat *dataPos;  /* a marker to locate specific data witin smsData */
 	/* calculate size of frame */
-	int sizeData = 2 * nTracks * sizeof(float);
-        sizeData += 1 * sizeof(float); //adding one for nSamples
-	if (iPhase > 0) sizeData += nTracks * sizeof(float);
-	if (nCoeff > 0) sizeData += (nCoeff + 1) * sizeof(float);
+	int sizeData = 2 * nTracks * sizeof(sfloat);
+        sizeData += 1 * sizeof(sfloat); //adding one for nSamples
+	if (iPhase > 0) sizeData += nTracks * sizeof(sfloat);
+	if (nCoeff > 0) sizeData += (nCoeff + 1) * sizeof(sfloat);
 	/* allocate memory for data */
-	if ((pSmsFrame->pSmsData = (float *) malloc (sizeData)) == NULL)
+	if ((pSmsFrame->pSmsData = (sfloat *) malloc (sizeData)) == NULL)
         {
 		sms_error("cannot allocate memory for SMS frame data");
                 return (-1);
@@ -483,21 +483,21 @@ int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase,
 	pSmsFrame->sizeData = sizeData; 
         /* set pointers to data types within smsData array */
 	pSmsFrame->pFSinFreq = pSmsFrame->pSmsData;
-        dataPos =  (float *)(pSmsFrame->pFSinFreq + nTracks);
+        dataPos =  (sfloat *)(pSmsFrame->pFSinFreq + nTracks);
 	pSmsFrame->pFSinAmp = dataPos;
-        dataPos = (float *)(pSmsFrame->pFSinAmp + nTracks);
+        dataPos = (sfloat *)(pSmsFrame->pFSinAmp + nTracks);
 	if (iPhase > 0)
 	{
 		pSmsFrame->pFSinPha = dataPos;
-                dataPos = (float *) (pSmsFrame->pFSinPha + nTracks);
+                dataPos = (sfloat *) (pSmsFrame->pFSinPha + nTracks);
         }	
 	else 	pSmsFrame->pFSinPha = NULL;
 	if (nCoeff > 0)
 	{
                 pSmsFrame->pFStocCoeff = dataPos;
-                dataPos = (float *) (pSmsFrame->pFStocCoeff + nCoeff);
+                dataPos = (sfloat *) (pSmsFrame->pFStocCoeff + nCoeff);
                 pSmsFrame->pFStocGain = dataPos; 
-                dataPos = (float *) (pSmsFrame->pFStocGain + 1);
+                dataPos = (sfloat *) (pSmsFrame->pFStocGain + 1);
 	}
         else
 	{
@@ -576,25 +576,25 @@ void sms_copyFrame (SMS_Data *pCopySmsData, SMS_Data *pOriginalSmsData)
 		pCopySmsData->nCoeff = nCoeff;
 		memcpy ((char *)pCopySmsData->pFSinFreq, 
 	          (char *)pOriginalSmsData->pFSinFreq,
-	          sizeof(float) * nTraj);
+	          sizeof(sfloat) * nTraj);
 		memcpy ((char *)pCopySmsData->pFSinAmp, 
 	          (char *)pOriginalSmsData->pFSinAmp,
-	          sizeof(float) * nTraj);
+	          sizeof(sfloat) * nTraj);
 		if (pOriginalSmsData->pFSinPha != NULL &&
 	      pCopySmsData->pFSinPha != NULL)
 			memcpy ((char *)pCopySmsData->pFSinPha, 
 		          (char *)pOriginalSmsData->pFSinPha,
-		          sizeof(float) * nTraj);
+		          sizeof(sfloat) * nTraj);
 		if (pOriginalSmsData->pFStocCoeff != NULL &&
 	      pCopySmsData->pFStocCoeff != NULL)
 			memcpy ((char *)pCopySmsData->pFStocCoeff, 
 	            (char *)pOriginalSmsData->pFStocCoeff,
-	            sizeof(float) * nCoeff);
+	            sizeof(sfloat) * nCoeff);
 		if (pOriginalSmsData->pFStocGain != NULL &&
 	      pCopySmsData->pFStocGain != NULL)
 			memcpy ((char *)pCopySmsData->pFStocGain, 
 	            (char *)pOriginalSmsData->pFStocGain,
-	            sizeof(float));
+	            sizeof(sfloat));
 	}
 }
 
@@ -608,10 +608,10 @@ void sms_copyFrame (SMS_Data *pCopySmsData, SMS_Data *pOriginalSmsData)
  * \param fInterpFactor              interpolation factor
  */
 void sms_interpolateFrames (SMS_Data *pSmsFrame1, SMS_Data *pSmsFrame2,
-                           SMS_Data *pSmsFrameOut, float fInterpFactor)
+                           SMS_Data *pSmsFrameOut, sfloat fInterpFactor)
 {
 	int i;
-	float fFreq1, fFreq2;
+	sfloat fFreq1, fFreq2;
 					 
 	/* interpolate the deterministic part */
 	for (i = 0; i < pSmsFrame1->nTracks; i++)

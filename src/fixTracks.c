@@ -37,8 +37,8 @@ static void FillGap (int iCurrentFrame, int iTrack, int *pIState,
                      SMS_AnalParams *pAnalParams)
 {
 	int iFrame, iLastFrame = - (pIState[iTrack] - 1);
-	float fConstant = TWO_PI / pAnalParams->iSamplingRate;
-	float fFirstMag, fFirstFreq, fLastMag, fLastFreq, fIncrMag, fIncrFreq,
+	sfloat fConstant = TWO_PI / pAnalParams->iSamplingRate;
+	sfloat fFirstMag, fFirstFreq, fLastMag, fLastFreq, fIncrMag, fIncrFreq,
 		fMag, fTmpPha, fFreq;
   
 	if(iCurrentFrame - iLastFrame < 0)
@@ -227,11 +227,11 @@ void sms_cleanTracks (int iCurrentFrame, SMS_AnalParams *pAnalParams)
  * \param pAnalParams      pointer to analysis parameters
  * \param nTrack                    number of tracks
  */
-void  sms_scaleDet (float *pFSynthBuffer, float *pFOriginalBuffer, 
-                          float *pFSinAmp, SMS_AnalParams *pAnalParams, int nTrack)
+void  sms_scaleDet (sfloat *pFSynthBuffer, float *pFOriginalBuffer, 
+                          sfloat *pFSinAmp, SMS_AnalParams *pAnalParams, int nTrack)
 {
-	float fOriginalMag = 0, fSynthesisMag = 0;
-	float fCosScaleFactor;
+	sfloat fOriginalMag = 0, fSynthesisMag = 0;
+	sfloat fCosScaleFactor;
 	int iTrack, i;
   
 	/* get sound energy */

@@ -26,15 +26,15 @@
 #include "sms.h"
 
 /*! \brief value to scale the sine-table-lookup phase */
-static float fSineScale;
+static sfloat fSineScale;
 /*! \brief inverse of fSineScale - turns a division into multiplication */
-static float fSineIncr;
+static sfloat fSineIncr;
 /*! \brief value to scale the sinc-table-lookup phase */
-static float fSincScale;
+static sfloat fSincScale;
 /*! \brief global pointer to the sine table */
-static float *sms_tab_sine;
+static sfloat *sms_tab_sine;
 /*! \brief global pointer to the sinc table */
-static float *sms_tab_sinc;
+static sfloat *sms_tab_sinc;
 
 /*! \brief prepares the sine table
  * \param  nTableSize    size of table
@@ -43,16 +43,16 @@ static float *sms_tab_sinc;
 int sms_prepSine (int nTableSize)
 {
         register int i;
-        float fTheta;
+        sfloat fTheta;
   
-        if((sms_tab_sine = (float *)malloc(nTableSize*sizeof(float))) == 0)
+        if((sms_tab_sine = (sfloat *)malloc(nTableSize*sizeof(float))) == 0)
                 return (SMS_MALLOC);
-        fSineScale =  (float)(TWO_PI) / (float)(nTableSize - 1);
+        fSineScale =  (sfloat)(TWO_PI) / (float)(nTableSize - 1);
         fSineIncr = 1.0 / fSineScale;
         fTheta = 0.0;
         for(i = 0; i < nTableSize; i++) 
         {
-                fTheta = fSineScale * (float)i;
+                fTheta = fSineScale * (sfloat)i;
                 sms_tab_sine[i] = sin(fTheta);
         }
         return (SMS_OK);
@@ -69,7 +69,7 @@ void sms_clearSine()
  * \param fTheta    angle in radians
  * \return approximately sin(fTheta)
  */
-float sms_sine (float fTheta)
+sfloat sms_sine (float fTheta)
 {
         int i;
         fTheta = fTheta - floor(fTheta * INV_TWO_PI) * TWO_PI;
@@ -88,7 +88,7 @@ float sms_sine (float fTheta)
 
 /*! \brief Sinc method to generate the lookup table
  */
-static float Sinc (float x, float N)	
+static sfloat Sinc (float x, float N)	
 {
 	return (sinf ((N/2) * x) / sinf (x/2));
 }
@@ -104,13 +104,13 @@ static float Sinc (float x, float N)
 int sms_prepSinc (int nTableSize)
 {
         int i, m;
-	float N = 512.0;
-	float fA[4] = {.35875, .48829, .14128, .01168},
+	sfloat N = 512.0;
+	sfloat fA[4] = {.35875, .48829, .14128, .01168},
 		fMax = 0;
-                float fTheta = -4.0 * TWO_PI / N, 
+                sfloat fTheta = -4.0 * TWO_PI / N, 
                         fThetaIncr = (8.0 * TWO_PI / N) / (nTableSize);
 
-                if((sms_tab_sinc = (float *) calloc (nTableSize, sizeof(float))) == 0)
+                if((sms_tab_sinc = (sfloat *) calloc (nTableSize, sizeof(float))) == 0)
                         return (SMS_MALLOC);
 
                 for(i = 0; i < nTableSize; i++) 
@@ -125,7 +125,7 @@ int sms_prepSinc (int nTableSize)
                 for (i = 0; i < nTableSize; i++) 
                         sms_tab_sinc[i] = sms_tab_sinc[i] / fMax;
 
-                fSincScale = (float) nTableSize / 8.0;
+                fSincScale = (sfloat) nTableSize / 8.0;
 
                 return (SMS_OK);
 }
@@ -144,7 +144,7 @@ void sms_clearSinc()
  * \param fTheta    angle in radians
  * \return approximately sinc(fTheta)
  */
-float sms_sinc (float fTheta)
+sfloat sms_sinc (float fTheta)
 {
 	int index = (int) (.5 + fSincScale * fTheta);
 

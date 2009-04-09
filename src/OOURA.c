@@ -2,7 +2,7 @@
 /* Copyright notice:
     This code comes from the "General Purpose FFT Package" that I obtained at 
     the following website http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html
-    It is exactly copied from the file fft4g.c, but I have changed the doubles to floats.
+    It is exactly copied from the file fft4g.c, but I have changed the doubles to sfloats.
     Here is the copyright notice included in the package:
 
     Copyright(C) 1996-2001 Takuya OOURA
@@ -32,7 +32,7 @@
     [parameters]
         n              :data length (int)
                         n >= 2, n = power of 2
-        a[0...n-1]     :input/output data (float *)
+        a[0...n-1]     :input/output data (sfloat *)
                         <case1>
                             output data
                                 a[2*k] = R[k], 0<=k<n/2
@@ -49,7 +49,7 @@
                         length of ip >= 
                             2+(1<<(int)(log(n/2+0.5)/log(2))/2).
                         ip[0],ip[1] are pointers of the cos/sin table.
-        w[0...n/2-1]   :cos/sin table (float *)
+        w[0...n/2-1]   :cos/sin table (sfloat *)
                         w[],ip[] are initialized if ip[0] == 0.
     [remark]
         Inverse of 
@@ -70,10 +70,10 @@
  * The source code contains documentation from
  * the original author. 
  */
-void rdft(int n, int isgn, float *a, int *ip, float *w)
+void rdft(int n, int isgn, sfloat *a, int *ip, float *w)
 {
     int nw, nc;
-    float xi;
+    sfloat xi;
     
     nw = ip[0];
     if (n > (nw << 2)) {
@@ -110,10 +110,10 @@ void rdft(int n, int isgn, float *a, int *ip, float *w)
 }
 
 
-void makewt(int nw, int *ip, float *w)
+void makewt(int nw, int *ip, sfloat *w)
 {
     int j, nwh;
-    float delta, x, y;
+    sfloat delta, x, y;
     
     ip[0] = nw;
     ip[1] = 1;
@@ -138,10 +138,10 @@ void makewt(int nw, int *ip, float *w)
     }
 }
 
-void makect(int nc, int *ip, float *c)
+void makect(int nc, int *ip, sfloat *c)
 {
     int j, nch;
-    float delta;
+    sfloat delta;
     
     ip[1] = nc;
     if (nc > 1) {
@@ -156,10 +156,10 @@ void makect(int nc, int *ip, float *c)
     }
 }
 
-void bitrv2(int n, int *ip, float *a)
+void bitrv2(int n, int *ip, sfloat *a)
 {
     int j, j1, k, k1, l, m, m2;
-    float xr, xi, yr, yi;
+    sfloat xr, xi, yr, yi;
     
     ip[0] = 0;
     l = n;
@@ -255,10 +255,10 @@ void bitrv2(int n, int *ip, float *a)
     }
 }
 
-void cftfsub(int n, float *a, float *w)
+void cftfsub(int n, sfloat *a, float *w)
 {
     int j, j1, j2, j3, l;
-    float x0r, x0i, x1r, x1i, x2r, x2i, x3r, x3i;
+    sfloat x0r, x0i, x1r, x1i, x2r, x2i, x3r, x3i;
     
     l = 2;
     if (n > 8) {
@@ -305,10 +305,10 @@ void cftfsub(int n, float *a, float *w)
 }
 
 
-void cftbsub(int n, float *a, float *w)
+void cftbsub(int n, sfloat *a, float *w)
 {
     int j, j1, j2, j3, l;
-    float x0r, x0i, x1r, x1i, x2r, x2i, x3r, x3i;
+    sfloat x0r, x0i, x1r, x1i, x2r, x2i, x3r, x3i;
     
     l = 2;
     if (n > 8) {
@@ -355,11 +355,11 @@ void cftbsub(int n, float *a, float *w)
 }
 
 
-void cft1st(int n, float *a, float *w)
+void cft1st(int n, sfloat *a, float *w)
 {
     int j, k1, k2;
-    float wk1r, wk1i, wk2r, wk2i, wk3r, wk3i;
-    float x0r, x0i, x1r, x1i, x2r, x2i, x3r, x3i;
+    sfloat wk1r, wk1i, wk2r, wk2i, wk3r, wk3i;
+    sfloat x0r, x0i, x1r, x1i, x2r, x2i, x3r, x3i;
     
     x0r = a[0] + a[2];
     x0i = a[1] + a[3];
@@ -460,11 +460,11 @@ void cft1st(int n, float *a, float *w)
 }
 
 
-void cftmdl(int n, int l, float *a, float *w)
+void cftmdl(int n, int l, sfloat *a, float *w)
 {
     int j, j1, j2, j3, k, k1, k2, m, m2;
-    float wk1r, wk1i, wk2r, wk2i, wk3r, wk3i;
-    float x0r, x0i, x1r, x1i, x2r, x2i, x3r, x3i;
+    sfloat wk1r, wk1i, wk2r, wk2i, wk3r, wk3i;
+    sfloat x0r, x0i, x1r, x1i, x2r, x2i, x3r, x3i;
     
     m = l << 2;
     for (j = 0; j < l; j += 2) {
@@ -587,10 +587,10 @@ void cftmdl(int n, int l, float *a, float *w)
 }
 
 
-void rftfsub(int n, float *a, int nc, float *c)
+void rftfsub(int n, sfloat *a, int nc, float *c)
 {
     int j, k, kk, ks, m;
-    float wkr, wki, xr, xi, yr, yi;
+    sfloat wkr, wki, xr, xi, yr, yi;
     
     m = n >> 1;
     ks = 2 * nc / m;
@@ -611,10 +611,10 @@ void rftfsub(int n, float *a, int nc, float *c)
     }
 }
 
-void rftbsub(int n, float *a, int nc, float *c)
+void rftbsub(int n, sfloat *a, int nc, float *c)
 {
     int j, k, kk, ks, m;
-    float wkr, wki, xr, xi, yr, yi;
+    sfloat wkr, wki, xr, xi, yr, yi;
     
     a[1] = -a[1];
     m = n >> 1;

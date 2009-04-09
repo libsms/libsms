@@ -69,18 +69,18 @@ int sms_openSF (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader)
  * \param offset                      which sound frame to start reading from
  * \return 0 on success, -1 on failure
  */
-int sms_getSound (SMS_SndHeader *pSoundHeader, long sizeSound, float *pSound,
+int sms_getSound (SMS_SndHeader *pSoundHeader, long sizeSound, sfloat *pSound,
                   long offset) 
 {
 	int nFrames;
         int i;
         int iChannelCount = pSoundHeader->channelCount;
         int iReadChannel = pSoundHeader->iReadChannel;
-        static float *pFSampleBuffer = NULL;
+        static sfloat *pFSampleBuffer = NULL;
 
         if(pFSampleBuffer == NULL)
         {
-                if((pFSampleBuffer = (float *) calloc(MAX_SAMPLES, sizeof(float))) == NULL)
+                if((pFSampleBuffer = (sfloat *) calloc(MAX_SAMPLES, sizeof(float))) == NULL)
                         return(SMS_MALLOC);
         }
 
@@ -135,7 +135,7 @@ int sms_createSF ( char *pChOutputSoundFile, int iSamplingRate, int iType)
  * \param pFBuffer    data to write to file
  * \param sizeBuffer     size of data buffer
  */
-void sms_writeSound (float *pFBuffer, int sizeBuffer)
+void sms_writeSound (sfloat *pFBuffer, int sizeBuffer)
 {
     sf_writef_float( pOutputSNDStream, pFBuffer, sizeBuffer);
 }
@@ -179,12 +179,12 @@ int sms_createResSF (int iSamplingRate)
  * \param sizeBuffer     size of data buffer
  * \return error code \see SMS_SNDERR in SMS_ERRORS
  */
-int sms_writeResSound (float *pBuffer, int sizeBuffer)
+int sms_writeResSound (sfloat *pBuffer, int sizeBuffer)
 {
 	int i;
-	float *pFResidual;
+	sfloat *pFResidual;
 
-	if ((pFResidual = (float *) calloc(sizeBuffer, sizeof(float))) == NULL)
+	if ((pFResidual = (sfloat *) calloc(sizeBuffer, sizeof(float))) == NULL)
 		return(SMS_MALLOC);
 
 	for (i = 0; i < sizeBuffer; i++)
@@ -208,13 +208,13 @@ void sms_writeResSF ()
  * \param pWaveform           input data
  * \param pAnalParams        pointer to structure of analysis parameters
  */
-void sms_fillSoundBuffer (int sizeWaveform, float *pWaveform, SMS_AnalParams *pAnalParams)
+void sms_fillSoundBuffer (int sizeWaveform, sfloat *pWaveform, SMS_AnalParams *pAnalParams)
 {
 	int i;
         long sizeNewData = (long) sizeWaveform;
 	/* leave space for new data */
 	memcpy ( pAnalParams->soundBuffer.pFBuffer,  pAnalParams->soundBuffer.pFBuffer+sizeNewData, 
-                 sizeof(float) * (pAnalParams->soundBuffer.sizeBuffer - sizeNewData));
+                 sizeof(sfloat) * (pAnalParams->soundBuffer.sizeBuffer - sizeNewData));
   
 	pAnalParams->soundBuffer.iFirstGood = 
 		MAX (0, pAnalParams->soundBuffer.iFirstGood - sizeNewData);
@@ -245,7 +245,7 @@ void sms_fillSoundBuffer (int sizeWaveform, float *pWaveform, SMS_AnalParams *pA
  * \param pWaveform           input data
  * \param pAnalParams        pointer to structure of analysis parameters
  */
-void sms_windowCentered (int sizeWindow, float *pWaveform, float *pWindow, int sizeFft, float *pFftBuffer)
+void sms_windowCentered (int sizeWindow, sfloat *pWaveform, float *pWindow, int sizeFft, float *pFftBuffer)
 {
         int i, iOffset, iMiddleWindow;
         

@@ -37,10 +37,10 @@
  * \return error code \see SMS_ERRORS (or -1 if the algorithm just messes up, 
                it will print an error of its own.
  */
-int sms_spectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
-                    float *pFSpec2, int sizeSpec2, int nCoefficients)
+int sms_spectralApprox (sfloat *pFSpec1, int sizeSpec1, int sizeSpec1Used,
+                    sfloat *pFSpec2, int sizeSpec2, int nCoefficients)
 {
-	float fHopSize, fCurrentLoc = 0, fLeft = 0, fRight = 0, fValue = 0, 
+	sfloat fHopSize, fCurrentLoc = 0, fLeft = 0, fRight = 0, fValue = 0, 
 		fLastLocation, fSizeX, fSpec2Acum=0, fNextHop, fDeltaY, *pFEnvelope;
 	int iFirstGood = 0, iLastSample = 0, i, j;
 
@@ -52,18 +52,18 @@ int sms_spectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 		return(SMS_OK);
 	}
 
-	if ((pFEnvelope = (float *) calloc(nCoefficients, sizeof(float))) == NULL)
+	if ((pFEnvelope = (sfloat *) calloc(nCoefficients, sizeof(float))) == NULL)
 		return(SMS_MALLOC);
  
 	/* calculate the hop size */
 	if (sizeSpec1 != sizeSpec1Used)
-                fHopSize = (float) sizeSpec1Used / nCoefficients;
+                fHopSize = (sfloat) sizeSpec1Used / nCoefficients;
 	else //why is this here, would be the same as sizeSpec1Used / nCoefficients
-		fHopSize = (float) sizeSpec1 / nCoefficients;
+		fHopSize = (sfloat) sizeSpec1 / nCoefficients;
         if(nCoefficients > sizeSpec1)
                 nCoefficients = sizeSpec1;
 
-        fHopSize = (float) sizeSpec1Used / nCoefficients;
+        fHopSize = (sfloat) sizeSpec1Used / nCoefficients;
         
 	/* approximate by linear interpolation */
 	if (fHopSize > 1)
@@ -104,7 +104,7 @@ int sms_spectralApprox (float *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 	/* Creates Spec2 from Envelope */
 	if (nCoefficients < sizeSpec2)
 	{
-		fSizeX = (float) (sizeSpec2-1) / nCoefficients;
+		fSizeX = (sfloat) (sizeSpec2-1) / nCoefficients;
 
 		/* the first step */
 		fNextHop = fSizeX / 2;

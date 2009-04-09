@@ -40,14 +40,14 @@
  * \param fFreqDev		        maximum deviation from guide
  * \return peak number or -1 if nothing is good
  */
-static int GetNextClosestPeak (float fGuideFreq, float *pFFreqDistance, 
+static int GetNextClosestPeak (sfloat fGuideFreq, float *pFFreqDistance, 
                                SMS_Peak *pSpectralPeaks, SMS_AnalParams *pAnalParams,
-                               float fFreqDev)
+                               sfloat fFreqDev)
 {
 	int iInitialPeak = 
 		SMS_MAX_NPEAKS * fGuideFreq / (pAnalParams->iSamplingRate * .5),
 		iLowPeak, iHighPeak, iChosenPeak = -1;
-	float fLowDistance, fHighDistance, fFreq;
+	sfloat fLowDistance, fHighDistance, fFreq;
 
 	if (pSpectralPeaks[iInitialPeak].fFreq <= 0)
 		iInitialPeak = 0;
@@ -128,10 +128,10 @@ static int GetNextClosestPeak (float fGuideFreq, float *pFFreqDistance,
  * \return the peak number of the best candidate
  */
 static int ChooseBestCand (SMS_ContCandidate *pCandidate, int nCandidates, 
-                           float fFreqDev)
+                           sfloat fFreqDev)
 {
 	int i, iHighestCand, iClosestCand, iBestCand = 0;
-	float fMaxMag, fClosestFreq;
+	sfloat fMaxMag, fClosestFreq;
   
 	/* intial guess */
 	iClosestCand = 0;
@@ -195,9 +195,9 @@ static int BestGuide (int iConflictingGuide, int iGuide, SMS_Guide *pGuides,
                       SMS_Peak *pSpectralPeaks)
 {
 	int iConflictingPeak = pGuides[iConflictingGuide].iPeakChosen;
-	float fGuideDistance = fabs (pSpectralPeaks[iConflictingPeak].fFreq -
+	sfloat fGuideDistance = fabs (pSpectralPeaks[iConflictingPeak].fFreq -
 	                             pGuides[iGuide].fFreq);
-	float fConfGuideDistance = fabs (pSpectralPeaks[iConflictingPeak].fFreq -
+	sfloat fConfGuideDistance = fabs (pSpectralPeaks[iConflictingPeak].fFreq -
 	                                 pGuides[iConflictingGuide].fFreq);
 
 	if (fGuideDistance > fConfGuideDistance)
@@ -215,10 +215,10 @@ static int BestGuide (int iConflictingGuide, int iGuide, SMS_Guide *pGuides,
  * \return the peak number
  */
 static int GetBestPeak (SMS_Guide *pGuides, int iGuide, SMS_Peak *pSpectralPeaks, 
-                        SMS_AnalParams *pAnalParams, float fFreqDev)
+                        SMS_AnalParams *pAnalParams, sfloat fFreqDev)
 {
 	int iCand = 0, iPeak, iBestPeak, iConflictingGuide, iWinnerGuide;
-	float fGuideFreq = pGuides[iGuide].fFreq,
+	sfloat fGuideFreq = pGuides[iGuide].fFreq,
 		fGuideMag = pGuides[iGuide].fMag,
 		fFreqDistance = -1, fMagDistance = 0;
 	SMS_ContCandidate pCandidate[MAX_CONT_CANDIDATES];
@@ -293,10 +293,10 @@ static int GetBestPeak (SMS_Guide *pGuides, int iGuide, SMS_Peak *pSpectralPeaks
  * \param pFCurrentMax		last peak maximum
  * \return the number of the maximum peak
  */
-static int GetNextMax (SMS_Peak *pSpectralPeaks, float *pFCurrentMax)
+static int GetNextMax (SMS_Peak *pSpectralPeaks, sfloat *pFCurrentMax)
 {
-	float fPeakMag;
-        float fMaxMag = 0.;
+	sfloat fPeakMag;
+        sfloat fMaxMag = 0.;
 	int iPeak, iMaxPeak = -1;
   
 	for (iPeak = 0; iPeak < SMS_MAX_NPEAKS; iPeak++)
@@ -326,7 +326,7 @@ static int GetNextMax (SMS_Peak *pSpectralPeaks, float *pFCurrentMax)
  * \return \todo should this return something?
  */
 static int GetStartingPeak (int iGuide, SMS_Guide *pGuides, int nGuides,
-                            SMS_Peak *pSpectralPeaks, float *pFCurrentMax)
+                            SMS_Peak *pSpectralPeaks, sfloat *pFCurrentMax)
 {
 	int iPeak = -1;
 	short peakNotFound = 1;
@@ -359,7 +359,7 @@ static int GetStartingPeak (int iGuide, SMS_Guide *pGuides, int nGuides,
 int sms_peakContinuation (int iFrame, SMS_AnalParams *pAnalParams)
 {
 	int iGuide, iCurrentPeak = -1, iGoodPeak = -1;
-	float fFund = pAnalParams->ppFrames[iFrame]->fFundamental,
+	sfloat fFund = pAnalParams->ppFrames[iFrame]->fFundamental,
 		fFreqDev = fFund * pAnalParams->fFreqDeviation, fCurrentMax = 1000;
   	static SMS_Guide *pGuides = NULL;
 
@@ -393,7 +393,7 @@ int sms_peakContinuation (int iFrame, SMS_AnalParams *pAnalParams)
 	/* continue all guides */
 	for (iGuide = 0; iGuide < pAnalParams->nGuides; iGuide++)
 	{
-		float fPreviousFreq = 
+		sfloat fPreviousFreq = 
 			pAnalParams->ppFrames[iFrame-1]->deterministic.pFSinFreq[iGuide];
    
 		/* get the guide value by upgrading the previous guide */

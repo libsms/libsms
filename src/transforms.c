@@ -18,28 +18,27 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
-/*! \file fourier.c 
+/*! \file transforms.c 
  * \brief routines for different Fast Fourier Transform Algorithms
  *
- * look at the very bottom of this file for the global fft call, sms_rdft()
  */
 
 #include "sms.h"
 #include "OOURA.h"
 
 static int ip[NMAXSQRT +2];
-static float w[NMAX * 5 / 4];
+static sfloat w[NMAX * 5 / 4];
 
 /*! \brief Forward Fast Fourier Transform
  *
  * function to call the OOURA routines to calculate
  * the forward FFT.  Operation is in place.
- * \todo if sizeFft != power of 2, there is a silent crash :( no bueno
+ * \todo if sizeFft != power of 2, there is a silent crash.. cuidado!
  *
  * \param sizeFft         size of the FFT in samples (must be a power of 2 >= 2)
  * \param pArray         pointer to real array (n >= 2, n = power of 2)
  */
-void sms_fft(  int sizeFft, float *pArray)
+void sms_fft(  int sizeFft, sfloat *pArray)
 { 
         rdft( sizeFft, 1, pArray, ip, w);
 }
@@ -52,8 +51,7 @@ void sms_fft(  int sizeFft, float *pArray)
  * \param sizeFft         size of the FFT in samples (must be a power of 2 >= 2)
  * \param pArray         pointer to real array (n >= 2, n = power of 2)
  */
-void sms_ifft(  int sizeFft, float *pArray)
+void sms_ifft(  int sizeFft, sfloat *pArray)
 { 
         rdft( sizeFft, -1, pArray, ip, w);
 }
-

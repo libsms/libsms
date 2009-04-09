@@ -33,12 +33,12 @@
  * \return 0 on success, -1 on error
  */
 
-int sms_stocAnalysis ( int sizeWindow, float *pResidual, float *pWindow, SMS_Data *pSmsData)
+int sms_stocAnalysis ( int sizeWindow, sfloat *pResidual, float *pWindow, SMS_Data *pSmsData)
 {
         int i;
-        float fMag = 0.0;
+        sfloat fMag = 0.0;
 
-        static float *pMagSpectrum;
+        static sfloat *pMagSpectrum;
         static int sizeWindowStatic = 0;
         static int sizeFft = 0;
         static int sizeMag = 0;
@@ -49,7 +49,7 @@ int sms_stocAnalysis ( int sizeWindow, float *pResidual, float *pWindow, SMS_Dat
                 sizeWindowStatic = sizeWindow;
                 sizeFft = sms_power2(sizeWindow);
                 sizeMag = sizeFft >> 1;
-                if((pMagSpectrum = (float *) calloc(sizeMag, sizeof(float))) == NULL)
+                if((pMagSpectrum = (sfloat *) calloc(sizeMag, sizeof(float))) == NULL)
                 {
                         sms_error("sms_stocAnalysis: error allocating memory for pMagSpectrum");
                         return -1;

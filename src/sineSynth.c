@@ -36,13 +36,13 @@
  * \param sizeBuffer	    size of the synthesis buffer 
  * \param iTrack                  current track 
  */
-static void SinePhaSynth (float fFreq, float fMag, float fPhase,
-                          SMS_Data *pLastFrame, float *pFWaveform, 
+static void SinePhaSynth (sfloat fFreq, float fMag, float fPhase,
+                          SMS_Data *pLastFrame, sfloat *pFWaveform, 
                           int sizeBuffer, int iTrack)
 {
-  float  fMagIncr, fInstMag, fInstPhase, fTmp;
+  sfloat  fMagIncr, fInstMag, fInstPhase, fTmp;
   int iM, i;
-  float fAlpha, fBeta, fTmp1, fTmp2;
+  sfloat fAlpha, fBeta, fTmp1, fTmp2;
    
   /* if no mag in last frame copy freq from current and make phase */
   if (pLastFrame->pFSinAmp[iTrack] <= 0)
@@ -73,10 +73,10 @@ static void SinePhaSynth (float fFreq, float fMag, float fPhase,
   fTmp2 = fPhase - pLastFrame->pFSinPha[iTrack] - 
 		pLastFrame->pFSinFreq[iTrack] * sizeBuffer +
 		TWO_PI * iM;
-  fAlpha = (3.0 / (float)(sizeBuffer * sizeBuffer)) * 
+  fAlpha = (3.0 / (sfloat)(sizeBuffer * sizeBuffer)) * 
     fTmp2 - fTmp1 / sizeBuffer;
-  fBeta = (-2.0 / ((float) (sizeBuffer * sizeBuffer * sizeBuffer))) * 
-    fTmp2 + fTmp1 / ((float) (sizeBuffer * sizeBuffer));
+  fBeta = (-2.0 / ((sfloat) (sizeBuffer * sizeBuffer * sizeBuffer))) * 
+    fTmp2 + fTmp1 / ((sfloat) (sizeBuffer * sizeBuffer));
   
   for(i=0; i<sizeBuffer; i++)
   {
@@ -103,10 +103,10 @@ static void SinePhaSynth (float fFreq, float fMag, float fPhase,
  * \param sizeBuffer	 size of the synthesis buffer 
  * \param iTrack               current track 
  */
-static void SineSynth (float fFreq, float fMag, SMS_Data *pLastFrame,
-                       float *pFBuffer, int sizeBuffer, int iTrack)
+static void SineSynth (sfloat fFreq, float fMag, SMS_Data *pLastFrame,
+                       sfloat *pFBuffer, int sizeBuffer, int iTrack)
 {
-  float  fMagIncr, fInstMag, fFreqIncr, fInstPhase, fInstFreq;
+  sfloat  fMagIncr, fInstMag, fFreqIncr, fInstPhase, fInstFreq;
   int i;
   
   /* if no mag in last frame copy freq from current */
@@ -153,11 +153,11 @@ static void SineSynth (float fFreq, float fMag, SMS_Data *pLastFrame,
  * \param pLastFrame    SMS data from last frame 
  * \param iSamplingRate sampling rate to synthesize for
  */
-void sms_sineSynthFrame (SMS_Data *pSmsData, float *pFBuffer, 
+void sms_sineSynthFrame (SMS_Data *pSmsData, sfloat *pFBuffer, 
                     int sizeBuffer, SMS_Data *pLastFrame, 
                     int iSamplingRate)
 {
-        float fMag, fFreq;
+        sfloat fMag, fFreq;
         int i;
         int nTracks = pSmsData->nTracks;
         int iHalfSamplingRate = iSamplingRate >> 1;

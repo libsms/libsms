@@ -29,12 +29,12 @@
 
 /* pre-emphasis filter function, it returns the filtered value   
  *
- * float fInput;   sound sample
+ * sfloat fInput;   sound sample
  */
-float sms_preEmphasis (float fInput)
+sfloat sms_preEmphasis (float fInput)
 {
-	static float fLastValue = 0;
-	float fOutput = 0;
+	static sfloat fLastValue = 0;
+	sfloat fOutput = 0;
   
 	fOutput = fInput - SMS_EMPH_COEF * fLastValue;
 	fLastValue = fOutput;
@@ -44,12 +44,12 @@ float sms_preEmphasis (float fInput)
 
 /* de-emphasis filter function, it returns the filtered value 
  *
- * float fInput;   sound input
+ * sfloat fInput;   sound input
  */
-float sms_deEmphasis (float fInput)
+sfloat sms_deEmphasis (float fInput)
 {
-	static float fLastValue = 0;
-	float fOutput = 0;
+	static sfloat fLastValue = 0;
+	sfloat fOutput = 0;
   
 	fOutput = fInput + SMS_EMPH_COEF * fLastValue;
 	fLastValue = fInput;
@@ -69,15 +69,15 @@ float sms_deEmphasis (float fInput)
  * \param fInput     input sample
  * \return value is the  filtered sample 
  */
-static float ZeroPoleFilter (float *pFa, float *pFb, int nCoeff, float fInput )
+static sfloat ZeroPoleFilter (float *pFa, float *pFb, int nCoeff, float fInput )
 {
 	double fOut = 0;
 	int iSection;
 
-/*         static float *pD = NULL; */
+/*         static sfloat *pD = NULL; */
 /* 	if (pD == NULL) */
-/* 		pD = (float *) calloc(5, sizeof(float));	     */
-        static float pD[5] = {0, 0, 0, 0, 0};
+/* 		pD = (sfloat *) calloc(5, sizeof(float));	     */
+        static sfloat pD[5] = {0, 0, 0, 0, 0};
 
 	pD[0] = fInput;
 	for (iSection = nCoeff-1; iSection > 0; iSection--)
@@ -87,19 +87,19 @@ static float ZeroPoleFilter (float *pFa, float *pFb, int nCoeff, float fInput )
 		pD[iSection] = pD [iSection-1];
 	}
 	fOut = fOut + pFa[0] * pD[0];
-	return((float) fOut);
+	return((sfloat) fOut);
 }
 
 	/* cutoff 1500 Hz */
-/*	static float pFCoeff32k[10] =  {0.679459, -2.71784, 4.07676, -2.71784, 
+/*	static sfloat pFCoeff32k[10] =  {0.679459, -2.71784, 4.07676, -2.71784, 
 		0.679459, 1, -3.23168, 3.97664, -2.20137, 0.461665};  
-	static float pFCoeff36k[10] =  {0.709489, -2.83796, 4.25694, -2.83796, 
+	static sfloat pFCoeff36k[10] =  {0.709489, -2.83796, 4.25694, -2.83796, 
 		0.709489, 1, -3.31681, 4.17425, -2.3574, 0.503375};
-	static float pFCoeff40k[10] =  {0.734408, -2.93763, 4.40645, -2.93763, 
+	static sfloat pFCoeff40k[10] =  {0.734408, -2.93763, 4.40645, -2.93763, 
 		0.734408, 1, -3.38497, 4.33706, -2.48914, 0.539355};
-	static float pFCoeff441k[10] =  {0.755893, -3.02357, 4.53536, -3.02357, 
+	static sfloat pFCoeff441k[10] =  {0.755893, -3.02357, 4.53536, -3.02357, 
 		0.755893, 1, -3.44205, 4.47657, -2.6043, 0.571374};
-	static float pFCoeff48k[10] =  {0.773347, -3.09339, 4.64008, -3.09339, 
+	static sfloat pFCoeff48k[10] =  {0.773347, -3.09339, 4.64008, -3.09339, 
 		0.773347, 1, -3.48731, 4.58929, -2.69888, 0.598065};
 */
 
@@ -114,22 +114,22 @@ static float ZeroPoleFilter (float *pFa, float *pFb, int nCoeff, float fInput )
  * \param pResidual          pointer to residual signal
  * \param iSamplingRate      sampling rate of signal                                                    
  */
-void sms_filterHighPass ( int sizeResidual, float *pResidual, int iSamplingRate)
+void sms_filterHighPass ( int sizeResidual, sfloat *pResidual, int iSamplingRate)
 {
 
 
 	/* cutoff 800Hz */
-	static float pFCoeff32k[10] =  {0.814255, -3.25702, 4.88553, -3.25702, 
+	static sfloat pFCoeff32k[10] =  {0.814255, -3.25702, 4.88553, -3.25702, 
 		0.814255, 1, -3.58973, 4.85128, -2.92405, 0.66301};
-	static float pFCoeff36k[10] =  {0.833098, -3.33239, 4.99859, -3.33239, 
+	static sfloat pFCoeff36k[10] =  {0.833098, -3.33239, 4.99859, -3.33239, 
 		0.833098, 1, -3.63528, 4.97089, -3.02934,0.694052};
-	static float pFCoeff40k[10] =  {0.848475, -3.3939, 5.09085, -3.3939, 
+	static sfloat pFCoeff40k[10] =  {0.848475, -3.3939, 5.09085, -3.3939, 
 		0.848475, 1, -3.67173, 5.068, -3.11597, 0.71991}; 
-	static float pFCoeff441k[10] =  {0.861554, -3.44622, 5.16932, -3.44622, 
+	static sfloat pFCoeff441k[10] =  {0.861554, -3.44622, 5.16932, -3.44622, 
 		0.861554, 1, -3.70223, 5.15023, -3.19013, 0.742275};
-	static float pFCoeff48k[10] =  {0.872061, -3.48824, 5.23236, -3.48824, 
+	static sfloat pFCoeff48k[10] =  {0.872061, -3.48824, 5.23236, -3.48824, 
 		0.872061, 1, -3.72641, 5.21605, -3.25002, 0.76049};
-	float *pFCoeff, fSample = 0;
+	sfloat *pFCoeff, fSample = 0;
 	int i;
   
 	if (iSamplingRate <= 32000)
@@ -165,10 +165,10 @@ void sms_filterHighPass ( int sizeResidual, float *pResidual, int iSamplingRate)
  * \param size2		horizontal size of pFArray
  * \param pFOutArray     output array of size size1
  */
-void sms_filterArray (float *pFArray, int size1, int size2, float *pFOutArray)
+void sms_filterArray (sfloat *pFArray, int size1, int size2, float *pFOutArray)
 {
 	int i, j, iPoint, iFrame, size2_2 = size2-2, size2_1 = size2-1;
-	float *pFCurrentArray = pFArray + (size2_1) * size1, fVal, fWeighting, 
+	sfloat *pFCurrentArray = pFArray + (size2_1) * size1, fVal, fWeighting, 
 		fTotalWeighting, fTmpVal;
 
 	/* find the filtered envelope */
@@ -179,7 +179,7 @@ void sms_filterArray (float *pFArray, int size1, int size2, float *pFOutArray)
 		/* filter by the surrounding points */
 		for (j = 1; j < (size2_2); j++)
 		{
-			fWeighting = (float) size2 / (1+ j);
+			fWeighting = (sfloat) size2 / (1+ j);
 			/* filter on the vertical dimension */
 			/* consider the lower points */
 			iPoint = i - (size2_1) + j;

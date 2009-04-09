@@ -24,9 +24,9 @@
 
 #include "sms.h"
 
-static float *pFWindow1 = NULL, *pFWindow2 = NULL;
+static sfloat *pFWindow1 = NULL, *pFWindow2 = NULL;
 static int sizeFft1, sizeFft2, sizeMag1, sizeMag2, sizeSmooth;
-static float *pFMagSpectrum1, *pFMagSpectrum2, *pFPhaseSpectrum1, 
+static sfloat *pFMagSpectrum1, *pFMagSpectrum2, *pFPhaseSpectrum1, 
 	     *pFPhaseSpectrum2, *pFMagEnv, *pFEnvBuffer, *pFMagEnvFilt;
 
 #ifndef ENV_THRESHOLD
@@ -41,9 +41,9 @@ static float *pFMagSpectrum1, *pFMagSpectrum2, *pFPhaseSpectrum1,
  */
 static int InitializeHybrid (int sizeWave1, int sizeWave2, SMS_HybParams *pHybParams)
 {
-    if ((pFWindow1 = (float *) calloc(sizeWave1, sizeof(float))) == NULL)
+    if ((pFWindow1 = (sfloat *) calloc(sizeWave1, sizeof(float))) == NULL)
       return -1;
-    if ((pFWindow2 = (float *) calloc(sizeWave2, sizeof(float))) == NULL)
+    if ((pFWindow2 = (sfloat *) calloc(sizeWave2, sizeof(float))) == NULL)
       return -1;
 
     sms_getWindow(sizeWave1, pFWindow1, SMS_WIN_HAMMING);
@@ -56,23 +56,23 @@ static int InitializeHybrid (int sizeWave1, int sizeWave2, SMS_HybParams *pHybPa
     sizeMag2 = sizeFft2 >> 1;
     sizeSmooth = 1 + pHybParams->iSmoothOrder;
     if ((pFMagSpectrum2 = 
-          (float *) calloc(sizeMag2, sizeof(float))) == NULL)
+          (sfloat *) calloc(sizeMag2, sizeof(float))) == NULL)
       return -1;
     if ((pFMagSpectrum1 = 
-          (float *) calloc(sizeMag1, sizeof(float))) == NULL)
+          (sfloat *) calloc(sizeMag1, sizeof(float))) == NULL)
       return -1;
     pFPhaseSpectrum2 = NULL;
     if ((pFPhaseSpectrum1 = 
-          (float *) calloc(sizeMag1, sizeof(float))) == NULL)
+          (sfloat *) calloc(sizeMag1, sizeof(float))) == NULL)
       return -1;
     if ((pFMagEnv = 
-          (float *) calloc(sizeMag1, sizeof(float))) == NULL)
+          (sfloat *) calloc(sizeMag1, sizeof(float))) == NULL)
       return -1;
     if ((pFEnvBuffer = 
-          (float *) calloc(sizeMag1 * sizeSmooth, sizeof(float))) == NULL)
+          (sfloat *) calloc(sizeMag1 * sizeSmooth, sizeof(float))) == NULL)
       return -1;
     if ((pFMagEnvFilt = 
-          (float *) calloc(sizeMag1, sizeof(float))) == NULL)
+          (sfloat *) calloc(sizeMag1, sizeof(float))) == NULL)
       return -1;
 
     return 1;
@@ -107,17 +107,17 @@ void freeBuffers ()
  * \param pFWeight hmmmm...
  * \param sizeSpec size of the spectrum
  */
-static void CompExp(float *pFEnv, float *pFSpec, float *pFWeight, int sizeSpec)
+static void CompExp(sfloat *pFEnv, float *pFSpec, float *pFWeight, int sizeSpec)
 {
-  float *pFEnd = pFSpec + sizeSpec;		
+  sfloat *pFEnd = pFSpec + sizeSpec;		
   do 
   {
       if (*pFWeight == 2.) *pFSpec = 1.;
       else if (!*pFWeight) *pFEnv = 1.;
       else if (*pFWeight > 1 && *pFSpec)
-          *pFSpec = (float)pow(10.,(2.-*pFWeight)*log10((double)*pFSpec)); 
+          *pFSpec = (sfloat)pow(10.,(2.-*pFWeight)*log10((double)*pFSpec)); 
       else if (*pFWeight < 1 && *pFEnv)
-          *pFEnv = (float)pow(10.,*pFWeight*log10((double)*pFEnv)); 
+          *pFEnv = (sfloat)pow(10.,*pFWeight*log10((double)*pFEnv)); 
       ++pFWeight; 
       ++pFSpec;
       ++pFEnv;
@@ -129,13 +129,13 @@ static void CompExp(float *pFEnv, float *pFSpec, float *pFWeight, int sizeSpec)
 
 /* filter each magnitude in a spectrum by the surounding magnitudes 
  */ 
-static int FilterMagEnv (float *pFMagEnv, float *pFMagEnvFilt, int sizeMag)
+static int FilterMagEnv (sfloat *pFMagEnv, float *pFMagEnvFilt, int sizeMag)
 {
   int sizeEnvBuffer = sizeSmooth * sizeMag;
    memcpy ((char *) pFEnvBuffer, (char *) (pFEnvBuffer+sizeMag), 
-	  sizeof(float) * sizeEnvBuffer);
+	  sizeof(sfloat) * sizeEnvBuffer);
    memcpy ((char *) (pFEnvBuffer+sizeEnvBuffer-sizeMag), (char *) pFMagEnv, 
-	  sizeof(float) * sizeMag);
+	  sizeof(sfloat) * sizeMag);
   sms_filterArray (pFEnvBuffer, sizeMag, sizeSmooth, pFMagEnvFilt);
   return 1;
 }
@@ -143,20 +143,20 @@ static int FilterMagEnv (float *pFMagEnv, float *pFMagEnvFilt, int sizeMag)
 /* multiply spectral envelope of one sound with magnitude spectrum of the other 
  *
  * pFMagEnv		envelope from hybridizing sound
- * float *pFMagSpectrum		magnitude spectrum of excitation sound
+ * sfloat *pFMagSpectrum		magnitude spectrum of excitation sound
  * int sizeMag			size of magnitude spectrum
  * SMS_HybParams params		control parameters
  */
-static int MultiplySpectra (float *pFMagEnv, float *pFMagSpectrum, int sizeMag, 
-                            float *pFMagSpectrum2, int sizeMag2, 
+static int MultiplySpectra (sfloat *pFMagEnv, float *pFMagSpectrum, int sizeMag, 
+                            sfloat *pFMagSpectrum2, int sizeMag2, 
                             SMS_HybParams *pHybParams)
 {
-	float *pFBuffer, fMag = 0, fAverageMag, fMagEnv = 0, fAverageMagEnv, 
+	sfloat *pFBuffer, fMag = 0, fAverageMag, fMagEnv = 0, fAverageMagEnv, 
 		fHybAverage, fMagHyb = 0, fAverageMagHyb;
 	int  i;
 
 	/* allocate buffers */    
-	if ((pFBuffer = (float *) calloc(sizeMag, sizeof(float))) == NULL)
+	if ((pFBuffer = (sfloat *) calloc(sizeMag, sizeof(float))) == NULL)
 		return -1;
 
 	/* get energy of excitation spectrum and envelope and normalize them */
@@ -212,12 +212,12 @@ static int MultiplySpectra (float *pFMagEnv, float *pFMagSpectrum, int sizeMag,
  * int sizeWave1		    size of excitation waveform
  * short *pIWaveform2		hybridization waveform
  * int sizeWave2		    size of hybridization waveform
- * float *pFWaveform		output waveform (hybridized)
+ * sfloat *pFWaveform		output waveform (hybridized)
  * SMS_HybParams params		control parameters
  *
  */
-void HybridizeMag (float *pIWaveform1, int sizeWave1, float *pIWaveform2, 
-                   int sizeWave2, float *pFWaveform, SMS_HybParams *pHybParams)
+void HybridizeMag (sfloat *pIWaveform1, int sizeWave1, float *pIWaveform2, 
+                   int sizeWave2, sfloat *pFWaveform, SMS_HybParams *pHybParams)
 {
 	int i;
 	double fMag1 = 0, fMag2 = 0, fScalar;
@@ -247,25 +247,25 @@ void HybridizeMag (float *pIWaveform1, int sizeWave1, float *pIWaveform2,
  * moved from interpolateArrays.c, because it doesn't seem to be useful
  * in anything but hybridizing routines.
  *
- * float *pFArray1       pointer to first array
+ * sfloat *pFArray1       pointer to first array
  * int sizeArray1        size of first array
- * float *pFArray2       pointer to second array
+ * sfloat *pFArray2       pointer to second array
  * int sizeArray2        size of second array
- * float *pFArrayOut     pointer to output array
+ * sfloat *pFArrayOut     pointer to output array
  * int sizeArrayOut      size of output array
- * float fInterpFactor   interpolation factor
+ * sfloat fInterpFactor   interpolation factor
  */
-int InterpolateArrays (float *pFArray1, int sizeArray1, float *pFArray2,
-                       int sizeArray2, float *pFArrayOut, int sizeArrayOut,
-                       float fInterpFactor)
+int InterpolateArrays (sfloat *pFArray1, int sizeArray1, float *pFArray2,
+                       int sizeArray2, sfloat *pFArrayOut, int sizeArrayOut,
+                       sfloat fInterpFactor)
 {
   int i;
-  float *pFArrayOne, *pFArrayTwo;
+  sfloat *pFArrayOne, *pFArrayTwo;
 
-  if ((pFArrayOne = (float *) calloc (sizeArrayOut, sizeof(float))) 
+  if ((pFArrayOne = (sfloat *) calloc (sizeArrayOut, sizeof(float))) 
        == NULL)
      return -1;
-  if ((pFArrayTwo = (float *) calloc (sizeArrayOut, sizeof(float))) 
+  if ((pFArrayTwo = (sfloat *) calloc (sizeArrayOut, sizeof(float))) 
        == NULL)
      return -1;
 
@@ -296,8 +296,8 @@ int InterpolateArrays (float *pFArray1, int sizeArray1, float *pFArray2,
  * \param pHybParams		pointer to strucutre of control parameterscontrol parameters
  *
  */
-void sms_hybridize (float *pFWaveform1, int sizeWave1, float *pFWaveform2, 
-               int sizeWave2, float *pFWaveform, SMS_HybParams *pHybParams)
+void sms_hybridize (sfloat *pFWaveform1, int sizeWave1, float *pFWaveform2, 
+               int sizeWave2, sfloat *pFWaveform, SMS_HybParams *pHybParams)
 {
 	/* initialize static variables and arrays */
 	if (pFWindow1 == NULL)

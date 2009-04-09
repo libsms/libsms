@@ -151,10 +151,10 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams, SMS_SndHeader *pSoundHeader)
 
         /* define the hopsize for each record */
 	pAnalParams->sizeHop = (int)(pSoundHeader->iSamplingRate / 
-	                (float) pAnalParams->iFrameRate);
+	                (sfloat) pAnalParams->iFrameRate);
         /* define how many records*/
         /* \todo why is this + 3? */
-	pAnalParams->nFrames = 3 + pSoundHeader->nSamples / (float) pAnalParams->sizeHop;
+	pAnalParams->nFrames = 3 + pSoundHeader->nSamples / (sfloat) pAnalParams->sizeHop;
 
 	pAnalParams->iSizeSound = pSoundHeader->nSamples;
         pAnalParams->iSamplingRate = pSoundHeader->iSamplingRate;
@@ -172,7 +172,7 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams, SMS_SndHeader *pSoundHeader)
 	pAnalParams->sizeNextRead = (pAnalParams->iDefaultSizeWindow + 1) * 0.5; // REMOVE THIS from other files first
 
 	/* sound buffer */
-	if ((pSoundBuf->pFBuffer = (float *) calloc(sizeBuffer, sizeof(float)))
+	if ((pSoundBuf->pFBuffer = (sfloat *) calloc(sizeBuffer, sizeof(float)))
 	    == NULL)
         {
 		sms_error("could not allocate memory");
@@ -207,7 +207,7 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams, SMS_SndHeader *pSoundHeader)
 	/* deterministic synthesis buffer */
 	pSynthBuf->sizeBuffer = pAnalParams->sizeHop << 1;
 	if ((pSynthBuf->pFBuffer = 
-	      (float *) calloc(pSynthBuf->sizeBuffer, sizeof(float))) == NULL)
+	      (sfloat *) calloc(pSynthBuf->sizeBuffer, sizeof(float))) == NULL)
         {
                 sms_error("could not allocate memory");
                 return(-1);
@@ -242,19 +242,19 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams, SMS_SndHeader *pSoundHeader)
                 }
 		(pAnalParams->pFrames[i].deterministic).nTracks = pAnalParams->nGuides;
 		if (((pAnalParams->pFrames[i].deterministic).pFSinFreq =
-		    (float *)calloc (pAnalParams->nGuides, sizeof(float))) == NULL)
+		    (sfloat *)calloc (pAnalParams->nGuides, sizeof(float))) == NULL)
 		{
                         sms_error("could not allocate memory");
                         return(-1);
                 }
 		if (((pAnalParams->pFrames[i].deterministic).pFSinAmp =
-                     (float *)calloc (pAnalParams->nGuides, sizeof(float))) == NULL)
+                     (sfloat *)calloc (pAnalParams->nGuides, sizeof(float))) == NULL)
                 {
                         sms_error("could not allocate memory");
                         return(-1);
                 }
 		if (((pAnalParams->pFrames[i].deterministic).pFSinPha =
-		    (float *) calloc (pAnalParams->nGuides, sizeof(float))) == NULL)
+		    (sfloat *) calloc (pAnalParams->nGuides, sizeof(float))) == NULL)
                 {
                         sms_error("could not allocate memory");
                         return(-1);
@@ -304,20 +304,20 @@ int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
         }
         sizeFft = sizeHop * 2;
 
-        pSynthParams->pFStocWindow =(float *) calloc(sizeFft, sizeof(float));
+        pSynthParams->pFStocWindow =(sfloat *) calloc(sizeFft, sizeof(float));
         sms_getWindow( sizeFft, pSynthParams->pFStocWindow, SMS_WIN_HANNING );
-	pSynthParams->pFDetWindow = (float *) calloc(sizeFft, sizeof(float));
+	pSynthParams->pFDetWindow = (sfloat *) calloc(sizeFft, sizeof(float));
         sms_getWindow( sizeFft, pSynthParams->pFDetWindow, SMS_WIN_IFFT );
 
         /* allocate memory for analysis data - size of original hopsize */
 	sms_allocFrame (&pSynthParams->prevFrame, pSmsHeader->nTracks, 
                          1 + pSmsHeader->nStochasticCoeff, 1, pSmsHeader->iStochasticType);
 
-        pSynthParams->pSynthBuff = (float *) calloc(sizeFft, sizeof(float));
-        pSynthParams->pMagBuff = (float *) calloc(sizeHop, sizeof(float));
-        pSynthParams->pPhaseBuff = (float *) calloc(sizeHop, sizeof(float));
+        pSynthParams->pSynthBuff = (sfloat *) calloc(sizeFft, sizeof(float));
+        pSynthParams->pMagBuff = (sfloat *) calloc(sizeHop, sizeof(float));
+        pSynthParams->pPhaseBuff = (sfloat *) calloc(sizeHop, sizeof(float));
 
-        pSynthParams->pSpectra = (float *) calloc(sizeFft, sizeof(float));
+        pSynthParams->pSpectra = (sfloat *) calloc(sizeFft, sizeof(float));
 
         return (SMS_OK);
 }
@@ -326,15 +326,15 @@ int sms_changeSynthHop( SMS_SynthParams *pSynthParams, int sizeHop)
 {
         int sizeFft = sizeHop * 2;
 
-        pSynthParams->pSynthBuff = (float *) realloc(pSynthParams->pSynthBuff, sizeFft * sizeof(float));
-        pSynthParams->pSpectra = (float *) realloc(pSynthParams->pSpectra, sizeFft * sizeof(float));
-        pSynthParams->pMagBuff = (float *) realloc(pSynthParams->pMagBuff, sizeHop * sizeof(float));
-        pSynthParams->pPhaseBuff = (float *) realloc(pSynthParams->pPhaseBuff, sizeHop * sizeof(float));
+        pSynthParams->pSynthBuff = (sfloat *) realloc(pSynthParams->pSynthBuff, sizeFft * sizeof(float));
+        pSynthParams->pSpectra = (sfloat *) realloc(pSynthParams->pSpectra, sizeFft * sizeof(float));
+        pSynthParams->pMagBuff = (sfloat *) realloc(pSynthParams->pMagBuff, sizeHop * sizeof(float));
+        pSynthParams->pPhaseBuff = (sfloat *) realloc(pSynthParams->pPhaseBuff, sizeHop * sizeof(float));
         pSynthParams->pFStocWindow = 
-		(float *) realloc(pSynthParams->pFStocWindow, sizeFft * sizeof(float));
+		(sfloat *) realloc(pSynthParams->pFStocWindow, sizeFft * sizeof(float));
         sms_getWindow( sizeFft, pSynthParams->pFStocWindow, SMS_WIN_HANNING );
 	pSynthParams->pFDetWindow =
-		(float *) realloc(pSynthParams->pFDetWindow, sizeFft * sizeof(float));
+		(sfloat *) realloc(pSynthParams->pFDetWindow, sizeFft * sizeof(float));
         sms_getWindow( sizeFft, pSynthParams->pFDetWindow, SMS_WIN_IFFT );
 
         pSynthParams->sizeHop = sizeHop;
@@ -402,7 +402,7 @@ void sms_freeSynth( SMS_SynthParams *pSynthParams )
  */
 int sms_sizeNextWindow (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 {
-	float fFund = pAnalParams->ppFrames[iCurrentFrame]->fFundamental,
+	sfloat fFund = pAnalParams->ppFrames[iCurrentFrame]->fFundamental,
         fPrevFund = pAnalParams->ppFrames[iCurrentFrame-1]->fFundamental;
 	int sizeWindow;
   
@@ -440,12 +440,12 @@ int sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams,
                       int sizeWindow)
 {
 	/* clear deterministic data */
-	memset ((float *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinFreq, 0, 
-	        sizeof(float) * pAnalParams->nGuides);
-	memset ((float *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinAmp, 0, 
-	        sizeof(float) * pAnalParams->nGuides);
-	memset ((float *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinPha, 0, 
-	        sizeof(float) * pAnalParams->nGuides);
+	memset ((sfloat *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinFreq, 0, 
+	        sizeof(sfloat) * pAnalParams->nGuides);
+	memset ((sfloat *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinAmp, 0, 
+	        sizeof(sfloat) * pAnalParams->nGuides);
+	memset ((sfloat *) pAnalParams->ppFrames[iCurrentFrame]->deterministic.pFSinPha, 0, 
+	        sizeof(sfloat) * pAnalParams->nGuides);
 	/* clear peaks */
 	memset ((void *) pAnalParams->ppFrames[iCurrentFrame]->pSpectralPeaks, 0,
 	        sizeof (SMS_Peak) * SMS_MAX_NPEAKS);
@@ -494,9 +494,9 @@ int sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams,
  * \param iCurrentFrame        number of current frame 
  * \return deviation value or -1 if really off
  */
-float sms_fundDeviation ( SMS_AnalParams *pAnalParams, int iCurrentFrame)
+sfloat sms_fundDeviation ( SMS_AnalParams *pAnalParams, int iCurrentFrame)
 {
-	float fFund, fSum = 0, fAverage, fDeviation = 0;
+	sfloat fFund, fSum = 0, fAverage, fDeviation = 0;
         int i;
 
 	/* get the sum of the past few fundamentals */
@@ -547,8 +547,8 @@ int sms_createDebugFile (SMS_AnalParams *pAnalParams)
  * \param pFBuffer3 pointer to array 3
  * \param sizeBuffer the size of the buffers
  */
-void sms_writeDebugData (float *pFBuffer1, float *pFBuffer2, 
-                             float *pFBuffer3, int sizeBuffer)
+void sms_writeDebugData (sfloat *pFBuffer1, float *pFBuffer2, 
+                             sfloat *pFBuffer3, int sizeBuffer)
 {
 	int i;
 	static int counter = 0;
@@ -573,12 +573,12 @@ void sms_writeDebugFile ()
  * \param x      magnitude (0:1)
  * \return         decibel (0: -100)
  */
-float sms_magToDB( float x)
+sfloat sms_magToDB( float x)
 {
     if (x <= 0) return (0);
     else
     {
-        float val = 100 + 20./LOG10 * log(x);
+        sfloat val = 100 + 20./LOG10 * log(x);
 
         return (val < 0 ? 0 : val);
     }
@@ -588,7 +588,7 @@ float sms_magToDB( float x)
  * \param x     decibel (0-100)
  * \return        magnitude (0-1)
  */
-float sms_dBToMag( float x)
+sfloat sms_dBToMag( float x)
 {
     if (x <= 0)
         return(0);
@@ -599,14 +599,16 @@ float sms_dBToMag( float x)
     }
     return (exp((LOG10 * 0.05) * (x-100.)));
 }
-/* float sms_magToDB( float x) */
+/* found one of the bugs that is keeping this from allowing peak detection,
+   but somewhere still is not letting peak amplitudes less than zero */
+/* sfloat sms_magToDB( float x) */
 /* { */
 /*         if(x < 0.00001) return(-100.); */
 /*         else return(20. * log10(x)); */
 /* } */
-/* float sms_dBToMag( float x) */
+/* sfloat sms_dBToMag( float x) */
 /* { */
-/*         return(pow(10, x*0.05));  */
+/*         return(pow(10, x*0.05)); */
 /* } */
 
 /*! \brief convert and array from magnitude (0-1) to decibel (0-100)
@@ -614,7 +616,7 @@ float sms_dBToMag( float x)
  * \param sizeArray     size of array
  * \param pArray pointer to array
  */
-void sms_arrayMagToDB( int sizeArray, float *pArray)
+void sms_arrayMagToDB( int sizeArray, sfloat *pArray)
 {
        int i;
         for( i = 0; i < sizeArray; i++)
@@ -626,7 +628,7 @@ void sms_arrayMagToDB( int sizeArray, float *pArray)
  * \param sizeArray     size of array
  * \param pArray pointer to array
  */
-void sms_arrayDBToMag( int sizeArray, float *pArray)
+void sms_arrayDBToMag( int sizeArray, sfloat *pArray)
 {
         int i;
         for( i = 0; i < sizeArray; i++)
@@ -692,12 +694,12 @@ char* sms_errorString()
  *
  * \return random number between -1 and 1
  */
-float sms_random()
+sfloat sms_random()
 {
 #ifdef MERSENNE_TWISTER
         return(genrand_real1()); 
 #else
-        return((float)(random() * 2 * INV_HALF_MAX));
+        return((sfloat)(random() * 2 * INV_HALF_MAX));
 #endif
 }
 
@@ -705,10 +707,10 @@ float sms_random()
  *
  * \return RMS energy
  */
-float sms_rms(int sizeArray, float *pArray)
+sfloat sms_rms(int sizeArray, float *pArray)
 {
         int i;
-        float mean_squared = 0.;
+        sfloat mean_squared = 0.;
         for( i = 0; i < sizeArray; i++)
                 mean_squared += pArray[i] * pArray[i];
 
@@ -738,4 +740,13 @@ int sms_power2( int n)
                 p++;
                 return(1<<p);
         }
+}
+
+/*! \brief compute a value for scaling frequency based on the well-tempered scale
+ *
+ * \return (1.059...)^x, where 1.059 is the 12th root of 2 precomputed
+ */
+sfloat sms_scalerTempered( float x)
+{
+        return(powf(1.0594630943592953, x));
 }

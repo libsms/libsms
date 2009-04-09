@@ -34,13 +34,13 @@
  * \return residual percentage (0 if residual was not large enough)
   \todo why is residual energy percentage computed this way? should be optional and in a seperate function
  */
-int sms_residual ( int sizeWindow, float *pSynthesis, float *pOriginal, float *pResidual, float *pWindow)
+int sms_residual ( int sizeWindow, sfloat *pSynthesis, float *pOriginal, float *pResidual, float *pWindow)
 {
-	static float fResidualMag = 0.;
-        static float fOriginalMag = 0.;
-	float fScale = 1.;
-        float fCurrentResidualMag = 0.;
-        float fCurrentOriginalMag = 0.;
+	static sfloat fResidualMag = 0.;
+        static sfloat fOriginalMag = 0.;
+	sfloat fScale = 1.;
+        sfloat fCurrentResidualMag = 0.;
+        sfloat fCurrentOriginalMag = 0.;
 	int i;
    
 	/* get residual */
@@ -95,10 +95,10 @@ int sms_residual ( int sizeWindow, float *pSynthesis, float *pOriginal, float *p
  * \return  residual percentage
   \todo why is residual energy percentage computed this way? should be optional and in a seperate function
  */
-int sms_residualOLD ( int sizeWindow, float *pSynthesis, float *pOriginal, float *pResidual, float *pWindow)
+int sms_residualOLD ( int sizeWindow, sfloat *pSynthesis, float *pOriginal, float *pResidual, float *pWindow)
 {
-	static float fResidualMag = 0, fOriginalMag = 0, *pFWindow = NULL;
-	float fScale = 1, fCurrentResidualMag = 0, fCurrentOriginalMag = 0;
+	static sfloat fResidualMag = 0, fOriginalMag = 0, *pFWindow = NULL;
+	sfloat fScale = 1, fCurrentResidualMag = 0, fCurrentOriginalMag = 0;
 	int i;
    
 	/* get residual */
