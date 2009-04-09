@@ -9,6 +9,7 @@ libsms work log
     - should be short ones (fast) and long ones (robust)
     - writes output files to /tmp so things don't get cluttered
 ** TODO SWIG / Python:
+*** TODO [#A] make it compile from main scons script
 *** TODO tie soundIO functions to SMS_Sound stuct
 *** TODO make a function for returning a list of SMS_Data frames
       - [ ] optional arguments to start with: start, stop frames, residual=True/False
@@ -23,11 +24,14 @@ libsms work log
         call an exception there? would reduce lots of python code
         - but the current error checking will not conflict with this if it is changed
           ( will just always return nothing and error checking will depend on the exceptions)
-** VERIFY [#A] remove all calloc's from looping functions
+** VERIFY remove all calloc's from looping functions
    - there are many in the analysis, work on one at a time and test
    - can push them into SMS_AnalParams 
    - can do some transfers in place (waveform-> spectrum)
 ** DONE make function for calculating rms energy of an array
+** TODO finish switch float's to sfloat's
+   - so the lib can be compiled in double point precision
+   - started this with sed but it missed alot
 ** TODO organization of main analysis routines :anal:
 *** functions in analysis.c:
     - seems 4 functions will fit:
@@ -57,7 +61,8 @@ libsms work log
    - these calls should call a different function, thereby avoiding the 
    if check for every sample
 ** TODO Doxygen todo list
-   - pretty good for now, but many more things that could use better docs
+   - fix name changes, etc.
+   - talk about sfloat in API and sms_error()
 ** TODO stochastic resynthesis needs a closer look :synth:
 *** TODO always turns out louder than the original
     - it appears pSmsData->pFStocGain is getting multiplied through twice
@@ -74,10 +79,12 @@ libsms work log
     - when nCoeff is set higher than this, artifacts are appearing in the residual synthesis
     - [ ] need to check at the beginning and limit the coeffcients
 ** TODO Residual Resynthesis
-*** to start, just store output DFT from getResidual
-      - make a check if the synthesis DFT is the same size as analysis 
-      - if it is, synthesize using original phases
-      - if it isn't, generate new random phases
+*** temp solution, just store output DFT from getResidual
+      - [ ] in analysis, check if -c coeff is size power2
+      - [ ] in synthesis, check if the synthesis DFT is the same size as analysis 
+      - if either aren't fix it
+      - for DFT, size pFStocCoeff = 2x nCoeff (real,imag pairs in sequence)
+      - synthesize to waveform, then apply amplitude adjustments
       - from here, will have to think of how to deal with interpolation
 ** TODO harmonic Dection :anal:
      - don't think it is actually two-way mismatch

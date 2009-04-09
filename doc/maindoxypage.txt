@@ -71,13 +71,16 @@
  * 
  * \subsection python Python Module
  *
- * Although still largely untested, a SWIG interface file is in the subfolder 'python', which can be used to build python wrappers
+ * (Under heavy contruction) A SWIG interface file is in the subfolder 'python', which can be used to build python wrappers
  * with the following commands (you will of course need the SWIG developement package for system to build this):
  *
  * swig -python sms.i \n
  * python setup.py build_ext --inplace
  *
- * If everything goes well, you should have '_sms.so', which is loadable in python using "import sms".
+ * (you can also type 'scons python' from the main directory to do  this for you )\n 
+ *
+ * If everything goes well, you should have '_sms.so', which is loadable in python using "import sms". \n
+ * Install it with python setup.py install (but I normally use 'os.path.append('PYSMS_DIR') instead) \n
  *
  * \section other_files Other Included Files
  *
@@ -116,13 +119,10 @@
  * the original analysis.  Of course, in synthesis it is not necessary to go frame-by-frame because
  * the synthesiser will interpolate between whatever two frames it is given in succession.
  *
- * \subsection libs Third Party Libraries Used:
+ * \subsection libs Necessary Third Party Libraries:
  * - libsndfile: http://www.mega-nerd.com/libsndfile/ - soundfile input and output in various formats
- * - FFTW3 (floating point) http://www.fftw.org/ - an optional compilation flag allows the library to
- *   use FFTW to compute fast fourier transforms.  It is much faster, but is messy in its current 
- *  stage and the pd externals crash with it (I do not know why, other than pointers to memory
- *  are getting mixed up).
- *
+ * - GSL: http://www.gnu.org/software/gsl/ - GNU Scientific Library (for matrix operations in cepstrum.c)
+ * 
  * \section doxy Generating this Documentation
  * To regenerate this documentation using doxymacs, type "scons doxygen" from the the main
  * directory. You should then get html documentation in the folder "doc/html/".
