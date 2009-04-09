@@ -8,7 +8,7 @@ Help("""
 ---- libsms ----
 The following building commands are available:
 'scons' to build libsms and the command line tools
-'scons pd' to build the pd externals
+'scons python' to build the python module pysms
 'scons doxygen' to build html documentation in ./doc/html'
 """)
 
@@ -33,6 +33,8 @@ env = Environment( ENV = os.environ, options = opts, CCFLAGS=sms_cflags)
 # default action is to build
 commands = COMMAND_LINE_TARGETS or 'build'
 
+if 'python' in commands:
+    os.system('cd ./python && ./makemodule')
 
 if 'doxygen' in commands:
         if os.path.exists('/usr/bin/doxygen') or os.path.exists('/usr/local/bin/doxygen'):
