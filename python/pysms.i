@@ -1,4 +1,4 @@
-%module (docstring="Python SWIG-wrapped module of libsms") sms
+%module (docstring="Python SWIG-wrapped module of libsms") pysms
 %{
 #define SWIG_FILE_WITH_INIT
 #include "../src/sms.h"
