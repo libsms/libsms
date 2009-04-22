@@ -227,7 +227,7 @@ void sms_cleanTracks (int iCurrentFrame, SMS_AnalParams *pAnalParams)
  * \param pAnalParams      pointer to analysis parameters
  * \param nTrack                    number of tracks
  */
-void  sms_scaleDet (sfloat *pFSynthBuffer, float *pFOriginalBuffer, 
+void  sms_scaleDet (sfloat *pFSynthBuffer, sfloat *pFOriginalBuffer, 
                           sfloat *pFSinAmp, SMS_AnalParams *pAnalParams, int nTrack)
 {
 	sfloat fOriginalMag = 0, fSynthesisMag = 0;
@@ -237,7 +237,7 @@ void  sms_scaleDet (sfloat *pFSynthBuffer, float *pFOriginalBuffer,
 	/* get sound energy */
 	for (i = 0; i < pAnalParams->sizeHop; i++)
 	{
-		fOriginalMag += fabs((double) pFOriginalBuffer[i]);
+		fOriginalMag += fabs((double) pFOriginalBuffer[i]); 
 		fSynthesisMag += fabs((double) pFSynthBuffer[i]);
 	}
   

@@ -35,8 +35,8 @@
  * \param pFPhaseSpectrum     pointer to output phase spectrum 
  * \return 0 on success, -1 on error
  */
-int sms_spectrum (int sizeWindow, sfloat *pWaveform, float *pWindow, int sizeMag, 
-                  sfloat *pMag, float *pPhase)
+int sms_spectrum (int sizeWindow, sfloat *pWaveform, sfloat *pWindow, int sizeMag, 
+                  sfloat *pMag, sfloat *pPhase)
 {
 	int sizeFft = sizeMag << 1;
         int i, it2;
@@ -55,7 +55,7 @@ int sms_spectrum (int sizeWindow, sfloat *pWaveform, float *pWindow, int sizeMag
                         sms_error("bad fft size, incremented to power of 2");
                         err = -1;
                 }
-                if ((pFftBuffer = (sfloat *) malloc(sizeFft * sizeof(float))) == NULL)
+                if ((pFftBuffer = (sfloat *) malloc(sizeFft * sizeof(sfloat))) == NULL)
                 {
                         sms_error("could not allocate memory for fft array");
                         return(-1);
@@ -75,13 +75,13 @@ int sms_spectrum (int sizeWindow, sfloat *pWaveform, float *pWindow, int sizeMag
 		fReal = pFftBuffer[it2]; /*odd numbers 1->N+1 */
 		fImag = pFftBuffer[it2+1]; /*even numbers 2->N+2 */
       
-		if (fReal != 0 || fImag != 0) /*!< \todo is this necessary or even helping? */
+		if (fReal != 0 || fImag != 0) /*!< \todo is this necessary / helping? */
 		{
 			pMag[i] = sqrt (fReal * fReal + fImag * fImag);
 			pPhase[i] = atan2 (-fImag, fReal);
 		}
 	}
-
+        
 	return (sizeFft);
 //	return (err);
 }
@@ -119,7 +119,7 @@ int sms_spectrumMag (int sizeWindow, sfloat *pWaveform, sfloat *pWindow,
                         sms_error("bad fft size, incremented to power of 2");
                         err = -1;
                 }
-                if ((pFftBuffer = (sfloat *) malloc(sizeFft * sizeof(float))) == NULL)
+                if ((pFftBuffer = (sfloat *) malloc(sizeFft * sizeof(sfloat))) == NULL)
                 {
                         sms_error("could not allocate memory for fft array");
                         return(-1);
@@ -162,8 +162,8 @@ int sms_spectrumMag (int sizeWindow, sfloat *pWaveform, sfloat *pWindow,
  * int sizeWave                size of output waveform
  * sfloat *pFWindow	       synthesis window
  */
-int sms_invSpectrum (int sizeWaveform, sfloat *pWaveform, float *pWindow ,
-                     int sizeMag, sfloat *pMag, float *pPhase)
+int sms_invSpectrum (int sizeWaveform, sfloat *pWaveform, sfloat *pWindow ,
+                     int sizeMag, sfloat *pMag, sfloat *pPhase)
 {
 	int i;
         int sizeFft = sizeMag << 1;
@@ -180,7 +180,7 @@ int sms_invSpectrum (int sizeWaveform, sfloat *pWaveform, float *pWindow ,
                         sms_error("bad fft size, incremented to power of 2");
                         err = -1;
                 }
-                if ((pFftBuffer = (sfloat *) malloc(sizeFft * sizeof(float))) == NULL)
+                if ((pFftBuffer = (sfloat *) malloc(sizeFft * sizeof(sfloat))) == NULL)
                 {
                         sms_error("could not allocate memory for fft array");
                         return(-1);
@@ -209,7 +209,7 @@ int sms_invSpectrum (int sizeWaveform, sfloat *pWaveform, float *pWindow ,
  * int sizeWave                size of output waveform
  * sfloat *pFWindow	       synthesis window
  */
-int sms_invQuickSpectrumW (sfloat *pFMagSpectrum, float *pFPhaseSpectrum, 
+int sms_invQuickSpectrumW (sfloat *pFMagSpectrum, sfloat *pFPhaseSpectrum, 
                            int sizeFft, sfloat *pFWaveform, int sizeWave,
                            sfloat *pFWindow)
 {
@@ -217,7 +217,7 @@ int sms_invQuickSpectrumW (sfloat *pFMagSpectrum, float *pFPhaseSpectrum,
 	sfloat *pFBuffer, fPower;
   
 	/* allocate buffer */    
-	if ((pFBuffer = (sfloat *) calloc(sizeFft, sizeof(float))) == NULL)
+	if ((pFBuffer = (sfloat *) calloc(sizeFft, sizeof(sfloat))) == NULL)
 		return -1;
 
 	/* convert from polar coordinates to rectangular  */
@@ -250,7 +250,7 @@ int sms_invQuickSpectrumW (sfloat *pFMagSpectrum, float *pFPhaseSpectrum,
  * \param pMag	       pointer to sfloat array of magnitude spectrum
  * \param pPhase	       pointer to sfloat array of phase spectrum
  */ 
-void sms_RectToPolar( int sizeMag, sfloat *pFReal, float *pFMag, float *pFPhase)
+void sms_RectToPolar( int sizeMag, sfloat *pFReal, sfloat *pFMag, sfloat *pFPhase)
 {
         int i, it2;
         sfloat fReal, fImag;
@@ -276,7 +276,7 @@ void sms_RectToPolar( int sizeMag, sfloat *pFReal, float *pFMag, float *pFPhase)
  * \param pMag	       pointer to sfloat array of magnitude spectrum
  * \param pPhase	       pointer to sfloat array of phase spectrum
  */ 
-void sms_PolarToRect( int sizeSpec, sfloat *pRect, float *pMag, float *pPhase)
+void sms_PolarToRect( int sizeSpec, sfloat *pRect, sfloat *pMag, sfloat *pPhase)
 {
         int i, it2;
         sfloat fMag;
@@ -296,7 +296,7 @@ void sms_PolarToRect( int sizeSpec, sfloat *pRect, float *pMag, float *pPhase)
  * \param pFReal	       pointer to input FFT real array (real/imag sfloats)
  * \param pFMAg	       pointer to sfloat array of magnitude spectrum
  */
-void sms_spectrumRMS( int sizeMag, sfloat *pInRect, float *pOutMag)
+void sms_spectrumRMS( int sizeMag, sfloat *pInRect, sfloat *pOutMag)
 {
         int i, it2;
         sfloat fReal, fImag;

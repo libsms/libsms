@@ -240,12 +240,13 @@ void sms_fillSoundBuffer (int sizeWaveform, sfloat *pWaveform, SMS_AnalParams *p
  * in the middle (zero-padding for an interpolated spectrum).
  *
  * \todo do I need to garuntee that sizeWindow is odd-lengthed?
+ * \todo move this to windows.c
  *
  * \param sizeWaveform        size of input data
  * \param pWaveform           input data
  * \param pAnalParams        pointer to structure of analysis parameters
  */
-void sms_windowCentered (int sizeWindow, sfloat *pWaveform, float *pWindow, int sizeFft, float *pFftBuffer)
+void sms_windowCentered (int sizeWindow, sfloat *pWaveform, sfloat *pWindow, int sizeFft, sfloat *pFftBuffer)
 {
         int i, iOffset, iMiddleWindow;
         

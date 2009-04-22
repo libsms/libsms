@@ -40,7 +40,7 @@
  * \param fFreqDev		        maximum deviation from guide
  * \return peak number or -1 if nothing is good
  */
-static int GetNextClosestPeak (sfloat fGuideFreq, float *pFFreqDistance, 
+static int GetNextClosestPeak (sfloat fGuideFreq, sfloat *pFFreqDistance, 
                                SMS_Peak *pSpectralPeaks, SMS_AnalParams *pAnalParams,
                                sfloat fFreqDev)
 {

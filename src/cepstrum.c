@@ -106,7 +106,7 @@ void AllocateDCepstrum(int nPoints, int nCoeff, CepstrumMatrices *m)
  * \param fLambda regularization factor
  * \param iMaxFreq maximum frequency of cepstrum
  */
-void sms_dCepstrum( int sizeCepstrum, sfloat *pCepstrum, int sizeFreq, float *pFreq, float *pMag, 
+void sms_dCepstrum( int sizeCepstrum, sfloat *pCepstrum, int sizeFreq, sfloat *pFreq, sfloat *pMag, 
                     sfloat fLambda, int iMaxFreq)
 {
         int i, k;
@@ -170,7 +170,7 @@ void sms_dCepstrum( int sizeCepstrum, sfloat *pCepstrum, int sizeFreq, float *pF
         //printf("c[%d]: %f
 }
 
-void sms_dCepstrumOLD( int sizeCepstrum, sfloat *pCepstrum, int sizeFreq, float *pFreq, float *pMag, 
+void sms_dCepstrumOLD( int sizeCepstrum, sfloat *pCepstrum, int sizeFreq, sfloat *pFreq, sfloat *pMag, 
                     sfloat fLambda, int iMaxFreq)
 {
         int i, k;
@@ -254,7 +254,7 @@ void sms_dCepstrumOLD( int sizeCepstrum, sfloat *pCepstrum, int sizeFreq, float 
  * \param sizeEnv  size of spectrum envelope (max frequency in bins) \todo does this have to be a pow2
  * \param pEnv pointer to output spectrum envelope (real part only)
  */
-void sms_dCepstrumEnvelope(int sizeCepstrum, sfloat *pCepstrum, int sizeEnv, float *pEnv)
+void sms_dCepstrumEnvelope(int sizeCepstrum, sfloat *pCepstrum, int sizeEnv, sfloat *pEnv)
 {
         
         static sfloat *pFftBuffer;

@@ -380,7 +380,6 @@ void sms_freeAnalysis( SMS_AnalParams *pAnalParams )
  */
 void sms_freeSynth( SMS_SynthParams *pSynthParams )
 {
-        //printf("\n sms_freeSynth \n");
         free(pSynthParams->pFStocWindow);        
         free(pSynthParams->pFDetWindow);
         free (pSynthParams->pSynthBuff);
@@ -547,7 +546,7 @@ int sms_createDebugFile (SMS_AnalParams *pAnalParams)
  * \param pFBuffer3 pointer to array 3
  * \param sizeBuffer the size of the buffers
  */
-void sms_writeDebugData (sfloat *pFBuffer1, float *pFBuffer2, 
+void sms_writeDebugData (sfloat *pFBuffer1, sfloat *pFBuffer2, 
                              sfloat *pFBuffer3, int sizeBuffer)
 {
 	int i;
@@ -573,14 +572,15 @@ void sms_writeDebugFile ()
  * \param x      magnitude (0:1)
  * \return         decibel (0: -100)
  */
-sfloat sms_magToDB( float x)
+sfloat sms_magToDB( sfloat x)
 {
     if (x <= 0) return (0);
     else
     {
-        sfloat val = 100 + 20./LOG10 * log(x);
-
-        return (val < 0 ? 0 : val);
+            sfloat val = 100 + 20./LOG10 * log(x);
+            //sfloat val =  20 ./ LOG10 * log(x/thresh);
+            
+            return (val < 0 ? 0 : val);
     }
 }
 /*! \brief convert from decibel to magnitude
@@ -588,7 +588,7 @@ sfloat sms_magToDB( float x)
  * \param x     decibel (0-100)
  * \return        magnitude (0-1)
  */
-sfloat sms_dBToMag( float x)
+sfloat sms_dBToMag( sfloat x)
 {
     if (x <= 0)
         return(0);
@@ -599,23 +599,38 @@ sfloat sms_dBToMag( float x)
     }
     return (exp((LOG10 * 0.05) * (x-100.)));
 }
-/* found one of the bugs that is keeping this from allowing peak detection,
-   but somewhere still is not letting peak amplitudes less than zero */
-/* sfloat sms_magToDB( float x) */
+
+/* sfloat sms_magToDB( sfloat x) */
 /* { */
 /*         if(x < 0.00001) return(-100.); */
 /*         else return(20. * log10(x)); */
 /* } */
-/* sfloat sms_dBToMag( float x) */
+/* sfloat sms_dBToMag( sfloat x) */
 /* { */
 /*         return(pow(10, x*0.05)); */
 /* } */
 
-/*! \brief convert and array from magnitude (0-1) to decibel (0-100)
+/*! \brief convert an array from magnitude to decibel 
+ *
+ * A linear threshold is supplied to indicate the bottom end
+ * of the dB scale (magnutdes at this value will convert to zero).
  *
  * \param sizeArray     size of array
  * \param pArray pointer to array
+ * \param fThresh linear magnitude threshold
  */
+/* void sms_arrayMagToDB( int sizeArray, sfloat *pArray, sfloat fThresh) */
+/* { */
+/*         int i; */
+/*         sfloat invThresh = 1. / fThresh; */
+/*         sfloat fVal; */
+/*         for( i = 0; i < sizeArray; i++) */
+/*         { */
+/*                 //pArray[i] = sms_magToDB(pArray[i] * invThresh); */
+/*                 fVal = pArray[i]; */
+/*                 pArray[i] = ( fVal <= fThesh ? 0. : sms_magToDB(fVal * invThresh)); */
+/*         } */
+/* } */
 void sms_arrayMagToDB( int sizeArray, sfloat *pArray)
 {
        int i;
@@ -707,7 +722,7 @@ sfloat sms_random()
  *
  * \return RMS energy
  */
-sfloat sms_rms(int sizeArray, float *pArray)
+sfloat sms_rms(int sizeArray, sfloat *pArray)
 {
         int i;
         sfloat mean_squared = 0.;
@@ -746,7 +761,7 @@ int sms_power2( int n)
  *
  * \return (1.059...)^x, where 1.059 is the 12th root of 2 precomputed
  */
-sfloat sms_scalerTempered( float x)
+sfloat sms_scalerTempered( sfloat x)
 {
         return(powf(1.0594630943592953, x));
 }

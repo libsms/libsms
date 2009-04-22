@@ -52,7 +52,7 @@ int sms_spectralApprox (sfloat *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 		return(SMS_OK);
 	}
 
-	if ((pFEnvelope = (sfloat *) calloc(nCoefficients, sizeof(float))) == NULL)
+	if ((pFEnvelope = (sfloat *) calloc(nCoefficients, sizeof(sfloat))) == NULL)
 		return(SMS_MALLOC);
  
 	/* calculate the hop size */
@@ -97,7 +97,8 @@ int sms_spectralApprox (sfloat *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 	else
 	{
 		free (pFEnvelope);
-		printf ("SpectralApprox: sizeSpec1 has too many nCoefficients\n"); /* \todo need to increase the frequency? */
+		//printf ("SpectralApprox: sizeSpec1 has too many nCoefficients\n"); /* \todo need to increase the frequency? */
+		sms_error ("SpectralApprox: sizeSpec1 has too many nCoefficients\n"); /* \todo need to increase the frequency? */
 		return -1;
 	}
 
@@ -145,7 +146,8 @@ int sms_spectralApprox (sfloat *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 	else
 	{
 		free (pFEnvelope);
-		printf ("SpectralApprox: sizeSpec2 has too many nCoefficients\n");
+		//printf ("SpectralApprox: sizeSpec2 has too many nCoefficients\n");
+		sms_error ("SpectralApprox: sizeSpec2 has too many nCoefficients\n");
 		return -1;
 	}
 	free (pFEnvelope);

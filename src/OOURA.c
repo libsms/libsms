@@ -70,7 +70,7 @@
  * The source code contains documentation from
  * the original author. 
  */
-void rdft(int n, int isgn, sfloat *a, int *ip, float *w)
+void rdft(int n, int isgn, sfloat *a, int *ip, sfloat *w)
 {
     int nw, nc;
     sfloat xi;
@@ -255,7 +255,7 @@ void bitrv2(int n, int *ip, sfloat *a)
     }
 }
 
-void cftfsub(int n, sfloat *a, float *w)
+void cftfsub(int n, sfloat *a, sfloat *w)
 {
     int j, j1, j2, j3, l;
     sfloat x0r, x0i, x1r, x1i, x2r, x2i, x3r, x3i;
@@ -305,7 +305,7 @@ void cftfsub(int n, sfloat *a, float *w)
 }
 
 
-void cftbsub(int n, sfloat *a, float *w)
+void cftbsub(int n, sfloat *a, sfloat *w)
 {
     int j, j1, j2, j3, l;
     sfloat x0r, x0i, x1r, x1i, x2r, x2i, x3r, x3i;
@@ -355,7 +355,7 @@ void cftbsub(int n, sfloat *a, float *w)
 }
 
 
-void cft1st(int n, sfloat *a, float *w)
+void cft1st(int n, sfloat *a, sfloat *w)
 {
     int j, k1, k2;
     sfloat wk1r, wk1i, wk2r, wk2i, wk3r, wk3i;
@@ -460,7 +460,7 @@ void cft1st(int n, sfloat *a, float *w)
 }
 
 
-void cftmdl(int n, int l, sfloat *a, float *w)
+void cftmdl(int n, int l, sfloat *a, sfloat *w)
 {
     int j, j1, j2, j3, k, k1, k2, m, m2;
     sfloat wk1r, wk1i, wk2r, wk2i, wk3r, wk3i;
@@ -587,7 +587,7 @@ void cftmdl(int n, int l, sfloat *a, float *w)
 }
 
 
-void rftfsub(int n, sfloat *a, int nc, float *c)
+void rftfsub(int n, sfloat *a, int nc, sfloat *c)
 {
     int j, k, kk, ks, m;
     sfloat wkr, wki, xr, xi, yr, yi;
@@ -611,7 +611,7 @@ void rftfsub(int n, sfloat *a, int nc, float *c)
     }
 }
 
-void rftbsub(int n, sfloat *a, int nc, float *c)
+void rftbsub(int n, sfloat *a, int nc, sfloat *c)
 {
     int j, k, kk, ks, m;
     sfloat wkr, wki, xr, xi, yr, yi;

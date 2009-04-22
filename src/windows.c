@@ -195,26 +195,15 @@ void Hamming (int sizeWindow, sfloat *pFWindow)
 	int     i;
 	sfloat fSum = 0;
 
-        // DEBUG::
-/*         static sfloat maxA = 0.; */
-/*         static sfloat maxB = 0.; */
-
 	for(i = 0; i < sizeWindow; i++) 
         {
-		//fSum += pFWindow[i] = 0.54 - 0.46*cos(2.0*PI*i/(sizeWindow-1));
 		fSum += pFWindow[i] = 0.53836 - 0.46164*cos(TWO_PI*i/(sizeWindow-1));
-//                if (pFWindow[i] > maxA) maxA = pFWindow[i];
         }
 
 	fSum = fSum / 2;
 
 	for(i = 0; i < sizeWindow; i++)
-        {
 		pFWindow[i] /= fSum;
-//                if (pFWindow[i] > maxB) maxB = pFWindow[i];
-        }
-
-//        printf("fSum: %f, maxA: %f \n", fSum, maxA);
 }
 
 /*! \brief Hanning window

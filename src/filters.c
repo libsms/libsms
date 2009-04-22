@@ -46,7 +46,7 @@ sfloat sms_preEmphasis (float fInput)
  *
  * sfloat fInput;   sound input
  */
-sfloat sms_deEmphasis (float fInput)
+sfloat sms_deEmphasis (sfloat fInput)
 {
 	static sfloat fLastValue = 0;
 	sfloat fOutput = 0;
@@ -69,7 +69,7 @@ sfloat sms_deEmphasis (float fInput)
  * \param fInput     input sample
  * \return value is the  filtered sample 
  */
-static sfloat ZeroPoleFilter (float *pFa, float *pFb, int nCoeff, float fInput )
+static sfloat ZeroPoleFilter (float *pFa, sfloat *pFb, int nCoeff, sfloat fInput )
 {
 	double fOut = 0;
 	int iSection;
@@ -165,11 +165,11 @@ void sms_filterHighPass ( int sizeResidual, sfloat *pResidual, int iSamplingRate
  * \param size2		horizontal size of pFArray
  * \param pFOutArray     output array of size size1
  */
-void sms_filterArray (sfloat *pFArray, int size1, int size2, float *pFOutArray)
+void sms_filterArray (sfloat *pFArray, int size1, int size2, sfloat *pFOutArray)
 {
 	int i, j, iPoint, iFrame, size2_2 = size2-2, size2_1 = size2-1;
-	sfloat *pFCurrentArray = pFArray + (size2_1) * size1, fVal, fWeighting, 
-		fTotalWeighting, fTmpVal;
+	sfloat *pFCurrentArray = pFArray + (size2_1) * size1;
+        sfloat fVal, fWeighting, fTotalWeighting, fTmpVal;
 
 	/* find the filtered envelope */
 	for (i = 0; i < size1; i++)

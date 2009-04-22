@@ -36,7 +36,7 @@
  * \param sizeBuffer	    size of the synthesis buffer 
  * \param iTrack                  current track 
  */
-static void SinePhaSynth (sfloat fFreq, float fMag, float fPhase,
+static void SinePhaSynth (sfloat fFreq, sfloat fMag, sfloat fPhase,
                           SMS_Data *pLastFrame, sfloat *pFWaveform, 
                           int sizeBuffer, int iTrack)
 {
@@ -103,7 +103,7 @@ static void SinePhaSynth (sfloat fFreq, float fMag, float fPhase,
  * \param sizeBuffer	 size of the synthesis buffer 
  * \param iTrack               current track 
  */
-static void SineSynth (sfloat fFreq, float fMag, SMS_Data *pLastFrame,
+static void SineSynth (sfloat fFreq, sfloat fMag, SMS_Data *pLastFrame,
                        sfloat *pFBuffer, int sizeBuffer, int iTrack)
 {
   sfloat  fMagIncr, fInstMag, fFreqIncr, fInstPhase, fInstFreq;
@@ -154,8 +154,7 @@ static void SineSynth (sfloat fFreq, float fMag, SMS_Data *pLastFrame,
  * \param iSamplingRate sampling rate to synthesize for
  */
 void sms_sineSynthFrame (SMS_Data *pSmsData, sfloat *pFBuffer, 
-                    int sizeBuffer, SMS_Data *pLastFrame, 
-                    int iSamplingRate)
+                    int sizeBuffer, SMS_Data *pLastFrame, int iSamplingRate)
 {
         sfloat fMag, fFreq;
         int i;
@@ -181,7 +180,7 @@ void sms_sineSynthFrame (SMS_Data *pSmsData, sfloat *pFBuffer,
                         fFreq = (fFreq == 0) ? 0 : TWO_PI * fFreq / iSamplingRate;
 
 
-                        // RTE TODO: make seperate function for SineSynth /wo phase
+                        /* \todo make seperate function for SineSynth /wo phase */
                         if (pSmsData->pFSinPha == NULL)
                         {                
                                 SineSynth(fFreq, fMag, pLastFrame, pFBuffer, sizeBuffer, i);
