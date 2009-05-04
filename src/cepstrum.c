@@ -117,14 +117,6 @@ void sms_dCepstrum( int sizeCepstrum, sfloat *pCepstrum, int sizeFreq, sfloat *p
         //printf("nPoints: %d, nCoeff: %d \n", m.nPoints, m.nCoeff);
         if(m.nPoints != sizeCepstrum || m.nCoeff != sizeFreq)
                 AllocateDCepstrum(sizeFreq, sizeCepstrum, &m);
-/*         m.pM = gsl_matrix_alloc(sizeFreq, sizeCepstrum); */
-/*         m.pMt = gsl_matrix_alloc(sizeCepstrum, sizeFreq); */
-/*         m.pR = gsl_matrix_calloc(sizeCepstrum, sizeCepstrum); */
-/*         m.pMtMR = gsl_matrix_alloc(sizeCepstrum, sizeCepstrum); */
-/*         m.pXk = gsl_vector_alloc(sizeFreq); */
-/*         m.pMtXk = gsl_vector_alloc(sizeCepstrum); */
-/*         m.pC = gsl_vector_alloc(sizeCepstrum); */
-/*         m.pPerm = gsl_permutation_alloc (sizeCepstrum); */
         int s; /* signum: "(-1)^n, where n is the number of interchanges in the permutation." */
         /* compute matrix M (eq. 4)*/
 	for (i=0; i<sizeFreq; i++)
@@ -284,15 +276,6 @@ void sms_dCepstrumEnvelope(int sizeCepstrum, sfloat *pCepstrum, int sizeEnv, sfl
 
 
         sms_fft(sizeFftArray, pFftBuffer);
-
-        /* ========= debug =========== */
-/*         printf("pFftBuffer (size: %d) = \n", sizeFftArray); */
-/*         for(i = 0; i < sizeFftArray; i++) */
-/*         { */
-/*                 printf("%2.6f   ", pFftBuffer[i]); */
-/*         } */
-/*         printf("\n"); */
-        /* ========= debug =========== */
 
         for (i = 0; i < sizeEnv; i++)
                 pEnv[i] = powf(EXP, 2. * pFftBuffer[i*2]);
