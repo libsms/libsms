@@ -25,6 +25,37 @@
  */
 #include "sms.h"
 
+
+/* \brief scale a window by its integral (numeric quadrature)
+ *
+ * In order to get a normalized magnitude spectrum (ex. Fourier analysis
+ * of a sinusoid with linear magnitude 1 gives one peak of magnitude 1 in
+ * the frequency domain), the spectrum windowing function should be 
+ * normalized by its area under the curve.  
+ *
+ * \param sizeWindow the size of the window
+ * \param pWindow pointer to an array that will hold the window
+ */
+void sms_scaleWindow ( int sizeWindow, sfloat *pWindow)
+{
+
+	int i;
+	sfloat fSum = 0;
+        sfloat fScale;
+
+	for(i = 0; i < sizeWindow; i++) 
+		fSum += pWindow[i];
+
+/* 	fSum = fSum / 2; */
+/* 	for(i = 0; i < sizeWindow; i++) */
+/* 		pWindow[i] /= fSum; */
+
+	fScale =  2. / fSum;
+
+	for(i = 0; i < sizeWindow; i++)
+		pWindow[i] *= fScale;
+}
+
 /*! \brief window to be used in the IFFT synthesis
  * 
  * contains both an inverse Blackman-Harris and triangular window.
@@ -83,11 +114,11 @@ void BlackmanHarris62 (int sizeWindow, sfloat *pFWindow)
 	}
 
 	/* I do not know why I now need this factor of two */
-	fSum = fSum / 2;
+/* 	fSum = fSum / 2; */
   
-	/* scale function */
-	for (i = 0; i < sizeWindow; i++)
-		pFWindow[i] = pFWindow[i] / fSum;
+/* 	/\* scale function *\/ */
+/* 	for (i = 0; i < sizeWindow; i++) */
+/* 		pFWindow[i] = pFWindow[i] / fSum; */
 }
 
 /*! \brief BlackmanHarris window with 70dB rolloff
@@ -110,13 +141,13 @@ void BlackmanHarris70 (int sizeWindow, sfloat *pFWindow)
 			a2 * cos(fConst * 2 * i);
 	}
 
-	fSum = fSum / 2;
+/* 	fSum = fSum / 2; */
   
-	/* scale function */
-	for (i = 0; i < sizeWindow; i++)
-        {
-		pFWindow[i] = pFWindow[i] / fSum;
-        }
+/* 	/\* scale function *\/ */
+/* 	for (i = 0; i < sizeWindow; i++) */
+/*         { */
+/* 		pFWindow[i] = pFWindow[i] / fSum; */
+/*         } */
 }
 
 /*! \brief BlackmanHarris window with 74dB rolloff
@@ -140,11 +171,11 @@ void BlackmanHarris74 (int sizeWindow, sfloat *pFWindow)
 	}
 
 	/* I do not know why I now need this factor of two */
-	fSum = fSum / 2;
+/* 	fSum = fSum / 2; */
   
-	/* scale function */
-	for (i = 0; i < sizeWindow; i++)
-		pFWindow[i] = pFWindow[i] / fSum;
+/* 	/\* scale function *\/ */
+/* 	for (i = 0; i < sizeWindow; i++) */
+/* 		pFWindow[i] = pFWindow[i] / fSum; */
 }
 
 /*! \brief BlackmanHarris window with 92dB rolloff
@@ -168,11 +199,10 @@ void BlackmanHarris92 (int sizeWindow, sfloat *pFWindow)
 	}
 
 	/* I do not know why I now need this factor of two */
-	fSum = fSum / 2;
-  
-	/* scale function */
-	for (i = 0; i < sizeWindow; i++)
-		pFWindow[i] = pFWindow[i] / fSum;
+/* 	fSum = fSum / 2; */
+/* 	/\* scale function *\/ */
+/* 	for (i = 0; i < sizeWindow; i++) */
+/* 		pFWindow[i] = pFWindow[i] / fSum; */
 }
 
 /*! \brief default BlackmanHarris window (70dB rolloff)
@@ -187,40 +217,43 @@ void BlackmanHarris (int sizeWindow, sfloat *pFWindow)
 
 /*! \brief Hamming window
  *
+ *
+ *
  * \param sizeWindow   window size
- * \param pFWindow      window array
+ * \param pWindow      window array
  */
-void Hamming (int sizeWindow, sfloat *pFWindow)
+void Hamming (int sizeWindow, sfloat *pWindow)
 {
 	int     i;
 	sfloat fSum = 0;
 
 	for(i = 0; i < sizeWindow; i++) 
         {
-		fSum += pFWindow[i] = 0.53836 - 0.46164*cos(TWO_PI*i/(sizeWindow-1));
+		fSum += pWindow[i] = 0.53836 - 0.46164*cos(TWO_PI*i/(sizeWindow-1));
         }
 
-	fSum = fSum / 2;
-
-	for(i = 0; i < sizeWindow; i++)
-		pFWindow[i] /= fSum;
+        //ScaleWindow(sizeWindow, pWindow);
+/* 	fSum = fSum / 2; */
+/* 	for(i = 0; i < sizeWindow; i++) */
+/* 		pFWindow[i] /= fSum; */
 }
 
 /*! \brief Hanning window
  *
  * \param sizeWindow   window size
- * \param pFWindow      window array
+ * \param pWindow      window array
  */
-void Hanning (int sizeWindow, sfloat *pFWindow)
+void Hanning (int sizeWindow, sfloat *pWindow)
 {
   int i;
-
   for(i = 0; i < sizeWindow; i++) 
-    pFWindow[i] = (sin(PI*i/(sizeWindow-1)))*(sin(PI*i/(sizeWindow-1)));
+          pWindow[i] = (sin(PI*i/(sizeWindow-1)))*(sin(PI*i/(sizeWindow-1)));
 }
 
 /*! \brief main function for getting various windows
  *
+ * \todo note on window scales
+ * 
  * \see SMS_WINDOWS for the different window types available
  * \param sizeWindow   window size
  * \param pFWindow      window array

@@ -516,13 +516,14 @@ enum SMS_FRAME_STATUS
 #define LOG10 2.3025850929940459  /*!< natural logarithm of 10 */
 #define EXP 2.7182818284590451 /*!< Eurler's number */ 
 
-sfloat sms_magToDB(float x); 
-sfloat sms_dBToMag(float x);
+sfloat sms_magToDB(sfloat x); 
+sfloat sms_dBToMag(sfloat x);
 void sms_arrayMagToDB(int sizeArray, sfloat *pArray);
 void sms_arrayDBToMag(int sizeArray, sfloat *pArray);
-sfloat sms_rms ( int sizeArray, float *pArray );
-sfloat sms_sine (float fTheta);
-sfloat sms_sinc (float fTheta);
+void sms_setMagThresh(sfloat x);
+sfloat sms_rms ( int sizeArray, sfloat *pArray );
+sfloat sms_sine (sfloat fTheta);
+sfloat sms_sinc (sfloat fTheta);
 sfloat sms_random ( void );
 int sms_power2(int n);
 //sfloat sms_temperedToFreq( float x ); /*!< raise frequency to the 12th root of 2 */
@@ -571,6 +572,8 @@ void sms_fillSoundBuffer (int sizeWaveform, sfloat *pWaveform,  SMS_AnalParams *
 void sms_windowCentered (int sizeWindow, sfloat *pWaveform, float *pWindow, int sizeFft, float *pFftBuffer);
 
 void sms_getWindow (int sizeWindow, sfloat *pWindow, int iWindowType);
+
+void sms_scaleWindow (int sizeWindow, sfloat *pWindow);
 
 int sms_spectrum (int sizeWindow, sfloat *pWaveform, float *pWindow, int sizeMag, 
                   sfloat *pMag, float *pPhase);
