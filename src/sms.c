@@ -23,18 +23,21 @@
  */
 
 #include "sms.h"
-#include "SFMT.h"
+#include "SFMT.h" /*!< mersenne twister random number genorator */
 
 char *pChDebugFile = "debug.txt"; /*!< debug text file */
 FILE *pDebug; /*!< pointer to debug file */
 
 static char error_message[256];
 static int error_status = 0;
+static sfloat mag_thresh = .00001; /*!< magnitude threshold for db conversion (-100db)*/
+static sfloat inv_mag_thresh = 100000.; /*!< inv(.00001) */
 
 #define SIZE_TABLES 4096
 
 #define HALF_MAX 1073741823.5  /*!< half the max of a 32-bit word */
 #define INV_HALF_MAX (1.0 / HALF_MAX)
+#define TWENTY_OVER_LOG10 (20. / LOG10)
 
 /*! \brief initialize global data
  *
@@ -122,7 +125,7 @@ void sms_initAnalParams (SMS_AnalParams *pAnalParams)
 	pAnalParams->iMinTrackLength = 40; /*!< depends on iFrameRate normally */
 	pAnalParams->iMaxSleepingTime = 40; /*!< depends on iFrameRate normally */
 	pAnalParams->fHighestFreq = 12000.;
-	pAnalParams->fMinPeakMag = -100.;
+	pAnalParams->fMinPeakMag = 0.;
 	pAnalParams->iAnalysisDirection = SMS_DIR_FWD;
 	pAnalParams->iWindowType = SMS_WIN_BH_70;
         pAnalParams->iSizeSound = 0; /*!< no sound yet */
@@ -433,7 +436,7 @@ int sms_sizeNextWindow (int iCurrentFrame, SMS_AnalParams *pAnalParams)
  * \param iCurrentFrame            frame number of current frame in buffer
  * \param pAnalParams             analysis parameters
  * \param sizeWindow               size of analysis window 
- * \return -1 on error
+ * \return -1 on error \todo make this return void
  */
 int sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, 
                       int sizeWindow)
@@ -469,7 +472,8 @@ int sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams,
 	if (pAnalParams->soundBuffer.iMarker >
 	         pAnalParams->ppFrames[iCurrentFrame]->iFrameSample - (sizeWindow+1)/2)
 	{
-		printf("sms_initFrame error: runoff on the sound buffer.\n");
+		sms_error("sms_initFrame: runoff on the sound buffer.");
+		//printf("BLAG: sms_initFrame: runoff on the sound buffer.");
 		return(-1);
 	} 
 
@@ -574,15 +578,13 @@ void sms_writeDebugFile ()
  */
 sfloat sms_magToDB( sfloat x)
 {
-    if (x <= 0) return (0);
-    else
-    {
-            sfloat val = 100 + 20./LOG10 * log(x);
-            //sfloat val =  20 ./ LOG10 * log(x/thresh);
-            
-            return (val < 0 ? 0 : val);
-    }
+        if(x < mag_thresh)
+                return(0.);
+        else
+                //return(20. * log10(x * inv_mag_thresh));
+        return(TWENTY_OVER_LOG10 * log(x * inv_mag_thresh));
 }
+
 /*! \brief convert from decibel to magnitude
  *
  * \param x     decibel (0-100)
@@ -590,55 +592,33 @@ sfloat sms_magToDB( sfloat x)
  */
 sfloat sms_dBToMag( sfloat x)
 {
-    if (x <= 0)
-        return(0);
-    else
-    {
-        if (x > 485)
-            x = 485;
-    }
-    return (exp((LOG10 * 0.05) * (x-100.)));
+        if(x < 0.00001)
+                return (0.);
+        else
+                return(mag_thresh * pow(10., x*0.05));
 }
-
-/* sfloat sms_magToDB( sfloat x) */
-/* { */
-/*         if(x < 0.00001) return(-100.); */
-/*         else return(20. * log10(x)); */
-/* } */
-/* sfloat sms_dBToMag( sfloat x) */
-/* { */
-/*         return(pow(10, x*0.05)); */
-/* } */
 
 /*! \brief convert an array from magnitude to decibel 
  *
- * A linear threshold is supplied to indicate the bottom end
+ * Depends on a  linear threshold that indicates the bottom end
  * of the dB scale (magnutdes at this value will convert to zero).
+ * \see sms_setMagThresh
  *
  * \param sizeArray     size of array
  * \param pArray pointer to array
  * \param fThresh linear magnitude threshold
  */
-/* void sms_arrayMagToDB( int sizeArray, sfloat *pArray, sfloat fThresh) */
-/* { */
-/*         int i; */
-/*         sfloat invThresh = 1. / fThresh; */
-/*         sfloat fVal; */
-/*         for( i = 0; i < sizeArray; i++) */
-/*         { */
-/*                 //pArray[i] = sms_magToDB(pArray[i] * invThresh); */
-/*                 fVal = pArray[i]; */
-/*                 pArray[i] = ( fVal <= fThesh ? 0. : sms_magToDB(fVal * invThresh)); */
-/*         } */
-/* } */
 void sms_arrayMagToDB( int sizeArray, sfloat *pArray)
 {
-       int i;
+        int i;
         for( i = 0; i < sizeArray; i++)
                 pArray[i] = sms_magToDB(pArray[i]);
 }
 
 /*! \brief convert and array from decibel (0-100) to magnitude (0-1)
+ *
+ * depends on the magnitude threshold
+ * \see sms_setMagThresh
  *
  * \param sizeArray     size of array
  * \param pArray pointer to array
@@ -649,7 +629,22 @@ void sms_arrayDBToMag( int sizeArray, sfloat *pArray)
         for( i = 0; i < sizeArray; i++)
                 pArray[i] = sms_dBToMag(pArray[i]);
 }
-
+/*! \brief set the linear magnitude threshold
+ *
+ * magnitudes below this will go to zero when converted to db.
+ * it is limited to 0.00001 (-100db)
+ *
+ * \param x  threshold value
+ */
+void sms_setMagThresh( sfloat x)
+{
+        /* limit threshold to -100db */
+        if(x < 0.00001) 
+                mag_thresh = 0.00001;
+        else
+                mag_thresh = x;
+        inv_mag_thresh = 1. / mag_thresh;
+}
 
 /*! \brief get a string containing information about the error code 
  *
@@ -682,28 +677,6 @@ char* sms_errorString()
         }
 	else return NULL;
 }
-/* const char* sms_errorString(int iError) */
-/* { */
-/*         switch(iError) */
-/*         { */
-/*         case SMS_NOPEN: return ("cannot open input file"); */
-/*                 break; */
-/*         case SMS_NSMS: return ("input file not an SMS file"); */
-/*                 break; */
-/*         case SMS_MALLOC: return ("cannot allocate memory for input file"); */
-/*                 break; */
-/*         case SMS_RDERR: return ("read error in input file"); */
-/*                 break; */
-/*         case SMS_WRERR: return ("cannot write output file"); */
-/*                 break; */
-/*         case SMS_SNDERR: return ("problem with libsndfile"); */
-/*                 break; */
-/*         default: return ("error undefined");  */
-/*         } */
-/* } */
-
-
-
 
 /*! \brief random number genorator
  *
