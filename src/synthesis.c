@@ -39,7 +39,7 @@ static void SineSynthIFFT (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
         sfloat fMag=0.0, fFreq=0.0, fPhase=0.0, fLoc, fSin, fCos, fBinRemainder, 
                 fTmp, fNewMag,  fIndex;
         sfloat fSamplingPeriod = 1.0 / pSynthParams->iSamplingRate;
-
+        //printf("| in sinesynth ifft | ");
         memset (pSynthParams->pSpectra, 0, (sizeFft +1) * sizeof(sfloat));
         for (i = 0; i < nTracks; i++)
         {
@@ -51,7 +51,7 @@ static void SineSynthIFFT (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
                         if (pSynthParams->prevFrame.pFSinAmp[i] <= 0)
                                 pSynthParams->prevFrame.pFSinPha[i] = TWO_PI * sms_random();
 
-                        fMag = sms_dBToMag (fMag);
+                        //fMag = sms_dBToMag (fMag);
                         fTmp = pSynthParams->prevFrame.pFSinPha[i] +
                                 TWO_PI * fFreq * fSamplingPeriod * sizeMag;
                         fPhase = fTmp - floor(fTmp * INV_TWO_PI) * TWO_PI;
@@ -108,6 +108,13 @@ static void SineSynthIFFT (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
 
 /*! \brief synthesis of one frame of the deterministic component using the IFFT
  *
+ * 
+ * I made this function trying to pull the ifft out of the SineSynthIFFT
+ * that part of the code is in the main sms_synthesize function below
+ * Next would be sms_stochastic, so they could be summed and synthesized
+ * with only one fft, but the problem is that it needs to be 'pre-inverse-windowed'
+ * before the stochastic can be summed.
+ *
  * \param pSmsData pointer to SMS data structure frame
  * \param pSynthParams pointer to structure of synthesis parameters
  */
@@ -122,8 +129,8 @@ void sms_deterministic (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
         sfloat fMag=0.0, fFreq=0.0, fPhase=0.0, fLoc, fSin, fCos, fBinRemainder, 
                 fTmp, fNewMag,  fIndex;
         sfloat fSamplingPeriod = 1.0 / pSynthParams->iSamplingRate;
+        printf("| in deterministic | ");
 
-        //memset (pSynthParams->pSpectra, 0, (sizeFft +1) * sizeof(sfloat));
         for (i = 0; i < nTracks; i++)
         {
                 if (((fMag = pSmsData->pFSinAmp[i]) > 0) &&
@@ -134,7 +141,7 @@ void sms_deterministic (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
                         if (pSynthParams->prevFrame.pFSinAmp[i] <= 0)
                                 pSynthParams->prevFrame.pFSinPha[i] = TWO_PI * sms_random();
 
-                        fMag = sms_dBToMag (fMag);
+                        //fMag = sms_dBToMag (fMag);
                         fTmp = pSynthParams->prevFrame.pFSinPha[i] +
                                 TWO_PI * fFreq * fSamplingPeriod * sizeSpec;
                         fPhase = fTmp - floor(fTmp * INV_TWO_PI) * TWO_PI;
@@ -214,8 +221,10 @@ static int StocSynthApprox (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
 
         /* scale the coefficients to normal amplitude */
         /*! \todo why is it also multiplied by 2? Why aren't the coeffecients just stored with gain already multiplied?*/
+
         for (i = 0; i < sizeSpec1; i++)
                 pSmsData->pFStocCoeff[i] *= 2 * *(pSmsData->pFStocGain) ;
+        //printf("| in stoch approx | ");
 
         sizeSpec1Used = sizeSpec1 * pSynthParams->iSamplingRate /
                 pSynthParams->iOriginalSRate;
@@ -242,52 +251,14 @@ static int StocSynthApprox (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
                                pSynthParams->pFStocWindow);
         return 1;
 }
-/* static int StocSynthApprox (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams) */
-/* { */
-/*         int i, sizeOriginalSpecUsed; */
-/*         int sizeOriginalSpec = pSmsData->nCoeff; */
-/*         int sizeSpec = pSynthParams->sizeHop; */
-/*         int sizeFft = pSynthParams->sizeHop << 1; /\* 50% overlap, so sizeFft is 2x sizeHop *\/ */
-
-/*         /\* if no gain or no coefficients return  *\/ */
-/*         if (*(pSmsData->pFStocGain) <= 0) */
-/*                 return (0); */
-
-/*         *(pSmsData->pFStocGain) = sms_dBToMag(*(pSmsData->pFStocGain)); */
-
-/*         /\* scale the coefficients to normal amplitude *\/ */
-/*         /\*! \todo why is it also multiplied by 2? Why aren't the coeffecients just stored with gain already multiplied?*\/ */
-/*         for (i = 0; i < sizeOriginalSpec; i++) */
-/*                 pSmsData->pFStocCoeff[i] *= 2 * *(pSmsData->pFStocGain) ; */
-
-/*         sizeOriginalSpecUsed = sizeOriginalSpec * pSynthParams->iSamplingRate / */
-/*                 pSynthParams->iOriginalSRate; */
-/*         /\* sizeOriginalSpecUsed cannot be more than what is available  \todo check by graph *\/ */
-/*         if(sizeOriginalSpecUsed  > sizeOriginalSpec) sizeOriginalSpecUsed = sizeOriginalSpec; */
-/*         //printf("iSamplingRate: %d, iOriginalSRate: %d, sizeOriginalSpec: %d, sizeOriginalSpecUsed: %d, sizeSpec: %d \n", */
-/* //               pSynthParams->iSamplingRate, pSynthParams->iOriginalSRate, sizeOriginalSpec, sizeOriginalSpecUsed, sizeSpec); */
-/*         sms_spectralApprox (pSmsData->pFStocCoeff, sizeOriginalSpec, sizeOriginalSpecUsed, */
-/*                         pSynthParams->pMagBuff, sizeSpec, sizeOriginalSpecUsed); */
-
-/*         /\* generate random phases *\/ */
-/*         for (i = 0; i < sizeSpec; i++) */
-/*                 pSynthParams->pPhaseBuff[i] =  TWO_PI * sms_random(); */
-
-
-/*         /\*\todo the stochastic resynthesis seems to be too loud here - why is fStocGain multiplied through twice? *\/ */
-/*         /\* adjust gain *\/ */
-/*         for( i = 1; i < sizeSpec; i++) */
-/*                 pSynthParams->pMagBuff[i] *= pSynthParams->fStocGain; */
-
-/*         sms_invSpectrum (sizeFft, pSynthParams->pSynthBuff, pSynthParams->pFStocWindow, sizeSpec, */
-/*                          pSynthParams->pMagBuff, pSynthParams->pPhaseBuff); */
-/*         return (0); */
-/* } */
 
 /*! \brief synthesis of one frame of the stochastic component by apprimating phases
  * 
  * computes a linearly interpolated spectral envelope to fit the correct number of output
  * audio samples. Phases are generated randomly.  
+ * 
+ * \todo needs to be pre-windowed to match the windowing effect of the deterministic,
+ * so when they are summed then they can be ifft'ed and overlap-added properly
  *
  * \param pSmsData pointer to the current SMS frame
  * \param pSynthParams pointer to a strucure of synthesis parameters
@@ -303,6 +274,7 @@ int sms_stochastic (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
         /* if no gain or no coefficients return  */
         if (*(pSmsData->pFStocGain) <= 0)
                 return (0);
+        printf("| in stochastic | ");
 
         *(pSmsData->pFStocGain) = sms_dBToMag(*(pSmsData->pFStocGain));
 
@@ -337,7 +309,7 @@ int sms_stochastic (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
  * \param pSmsData      input SMS data
  * \param pFSynthesis      output sound buffer  
  * \param pSynthParams   synthesis parameters
- * \return 0 on success, -1 on error
+ * \return 0 on success, -1 on error \todo make this return void
  */
 int sms_synthesize (SMS_Data *pSmsData, sfloat *pFSynthesis,  
                   SMS_SynthParams *pSynthParams)
@@ -360,17 +332,15 @@ int sms_synthesize (SMS_Data *pSmsData, sfloat *pFSynthesis,
                         memset (pSynthParams->pSpectra, 0, sizeFft  * sizeof(sfloat));
                         sms_deterministic(pSmsData, pSynthParams);
                         //sms_stochastic(pSmsData, pSynthParams);
-                        printf("hassdsds ");
+                        printf("in combo IFFT ");
                         sms_ifft(sizeFft, pSynthParams->pSpectra);
 
                         for(i = 0, k = sizeHop; i < sizeHop; i++, k++)
                                 pSynthParams->pSynthBuff[i] += pSynthParams->pSpectra[k] * pSynthParams->pFDetWindow[i];
                         for(i= sizeHop, k = 0; i < sizeFft; i++, k++)
                                 pSynthParams->pSynthBuff[i] +=  pSynthParams->pSpectra[k] * pSynthParams->pFDetWindow[i];
-/*                         sms_error("COMBO_SYNTH not implemented yet."); */
-/*                         return (-1); */
                 }
-                else /* can't use combo STFT, synthesize seperately and sum */
+                else /* can't use combo  IFFT, synthesize seperately and sum */
                 {
                         if(pSynthParams->iDetSynthType == SMS_DET_IFFT)
                                 SineSynthIFFT (pSmsData, pSynthParams);

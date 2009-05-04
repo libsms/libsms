@@ -58,6 +58,7 @@ void sms_analyzeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, sfloat fR
         {
                 sizeMag = sms_power2(sizeWindow);
                 sms_getWindow(sizeWindow, pFSpectrumWindow, pAnalParams->iWindowType);
+                sms_scaleWindow(sizeWindow, pFSpectrumWindow);
                 sizeWindowStatic = sizeWindow;
         }
 
@@ -70,8 +71,7 @@ void sms_analyzeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams, sfloat fR
 
 	/* find the prominent peaks */
 	//pAnalParams->ppFrames[iCurrentFrame]->nPeaks =
-	pCurrentFrame->nPeaks =
-		sms_detectPeaks (sizeMag,
+	pCurrentFrame->nPeaks = sms_detectPeaks (sizeMag,
                                  pFMagSpectrum,
                                  pFPhaSpectrum,
                                  pCurrentFrame->pSpectralPeaks,
@@ -184,8 +184,12 @@ int sms_analyze (int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_An
 
 
 	/* initialize the current frame */
-	iError = sms_initFrame (iCurrentFrame, pAnalParams, sizeWindow);
-        if(iError) return (-1);
+	sms_initFrame (iCurrentFrame, pAnalParams, sizeWindow);
+        if(sms_errorCheck())
+        {
+                printf("error in init frame: %s \n", sms_errorString());
+                return(-1);
+        }
   
 	/* if right data in the sound buffer do analysis */
 	if (pAnalParams->ppFrames[iCurrentFrame]->iStatus == SMS_FRAME_READY)
@@ -294,6 +298,7 @@ int sms_analyze (int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_An
                                         return -1;
                                 }
                                 sms_getWindow( sizeData, pWindow, SMS_WIN_HAMMING);
+                                sms_scaleWindow( sizeData, pWindow);
                                 sizeWindowArray = sizeData;
                         }
 
@@ -319,7 +324,7 @@ int sms_analyze (int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_An
       
 			pAnalParams->ppFrames[0]->iStatus = SMS_FRAME_DONE;
 
-			free ((char *) pFResidual);
+			free ((char *) pFResidual); /* \todo get rid of this free, manage memory the same as spectrum functions */
 		}
 	}
 	else if (pAnalParams->ppFrames[0]->iStatus != SMS_FRAME_EMPTY &&
@@ -339,6 +344,8 @@ int sms_analyze (int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_An
 		        pAnalParams->ppFrames[0]->deterministic.pFSinFreq, length);
 		memcpy ((char *) pSmsData->pFSinAmp, (char *)
 		         pAnalParams->ppFrames[0]->deterministic.pFSinAmp, length);
+                /* convert mags back to linear */
+                sms_arrayDBToMag(pSmsData->nTracks, pSmsData->pFSinAmp);
 		if (pAnalParams->iFormat == SMS_FORMAT_HP ||
 		    pAnalParams->iFormat == SMS_FORMAT_IHP)
 			memcpy ((char *) pSmsData->pFSinPha, (char *)
