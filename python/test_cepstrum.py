@@ -11,22 +11,17 @@ filename = "../../test/audio/fs.wav"
 sizeWin = 601
 sizeSpec = 512
 winType = SMS_WIN_HAMMING
-#winType = SMS_WIN_HANNING
 sample = 1000
-
-
 
 soundheader = SMS_SndHeader()
 smsData = SMS_Data()
-wave = zeros(sizeWin).astype('float32')
-Mag = zeros(sizeSpec).astype('float32')
-Phase = zeros(sizeSpec).astype('float32')
-win = zeros(sizeWin).astype('float32')
+wave = zeros(sizeWin)
+Mag = zeros(sizeSpec)
+Phase = zeros(sizeSpec)
+win = zeros(sizeWin)
 sms_getWindow(win, winType)
-# because of issues with libsms and the conversion from short to floating
-# point, the hamming window still needs to be normalized to 1
-win = win / win.max()
-
+sms_scaleWindow(win)
+#sms_setMagThresh(.001)
 ##############################
 ### Open / Get Sound ###########
 sms_openSF(filename, soundheader)
@@ -35,9 +30,9 @@ sms_getSound(soundheader, wave, sample)
 sr = soundheader.iSamplingRate
 ################################
 ### compute spectrum of a frame #####
-blarg = sms_spectrum(wave, win,Mag, Phase)
-#sms_arrayMagToDB(Mag)
-Xdb = 20*log10(Mag)
+sms_spectrum(wave, win,Mag, Phase);
+sms_arrayMagToDB(Mag)
+#Xdb = 20*log10(Mag)
 
 ###############################
 ### get partial peaks #############
@@ -51,7 +46,7 @@ peakParams.fMinPeakMag = -90.
 peakParams.iSamplingRate = soundheader.iSamplingRate
 peakParams.iMaxPeaks = 100
 peaks = SMS_SpectralPeaks(peakParams.iMaxPeaks)
-sms_detectPeaks(Xdb, Phase, peaks, peakParams)
+sms_detectPeaks(Mag, Phase, peaks, peakParams)
 fx = zeros(peaks.nPeaks)
 ax = zeros(peaks.nPeaks)
 peaks.getFreq(fx)  # why aren't I getting any peaks > 10k hertz?
@@ -92,7 +87,7 @@ if True:
     hold(False)
     subplot(111, axisbg='black')
     f_axis = arange(0, maxFreq - fRes*2, fRes)
-    plot(f_axis, Xdb[0:maxbin-1]) 
+    plot(f_axis, Mag[0:maxbin-1]) 
     hold(True)
     plot(fx, ax, 'r+')
     env_freq = arange(0, maxFreq, float(maxFreq) / maxBin)

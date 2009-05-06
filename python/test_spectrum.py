@@ -3,25 +3,27 @@
 from pylab import *
 from pysms import *
 
-filename = "../../test/audio/fs.wav"
+#filename = "../../test/audio/fs.wav
+filename = "../../test/audio/soopastar.wav"
+#filename = "../../test/audio/tone440.wav"
 sizeWin = 301
 sizeSpec = 512
-#winType = SMS_WIN_HAMMING
-winType = SMS_WIN_HANNING
-sample = 1000
+winType = SMS_WIN_HAMMING
+#winType = SMS_WIN_HANNING
+sample = 10000 #0
 soundheader = SMS_SndHeader()
 smsData = SMS_Data()
-wave = zeros(sizeWin).astype('float32')
-Mag = zeros(sizeSpec).astype('float32')
-Phase = zeros(sizeSpec).astype('float32')
-win = zeros(sizeWin).astype('float32')
+wave = zeros(sizeWin)
+Mag = zeros(sizeSpec)
+Phase = zeros(sizeSpec)
+win = zeros(sizeWin)
 sms_getWindow(win, winType)
-
+sms_scaleWindow(win)
 ##############################
 ### Open / Get Sound ###########
 sms_openSF(filename, soundheader)
 nSamples = soundheader.nSamples
-sms_getSound(soundheader, wave, sample)
+sms_getSound(soundheader, wave, sample);
 
 # testing window centering:
 #buff = zeros(sizeSpec*2).astype('float32')
@@ -30,9 +32,10 @@ sms_getSound(soundheader, wave, sample)
 
 ################################
 ### compute spectrum of a frame #####
-err = sms_spectrum(wave, win,Mag, Phase)
-
-sms_arrayMagToDB(Mag)
+sms_setMagThresh(.01)
+sms_spectrum(wave, win,Mag, Phase)
+dbMag = Mag.copy()
+sms_arrayMagToDB(dbMag)
 #sms_arrayDBToMag(Mag)
 
 #newWave = zeros(sizeWin).astype('float32')
@@ -44,17 +47,18 @@ sms_arrayMagToDB(Mag)
 ###############################
 ### get partial peaks #############
 #nPeaks = 39
-nPeaks = 5
+nPeaks = 30
 print "nPeaks: ", nPeaks
 peakParams = SMS_PeakParams()
 peakParams.fHighestFreq = 20000
 peakParams.fLowestFreq = 100
-peakParams.fMinPeakMag = 0
+peakParams.fMinPeakMag = 
 peakParams.iSamplingRate = soundheader.iSamplingRate
 peakParams.iMaxPeaks = nPeaks
 peaks = SMS_SpectralPeaks(nPeaks)
 
-n = sms_detectPeaks(Mag, Phase, peaks, peakParams)
+sms_detectPeaks(dbMag, Phase, peaks, peakParams)
+nPeaks = peaks.nPeaksFound
 
 fx = zeros(nPeaks)
 ax = zeros(nPeaks)
@@ -63,11 +67,11 @@ peaks.getFreq(fx)  # why aren't I getting any peaks > 10k hertz?
 peaks.getMag(ax)
 
 # plot the peaks on top of the magnitude spectrum
-if False:
+if True:
     hold(False)
     subplot(111, axisbg='black')
     faxis = arange(sizeSpec) * soundheader.iSamplingRate *.5 / sizeSpec
-    plot(faxis,Mag)
+    plot(faxis,dbMag)
     hold(True)
     plot(fx,ax,'r.')
 
