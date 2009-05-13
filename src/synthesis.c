@@ -40,7 +40,7 @@ static void SineSynthIFFT (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
                 fTmp, fNewMag,  fIndex;
         sfloat fSamplingPeriod = 1.0 / pSynthParams->iSamplingRate;
         //printf("| in sinesynth ifft | ");
-        memset (pSynthParams->pSpectra, 0, (sizeFft +1) * sizeof(sfloat));
+        memset (pSynthParams->pSpectra, 0, sizeFft * sizeof(sfloat));
         for (i = 0; i < nTracks; i++)
         {
                 if (((fMag = pSmsData->pFSinAmp[i]) > 0) &&
@@ -51,7 +51,7 @@ static void SineSynthIFFT (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
                         if (pSynthParams->prevFrame.pFSinAmp[i] <= 0)
                                 pSynthParams->prevFrame.pFSinPha[i] = TWO_PI * sms_random();
 
-                        //fMag = sms_dBToMag (fMag);
+                        // fMag = sms_dBToMag (fMag);
                         fTmp = pSynthParams->prevFrame.pFSinPha[i] +
                                 TWO_PI * fFreq * fSamplingPeriod * sizeMag;
                         fPhase = fTmp - floor(fTmp * INV_TWO_PI) * TWO_PI;
@@ -207,7 +207,7 @@ void sms_deterministic (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
  * \todo cleanup returns and various constant multipliers. check that approximation is ok
  */
 static int StocSynthApprox (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
-{
+{       
         int i, sizeSpec1Used;
         int sizeSpec1 = pSmsData->nCoeff;
         int sizeSpec2 = pSynthParams->sizeHop;
@@ -217,13 +217,12 @@ static int StocSynthApprox (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
         if (*(pSmsData->pFStocGain) <= 0)
                 return 0;
 
-        *(pSmsData->pFStocGain) = sms_dBToMag(*(pSmsData->pFStocGain));
+        // *(pSmsData->pFStocGain) = sms_dBToMag(*(pSmsData->pFStocGain));
 
         /* scale the coefficients to normal amplitude */
         /*! \todo why is it also multiplied by 2? Why aren't the coeffecients just stored with gain already multiplied?*/
-
-        for (i = 0; i < sizeSpec1; i++)
-                pSmsData->pFStocCoeff[i] *= 2 * *(pSmsData->pFStocGain) ;
+        // for (i = 0; i < sizeSpec1; i++)
+        //         pSmsData->pFStocCoeff[i] *= 2 * *(pSmsData->pFStocGain) ;
         //printf("| in stoch approx | ");
 
         sizeSpec1Used = sizeSpec1 * pSynthParams->iSamplingRate /
@@ -244,7 +243,6 @@ static int StocSynthApprox (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
         /* adjust gain */
         for( i = 1; i < sizeSpec2; i++)
                 pSynthParams->pMagBuff[i] *= pSynthParams->fStocGain;
-
 
         sms_invQuickSpectrumW (pSynthParams->pMagBuff, pSynthParams->pPhaseBuff,
                                sizeFft, pSynthParams->pSynthBuff, sizeFft,

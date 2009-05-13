@@ -118,6 +118,8 @@ int sms_createSF ( char *pChOutputSoundFile, int iSamplingRate, int iType)
             sfOutputSoundHeader.format = SF_FORMAT_AIFF | SF_FORMAT_FLOAT;
     else if(iType == 0)
             sfOutputSoundHeader.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
+    else if(iType == 2)
+            sfOutputSoundHeader.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
     else sfOutputSoundHeader.format = iType; /* untested.. */
     sfOutputSoundHeader.samplerate = iSamplingRate;
     sfOutputSoundHeader.channels = 1;

@@ -157,7 +157,8 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams, SMS_SndHeader *pSoundHeader)
 	                (sfloat) pAnalParams->iFrameRate);
         /* define how many records*/
         /* \todo why is this + 3? */
-	pAnalParams->nFrames = 3 + pSoundHeader->nSamples / (sfloat) pAnalParams->sizeHop;
+	/*pAnalParams->nFrames = 3 + pSoundHeader->nSamples / (sfloat) pAnalParams->sizeHop;*/
+        pAnalParams->nFrames = pSoundHeader->nSamples / (sfloat) pAnalParams->sizeHop;
 
 	pAnalParams->iSizeSound = pSoundHeader->nSamples;
         pAnalParams->iSamplingRate = pSoundHeader->iSamplingRate;

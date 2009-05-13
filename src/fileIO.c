@@ -482,23 +482,30 @@ int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase,
 	pSmsFrame->nCoeff = nCoeff;
 	pSmsFrame->sizeData = sizeData; 
         /* set pointers to data types within smsData array */
-	pSmsFrame->pFSinFreq = pSmsFrame->pSmsData;
+        pSmsFrame->pFSinFreq = pSmsFrame->pSmsData;  
         dataPos =  (sfloat *)(pSmsFrame->pFSinFreq + nTracks);
-	pSmsFrame->pFSinAmp = dataPos;
+        memset(pSmsFrame->pFSinFreq, 0, sizeof(sfloat) * nTracks);
+
+        pSmsFrame->pFSinAmp = dataPos;
         dataPos = (sfloat *)(pSmsFrame->pFSinAmp + nTracks);
-	if (iPhase > 0)
-	{
-		pSmsFrame->pFSinPha = dataPos;
+        memset(pSmsFrame->pFSinAmp, 0, sizeof(sfloat) * nTracks);
+
+        if (iPhase > 0)
+        {
+        	pSmsFrame->pFSinPha = dataPos;
                 dataPos = (sfloat *) (pSmsFrame->pFSinPha + nTracks);
+                memset(pSmsFrame->pFSinPha, 0, sizeof(sfloat) * nTracks);
         }	
-	else 	pSmsFrame->pFSinPha = NULL;
-	if (nCoeff > 0)
-	{
+        else pSmsFrame->pFSinPha = NULL;
+        if (nCoeff > 0)
+        {
                 pSmsFrame->pFStocCoeff = dataPos;
                 dataPos = (sfloat *) (pSmsFrame->pFStocCoeff + nCoeff);
+                memset(pSmsFrame->pFStocCoeff, 0, sizeof(sfloat) * nCoeff);
+
                 pSmsFrame->pFStocGain = dataPos; 
                 dataPos = (sfloat *) (pSmsFrame->pFStocGain + 1);
-	}
+        }
         else
 	{
                 pSmsFrame->pFStocCoeff = NULL;

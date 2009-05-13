@@ -34,7 +34,7 @@
  * \return residual percentage (0 if residual was not large enough)
   \todo why is residual energy percentage computed this way? should be optional and in a seperate function
  */
-int sms_residual ( int sizeWindow, sfloat *pSynthesis, float *pOriginal, sfloat *pResidual, sfloat *pWindow)
+int sms_residual (int sizeWindow, sfloat *pSynthesis, sfloat *pOriginal, sfloat *pResidual, sfloat *pWindow)
 {
 	static sfloat fResidualMag = 0.;
         static sfloat fOriginalMag = 0.;
@@ -44,44 +44,87 @@ int sms_residual ( int sizeWindow, sfloat *pSynthesis, float *pOriginal, sfloat 
 	int i;
    
 	/* get residual */
-	for (i=0; i<sizeWindow; i++)
-                pResidual[i] = pOriginal[i] - pSynthesis[i];
-
+        for (i=0; i<sizeWindow; i++)
+            pResidual[i] = pOriginal[i] - pSynthesis[i];
+        // static sfloat *pOrigMagSpectrum;
+        // static sfloat *pOrigPhaSpectrum;
+        // static sfloat *pMagSpectrum;
+        // static int sizeWindowStatic = 0;
+        // static int sizeFft = 0;
+        // static int sizeMag = 0;
+        // /* update array sizes if sizeWindow is new */
+        // if (sizeWindowStatic != sizeWindow)
+        // { 
+        //         if(sizeWindowStatic != 0) 
+        //         {
+        //              free(pOrigMagSpectrum);
+        //              free(pOrigPhaSpectrum);
+        //              free(pMagSpectrum);
+        //         }
+        //         sizeWindowStatic = sizeWindow;
+        //         sizeFft = sms_power2(sizeWindow);
+        //         sizeMag = sizeFft >> 1;
+        //         if((pOrigMagSpectrum = (sfloat *) calloc(sizeMag, sizeof(float))) == NULL)
+        //         {
+        //                 sms_error("sms_residual: error allocating memory for pOrigMagSpectrum");
+        //                 return -1;
+        //         }
+        //         if((pOrigPhaSpectrum = (sfloat *) calloc(sizeMag, sizeof(float))) == NULL)
+        //         {
+        //                 sms_error("sms_residual: error allocating memory for pOrigPhaSpectrum");
+        //                 return -1;
+        //         }
+        //         if((pMagSpectrum = (sfloat *) calloc(sizeMag, sizeof(float))) == NULL)
+        //         {
+        //                 sms_error("sms_residual: error allocating memory for pResMagSpectrum");
+        //                 return -1;
+        //         }
+        // }
+        // sms_spectrum(sizeWindow, pOriginal, pWindow, sizeMag, pOrigMagSpectrum, pOrigPhaSpectrum);
+        // sms_spectrumMag(sizeWindow, pSynthesis, pWindow, sizeMag, pMagSpectrum);
+        // for(i = 0; i < sizeMag; i++)
+        // {   
+        //         pMagSpectrum[i] = pOrigMagSpectrum[i] - pMagSpectrum[i];
+        //         printf("%f\t%f\n", pSynthesis[i], pMagSpectrum[i]);
+        // }
+        // sms_invQuickSpectrumW(pMagSpectrum, pOrigPhaSpectrum, sizeFft, pResidual, sizeFft, pWindow);
+        // for (i=0; i<sizeWindow; i++)
+        // {   
+        //         printf("%f\n", pResidual[i]);
+        // }
+        
 	/* get energy of residual */
-	for (i=0; i<sizeWindow; i++)
-		fCurrentResidualMag += fabsf( pResidual[i] * pWindow[i]);
+        for (i=0; i<sizeWindow; i++)
+                fCurrentResidualMag += (pResidual[i] * pResidual[i]);
 
-	/* if residual is big enough compute coefficients */
-//	if (fCurrentResidualMag/sizeWindow > .01)
-	if (fCurrentResidualMag) //always compute
-	{  
-/*                 printf(" fCurrentResidualMag: %f, sizeWindow: %d, ratio: %f\n", */
-/*                        fCurrentResidualMag, sizeWindow, fCurrentResidualMag/sizeWindow ); */
-                
-		/* get energy of original */
-		for (i=0; i<sizeWindow; i++)
-			fCurrentOriginalMag += fabs( pOriginal[i] * pWindow[i]);
-                
-		fOriginalMag = 
-			.5 * (fCurrentOriginalMag/sizeWindow + fOriginalMag);
-		fResidualMag = 
-			.5 * (fCurrentResidualMag/sizeWindow + fResidualMag);
-  
-		/* scale residual if need to be */
-		if (fResidualMag > fOriginalMag)
-		{
-			fScale = fOriginalMag / fResidualMag;
-			for (i=0; i<sizeWindow; i++)
-				pResidual[i] *= fScale;
-		}
-                
+        /* if residual is big enough compute coefficients */
+        // if (fCurrentResidualMag/sizeWindow > .01)
+        if (fCurrentResidualMag) //always compute
+        {  
+                /* printf("fCurrentResidualMag: %f, sizeWindow: %d, ratio: %f\n", */
+                /*        fCurrentResidualMag, sizeWindow, fCurrentResidualMag/sizeWindow ); */
+            
+                /* get energy of original */
+                for (i=0; i<sizeWindow; i++)
+                        fCurrentOriginalMag += (pOriginal[i] * pOriginal[i]);
+        
+                fOriginalMag = .5 * (fCurrentOriginalMag/sizeWindow + fOriginalMag);
+                fResidualMag = .5 * (fCurrentResidualMag/sizeWindow + fResidualMag);
+
+                /* scale residual if need to be */
+                if (fResidualMag > fOriginalMag)
+                {
+                        fScale = fOriginalMag / fResidualMag;
+                        for (i=0; i<sizeWindow; i++)
+                                pResidual[i] *= fScale;
+                }
+            
                 //printf("risidual mag: %f, original mag: %f \n", fCurrentResidualMag , fCurrentOriginalMag);
                 //printf("risidual mag: %f, original mag: %f \n", fResidualMag , fOriginalMag);
                 return (fCurrentResidualMag / fCurrentOriginalMag);
-	}
-/*         else printf("whaaaat not big enough: fCurrentResidualMag: %f, sizeWindow: %d, ratio: %f\n", */
-/*                     fCurrentResidualMag, sizeWindow, fCurrentResidualMag/sizeWindow ); */
-        
+        }
+        /* else printf("whaaaat not big enough: fCurrentResidualMag: %f, sizeWindow: %d, ratio: %f\n", */
+        /*             fCurrentResidualMag, sizeWindow, fCurrentResidualMag/sizeWindow ); */ 
 	return (0);
 }
 

@@ -318,9 +318,9 @@ int sms_analyze (int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_An
 			sms_stocAnalysis (sizeData, pFResidual, pWindow, pSmsData);
                         
 			/* get sharper transitions in deterministic representation */
-			sms_scaleDet (pAnalParams->synthBuffer.pFBuffer, pOriginal,
-			                    pAnalParams->ppFrames[0]->deterministic.pFSinAmp,
-			                    pAnalParams, pSmsData->nTracks);
+                        sms_scaleDet (pAnalParams->synthBuffer.pFBuffer, pOriginal,
+                                      pAnalParams->ppFrames[0]->deterministic.pFSinAmp,
+                                      pAnalParams, pSmsData->nTracks);
       
 			pAnalParams->ppFrames[0]->iStatus = SMS_FRAME_DONE;
 

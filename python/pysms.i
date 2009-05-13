@@ -38,6 +38,7 @@
 %apply (int DIM1, float* INPLACE_ARRAY1) {(int sizeArray, float* pArray)};
 %apply (int DIM1, float* IN_ARRAY1) {(int sizeInArray, float* pInArray)};
 %apply (int DIM1, float* INPLACE_ARRAY1) {(int sizeOutArray, float* pOutArray)};
+%apply (int DIM1, float* INPLACE_ARRAY1) {(int sizeHop, float* pSynthesis)};
 // this 2D typemap is for the SMS_File's getFrameDet and getFrameDetP methods
 //%apply (int DIM1, int DIM2, float* INPLACE_FARRAY2 ) {(int nTracks, int nComponents, float* pFrame)};
 
@@ -66,8 +67,9 @@ by renaming the wrapped names back to originals */
 %rename (sms_spectrumMag) pysms_spectrumMag; 
 %rename (sms_windowCentered) pysms_windowCentered; 
 %rename (sms_invSpectrum) pysms_invSpectrum; 
-%rename (sms_dCepstrum) pysms_dCepstrum; 
-//%rename (getFrameDetP) p_getFrameDetP; 
+%rename (sms_dCepstrum) pysms_dCepstrum;
+%rename (sms_synthesize) pysms_synthesize;  
+//%rename (getFrameDetP) p_getFrameDetP;
 
 %inline %{
 
@@ -105,7 +107,6 @@ void pysms_detectPeaks(int sizeMag, float *pMag, int sizePhase, float *pPhase,
         pPeakStruct->nPeaksFound = sms_detectPeaks(sizeMag, pMag, pPhase, pPeakStruct->pSpectralPeaks, pPeakParams);
         
 }
-
 int pysms_spectrum( int sizeWaveform, float *pWaveform, int sizeWindow, float *pWindow,
                     int sizeMag, float *pMag, int sizePhase, float *pPhase)
 {
@@ -131,7 +132,15 @@ void pysms_windowCentered(int sizeWaveform, float *pWaveform, int sizeWindow,
         }
         sms_windowCentered(sizeWindow, pWaveform, pWindow, sizeFft, pFftBuffer);
 }
-
+int pysms_synthesize(SMS_Data *pSmsData, int sizeHop, float *pSynthesis, SMS_SynthParams *pSynthParams) 
+{
+    if(sizeHop != pSynthParams->sizeHop)
+    {
+        sms_error("sizeHop != pSynthParams->sizeHop");
+        return -1;
+    }
+    return sms_synthesize(pSmsData, pSynthesis, pSynthParams);
+}
 %}
 
 %extend SMS_File 

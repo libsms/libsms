@@ -63,19 +63,19 @@ int sms_stocAnalysis ( int sizeWindow, sfloat *pResidual, sfloat *pWindow, SMS_D
   
         /* get energy of spectrum  */
         for (i = 0; i < sizeMag; i++)
-                fMag += pMagSpectrum[i];
+                fMag += (pMagSpectrum[i] * pMagSpectrum[i]);
  
         //*pSmsData->pFStocGain = MAX (fMag / sizeMag, ENV_THRESHOLD);
         *pSmsData->pFStocGain = fMag / sizeMag;
 
-/*         printf("pFStocGain: %f, fmag: %f, sizeMag: %d, ratio: %f \n", *pSmsData->pFStocGain,  */
-/*                fMag, sizeMag, fMag/sizeMag); */
+        /* printf("pFStocGain: %f, fmag: %f, sizeMag: %d, ratio: %f \n", *pSmsData->pFStocGain,  
+                  fMag, sizeMag, fMag/sizeMag); */
 
         /* normalize envelope */
-        for (i = 0; i <  pSmsData->nCoeff; i++)
-                pSmsData->pFStocCoeff[i] /= *pSmsData->pFStocGain;
+        /* for (i = 0; i <  pSmsData->nCoeff; i++)
+                pSmsData->pFStocCoeff[i] /= *pSmsData->pFStocGain; */
     
-        *pSmsData->pFStocGain = sms_magToDB (*pSmsData->pFStocGain);
+        // *pSmsData->pFStocGain = sms_magToDB(*pSmsData->pFStocGain);
 	return(0);
 }
 
