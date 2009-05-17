@@ -149,6 +149,7 @@ void sms_initAnalParams (SMS_AnalParams *pAnalParams)
 int sms_initAnalysis ( SMS_AnalParams *pAnalParams, SMS_SndHeader *pSoundHeader)
 {
 
+	int i;
         SMS_SndBuffer *pSynthBuf = &pAnalParams->synthBuffer;
         SMS_SndBuffer *pSoundBuf = &pAnalParams->soundBuffer;
 
@@ -168,12 +169,14 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams, SMS_SndHeader *pSoundHeader)
 		pAnalParams->fSizeWindow / 2) * 2 + 1; 
 
 	int sizeBuffer = (pAnalParams->iMaxDelayFrames * pAnalParams->sizeHop) + SMS_MAX_WINDOW;
-	int i;
 
+        /* if storing residual phases, restrict number of stochastic coefficients to the size of the spectrum (sizeHop = 1/2 sizeFft)*/
+        if(pAnalParams->iStochasticType == SMS_STOC_IFFT)
+                pAnalParams->nStochasticCoeff = sms_power2(pAnalParams->sizeHop);
         sms_allocFrame (&pAnalParams->prevFrame, pAnalParams->nGuides, 
                            pAnalParams->nStochasticCoeff, 1, pAnalParams->iStochasticType);
   
-	pAnalParams->sizeNextRead = (pAnalParams->iDefaultSizeWindow + 1) * 0.5; // REMOVE THIS from other files first
+	pAnalParams->sizeNextRead = (pAnalParams->iDefaultSizeWindow + 1) * 0.5; /* \todo REMOVE THIS from other files first */
 
 	/* sound buffer */
 	if ((pSoundBuf->pFBuffer = (sfloat *) calloc(sizeBuffer, sizeof(float)))
@@ -314,6 +317,7 @@ int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
         sms_getWindow( sizeFft, pSynthParams->pFDetWindow, SMS_WIN_IFFT );
 
         /* allocate memory for analysis data - size of original hopsize */
+        /* \todo why is stoch coeff + 1? */
 	sms_allocFrame (&pSynthParams->prevFrame, pSmsHeader->nTracks, 
                          1 + pSmsHeader->nStochasticCoeff, 1, pSmsHeader->iStochasticType);
 
