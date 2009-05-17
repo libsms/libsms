@@ -86,7 +86,7 @@ void sms_fillHeader (SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams,
         pSmsHeader->iStochasticType = pAnalParams->iStochasticType;
         pSmsHeader->nTracks = pAnalParams->nTracks;
         pSmsHeader->iSamplingRate = pAnalParams->iSamplingRate;
-	if(pAnalParams->iStochasticType != SMS_STOC_APPROX)
+	if(pAnalParams->iStochasticType == SMS_STOC_NONE)
 		pSmsHeader->nStochasticCoeff = 0;
         else
                 pSmsHeader->nStochasticCoeff = pAnalParams->nStochasticCoeff;
@@ -308,7 +308,8 @@ int sms_frameSizeB (SMS_Header *pSmsHeader)
         }
         else if(pSmsHeader->iStochasticType == SMS_STOC_IFFT)
         {
-                /* sizeFFT*2 */
+                /* sizeFFT*2 + 1 (gain) */
+                iSize += sizeof(sfloat) * (pSmsHeader->nStochasticCoeff * 2 + 1);
         }
 
 	return(iSize);
@@ -469,7 +470,10 @@ int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase,
 	int sizeData = 2 * nTracks * sizeof(sfloat);
         sizeData += 1 * sizeof(sfloat); //adding one for nSamples
 	if (iPhase > 0) sizeData += nTracks * sizeof(sfloat);
-	if (nCoeff > 0) sizeData += (nCoeff + 1) * sizeof(sfloat);
+	if (stochType == SMS_STOC_APPROX)
+                sizeData += (nCoeff + 1) * sizeof(sfloat);
+	else if (stochType == SMS_STOC_IFFT)
+                sizeData += (2*nCoeff + 1) * sizeof(sfloat);
 	/* allocate memory for data */
 	if ((pSmsFrame->pSmsData = (sfloat *) malloc (sizeData)) == NULL)
         {
@@ -496,9 +500,10 @@ int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase,
                 dataPos = (sfloat *) (pSmsFrame->pFSinPha + nTracks);
                 memset(pSmsFrame->pFSinPha, 0, sizeof(sfloat) * nTracks);
         }	
-        else pSmsFrame->pFSinPha = NULL;
-        if (nCoeff > 0)
-        {
+	else 	pSmsFrame->pFSinPha = NULL;
+
+	if (stochType == SMS_STOC_APPROX)
+	{
                 pSmsFrame->pFStocCoeff = dataPos;
                 dataPos = (sfloat *) (pSmsFrame->pFStocCoeff + nCoeff);
                 memset(pSmsFrame->pFStocCoeff, 0, sizeof(sfloat) * nCoeff);
@@ -506,9 +511,19 @@ int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase,
                 pSmsFrame->pFStocGain = dataPos; 
                 dataPos = (sfloat *) (pSmsFrame->pFStocGain + 1);
         }
+	else if (stochType == SMS_STOC_IFFT)
+	{
+                pSmsFrame->pFStocCoeff = dataPos;
+                dataPos = (sfloat *) (pSmsFrame->pFStocCoeff + nCoeff);
+                pSmsFrame->pResPhase = dataPos;
+                dataPos = (sfloat *) (pSmsFrame->pResPhase + nCoeff);
+                pSmsFrame->pFStocGain = dataPos; 
+                dataPos = (sfloat *) (pSmsFrame->pFStocGain + 1);
+	}
         else
 	{
                 pSmsFrame->pFStocCoeff = NULL;
+                pSmsFrame->pResPhase = NULL;
                 pSmsFrame->pFStocGain = NULL;
         }
 	return (0);			
@@ -545,6 +560,7 @@ void sms_freeFrame (SMS_Data *pSmsFrame)
 	pSmsFrame->pFSinFreq = NULL;
 	pSmsFrame->pFSinAmp = NULL;
 	pSmsFrame->pFStocCoeff = NULL;
+	pSmsFrame->pResPhase = NULL;
 	pSmsFrame->pFStocGain = NULL;
 }
 
@@ -573,35 +589,39 @@ void sms_copyFrame (SMS_Data *pCopySmsData, SMS_Data *pOriginalSmsData)
 	          (char *)pOriginalSmsData->pSmsData,
 	          pCopySmsData->sizeData);
 	}
-	/* if frames of different size copy the smallest */
+	/* if frames is different size copy the smallest */
 	else
 	{	
-		int nTraj = MIN (pCopySmsData->nTracks, pOriginalSmsData->nTracks);
+		int nTracks = MIN (pCopySmsData->nTracks, pOriginalSmsData->nTracks);
 		int nCoeff = MIN (pCopySmsData->nCoeff, pOriginalSmsData->nCoeff);
 
-		pCopySmsData->nTracks = nTraj;
+		pCopySmsData->nTracks = nTracks;
 		pCopySmsData->nCoeff = nCoeff;
 		memcpy ((char *)pCopySmsData->pFSinFreq, 
-	          (char *)pOriginalSmsData->pFSinFreq,
-	          sizeof(sfloat) * nTraj);
+                        (char *)pOriginalSmsData->pFSinFreq,
+                        sizeof(sfloat) * nTracks);
 		memcpy ((char *)pCopySmsData->pFSinAmp, 
-	          (char *)pOriginalSmsData->pFSinAmp,
-	          sizeof(sfloat) * nTraj);
+                        (char *)pOriginalSmsData->pFSinAmp,
+                        sizeof(sfloat) * nTracks);
 		if (pOriginalSmsData->pFSinPha != NULL &&
-	      pCopySmsData->pFSinPha != NULL)
+                    pCopySmsData->pFSinPha != NULL)
 			memcpy ((char *)pCopySmsData->pFSinPha, 
-		          (char *)pOriginalSmsData->pFSinPha,
-		          sizeof(sfloat) * nTraj);
+                                (char *)pOriginalSmsData->pFSinPha,
+                                sizeof(sfloat) * nTracks);
 		if (pOriginalSmsData->pFStocCoeff != NULL &&
-	      pCopySmsData->pFStocCoeff != NULL)
-			memcpy ((char *)pCopySmsData->pFStocCoeff, 
-	            (char *)pOriginalSmsData->pFStocCoeff,
-	            sizeof(sfloat) * nCoeff);
+                    pCopySmsData->pFStocCoeff != NULL)
+                {
+                        if (pOriginalSmsData->pResPhase != NULL &&
+                            pCopySmsData->pResPhase != NULL)
+                                memcpy ((char *)pCopySmsData->pResPhase, 
+                                        (char *)pOriginalSmsData->pResPhase,
+                                        sizeof(sfloat) * nCoeff);
+                }
 		if (pOriginalSmsData->pFStocGain != NULL &&
-	      pCopySmsData->pFStocGain != NULL)
+                    pCopySmsData->pFStocGain != NULL)
 			memcpy ((char *)pCopySmsData->pFStocGain, 
-	            (char *)pOriginalSmsData->pFStocGain,
-	            sizeof(sfloat));
+                                (char *)pOriginalSmsData->pFStocGain,
+                                sizeof(sfloat));
 	}
 }
 
@@ -642,6 +662,7 @@ void sms_interpolateFrames (SMS_Data *pSmsFrame1, SMS_Data *pSmsFrame2,
 			*(pSmsFrame1->pFStocGain) + fInterpFactor *
 			(*(pSmsFrame2->pFStocGain) - *(pSmsFrame1->pFStocGain));
         }
+        /*! \todo how to interpolate residual phase spectrum */
         for (i = 0; i < pSmsFrame1->nCoeff; i++)
                 pSmsFrameOut->pFStocCoeff[i] = 
                         pSmsFrame1->pFStocCoeff[i] + fInterpFactor * 
