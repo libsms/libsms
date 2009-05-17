@@ -32,11 +32,11 @@
  * \param pSmsData        pointer to output SMS data
  * \return 0 on success, -1 on error
  */
-
 int sms_stocAnalysis ( int sizeWindow, sfloat *pResidual, sfloat *pWindow, SMS_Data *pSmsData)
 {
         int i;
         sfloat fMag = 0.0;
+        float fStocNorm;
 
         static sfloat *pMagSpectrum;
         static int sizeWindowStatic = 0;
@@ -55,7 +55,7 @@ int sms_stocAnalysis ( int sizeWindow, sfloat *pResidual, sfloat *pWindow, SMS_D
                         return -1;
                 }
         }
-
+        
         sms_spectrumMag (sizeWindow, pResidual, pWindow, sizeMag, pMagSpectrum);
  
         sms_spectralApprox (pMagSpectrum, sizeMag, sizeMag, pSmsData->pFStocCoeff, 
@@ -64,16 +64,13 @@ int sms_stocAnalysis ( int sizeWindow, sfloat *pResidual, sfloat *pWindow, SMS_D
         /* get energy of spectrum  */
         for (i = 0; i < sizeMag; i++)
                 fMag += (pMagSpectrum[i] * pMagSpectrum[i]);
- 
-        //*pSmsData->pFStocGain = MAX (fMag / sizeMag, ENV_THRESHOLD);
         *pSmsData->pFStocGain = fMag / sizeMag;
-
-        /* printf("pFStocGain: %f, fmag: %f, sizeMag: %d, ratio: %f \n", *pSmsData->pFStocGain,  
-                  fMag, sizeMag, fMag/sizeMag); */
+        fStocNorm = 1. / *pSmsData->pFStocGain;
 
         /* normalize envelope */
-        /* for (i = 0; i <  pSmsData->nCoeff; i++)
-                pSmsData->pFStocCoeff[i] /= *pSmsData->pFStocGain; */
+        /* \todo what good is this scaling, it is only being undone in resynthesis */
+/*         for (i = 0; i <  pSmsData->nCoeff; i++) */
+/*                 pSmsData->pFStocCoeff[i] *= fStocNorm; */
     
         // *pSmsData->pFStocGain = sms_magToDB(*pSmsData->pFStocGain);
 	return(0);
