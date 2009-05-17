@@ -212,25 +212,23 @@ static int StocSynthApprox (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
         int sizeSpec1 = pSmsData->nCoeff;
         int sizeSpec2 = pSynthParams->sizeHop;
         int sizeFft = pSynthParams->sizeHop << 1; /* 50% overlap, so sizeFft is 2x sizeHop */
-
+        float fStocGain;
         /* if no gain or no coefficients return  */
         if (*(pSmsData->pFStocGain) <= 0)
                 return 0;
 
         // *(pSmsData->pFStocGain) = sms_dBToMag(*(pSmsData->pFStocGain));
 
-        /* scale the coefficients to normal amplitude */
-        /*! \todo why is it also multiplied by 2? Why aren't the coeffecients just stored with gain already multiplied?*/
-        // for (i = 0; i < sizeSpec1; i++)
-        //         pSmsData->pFStocCoeff[i] *= 2 * *(pSmsData->pFStocGain) ;
-        //printf("| in stoch approx | ");
-
+        /* \todo check why this was here */
+        /* for (i = 0; i < sizeSpec1; i++)
+                 pSmsData->pFStocCoeff[i] *= 2 * *(pSmsData->pFStocGain) ;
+        */
         sizeSpec1Used = sizeSpec1 * pSynthParams->iSamplingRate /
                 pSynthParams->iOriginalSRate;
         /* sizeSpec1Used cannot be more than what is available  \todo check by graph */
         if(sizeSpec1Used  > sizeSpec1) sizeSpec1Used = sizeSpec1;
         //printf("iSamplingRate: %d, iOriginalSRate: %d, sizeSpec1: %d, sizeSpec1Used: %d, sizeSpec2: %d \n",
-//               pSynthParams->iSamplingRate, pSynthParams->iOriginalSRate, sizeSpec1, sizeSpec1Used, sizeSpec2);
+        //         pSynthParams->iSamplingRate, pSynthParams->iOriginalSRate, sizeSpec1, sizeSpec1Used, sizeSpec2);
         sms_spectralApprox (pSmsData->pFStocCoeff, sizeSpec1, sizeSpec1Used,
                         pSynthParams->pMagBuff, sizeSpec2, sizeSpec1Used);
 
@@ -250,7 +248,8 @@ static int StocSynthApprox (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
         return 1;
 }
 
-/*! \brief synthesis of one frame of the stochastic component by apprimating phases
+/*! \brief synthesis of one frame of the residual component, modeled as stochastic,
+ * by approximating phases
  * 
  * computes a linearly interpolated spectral envelope to fit the correct number of output
  * audio samples. Phases are generated randomly.  
@@ -272,14 +271,13 @@ int sms_stochastic (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
         /* if no gain or no coefficients return  */
         if (*(pSmsData->pFStocGain) <= 0)
                 return (0);
-        printf("| in stochastic | ");
 
-        *(pSmsData->pFStocGain) = sms_dBToMag(*(pSmsData->pFStocGain));
+/*         *(pSmsData->pFStocGain) = sms_dBToMag(*(pSmsData->pFStocGain)); */
 
         /* scale the coefficients to normal amplitude */
         /*! \todo why is it also multiplied by 2? Why aren't the coeffecients just stored with gain already multiplied?*/
-        for (i = 0; i < sizeOriginalSpec; i++)
-                pSmsData->pFStocCoeff[i] *= 2 * *(pSmsData->pFStocGain) ;
+/*         for (i = 0; i < sizeOriginalSpec; i++) */
+/*                 pSmsData->pFStocCoeff[i] *= 2 * *(pSmsData->pFStocGain) ; */
 
         sizeOriginalSpecUsed = sizeOriginalSpec * pSynthParams->iSamplingRate / 
                 pSynthParams->iOriginalSRate;
@@ -325,18 +323,19 @@ int sms_synthesize (SMS_Data *pSmsData, sfloat *pFSynthesis,
         {
                 if(pSynthParams->iDetSynthType == SMS_DET_IFFT &&
                    pSynthParams->iStochasticType == SMS_STOC_IFFT)
-//                   pSynthParams->iStochasticType == SMS_STOC_APPROX)
                 {
                         memset (pSynthParams->pSpectra, 0, sizeFft  * sizeof(sfloat));
                         sms_deterministic(pSmsData, pSynthParams);
-                        //sms_stochastic(pSmsData, pSynthParams);
-                        printf("in combo IFFT ");
                         sms_ifft(sizeFft, pSynthParams->pSpectra);
 
                         for(i = 0, k = sizeHop; i < sizeHop; i++, k++)
                                 pSynthParams->pSynthBuff[i] += pSynthParams->pSpectra[k] * pSynthParams->pFDetWindow[i];
                         for(i= sizeHop, k = 0; i < sizeFft; i++, k++)
                                 pSynthParams->pSynthBuff[i] +=  pSynthParams->pSpectra[k] * pSynthParams->pFDetWindow[i];
+
+                        //sms_invSpectrum(sizeFft, pSynthParams->pSynthBuff, 
+
+
                 }
                 else /* can't use combo  IFFT, synthesize seperately and sum */
                 {
