@@ -310,13 +310,30 @@ int sms_analyze (int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_An
                                       pWindow);
 
 
-                        //printf("residual percentage accumulation: %f  \n", pAnalParams->fResidualAccumPerc);
-                        /* filter residual with a high pass filter (it solves some problems) */
-                        sms_filterHighPass (sizeData, pFResidual, pAnalParams->iSamplingRate);
-                         
-                        /* approximate residual */
-			sms_stocAnalysis (sizeData, pFResidual, pWindow, pSmsData);
-                        
+                        if (pAnalParams->iStochasticType == SMS_STOC_APPROX)
+                        {
+                                /* filter residual with a high pass filter (it solves some problems) */
+                                sms_filterHighPass (sizeData, pFResidual, pAnalParams->iSamplingRate);
+                                
+                                /* approximate residual */
+                                sms_stocAnalysis (sizeData, pFResidual, pWindow, pSmsData);
+                        }
+                        else if  (pAnalParams->iStochasticType == SMS_STOC_IFFT)
+                        {
+                                int sizeMag = sms_power2(sizeData >> 1);
+                                /* this spectrum is seg faulting... */
+                                sms_spectrum (sizeData, pFResidual, pWindow, sizeMag, pSmsData->pFStocCoeff, 
+                                        pSmsData->pResPhase);
+
+                                // DEBUGGGGGGG
+/*                                 static int f = 1; */
+/*                                 printf("\n ========= frame: %d ========= \n", f++); */
+/*                                 for(i = 0; i < sizeMag; i++)  */
+/*                                         printf(" %f, ", pSmsData->pResPhase[i]); */
+
+                        }
+
+
 			/* get sharper transitions in deterministic representation */
                         sms_scaleDet (pAnalParams->synthBuffer.pFBuffer, pOriginal,
                                       pAnalParams->ppFrames[0]->deterministic.pFSinAmp,
