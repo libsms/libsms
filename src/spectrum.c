@@ -45,8 +45,8 @@ int sms_spectrum (int sizeWindow, sfloat *pWaveform, sfloat *pWindow, int sizeMa
   
         static sfloat *pFftBuffer;
         static int sizeFftArray = 0;
-
-        if(sizeFftArray != sizeFft)
+        /* if new size fft is larger than old, allocate more memory */
+        if(sizeFftArray < sizeFft)
         {
                 if(sizeFftArray != 0) free(pFftBuffer);
                 sizeFftArray = sms_power2(sizeFft);
@@ -73,17 +73,12 @@ int sms_spectrum (int sizeWindow, sfloat *pWaveform, sfloat *pWindow, int sizeMa
 	{ 
 		it2 = i << 1; //even numbers 0-N
 		fReal = pFftBuffer[it2]; /*odd numbers 1->N+1 */
-		fImag = pFftBuffer[it2+1]; /*even numbers 2->N+2 */
-      
-		if (fReal != 0 || fImag != 0) /*!< \todo is this necessary / helping? */
-		{
-			pMag[i] = sqrt (fReal * fReal + fImag * fImag);
-			pPhase[i] = atan2 (-fImag, fReal);
-		}
+		fImag = pFftBuffer[it2 + 1]; /*even numbers 2->N+2 */
+                pMag[i] = sqrt (fReal * fReal + fImag * fImag);
+                pPhase[i] = atan2 (-fImag, fReal); /* \todo why is fImag negated? */
 	}
         
 	return (sizeFft);
-//	return (err);
 }
 
 /*! \brief compute the spectrum Magnitude of a waveform
@@ -102,10 +97,10 @@ int sms_spectrum (int sizeWindow, sfloat *pWaveform, sfloat *pWindow, int sizeMa
 int sms_spectrumMag (int sizeWindow, sfloat *pWaveform, sfloat *pWindow,  
                      int sizeMag, sfloat *pMag)
 {
-	int i,it2;
+        int i,it2;
         int sizeFft = sizeMag << 1;
         int err = 0;
-	sfloat fReal, fImag;
+        sfloat fReal, fImag;
 
         static sfloat *pFftBuffer;
         static int sizeFftArray = 0;
