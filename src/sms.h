@@ -120,6 +120,7 @@ typedef struct
 	int nTracks;                     /*!< number of sinusoidal tracks in frame */
 	sfloat *pFStocGain;     /*!< gain of stochastic component */
 	sfloat *pFStocCoeff;    /*!< filter coefficients for stochastic component */
+	sfloat *pResPhase;    /*!< residual phase spectrum */
 	int nCoeff;                  /*!< number of filter coefficients */
 } SMS_Data;
 
