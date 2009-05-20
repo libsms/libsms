@@ -73,17 +73,13 @@ typedef struct
 	int iFrameRate;        /*!< rate in Hz of data frames */
 	int iStochasticType;   /*!< type stochastic representation */
 	int nStochasticCoeff;  /*!< number of stochastic coefficients per frame  */
+        int nEnvCoeff;                /*!< number of spectral envelope bins */
 	sfloat fAmplitude;      /*!< average amplitude of represented sound.  */
 	sfloat fFrequency;      /*!< average fundamental frequency */
 	int iBegSteadyState;   /*!< record number of begining of steady state. */
 	int iEndSteadyState;   /*!< record number of end of steady state. */
 	sfloat fResidualPerc;   /*!< percentage of the residual to original */
-	int nLoopRecords;      /*!< number of loop records specified. */
-	int nSpecEnvelopePoints; /*!< number of breakpoints in spectral envelope */
 	int nTextCharacters;   /*!< number of text characters */
-	/* variable part */
-	int *pILoopRecords;    /*!< array of record numbers of loop points */
-	sfloat *pFSpectralEnvelope; /*!< spectral envelope of partials */
 	char *pChTextCharacters; /*!< Text string relating to the sound */
 } SMS_Header;
 
@@ -192,6 +188,20 @@ typedef struct
 	int iSoundType;            /*!< type of sound to be analyzed \see SMS_SOUND_TYPE */	
 } SMS_PeakParams;
 
+/*! \struct SMS_SpecEnv
+ * \brief structure information and data for spectral enveloping
+ *
+ */
+typedef struct 
+{
+        int iOrder; /*!< ceptrum order */
+        int iMaxFreq; /*!< maximum frequency to envelope */
+        sfloat fLambda; /*!< regularization factor */
+
+} SMS_SpecEnv;
+
+
+
 /*! \struct SMS_AnalParams
  * \brief structure with useful information for analysis functions
  *
@@ -227,6 +237,7 @@ typedef struct
 	int nTracks;                     /*!< number of sinusoidal tracks in frame */
 	int nGuides;              /*!< number of guides used for peak detection and continuation \see SMS_Guide */
 	int iCleanTracks;           /*!< whether or not to clean sinusoidal tracks */
+	int iEnvelope;           /*!< whether or not to compute spectral envelope */
 	sfloat fMinRefHarmMag;     /*!< minimum magnitude in dB for reference peak */
 	sfloat fRefHarmMagDiffFromMax; /*!< maximum magnitude difference from reference peak to highest peak */
 	int iRefHarmonic;	       /*!< reference harmonic to use in the fundamental detection */
@@ -243,6 +254,7 @@ typedef struct
         int sizeNextRead;     /*!< size of samples to read from sound file next analysis */
         SMS_PeakParams peakParams; /*!< structure with parameters for spectral peaks */
         SMS_Data prevFrame;   /*!< the previous analysis frame  */
+        SMS_SpecEnv specEnvParams; /*!< all data for spectral enveloping */
         SMS_SndBuffer soundBuffer;    /*!< signal to be analyzed */
         SMS_SndBuffer synthBuffer; /*!< resynthesized signal used to create the residual */
         SMS_AnalFrame *pFrames;  /*!< an array of frames that have already been analyzed */

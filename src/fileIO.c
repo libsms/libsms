@@ -48,16 +48,13 @@ void sms_initHeader (SMS_Header *pSmsHeader)
 	pSmsHeader->iStochasticType = SMS_STOC_APPROX;
 	pSmsHeader->nTracks = 0;
 	pSmsHeader->nStochasticCoeff = 0;
+	pSmsHeader->nEnvCoeff = 0;
 	pSmsHeader->fAmplitude = 0;
 	pSmsHeader->fFrequency = 0;
 	pSmsHeader->iBegSteadyState = 0;
 	pSmsHeader->iEndSteadyState = 0;
 	pSmsHeader->fResidualPerc = 0;
-	pSmsHeader->nLoopRecords = 0;
-	pSmsHeader->nSpecEnvelopePoints = 0;
 	pSmsHeader->nTextCharacters = 0;
-	pSmsHeader->pILoopRecords = NULL;
-	pSmsHeader->pFSpectralEnvelope = NULL;
 	pSmsHeader->pChTextCharacters = NULL;    
 }
 
@@ -91,7 +88,7 @@ void sms_fillHeader (SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams,
         else
                 pSmsHeader->nStochasticCoeff = pAnalParams->nStochasticCoeff;
         pSmsHeader->iFrameBSize = sms_frameSizeB(pSmsHeader);
-
+        
         sprintf (pChTextString, 
                  "created by %s with parameters: format %d, soundType %d, "
                  "analysisDirection %d, windowSize %.2f,"
@@ -115,7 +112,7 @@ void sms_fillHeader (SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams,
                  pAnalParams->iCleanTracks, pAnalParams->iMinTrackLength,
                  pAnalParams->iMaxSleepingTime,  pAnalParams->iStochasticType,
                  pAnalParams->nStochasticCoeff);
-       
+        
         pSmsHeader->nTextCharacters = strlen (pChTextString) + 1;
         pSmsHeader->pChTextCharacters = (char *) pChTextString;
 }
@@ -128,10 +125,10 @@ void sms_fillHeader (SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams,
  * \return error code \see SMS_WRERR in SMS_ERRORS 
  */
 int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader, 
-                    FILE **ppSmsFile)
+                     FILE **ppSmsFile)
 {
 	int iVariableSize = 0;
-
+        
 	if (pSmsHeader->iSmsMagic != SMS_MAGIC)
 	{
                 sms_error("not an SMS file");
@@ -143,50 +140,26 @@ int sms_writeHeader (char *pChFileName, SMS_Header *pSmsHeader,
 		return(-1);
         }	
 	/* check variable size of header */
-	iVariableSize = sizeof (int) * pSmsHeader->nLoopRecords +
-		sizeof (sfloat) * pSmsHeader->nSpecEnvelopePoints +
-		sizeof(char) * pSmsHeader->nTextCharacters;
+/* 	iVariableSize = sizeof (int) * pSmsHeader->nLoopRecords + */
+/* 		sizeof (sfloat) * pSmsHeader->nSpecEnvelopePoints + */
+/* 		sizeof(char) * pSmsHeader->nTextCharacters; */
+	iVariableSize = sizeof(char) * pSmsHeader->nTextCharacters;
 
 	pSmsHeader->iHeadBSize = sizeof(SMS_Header) + iVariableSize;
-
+        
 	/* write header */
 	if (fwrite((void *)pSmsHeader, (size_t)1, (size_t)sizeof(SMS_Header),
-	    *ppSmsFile) < (size_t)sizeof(SMS_Header))
+                   *ppSmsFile) < (size_t)sizeof(SMS_Header))
         {
                 sms_error("cannot write output file");
                 return(-1);
         }	
 	/* write variable part of header */
-	if (pSmsHeader->nLoopRecords > 0)
-	{
-		char *pChStart = (char *) pSmsHeader->pILoopRecords;
-		int iSize = sizeof (int) * pSmsHeader->nLoopRecords;
-    
-		if (fwrite ((void *)pChStart, (size_t)1, (size_t)iSize, *ppSmsFile) < 
-		    (size_t)iSize)
-                {
-                        sms_error("cannot write output file (nLoopRecords)");
-                        return(-1);
-                }	
-
-	}
-	if (pSmsHeader->nSpecEnvelopePoints > 0)
-	{
-		char *pChStart = (char *) pSmsHeader->pFSpectralEnvelope;
-		int iSize = sizeof (sfloat) * pSmsHeader->nSpecEnvelopePoints;
-    
-		if (fwrite ((void *)pChStart, (size_t)1, (size_t)iSize, *ppSmsFile) < 
-		    (size_t)iSize)
-                {
-                        sms_error("cannot write output file (nSpecEnvelopePoints)");
-                        return(-1);
-                }	
-	}
 	if (pSmsHeader->nTextCharacters > 0)
 	{
 		char *pChStart = (char *) pSmsHeader->pChTextCharacters;
 		int iSize = sizeof(char) * pSmsHeader->nTextCharacters;
-    
+                
 		if (fwrite ((void *)pChStart, (size_t)1, (size_t)iSize, *ppSmsFile) < 
 		    (size_t)iSize)
                 {
@@ -210,45 +183,21 @@ int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader)
 	rewind(pSmsFile);
 
 	/* check variable size of header */
-	iVariableSize = sizeof (int) * pSmsHeader->nLoopRecords +
-		sizeof (sfloat) * pSmsHeader->nSpecEnvelopePoints +
-		sizeof(char) * pSmsHeader->nTextCharacters;
+/* 	iVariableSize = sizeof (int) * pSmsHeader->nLoopRecords + */
+/* 		sizeof (sfloat) * pSmsHeader->nSpecEnvelopePoints + */
+/* 		sizeof(char) * pSmsHeader->nTextCharacters; */
+	iVariableSize = sizeof(char) * pSmsHeader->nTextCharacters;
 
 	pSmsHeader->iHeadBSize = sizeof(SMS_Header) + iVariableSize;
 
 	/* write header */
 	if (fwrite((void *)pSmsHeader, (size_t)1, (size_t)sizeof(SMS_Header),
 	    pSmsFile) < (size_t)sizeof(SMS_Header))
-                {
-                        sms_error("cannot write output file (header)");
-                        return(-1);
-                }	
-	
-	/* write variable part of header */
-	if (pSmsHeader->nLoopRecords > 0)
-	{
-		char *pChStart = (char *) pSmsHeader->pILoopRecords;
-		int iSize = sizeof (int) * pSmsHeader->nLoopRecords;
-    
-		if (fwrite ((void *)pChStart, (size_t)1, (size_t)iSize, pSmsFile) < 
-		    (size_t)iSize)
-                {
-                        sms_error("cannot write output file (nLoopRecords)");
-                        return(-1);
-                }	
-	}
-	if (pSmsHeader->nSpecEnvelopePoints > 0)
-	{
-		char *pChStart = (char *) pSmsHeader->pFSpectralEnvelope;
-		int iSize = sizeof (sfloat) * pSmsHeader->nSpecEnvelopePoints;
-    
-		if (fwrite ((void *)pChStart, (size_t)1, (size_t)iSize, pSmsFile) < 
-		    (size_t)iSize)
-                {
-                        sms_error("cannot write output file (nSpecEnvelopePoints)");
-                        return(-1);
-                }	
-	}
+        {
+                sms_error("cannot write output file (header)");
+                return(-1);
+        }	
+
 	if (pSmsHeader->nTextCharacters > 0)
 	{
 		char *pChStart = (char *) pSmsHeader->pChTextCharacters;
@@ -273,16 +222,16 @@ int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader)
  * \param pSmsFrame   pointer to SMS data frame
  * \return 0 on success, -1 on failure
  */
-int sms_writeFrame (FILE *pSmsFile, SMS_Header *pSmsHeader, 
+int sms_writeFrame (FILE *pSmsFile, SMS_Header *pSmsHeader,
                     SMS_Data *pSmsFrame)
-{  
-	if (fwrite ((void *)pSmsFrame->pSmsData, 1, pSmsHeader->iFrameBSize, 
+{
+	if (fwrite ((void *)pSmsFrame->pSmsData, 1, pSmsHeader->iFrameBSize,
 	            pSmsFile) < (unsigned int) pSmsHeader->iFrameBSize)
                 {
                         sms_error("cannot write frame to output file");
                         return(-1);
-                }	
-	else return (0);			
+                }
+	else return (0);
 }
 
 
@@ -407,20 +356,22 @@ int sms_getHeader (char *pChFileName, SMS_Header **ppSmsHeader,
         }
 
 	/* set pointers to variable part of header */
-	if ((*ppSmsHeader)->nLoopRecords > 0)
-		(*ppSmsHeader)->pILoopRecords = (int *) ((char *)(*ppSmsHeader) + 
-			sizeof(SMS_Header));
+/* 	if ((*ppSmsHeader)->nLoopRecords > 0) */
+/* 		(*ppSmsHeader)->pILoopRecords = (int *) ((char *)(*ppSmsHeader) +  */
+/* 			sizeof(SMS_Header)); */
 						
-	if ((*ppSmsHeader)->nSpecEnvelopePoints > 0)
-		(*ppSmsHeader)->pFSpectralEnvelope = 
-			(sfloat *) ((char *)(*ppSmsHeader) + sizeof(SMS_Header) + 
-			           sizeof(int) * (*ppSmsHeader)->nLoopRecords);
+/* 	if ((*ppSmsHeader)->nSpecEnvelopePoints > 0) */
+/* 		(*ppSmsHeader)->pFSpectralEnvelope =  */
+/* 			(sfloat *) ((char *)(*ppSmsHeader) + sizeof(SMS_Header) +  */
+/* 			           sizeof(int) * (*ppSmsHeader)->nLoopRecords); */
 			
+/* 	if ((*ppSmsHeader)->nTextCharacters > 0) */
+/* 		(*ppSmsHeader)->pChTextCharacters =  */
+/* 			(char *) ((char *)(*ppSmsHeader) + sizeof(SMS_Header) +  */
+/* 			sizeof(int) * (*ppSmsHeader)->nLoopRecords + */
+/* 			sizeof(sfloat) * (*ppSmsHeader)->nSpecEnvelopePoints); */
 	if ((*ppSmsHeader)->nTextCharacters > 0)
-		(*ppSmsHeader)->pChTextCharacters = 
-			(char *) ((char *)(*ppSmsHeader) + sizeof(SMS_Header) + 
-			sizeof(int) * (*ppSmsHeader)->nLoopRecords +
-			sizeof(sfloat) * (*ppSmsHeader)->nSpecEnvelopePoints);
+		(*ppSmsHeader)->pChTextCharacters = (char *)(*ppSmsHeader) + sizeof(SMS_Header);
 
 	return (0);			
 }
