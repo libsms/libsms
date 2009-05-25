@@ -403,6 +403,59 @@ int pysms_synthesize(SMS_Data *pSmsData, int sizeHop, float *pSynthesis, SMS_Syn
         }
 }
 
+%extend SMS_Data 
+{
+        void getSinAmp(int sizeArray, float *pArray)
+        {
+                if(sizeArray < $self->nTracks)
+                {
+                        sms_error("numpy array not big enough");
+                        return;
+                }
+                int i;
+                for (i = 0; i < $self->nTracks; i++)
+                        pArray[i] = $self->pFSinAmp[i];
+        }
+        void getSinFreq(int sizeArray, float *pArray)
+        {
+                if(sizeArray < $self->nTracks)
+                {
+                        sms_error("numpy array not big enough");
+                        return;
+                }
+                int i;
+                for (i = 0; i < $self->nTracks; i++)
+                        pArray[i] = $self->pFSinFreq[i];
+        }
+        void setSinAmp(int sizeArray, float *pArray)
+        {
+                if(sizeArray < $self->nTracks)
+                {
+                        sms_error("numpy array not big enough");
+                        return;
+                }
+                int i;
+                for (i = 0; i < $self->nTracks; i++)
+                        $self->pFSinAmp[i] = pArray[i];
+                                
+        }
+        void setSinFreq(int sizeArray, float *pArray)
+        {
+                if(sizeArray < $self->nTracks)
+                {
+                        sms_error("numpy array not big enough");
+                        return;
+                }
+                int i;
+                for (i = 0; i < $self->nTracks; i++)
+                        $self->pFSinFreq[i] = pArray[i];
+        }
+        void setSinPha(int sizeArray, float *pArray)
+        {
+                
+        }
+}
+
 %pythoncode %{
 
 from numpy import array as np_array
