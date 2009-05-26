@@ -73,11 +73,13 @@ typedef struct
 	int iFrameRate;        /*!< rate in Hz of data frames */
 	int iStochasticType;   /*!< type stochastic representation */
 	int nStochasticCoeff;  /*!< number of stochastic coefficients per frame  */
-        int nEnvCoeff;                /*!< number of spectral envelope bins */
-	sfloat fAmplitude;      /*!< average amplitude of represented sound.  */
-	sfloat fFrequency;      /*!< average fundamental frequency */
-	int iBegSteadyState;   /*!< record number of begining of steady state. */
-	int iEndSteadyState;   /*!< record number of end of steady state. */
+        int iEnvType;            /*!< type of envelope representation */
+        int nEnvCoeff;                /*!< number of cepstral coefficents per frame */
+        int iMaxFreq;                  /*!< maximum frequency of peaks (also corresponds to the last bin of the specEnv */
+/* 	sfloat fAmplitude;      /\*!< average amplitude of represented sound.  *\/ */
+/* 	sfloat fFrequency;      /\*!< average fundamental frequency *\/ */
+/* 	int iBegSteadyState;   /\*!< record number of begining of steady state. *\/ */
+/* 	int iEndSteadyState;   /\*!< record number of end of steady state. *\/ */
 	sfloat fResidualPerc;   /*!< percentage of the residual to original */
 	int nTextCharacters;   /*!< number of text characters */
 	char *pChTextCharacters; /*!< Text string relating to the sound */
@@ -115,9 +117,11 @@ typedef struct
 	sfloat *pFSinPha;        /*!< phase of sinusoids */
 	int nTracks;                     /*!< number of sinusoidal tracks in frame */
 	sfloat *pFStocGain;     /*!< gain of stochastic component */
+	int nCoeff;                  /*!< number of filter coefficients */
 	sfloat *pFStocCoeff;    /*!< filter coefficients for stochastic component */
 	sfloat *pResPhase;    /*!< residual phase spectrum */
-	int nCoeff;                  /*!< number of filter coefficients */
+        int nEnvCoeff;             /*!< number of spectral envelope coefficients */
+        sfloat *pSpecEnv;
 } SMS_Data;
 
 
@@ -157,8 +161,7 @@ typedef struct
  */
 typedef struct 
 {
-	int iFrameSample;         /*!< sample number of the sound file that 
-                               corresponds to the middle of the frame */
+	int iFrameSample;         /*!< sample number of the middle of the frame */
 	int iFrameSize;           /*!< number of samples used in the frame */
 	int iFrameNum;            /*!< frame number */
 	SMS_Peak *pSpectralPeaks;  /*!< spectral peaks found in frame */
@@ -194,11 +197,13 @@ typedef struct
  */
 typedef struct 
 {
+        int iType; /*!< envelope type \see SMS_SpecEnvType */
         int iOrder; /*!< ceptrum order */
-        int iMaxFreq; /*!< maximum frequency to envelope */
+        int iMaxFreq; /*!< maximum frequency covered by the envelope */
         sfloat fLambda; /*!< regularization factor */
-
-} SMS_SpecEnv;
+        int nCoeff;    /*!< number of coefficients (bins) in the envelope */
+        int iAnchor; /*!< whether to make anchor points at DC / Nyquist or not */
+} SMS_SEnvParams;
 
 
 
@@ -237,7 +242,7 @@ typedef struct
 	int nTracks;                     /*!< number of sinusoidal tracks in frame */
 	int nGuides;              /*!< number of guides used for peak detection and continuation \see SMS_Guide */
 	int iCleanTracks;           /*!< whether or not to clean sinusoidal tracks */
-	int iEnvelope;           /*!< whether or not to compute spectral envelope */
+	//int iEnvelope;           /*!< whether or not to compute spectral envelope */
 	sfloat fMinRefHarmMag;     /*!< minimum magnitude in dB for reference peak */
 	sfloat fRefHarmMagDiffFromMax; /*!< maximum magnitude difference from reference peak to highest peak */
 	int iRefHarmonic;	       /*!< reference harmonic to use in the fundamental detection */
@@ -254,7 +259,7 @@ typedef struct
         int sizeNextRead;     /*!< size of samples to read from sound file next analysis */
         SMS_PeakParams peakParams; /*!< structure with parameters for spectral peaks */
         SMS_Data prevFrame;   /*!< the previous analysis frame  */
-        SMS_SpecEnv specEnvParams; /*!< all data for spectral enveloping */
+        SMS_SEnvParams specEnvParams; /*!< all data for spectral enveloping */
         SMS_SndBuffer soundBuffer;    /*!< signal to be analyzed */
         SMS_SndBuffer synthBuffer; /*!< resynthesized signal used to create the residual */
         SMS_AnalFrame *pFrames;  /*!< an array of frames that have already been analyzed */
@@ -412,8 +417,25 @@ enum SMS_StocSynthType
         SMS_STOC_IFFT               /*!< 2, inverse FFT, interpolated spectrum (not used) */
 };
 
+/*! \brief synthesis method for deterministic component
+ * 
+ * There are two options for deterministic synthesis available to the 
+ * SMS synthesizer.  The Inverse Fast Fourier Transform method
+ * (IFFT) is more effecient for models with lots of partial tracks, but can
+ * possibly smear transients.  The Sinusoidal Table Lookup (SIN) can
+ * theoritically support faster moving tracks at a higher fidelity, but
+ * can consume lots of cpu at varying rates.  
+ */
+enum SMS_SpecEnvType
+{
+        SMS_ENV_NONE,       /*!< none */
+        SMS_ENV_CEP,          /*!< cepstral coefficients */
+        SMS_ENV_FBINS       /*!< frequency bins */
+};
+
 
 /*! \brief Error codes returned by SMS file functions */
+/* \todo remove me */
 enum SMS_ERRORS
 {
         SMS_OK,              /*!< 0, no error*/
@@ -608,7 +630,9 @@ int sms_spectrumMag (int sizeWindow, sfloat *pWaveform, float *pWindow,
 void sms_dCepstrum( int sizeCepstrum, sfloat *pCepstrum, int sizeFreq, float *pFreq, float *pMag, 
                     sfloat fLambda, int iSamplingRate);
 
-void sms_dCepstrumEnvelope(int sizeCepstrum, sfloat *pCepstrum, int sizeEnv, float *pEnv);
+void sms_dCepstrumEnvelope (int sizeCepstrum, sfloat *pCepstrum, int sizeEnv, float *pEnv);
+
+void sms_spectralEnvelope ( SMS_Data *pSmsData, SMS_SEnvParams *pSpecEnvParams);
 
 int sms_sizeNextWindow (int iCurrentFrame, SMS_AnalParams *pAnalParams);
 
@@ -663,7 +687,7 @@ int sms_initFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams,
                       int sizeWindow);
 		     
 int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, 
-                       int iPhase, int stochType);
+                    int iPhase, int stochType, int nEnvCoeff);
 
 int sms_allocFrameH (SMS_Header *pSmsHeader, SMS_Data *pSmsFrame);
 
@@ -681,8 +705,6 @@ void sms_copyFrame (SMS_Data *pCopySmsFrame, SMS_Data *pOriginalSmsFrame);
 
 int sms_frameSizeB (SMS_Header *pSmsHeader);
 
-/* int sms_residual (sfloat *pSynthesis, float *pOriginal,   */
-/*                  sfloat *pResidual, int sizeWindow, SMS_AnalParams *pAnalParams); */
 int sms_residual ( int sizeWindow, sfloat *pSynthesis, float *pOriginal, float *pResidual, float *pWindow);
 
 void sms_filterHighPass ( int sizeResidual, sfloat *pResidual, int iSamplingRate);
