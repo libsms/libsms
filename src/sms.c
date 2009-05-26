@@ -105,7 +105,7 @@ void sms_initAnalParams (SMS_AnalParams *pAnalParams)
 	pAnalParams->iSoundType = SMS_SOUND_TYPE_MELODY;
         pAnalParams->iStochasticType =SMS_STOC_APPROX;
 	pAnalParams->iFrameRate = 300;
-	pAnalParams->nStochasticCoeff = 64;
+	pAnalParams->nStochasticCoeff = 128;
 	pAnalParams->fLowestFundamental = 50;
 	pAnalParams->fHighestFundamental = 1000;
 	pAnalParams->fDefaultFundamental = 100;
@@ -134,7 +134,13 @@ void sms_initAnalParams (SMS_AnalParams *pAnalParams)
 		MAX(pAnalParams->iMinTrackLength, pAnalParams->iMaxSleepingTime) + 2 +
 			SMS_DELAY_FRAMES;
 	pAnalParams->fResidualAccumPerc = 0.;
-
+        /* spectral envelope params */
+        pAnalParams->specEnvParams.iType = SMS_ENV_NONE; /* turn off enveloping */
+        pAnalParams->specEnvParams.iOrder = 25; /* ... but set default params anyway */
+        pAnalParams->specEnvParams.fLambda = 0.00001;
+        pAnalParams->specEnvParams.iMaxFreq = pAnalParams->fHighestFreq;
+        pAnalParams->specEnvParams.nCoeff = 0;
+        pAnalParams->specEnvParams.iAnchor = 0; /* not yet implemented */
 }
 
 /*! \brief initialize analysis data structure's arrays
@@ -173,8 +179,16 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams, SMS_SndHeader *pSoundHeader)
         /* if storing residual phases, restrict number of stochastic coefficients to the size of the spectrum (sizeHop = 1/2 sizeFft)*/
         if(pAnalParams->iStochasticType == SMS_STOC_IFFT)
                 pAnalParams->nStochasticCoeff = sms_power2(pAnalParams->sizeHop);
+        /* do the same if spectral envelope is to be stored in frequency bins */
+        if(pAnalParams->specEnvParams.iType == SMS_ENV_FBINS)
+                pAnalParams->specEnvParams.nCoeff = sms_power2(pAnalParams->sizeHop);
+        else if(pAnalParams->specEnvParams.iType == SMS_ENV_CEP)
+                pAnalParams->specEnvParams.nCoeff = pAnalParams->specEnvParams.iOrder+1; 
+
+        /*\todo this probably doesn't need env coefficients - they aren't getting used */
         sms_allocFrame (&pAnalParams->prevFrame, pAnalParams->nGuides, 
-                           pAnalParams->nStochasticCoeff, 1, pAnalParams->iStochasticType);
+                        pAnalParams->nStochasticCoeff, 1, pAnalParams->iStochasticType, 0);
+//                        pAnalParams->specEnvParams.nCoeff);
   
 	pAnalParams->sizeNextRead = (pAnalParams->iDefaultSizeWindow + 1) * 0.5; /* \todo REMOVE THIS from other files first */
 
@@ -317,9 +331,11 @@ int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
         sms_getWindow( sizeFft, pSynthParams->pFDetWindow, SMS_WIN_IFFT );
 
         /* allocate memory for analysis data - size of original hopsize */
+        /* previous frame to interpolate from */
         /* \todo why is stoch coeff + 1? */
 	sms_allocFrame (&pSynthParams->prevFrame, pSmsHeader->nTracks, 
-                         1 + pSmsHeader->nStochasticCoeff, 1, pSmsHeader->iStochasticType);
+                        1 + pSmsHeader->nStochasticCoeff, 1, pSmsHeader->iStochasticType,
+                pSmsHeader->nEnvCoeff);
 
         pSynthParams->pSynthBuff = (sfloat *) calloc(sizeFft, sizeof(float));
         pSynthParams->pMagBuff = (sfloat *) calloc(sizeHop, sizeof(float));

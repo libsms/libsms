@@ -49,10 +49,11 @@ void sms_initHeader (SMS_Header *pSmsHeader)
 	pSmsHeader->nTracks = 0;
 	pSmsHeader->nStochasticCoeff = 0;
 	pSmsHeader->nEnvCoeff = 0;
-	pSmsHeader->fAmplitude = 0;
-	pSmsHeader->fFrequency = 0;
-	pSmsHeader->iBegSteadyState = 0;
-	pSmsHeader->iEndSteadyState = 0;
+        pSmsHeader->iMaxFreq = 0;
+/* 	pSmsHeader->fAmplitude = 0; */
+/* 	pSmsHeader->fFrequency = 0; */
+/* 	pSmsHeader->iBegSteadyState = 0; */
+/* 	pSmsHeader->iEndSteadyState = 0; */
 	pSmsHeader->fResidualPerc = 0;
 	pSmsHeader->nTextCharacters = 0;
 	pSmsHeader->pChTextCharacters = NULL;    
@@ -87,8 +88,9 @@ void sms_fillHeader (SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams,
 		pSmsHeader->nStochasticCoeff = 0;
         else
                 pSmsHeader->nStochasticCoeff = pAnalParams->nStochasticCoeff;
+        pSmsHeader->iEnvType = pAnalParams->specEnvParams.iType;
+        pSmsHeader->nEnvCoeff = pAnalParams->specEnvParams.nCoeff;
         pSmsHeader->iFrameBSize = sms_frameSizeB(pSmsHeader);
-        
         sprintf (pChTextString, 
                  "created by %s with parameters: format %d, soundType %d, "
                  "analysisDirection %d, windowSize %.2f,"
@@ -97,7 +99,8 @@ void sms_fillHeader (SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams,
                  " defaultFund %.2f, lowestFund %.2f, highestFund %.2f, nGuides %d,"
                  " nTracks %d, freqDeviation %.2f, peakContToGuide %.2f,"
                  " fundContToGuide %.2f, cleanTracks %d, iMinTrackLength %d,"
-                 "iMaxSleepingTime %d, stochasticType %d, nStocCoeff %d\n", 	
+                 "iMaxSleepingTime %d, stochasticType %d, nStocCoeff %d\n"
+                 "iEnvType: %d, nEnvCoeff: %d", 	
                  pProgramString,
                  pAnalParams->iFormat, pAnalParams->iSoundType,
                  pAnalParams->iAnalysisDirection, pAnalParams->fSizeWindow, 
@@ -111,7 +114,7 @@ void sms_fillHeader (SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams,
                  pAnalParams->fPeakContToGuide, pAnalParams->fFundContToGuide,
                  pAnalParams->iCleanTracks, pAnalParams->iMinTrackLength,
                  pAnalParams->iMaxSleepingTime,  pAnalParams->iStochasticType,
-                 pAnalParams->nStochasticCoeff);
+                 pAnalParams->nStochasticCoeff, pSmsHeader->iEnvType, pSmsHeader->nEnvCoeff);
         
         pSmsHeader->nTextCharacters = strlen (pChTextString) + 1;
         pSmsHeader->pChTextCharacters = (char *) pChTextString;
@@ -183,9 +186,6 @@ int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader)
 	rewind(pSmsFile);
 
 	/* check variable size of header */
-/* 	iVariableSize = sizeof (int) * pSmsHeader->nLoopRecords + */
-/* 		sizeof (sfloat) * pSmsHeader->nSpecEnvelopePoints + */
-/* 		sizeof(char) * pSmsHeader->nTextCharacters; */
 	iVariableSize = sizeof(char) * pSmsHeader->nTextCharacters;
 
 	pSmsHeader->iHeadBSize = sizeof(SMS_Header) + iVariableSize;
@@ -225,12 +225,13 @@ int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader)
 int sms_writeFrame (FILE *pSmsFile, SMS_Header *pSmsHeader,
                     SMS_Data *pSmsFrame)
 {
-	if (fwrite ((void *)pSmsFrame->pSmsData, 1, pSmsHeader->iFrameBSize,
+        int i;
+        if (fwrite ((void *)pSmsFrame->pSmsData, 1, pSmsHeader->iFrameBSize,
 	            pSmsFile) < (unsigned int) pSmsHeader->iFrameBSize)
-                {
-                        sms_error("cannot write frame to output file");
-                        return(-1);
-                }
+        {
+                sms_error("cannot write frame to output file");
+                return(-1);
+        }
 	else return (0);
 }
 
@@ -260,7 +261,7 @@ int sms_frameSizeB (SMS_Header *pSmsHeader)
                 /* sizeFFT*2 + 1 (gain) */
                 iSize += sizeof(sfloat) * (pSmsHeader->nStochasticCoeff * 2 + 1);
         }
-
+        iSize += sizeof(sfloat) * pSmsHeader->nEnvCoeff;
 	return(iSize);
 }	     
    
@@ -408,13 +409,14 @@ int sms_getFrame (FILE *pSmsFile, SMS_Header *pSmsHeader, int iFrame,
  *
  * \param pSmsFrame	     pointer to a frame of SMS data
  * \param nTracks		      number of sinusoidal tracks in frame
- * \param nCoeff		      number of stochastic coefficients in frame
+ * \param nStochCoeff		      number of stochastic coefficients in frame
  * \param iPhase		      whether phase information is in the frame
  * \param stochType           stochastic resynthesis type
+ * \param nStochCoeff		      number of envelope coefficients in frame
  * \return  0 on success, -1 on error
  */
-int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase,
-                                       int stochType)
+int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nStochCoeff, int iPhase,
+                    int stochType, int nEnvCoeff)
 {
         sfloat *dataPos;  /* a marker to locate specific data witin smsData */
 	/* calculate size of frame */
@@ -422,9 +424,10 @@ int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase,
         sizeData += 1 * sizeof(sfloat); //adding one for nSamples
 	if (iPhase > 0) sizeData += nTracks * sizeof(sfloat);
 	if (stochType == SMS_STOC_APPROX)
-                sizeData += (nCoeff + 1) * sizeof(sfloat);
+                sizeData += (nStochCoeff + 1) * sizeof(sfloat);
 	else if (stochType == SMS_STOC_IFFT)
-                sizeData += (2*nCoeff + 1) * sizeof(sfloat);
+                sizeData += (2*nStochCoeff + 1) * sizeof(sfloat);
+        sizeData += nEnvCoeff * sizeof(sfloat); /* add in number of envelope coefficients (cep or fbins) if any */
 	/* allocate memory for data */
 	if ((pSmsFrame->pSmsData = (sfloat *) malloc (sizeData)) == NULL)
         {
@@ -433,9 +436,11 @@ int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase,
         }
 
 	/* set the variables in the structure */
-	pSmsFrame->nTracks = nTracks;
-	pSmsFrame->nCoeff = nCoeff;
+        /* \todo why not set these in init functions, then allocate with them?? */
 	pSmsFrame->sizeData = sizeData; 
+	pSmsFrame->nTracks = nTracks;
+	pSmsFrame->nCoeff = nStochCoeff;
+	pSmsFrame->nEnvCoeff = nEnvCoeff; 
         /* set pointers to data types within smsData array */
         pSmsFrame->pFSinFreq = pSmsFrame->pSmsData;  
         dataPos =  (sfloat *)(pSmsFrame->pFSinFreq + nTracks);
@@ -456,8 +461,8 @@ int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase,
 	if (stochType == SMS_STOC_APPROX)
 	{
                 pSmsFrame->pFStocCoeff = dataPos;
-                dataPos = (sfloat *) (pSmsFrame->pFStocCoeff + nCoeff);
-                memset(pSmsFrame->pFStocCoeff, 0, sizeof(sfloat) * nCoeff);
+                dataPos = (sfloat *) (pSmsFrame->pFStocCoeff + nStochCoeff);
+                memset(pSmsFrame->pFStocCoeff, 0, sizeof(sfloat) * nStochCoeff);
 
                 pSmsFrame->pFStocGain = dataPos; 
                 dataPos = (sfloat *) (pSmsFrame->pFStocGain + 1);
@@ -465,9 +470,9 @@ int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase,
 	else if (stochType == SMS_STOC_IFFT)
 	{
                 pSmsFrame->pFStocCoeff = dataPos;
-                dataPos = (sfloat *) (pSmsFrame->pFStocCoeff + nCoeff);
+                dataPos = (sfloat *) (pSmsFrame->pFStocCoeff + nStochCoeff);
                 pSmsFrame->pResPhase = dataPos;
-                dataPos = (sfloat *) (pSmsFrame->pResPhase + nCoeff);
+                dataPos = (sfloat *) (pSmsFrame->pResPhase + nStochCoeff);
                 pSmsFrame->pFStocGain = dataPos; 
                 dataPos = (sfloat *) (pSmsFrame->pFStocGain + 1);
 	}
@@ -477,6 +482,10 @@ int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase,
                 pSmsFrame->pResPhase = NULL;
                 pSmsFrame->pFStocGain = NULL;
         }
+	if (nEnvCoeff > 0)
+                pSmsFrame->pSpecEnv = dataPos;
+        else
+                pSmsFrame->pSpecEnv = NULL;
 	return (0);			
 }
 
@@ -495,8 +504,9 @@ int sms_allocFrameH (SMS_Header *pSmsHeader, SMS_Data *pSmsFrame)
 	              pSmsHeader->iFormat == SMS_FORMAT_IHP) ? 1 : 0;
 	return (sms_allocFrame (pSmsFrame, pSmsHeader->nTracks, 
                                    pSmsHeader->nStochasticCoeff, iPhase,
-                                   pSmsHeader->iStochasticType));
+                                pSmsHeader->iStochasticType, pSmsHeader->nEnvCoeff));
 }
+
 
 /*! \brief free the SMS data structure
  * 

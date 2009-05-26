@@ -32,7 +32,6 @@
 //#define MAX_ORDER 100 /*!< max discrete cepstrum order */
 #define CHOLESKY 1
 
-//gsl_matrix *pM, *pMt;
 typedef struct
 {
         int nPoints;
@@ -76,11 +75,6 @@ void AllocateDCepstrum(int nPoints, int nCoeff, CepstrumMatrices *m)
         m->pMtXk = gsl_vector_alloc(nCoeff);
         m->pC = gsl_vector_alloc(nCoeff);
         m->pPerm = gsl_permutation_alloc (nCoeff);
-/*         if((pM = (gsl_matrix *) gsl_matrix_alloc (nPeaks, nOrder)) == NULL) */
-/*         { */
-/*                 sms_error("gsl could not allocate matrix pM."); */
-/*                 return; */
-/*         } */
 }
 
 /*! \brief Discrete Cepstrum Transform
@@ -159,88 +153,12 @@ void sms_dCepstrum( int sizeCepstrum, sfloat *pCepstrum, int sizeFreq, sfloat *p
         /* copy pC to pCepstrum */
         for(i = 0; i  < sizeCepstrum; i++)
                 pCepstrum[i] = gsl_vector_get (m.pC, i);
-        //printf("c[%d]: %f
-}
-
-void sms_dCepstrumOLD( int sizeCepstrum, sfloat *pCepstrum, int sizeFreq, sfloat *pFreq, sfloat *pMag, 
-                    sfloat fLambda, int iMaxFreq)
-{
-        int i, k;
-        sfloat factor;
-        sfloat fNorm = PI  / (float)iMaxFreq; /* value to normalize frequencies to 0:0.5 */
-
-        static CepstrumMatrices m;
-        //AllocateDCepstrum(sizeFreq, sizeCepstrum, pM);
-        gsl_matrix *pM = gsl_matrix_alloc(sizeFreq, sizeCepstrum);
-        gsl_matrix *pMt = gsl_matrix_alloc(sizeCepstrum, sizeFreq);
-        gsl_matrix *pR = gsl_matrix_calloc(sizeCepstrum, sizeCepstrum);
-        gsl_matrix *pMtMR = gsl_matrix_alloc(sizeCepstrum, sizeCepstrum);
-        gsl_vector *pXk = gsl_vector_alloc(sizeFreq);
-        gsl_vector *pMtXk = gsl_vector_alloc(sizeCepstrum);
-        gsl_vector *pC = gsl_vector_alloc(sizeCepstrum);
-        gsl_permutation *pPerm = gsl_permutation_alloc (sizeCepstrum);
-        int s; /* signum: "(-1)^n, where n is the number of interchanges in the permutation." */
-        /* compute matrix M (eq. 4)*/
-	for (i=0; i<sizeFreq; i++)
-	{
-                gsl_matrix_set (pM, i, 0, 1.); // first colum is all 1
-		for (k=1; k <sizeCepstrum; k++)
-                        gsl_matrix_set (pM, i, k , 2.*sms_sine(PI_2 + fNorm * k *pFreq[i]) );
-	}
-
-        /* compute transpose of M */
-        gsl_matrix_transpose_memcpy (pMt, pM);
-                               
-        /* compute R diagonal matrix (for eq. 7)*/
-        factor = COEF * (fLambda / (1.-fLambda)); /* \todo why is this divided like this again? */
-	for (k=0; k<sizeCepstrum; k++)
-                gsl_matrix_set(pR, k, k, factor * powf((sfloat) k,2.));
-
-        /* MtM = Mt * M, later will add R */
-        gsl_blas_dgemm  (CblasNoTrans, CblasNoTrans, 1., pMt, pM, 0.0, pMtMR);
-        /* add R to make MtMR */
-        gsl_matrix_add (pMtMR, pR);
-
-        /* set pMag in X and multiply with Mt to get pMtXk */
-        for(k = 0; k <sizeFreq; k++)
-                gsl_vector_set(pXk, k, log(pMag[k]));
-        gsl_blas_dgemv (CblasNoTrans, 1., pMt, pXk, 0., pMtXk);
-
-        /* solve x (the cepstrum) in Ax = b, where A=MtMR and b=pMtXk */ 
-
-        /* ==== the Cholesky Decomposition way ==== */
-        /* MtM is 'symmetric and positive definite?' */
-        gsl_linalg_cholesky_decomp (pMtMR);
-        gsl_linalg_cholesky_solve (pMtMR, pMtXk, pC);
-
-        /* ==== the LU decomposition way ==== */
-        //gsl_linalg_LU_decomp (pMtMR, pPerm, &s);
-        //gsl_linalg_LU_solve (pMtMR, pPerm, pMtXk, pC);
-
-        
-        /* copy pC to pCepstrum */
-        for(i = 0; i  < sizeCepstrum; i++)
-                pCepstrum[i] = gsl_vector_get (pC, i);
-        //printf("c[%d]: %f
-
-        /* cleanup */
-        gsl_matrix_free(pM);
-        gsl_matrix_free(pMt);
-        gsl_matrix_free(pR);
-        gsl_matrix_free(pMtMR);
-        gsl_vector_free(pXk);
-        gsl_vector_free(pMtXk);
-        gsl_vector_free(pC);
-        gsl_permutation_free (pPerm);
 }
 
 /*! \brief Spectrum Envelope from Cepstrum
  *
  *  from a set of cepstrum coefficients, compute the spectrum envelope
  *  
- * This implementation is derived from an mfile that Jordi Janer from the MTG
- * wrote in 2005.  Thanks for the help!
- *
  * \param sizeCepstrum order + 1 of the cepstrum 
  * \param pCepstrum pointer to array of cepstrum coefficients
  * \param sizeEnv  size of spectrum envelope (max frequency in bins) \todo does this have to be a pow2
@@ -274,9 +192,84 @@ void sms_dCepstrumEnvelope(int sizeCepstrum, sfloat *pCepstrum, int sizeEnv, sfl
                 pFftBuffer[i] = pCepstrum[i];
 
 
-
         sms_fft(sizeFftArray, pFftBuffer);
 
         for (i = 0; i < sizeEnv; i++)
                 pEnv[i] = powf(EXP, 2. * pFftBuffer[i*2]);
+}
+
+/*! \brief main function for computing spectral envelope from sinusoidal peaks
+ *
+ * Magnitudes should already be in linear for this function.
+ * If pSmsData->iEnvelope == SMS_ENV_CEP, will return cepstrum coefficeints
+ * If pSmsData->iEnvelope == SMS_ENV_FBINS, will return linear magnitude spectrum
+ * 
+ * \param pSmsData pointer to SMS_Data structure with all the arrays necessary
+ * \param pSpecEnvParams pointer to a structure of parameters for spectral enveloping
+ */
+void sms_spectralEnvelope( SMS_Data *pSmsData, SMS_SEnvParams *pSpecEnvParams)
+{
+        int i;
+        int sizeCepstrum = pSpecEnvParams->iOrder+1;
+        int nPeaks = 0;
+        static sfloat pFreqBuff[1000], pMagBuff[1000];
+       
+        /* \todo see if this memset is even necessary, once working */
+        //memset(pSmsData->pSpecEnv, 0, pSpecEnvParams->nCoeff * sizeof(sfloat));
+
+        /* try to store cepstrum coefficients in pSmsData->nEnvCoeff always.
+           if cepstrum is what is wanted, memset the rest. otherwise, hand this array 2x to dCepstrumEnvelope */
+        if(pSpecEnvParams->iOrder + 1> pSmsData->nEnvCoeff)
+        {
+                sms_error("cepstrum order is larger than the size of the spectral envelope");
+                return;
+        }
+
+        /* find out how many tracks were actually found... many are zero
+           \todo is this necessary? */
+        for(i = 0; i < pSmsData->nTracks; i++)
+        {
+                if(pSmsData->pFSinFreq[i] > 0.00001)
+                {
+                        nPeaks++;
+                        if(pSpecEnvParams->iAnchor != 0)
+                        {
+                                pFreqBuff[i+1] = pSmsData->pFSinFreq[i];
+                                pMagBuff[i+1] = pSmsData->pFSinAmp[i];
+                                if(nPeaks == 1)
+                                {
+                                        nPeaks++; /* add two peaks for the first one - one is the anchor */
+                                        pFreqBuff[i] = 0.0;
+                                        pMagBuff[i] = pSmsData->pFSinAmp[i];
+                                }
+                        }
+                        else
+                        {
+                                pFreqBuff[i] = pSmsData->pFSinFreq[i];
+                                pMagBuff[i] = pSmsData->pFSinAmp[i];
+                        }
+                }
+        }
+        /* \todo see if adding an anchor at the max freq helps */
+        
+
+        if(nPeaks < 1) // how few can this be?  try out a few in python
+                return;
+        sms_dCepstrum(sizeCepstrum, pSmsData->pSpecEnv, nPeaks, pFreqBuff, pMagBuff, 
+                      pSpecEnvParams->fLambda, pSpecEnvParams->iMaxFreq);
+
+        if(pSpecEnvParams->iType == SMS_ENV_FBINS)
+        {
+                sms_dCepstrumEnvelope(sizeCepstrum, pSmsData->pSpecEnv, 
+                                      pSpecEnvParams->nCoeff, pSmsData->pSpecEnv);
+        }
+        // DEBUG //////
+/*         printf("COEFFICIENTS: \n"); */
+/*         for ( i = 0; i < sizeCepstrum; i++) */
+/*                 printf("[%d] %f, ", i, pSmsData->pSpecEnv[i]); */
+/*         printf(" \n\n"); */
+
+        //if(pSpecEnvParams->iType == SMS_ENV_FBIN)
+        // do envelope here
+
 }
