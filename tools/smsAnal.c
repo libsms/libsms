@@ -19,8 +19,15 @@
  * 
  */
 #include "sms.h"
+#include <popt.h>
 
-int verbose = 0;
+const char *help_header_text =
+        "\n\n"
+        "Usage: smsAnal [options]  <inputSoundFile> <outputSmsFile>\n"
+        "\n"
+        "analyzes a sound file a stores it in a binary SMS file. All parameters are numbers. "
+        "See the man page for details.\n\n"
+        "Options:\n";
 
 void usage (void)
 {
@@ -63,6 +70,8 @@ void usage (void)
              " Stochastic Analysis parameters:\n"
              "      -e    stochasticType (default 1, approximated spectrum). 0=none \n"
              "      -c    nStocCoeff (default 64)\n"
+             " Spectral Envelope parameters:\n"
+             "      -blahhhhhh don't have any more room!! time to use argp.h?"
              );
         exit(1);
 }
@@ -85,8 +94,8 @@ static int GetArguments (char *argv[], int argc, SMS_AnalParams *pAnalParams)
 		{
 			switch (*(argv[i]++)) 
 			{
-                        case 'v': verbose = 1;
-                                break;
+/*                         case 'v': verbose = 1; */
+/*                                 break; */
                         case 'd': if (sscanf(argv[i],"%d", 
                                              &pAnalParams->iDebugMode) < 0)
 					printf("GetArguments: Invalid debug mode");
@@ -207,10 +216,8 @@ static int GetArguments (char *argv[], int argc, SMS_AnalParams *pAnalParams)
 	return (1);
 }
 
-int main (int argc, char *argv[])
+int main (int argc, const char *argv[])
 {
-	SMS_AnalParams analParams;
-
 	FILE *pOutputSmsFile; 
 	SMS_Data smsData;
 	SMS_Header smsHeader;
@@ -219,22 +226,91 @@ int main (int argc, char *argv[])
 	SMS_SndHeader soundHeader;
 
 	char *pChInputSoundFile = NULL, *pChOutputSmsFile = NULL;
+        int verbose = 0;
 	int iHopSize;
 	int iDoAnalysis = 1;
         int iFrame = 0;
 	long iStatus = 0, iSample = 0, sizeNewData = 0;
 
-	/* initialize arguments */
-        sms_initAnalParams(&analParams);
-	/* get user arguments */
-	if (argc > 3) 
-		GetArguments (argv, argc, &analParams);
-	else if (argc < 2 || !strcmp( argv[1], "--help"))
-                usage();
+	int optc;   /* switch */
+	poptContext pc;
 
-	pChInputSoundFile = argv[argc-2];
-	pChOutputSmsFile = argv[argc-1];
- 
+	SMS_AnalParams analParams;
+        sms_initAnalParams(&analParams); 	/* initialize arguments to defaults*/
+
+        struct poptOption options[] =
+                {
+                        {"verbose", 'v', POPT_ARG_NONE, &verbose, 0, 
+                         "verbose mode", 0},
+                        {"debug", 'd', POPT_ARG_INT, &analParams.iDebugMode, 0, 
+                         "debug mode (0)", "int"},
+                        {"format", 'f', POPT_ARG_INT, &analParams.iFormat, 0, 
+                         "analysis format (0, harmonic)", "int"},
+                        {"sound-type", 'q', POPT_ARG_INT, &analParams.iSoundType, 0, 
+                         "sound type (0, phrase)", "int"},
+                        {"direction", 'x', POPT_ARG_INT, &analParams.iAnalysisDirection, 0, 
+                         "analysis direction (0, forward)", "int"},
+                        /* STFT Parameters: */
+                        {"window-size", 's', POPT_ARG_FLOAT, &analParams.fSizeWindow, 0, 
+                         "size of the window in f0 periods (3.5)", "float"},
+                        {"window-type", 'i', POPT_ARG_INT, &analParams.iWindowType, 0, 
+                         "window type (1, blackman harris 70 dB)", "int"},
+                        {"frame-rate", 'r', POPT_ARG_INT, &analParams.iFrameRate, 0, 
+                         "frame rate in hertz (300)", "int"},
+                        /* Peak Detection Parameters */
+                        {"highest-freq", 'j', POPT_ARG_FLOAT, &analParams.fHighestFreq, 0, 
+                         "highest frequency to look for peaks (12000hz)", "float"},
+                        {"min-peak-mag", 'k', POPT_ARG_FLOAT, &analParams.fMinPeakMag, 0, 
+                         "minimum peak magnitude (0 normalized dB, which corresponds to -100dB)", "float"}, /*\todo check this doc*/
+                        /* Harmonic Detection Parameters */
+                        {"ref-harmonic", 'y', POPT_ARG_INT, &analParams.iRefHarmonic, 0, 
+                         "reference harmonic number in series (1)", "int"},
+                        {"min-ref-harm-mag", 'm', POPT_ARG_FLOAT, &analParams.fMinPeakMag, 0, 
+                         "minimum reference harmonic magnitude (30 normalized dB)", "float"}, /*\todo check this doc*/
+                        /* spectral enveloping parameters */
+                        {"spec-env-type", 'e', POPT_ARG_INT, &analParams.specEnvParams.iType, 0, 
+                         "spectral enveloping type (0, off)", "int"},
+                        {"cep-order", 'o', POPT_ARG_INT, &analParams.specEnvParams.iOrder, 0, 
+                         "discrete cepstrum order (25)", "int"},
+                        {"lambda", 'l', POPT_ARG_FLOAT, &analParams.specEnvParams.fLambda, 0, 
+                         "lambda, regularizing coefficient (0.00001)", "float"}, 
+                        {"anchor", 'a', POPT_ARG_NONE, &analParams.specEnvParams.iAnchor, 0, 
+                         "turn on anchoring of spectral envelope endpoints", 0}, 
+                        POPT_AUTOHELP
+                        POPT_TABLEEND
+                };
+
+
+        pc = poptGetContext("smsAnal", argc, argv, options, 0);
+        poptSetOtherOptionHelp(pc, help_header_text);
+
+        while ((optc = poptGetNextOpt(pc)) > 0) {
+                switch (optc) {
+                        /* specific arguments are handled here */
+                case 'v':
+                        verbose = 1;
+                default:
+                        ;
+                }
+        }
+        if (optc < -1) 
+        {
+                /* an error occurred during option processing */
+                printf("%s: %s\n",
+                       poptBadOption(pc, POPT_BADOPTION_NOALIAS),
+                       poptStrerror(optc));
+                return 1;
+        }
+        if (argc < 3)
+        {
+                poptPrintUsage(pc,stderr,0);
+                return 1;
+        }
+	pChInputSoundFile = (char *) poptGetArg(pc);
+	pChOutputSmsFile = (char *) poptGetArg(pc);
+        /* parsing done */
+
+
 	/* open input sound */
 	if (sms_openSF(pChInputSoundFile, &soundHeader))
 	{
@@ -244,10 +320,19 @@ int main (int argc, char *argv[])
 
         /* initialize everything */
         sms_init();
+        /* TODO NExt: go from here through all the functions that need to look at specEnvParams */
         sms_initAnalysis (&analParams, &soundHeader);
         
 	sms_fillHeader (&smsHeader, &analParams, "smsAnal");
 	sms_writeHeader (pChOutputSmsFile, &smsHeader, &pOutputSmsFile);
+
+        /* allocate output SMS record */
+	sms_allocFrameH (&smsHeader, &smsData);
+
+	/* perform analysis */
+
+	if (analParams.iAnalysisDirection == SMS_DIR_REV)
+		iSample = soundHeader.nSamples;
 
 	if (analParams.iDebugMode == SMS_DBG_SYNC)
 		sms_createDebugFile (&analParams);
@@ -263,24 +348,18 @@ int main (int argc, char *argv[])
                 printf("\n===Analysis Parameters====\n");
 		printf("sizeHop: %d, nFrames: %d \n", analParams.sizeHop, analParams.nFrames);
                 /* \todo: print analysis window type (by name) here */
+                if(analParams.specEnvParams.iType != SMS_ENV_NONE)
+                {
+                        printf("discrete cepstrum spectral envelope parameters: \n");
+                        printf("order: %d, lambda: %f, max frequency: %d \n", analParams.specEnvParams.iOrder,
+                               analParams.specEnvParams.fLambda, analParams.specEnvParams.iMaxFreq);
+                }
 		printf("header info string: %s", smsHeader.pChTextCharacters);
-
+                printf("\ndoing analysis now:\n");
         }
 
-
-        /* allocate output SMS record */
-	sms_allocFrameH (&smsHeader, &smsData);
-
-	/* perform analysis */
-
-	if (analParams.iAnalysisDirection == SMS_DIR_REV)
-		iSample = soundHeader.nSamples;
-
-        if(verbose) printf("\ndoing analysis now:\n");
-        static int loopnum = 0;
 	while(iDoAnalysis > 0)
 	{
-                loopnum++;
 		if (analParams.iAnalysisDirection == SMS_DIR_REV)
 		{
 			if ((iSample - analParams.sizeNextRead) >= 0)
@@ -305,16 +384,16 @@ int main (int argc, char *argv[])
 			break;
 		}
 		/* perform analysis of one frame of sound */
-//                printf("frame: %d, loop: %d, sizeNewData: %ld \n", iFrame, loopnum, sizeNewData);
 		iStatus = sms_analyze (sizeNewData, pSoundData, &smsData,
 		                       &analParams);
 
 		/* if there is an output SMS record, write it */
 		if (iStatus == 1)
 		{
-			if(sms_writeFrame (pOutputSmsFile, &smsHeader, &smsData))
+			sms_writeFrame (pOutputSmsFile, &smsHeader, &smsData);
+                        if(sms_errorCheck())
                         {
-                                printf("error: could not write sms frame %d\n", iFrame);
+                                printf("error: could not write sms frame %d:\n", iFrame);
                                 printf("error message in sms_writeFrame: %s \n", sms_errorString());
                                 break;
                         }
