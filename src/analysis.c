@@ -321,20 +321,12 @@ int sms_analyze (int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_An
                         else if  (pAnalParams->iStochasticType == SMS_STOC_IFFT)
                         {
                                 int sizeMag = sms_power2(sizeData >> 1);
-                                /* this spectrum is seg faulting... */
                                 sms_spectrum (sizeData, pFResidual, pWindow, sizeMag, pSmsData->pFStocCoeff, 
                                         pSmsData->pResPhase);
-
-                                // DEBUGGGGGGG
-/*                                 static int f = 1; */
-/*                                 printf("\n ========= frame: %d ========= \n", f++); */
-/*                                 for(i = 0; i < sizeMag; i++)  */
-/*                                         printf(" %f, ", pSmsData->pResPhase[i]); */
-
                         }
 
-
 			/* get sharper transitions in deterministic representation */
+                        /* \todo why is this done in the stochastic analysis space? */
                         sms_scaleDet (pAnalParams->synthBuffer.pFBuffer, pOriginal,
                                       pAnalParams->ppFrames[0]->deterministic.pFSinAmp,
                                       pAnalParams, pSmsData->nTracks);
@@ -347,6 +339,7 @@ int sms_analyze (int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_An
 	else if (pAnalParams->ppFrames[0]->iStatus != SMS_FRAME_EMPTY &&
 	         pAnalParams->ppFrames[0]->iStatus != SMS_FRAME_END)
 		pAnalParams->ppFrames[0]->iStatus = SMS_FRAME_DONE;
+
 	/* get the result */
 	if (pAnalParams->ppFrames[0]->iStatus == SMS_FRAME_EMPTY)
         {
@@ -367,6 +360,14 @@ int sms_analyze (int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_An
 		    pAnalParams->iFormat == SMS_FORMAT_IHP)
 			memcpy ((char *) pSmsData->pFSinPha, (char *)
 			        pAnalParams->ppFrames[0]->deterministic.pFSinPha, length);
+
+                /* do post-processing (for now, spectral envelope calculation and storage) */
+                if(pAnalParams->specEnvParams.iType != SMS_ENV_NONE)
+                {
+                        //printf("computing spectral envelope \n");
+                        sms_spectralEnvelope( pSmsData, &pAnalParams->specEnvParams);
+                        
+                }
 		return (1);
 	}
 	/* done, end of sound */
