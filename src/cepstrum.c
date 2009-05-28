@@ -209,9 +209,9 @@ void sms_dCepstrumEnvelope(int sizeCepstrum, sfloat *pCepstrum, int sizeEnv, sfl
  */
 void sms_spectralEnvelope( SMS_Data *pSmsData, SMS_SEnvParams *pSpecEnvParams)
 {
-        int i;
+        int i, k;
         int sizeCepstrum = pSpecEnvParams->iOrder+1;
-        int nPeaks = 0;
+        //int nPeaks = 0;
         static sfloat pFreqBuff[1000], pMagBuff[1000];
        
         /* \todo see if this memset is even necessary, once working */
@@ -227,35 +227,31 @@ void sms_spectralEnvelope( SMS_Data *pSmsData, SMS_SEnvParams *pSpecEnvParams)
 
         /* find out how many tracks were actually found... many are zero
            \todo is this necessary? */
-        for(i = 0; i < pSmsData->nTracks; i++)
+        for(i = 0, k=0; i < pSmsData->nTracks; i++)
         {
                 if(pSmsData->pFSinFreq[i] > 0.00001)
                 {
-                        nPeaks++;
                         if(pSpecEnvParams->iAnchor != 0)
                         {
-                                pFreqBuff[i+1] = pSmsData->pFSinFreq[i];
-                                pMagBuff[i+1] = pSmsData->pFSinAmp[i];
-                                if(nPeaks == 1)
+                                if(k == 0) /* add anchor at beginning */
+
                                 {
-                                        nPeaks++; /* add two peaks for the first one - one is the anchor */
-                                        pFreqBuff[i] = 0.0;
-                                        pMagBuff[i] = pSmsData->pFSinAmp[i];
+                                        pFreqBuff[k] = 0.0;
+                                        pMagBuff[k] = pSmsData->pFSinAmp[i];
+                                        k++;
                                 }
                         }
-                        else
-                        {
-                                pFreqBuff[i] = pSmsData->pFSinFreq[i];
-                                pMagBuff[i] = pSmsData->pFSinAmp[i];
-                        }
+                        pFreqBuff[k] = pSmsData->pFSinFreq[i];
+                        pMagBuff[k] = pSmsData->pFSinAmp[i];
+                        k++;
                 }
         }
         /* \todo see if adding an anchor at the max freq helps */
         
 
-        if(nPeaks < 1) // how few can this be?  try out a few in python
+        if(k < 1) // how few can this be?  try out a few in python
                 return;
-        sms_dCepstrum(sizeCepstrum, pSmsData->pSpecEnv, nPeaks, pFreqBuff, pMagBuff, 
+        sms_dCepstrum(sizeCepstrum, pSmsData->pSpecEnv, k, pFreqBuff, pMagBuff, 
                       pSpecEnvParams->fLambda, pSpecEnvParams->iMaxFreq);
 
         if(pSpecEnvParams->iType == SMS_ENV_FBINS)
@@ -263,13 +259,4 @@ void sms_spectralEnvelope( SMS_Data *pSmsData, SMS_SEnvParams *pSpecEnvParams)
                 sms_dCepstrumEnvelope(sizeCepstrum, pSmsData->pSpecEnv, 
                                       pSpecEnvParams->nCoeff, pSmsData->pSpecEnv);
         }
-        // DEBUG //////
-/*         printf("COEFFICIENTS: \n"); */
-/*         for ( i = 0; i < sizeCepstrum; i++) */
-/*                 printf("[%d] %f, ", i, pSmsData->pSpecEnv[i]); */
-/*         printf(" \n\n"); */
-
-        //if(pSpecEnvParams->iType == SMS_ENV_FBIN)
-        // do envelope here
-
 }
