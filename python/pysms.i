@@ -338,6 +338,26 @@ int pysms_synthesize(SMS_Data *pSmsData, int sizeHop, float *pSynthesis, SMS_Syn
                 memcpy(pRes, $self->smsData[i].pFStocCoeff, sizeof(float) * nCoeff);
                 return;
         }
+        void getFrameEnv(int i, int sizeEnv, float *pEnv)
+        {
+                
+                if(!$self->allocated)
+                {
+                        sms_error("file not yet alloceted");
+                        return ;
+                }
+                if($self->header->iEnvType < 1) 
+                {
+                        sms_error("file does not contain a spectral envelope");
+                        return ;
+                }
+                int nCoeff = sizeEnv;
+                if($self->header->nStochasticCoeff > sizeEnv) 
+                        nCoeff = $self->header->nEnvCoeff; // return what you can
+
+                memcpy(pEnv, $self->smsData[i].pSpecEnv, sizeof(sfloat) * nCoeff);
+                return;
+        }
 }
 
 %extend SMS_AnalParams 
@@ -426,6 +446,17 @@ int pysms_synthesize(SMS_Data *pSmsData, int sizeHop, float *pSynthesis, SMS_Syn
                 int i;
                 for (i = 0; i < $self->nTracks; i++)
                         pArray[i] = $self->pFSinFreq[i];
+        }
+        void getSpecEnv(int sizeArray, float *pArray)
+        {
+                if(sizeArray < $self->nEnvCoeff)
+                {
+                        sms_error("numpy array not big enough");
+                        return;
+                }
+                int i;
+                for (i = 0; i < $self->nEnvCoeff; i++)
+                        pArray[i] = $self->pSpecEnv[i];
         }
         void setSinAmp(int sizeArray, float *pArray)
         {
