@@ -38,7 +38,6 @@ snd_header = SMS_SndHeader()
 sms_header = SMS_Header()
 data = SMS_Data()
 analysis_params = SMS_AnalParams()
-sms_fillHeader(sms_header, analysis_params, "analysis_synthesis.py")
 
 if options.num_stoc_coeffs:
     sms_header.nStochasticCoeff = options.num_stoc_coeffs
@@ -55,6 +54,7 @@ if(sms_openSF(args[0], snd_header)):
 
 sms_init()
 sms_initAnalysis(analysis_params, snd_header)
+sms_fillHeader(sms_header, analysis_params, "analysis_synthesis.py")
 sms_allocFrameH(sms_header, data)
 
 analysis_frames = []
@@ -82,9 +82,6 @@ while do_analysis:
     if status == 1:
         analysis_frames.append(data)
         num_frames += 1
-        # if num_frames == 50:
-        #     sms_header.nFrames = num_frames
-        #     break
     elif status == -1:
        do_analysis = False
        sms_header.nFrames = num_frames
@@ -100,7 +97,7 @@ synth_params.sizeHop = SMS_MIN_SIZE_FRAME
 synth_params.iSamplingRate = 0
 
 sms_initSynth(sms_header, synth_params)
-sms_allocFrame(interp_frame, sms_header.nTracks, sms_header.nStochasticCoeff, 0, sms_header.iStochasticType)
+sms_allocFrame(interp_frame, sms_header.nTracks, sms_header.nStochasticCoeff, 0, sms_header.iStochasticType, sms_header.nEnvCoeff)
 
 synth_samples = zeros(synth_params.sizeHop).astype('float32')
 num_synth_samples = 0
@@ -131,7 +128,8 @@ while num_synth_samples < target_synth_samples:
     sms_synthesize(interp_frame, synth_samples, synth_params)
     audio_output = hstack((audio_output, synth_samples))
     num_synth_samples += synth_params.sizeHop
-               
+              
+# Clean up
 sms_freeAnalysis(analysis_params)
 for frame in analysis_frames:
     sms_freeFrame(frame)
@@ -144,4 +142,4 @@ audio_output *= 32767
 audio_output = asarray(audio_output, int16)
 
 # write output file
-write(options.output_file, 44100, audio_output)
+write(options.output_file, snd_header.iSamplingRate, audio_output)
