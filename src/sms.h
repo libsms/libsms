@@ -343,6 +343,32 @@ typedef struct
 	int iPeakChosen;    /*!< peak number chosen by the guide */
 } SMS_Guide;
 
+/*! \ frame modification parameters
+ * 
+ * This structure holds parameters and data that will be used to modify a
+ * frame (SMS_Data object)
+ */
+typedef struct
+{
+        int modifyType;      /*!< type of modification (transpose, apply different envelope, etc) */
+	int maxFreq;         /*!< maximum frequency component */
+	float transposition; /*!< transposition factor */
+	float envInterp;     /*!< (between 0 and 1) specifies the linear envelope interpolation factor */
+	int sizeEnv;	     /*!< size of the envelope pointed to by env */
+	sfloat *env;	     /*!< additional spectral envelope used in some modifications */
+} SMS_ModifyParams;
+
+/*! \brief modification type 
+ * 
+ * Used to specify what transformation will be applied to the target SMS_Data object. 
+ */
+enum SMS_ModifyType
+{
+        SMS_MTYPE_TRANSPOSE,          /*!< simple transposition - multiply deterministic frequencies */
+        SMS_MTYPE_TRANSPOSE_KEEP_ENV, /*!< transpose but frequency multiplication but keep spectral envelope */
+        SMS_MTYPE_USE_ENV,             /*!< apply a given spectal envelope to the sound */
+	SMS_MTYPE_INTERP_ENV          /*!< linear interpolation between two spectral envelopes */
+};
 
 /*!  \brief analysis format
  *
@@ -735,6 +761,8 @@ void sms_RectToPolar( int sizeSpec, sfloat *pReal, float *pMag, float *pPhase);
 void sms_PolarToRect( int sizeSpec, sfloat *pReal, float *pMag, float *pPhase);
 
 void sms_spectrumRMS( int sizeMag, sfloat *pReal, float *pMag);
+
+void sms_modify(SMS_Data *frame, SMS_ModifyParams *params);
 
 /***********************************************************************************/
 /************* debug functions: ******************************************************/

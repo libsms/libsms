@@ -31,6 +31,7 @@ sms_sources = Split("""
 		soundIO.c 
                 OOURA.c
                 SFMT.c
+                modify.c
 """)
 
 lib = env.Library( 'libsms', sms_sources )
