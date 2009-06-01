@@ -77,7 +77,7 @@ void sms_applyEnvelope(int numPeaks, sfloat *pFreqs, sfloat *pMags, int sizeEnv,
 			        pMags[i] = ((1.0 - frac) * pEnvMags[envPos]) + (frac * pEnvMags[envPos+1]);
                         }
                         else
-                        {       printf("should this ever happen?\n");
+                        {       
                                 pMags[i] = pEnvMags[sizeEnv-1];
                         }
                 }
@@ -93,11 +93,15 @@ void sms_applyEnvelope(int numPeaks, sfloat *pFreqs, sfloat *pMags, int sizeEnv,
 }
 
 /*! \brief basic transposition
- *
  * Multiply the frequencies of the deterministic component by a constant
  */
 void sms_transpose(SMS_Data *frame, sfloat transpositionFactor)
 {
+        int i;
+        for(i = 0; i < frame->nTracks; i++)
+        {
+                frame->pFSinFreq[i] *= sms_scalerTempered(transpositionFactor);
+        }
 }
 
 /*! \brief transposition maintaining spectral envelope
