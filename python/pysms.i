@@ -487,6 +487,45 @@ int pysms_synthesize(SMS_Data *pSmsData, int sizeHop, float *pSynthesis, SMS_Syn
         }
 }
 
+%extend SMS_ModifyParams
+{
+        int setEnv(int sizeArray, float *pArray)
+        {
+                static int sizeEnv = 0;
+
+                if(sizeArray != $self->sizeEnv)        
+                {
+                        sms_error("numpy array is not equal to envelope size");
+                        return -1;
+                }
+
+                /* todo init/free functions for allocating ModifyParams memory? */
+                if($self->env == NULL)
+                {
+                        if(($self->env = (float *)calloc($self->sizeEnv, sizeof(float))) == NULL)
+                        {
+		                sms_error("could not allocate memory");
+                                return(-1);
+                        }
+        
+                        sizeEnv = $self->sizeEnv;
+                }
+                else if(sizeEnv != sizeArray)
+                {
+                        free($self->env);
+                        if(($self->env = (float *)calloc($self->sizeEnv, sizeof(float))) == NULL)
+                        {
+		                sms_error("could not allocate memory");
+                                return(-1);
+                        }
+                        sizeEnv = $self->sizeEnv;
+                }
+
+                memcpy($self->env, pArray, sizeof(sfloat) * $self->sizeEnv);
+                return 0;
+        }
+}
+
 %pythoncode %{
 
 from numpy import array as np_array
