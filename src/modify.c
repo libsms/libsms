@@ -109,8 +109,10 @@ void sms_transpose(SMS_Data *frame, sfloat transpositionFactor)
  * Multiply the frequencies of the deterministic component by a constant, then change
  * their amplitudes so that the original spectral envelope is maintained
  */
-void sms_transposeKeepEnv(SMS_Data *frame)
+void sms_transposeKeepEnv(SMS_Data *frame, sfloat transpositionFactor, int maxFreq)
 {
+	sms_transpose(frame, transpositionFactor);
+	sms_applyEnvelope(frame->nTracks, frame->pFSinFreq, frame->pFSinAmp, frame->nEnvCoeff, frame->pSpecEnv, maxFreq);
 }
 
 /*! \brief modify a frame (SMS_Data object) 
@@ -127,7 +129,7 @@ void sms_modify(SMS_Data *frame, SMS_ModifyParams *params)
                         break;
 
                 case SMS_MTYPE_TRANSPOSE_KEEP_ENV:
-                        printf("transpose keep env\n");
+                        sms_transposeKeepEnv(frame, params->transposition, params->maxFreq);
                         break;
 
                 case SMS_MTYPE_USE_ENV:
