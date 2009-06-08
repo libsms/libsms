@@ -32,6 +32,7 @@ static char error_message[256];
 static int error_status = 0;
 static sfloat mag_thresh = .00001; /*!< magnitude threshold for db conversion (-100db)*/
 static sfloat inv_mag_thresh = 100000.; /*!< inv(.00001) */
+static int initIsDone = 0; /* \todo is this variable necessary? */ 
 
 #define SIZE_TABLES 4096
 
@@ -52,7 +53,6 @@ static sfloat inv_mag_thresh = 100000.; /*!< inv(.00001) */
 int sms_init( void )
 {
         int iError;
-        static int initIsDone = 0;
 	if (!initIsDone)
         {
                 initIsDone = 1;
@@ -81,6 +81,7 @@ int sms_init( void )
  */
 void sms_free( void )
 {
+	initIsDone = 0;
         sms_clearSine();
         sms_clearSinc();
 }
