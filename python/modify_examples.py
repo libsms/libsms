@@ -1,0 +1,157 @@
+# Copyright (c) 2009 John Glover, National University of Ireland, Maynooth
+#  
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, M  02111-1307  USA
+
+# This file shows 3 sms modification examples:
+# 1. Morphing between sounds by applying the spectral envelope of one to the other
+# 2. Transposition without maintaining the spectral envelope
+# 3. Transposition maintaining the original spectral envelope
+
+from scipy import asarray, int16
+from scipy.io.wavfile import write
+from SMS import (zeros, analyze, synthesize, SMS_ModifyParams, SMS_MTYPE_INTERP_ENV, SMS_MTYPE_USE_ENV,
+	         SMS_MTYPE_TRANSPOSE, SMS_MTYPE_TRANSPOSE_KEEP_ENV, SMS_ENV_FBINS, sms_modify)
+from time import time
+
+start_time = time()
+
+# In the morph example, the spectral envelope from the source file will be
+# applied to the target file.
+# For all other examples, the source file will be modified.
+source = "../../test/audio/soopastar.wav"
+target = "../../test/audio/synth_cello.wav"
+
+# the maximum frequency of the highest partial detected (and of the spectral envelope)
+max_freq = 12000
+
+# The envelope_interp_factor only applies to the morph example
+# if the envelope_interp_factor is 0, the original target envelope will be used (no morph)
+# if it is 1, the original source envelope will be used
+# any value in between will result in a linear interpolation between the two envelopes
+envelope_interp_factor = 1
+
+# In the transposition examples, transpose by this number of semitones
+transposition = 4
+
+# ----------------------------------------------------------------------------------------
+# Morph
+
+# Analyze files
+source_frames, source_sms_header, source_snd_header = analyze(source, env_type=SMS_ENV_FBINS, env_order=80)
+target_frames, target_sms_header, target_snd_header = analyze(target, env_type=SMS_ENV_FBINS, env_order=80)
+
+source_num_tracks = source_sms_header.nTracks
+num_tracks = target_sms_header.nTracks
+num_frames = min(len(source_frames), len(target_frames))
+
+if num_tracks != source_num_tracks:
+    print "Error: sound sources have a different number of tracks"
+    exit()
+
+if source_sms_header.iSamplingRate != target_sms_header.iSamplingRate:
+    # todo: should be able to work around this problem
+    print "Error: sound sources have different sampling rates"
+    exit()
+
+for frame_number in range(num_frames):
+    source_frame = source_frames[frame_number]
+    target_frame = target_frames[frame_number]
+    
+    # Set modification parameters
+    mod_params = SMS_ModifyParams()
+    mod_params.maxFreq = max_freq
+    mod_params.envInterp = envelope_interp_factor
+    mod_params.sizeEnv = source_frame.nEnvCoeff
+
+    # get the source envelope
+    source_env_mags = zeros(source_frame.nEnvCoeff)
+    source_frame.getSpecEnv(source_env_mags)
+    mod_params.setEnv(source_env_mags)
+
+    # interpolate envelopes
+    mod_params.modifyType = SMS_MTYPE_INTERP_ENV
+    sms_modify(target_frame, mod_params)
+
+    # apply the new interpolated envelope to the target sound
+    mod_params.modifyType = SMS_MTYPE_USE_ENV
+    sms_modify(target_frame, mod_params)
+
+# change the output number of frames to the minimum of the two frame counts
+target_frames = target_frames[0:num_frames]
+target_sms_header.nFrames = num_frames
+
+# Synthesis
+morph = synthesize(target_frames, target_sms_header)
+
+# convert audio to int values
+morph *= 32767
+morph *= 0.25 # soopastar sample clips so make output quieter
+morph = asarray(morph, int16)
+
+# write output files
+write("modify_example_morph.wav", target_snd_header.iSamplingRate, morph)
+
+# ----------------------------------------------------------------------------------------
+# Transpose without maintaining envelope  
+
+for frame_number in range(len(source_frames)):
+    source_frame = source_frames[frame_number]
+    
+    # Set modification parameters
+    mod_params = SMS_ModifyParams()
+    mod_params.modifyType = SMS_MTYPE_TRANSPOSE
+    mod_params.transposition = transposition 
+    sms_modify(source_frame, mod_params)
+
+# Synthesis
+transpose = synthesize(source_frames, source_sms_header)
+
+# convert audio to int values
+transpose *= 32767
+transpose *= 0.25 # soopastar sample clips so make output quieter
+transpose = asarray(transpose, int16)
+
+# write output files
+write("modify_example_transpose.wav", source_snd_header.iSamplingRate, transpose)
+
+# ----------------------------------------------------------------------------------------
+# Transpose maintaining envelope  
+
+# Have to analyze source again for now, should really be a way to copy/clone frames
+source_frames, source_sms_header, source_snd_header = analyze(source, env_type=SMS_ENV_FBINS, env_order=80)
+
+for frame_number in range(len(source_frames)):
+    source_frame = source_frames[frame_number]
+    
+    # Set modification parameters
+    mod_params = SMS_ModifyParams()
+    mod_params.modifyType = SMS_MTYPE_TRANSPOSE_KEEP_ENV
+    mod_params.transposition = transposition 
+    mod_params.maxFreq = max_freq
+    sms_modify(source_frame, mod_params)
+
+# Synthesis
+transpose_with_env = synthesize(source_frames, source_sms_header)
+
+# convert audio to int values
+transpose_with_env *= 32767
+transpose_with_env *= 0.25 # soopastar sample clips so make output quieter
+transpose_with_env = asarray(transpose_with_env, int16)
+
+# write output files
+write("modify_example_transpose_with_env.wav", source_snd_header.iSamplingRate, transpose_with_env)
+
+# ----------------------------------------------------------------------------------------
+print "Running time: ", int(time() - start_time), "seconds."
