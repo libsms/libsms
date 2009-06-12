@@ -227,7 +227,7 @@ int main (int argc, const char *argv[])
 
 	char *pChInputSoundFile = NULL, *pChOutputSmsFile = NULL;
         int verbose = 0;
-	int iHopSize;
+	//int iHopSize;
 	int iDoAnalysis = 1;
         int iFrame = 0;
 	long iStatus = 0, iSample = 0, sizeNewData = 0;
@@ -276,6 +276,18 @@ int main (int argc, const char *argv[])
                          "lambda, regularizing coefficient (0.00001)", "float"}, 
                         {"anchor", 'a', POPT_ARG_NONE, &analParams.specEnvParams.iAnchor, 0, 
                          "turn on anchoring of spectral envelope endpoints", 0}, 
+                        {"max-env-freq", 0, POPT_ARG_INT, &analParams.specEnvParams.iMaxFreq, 0, 
+                         "maximum envelope frequency (default is highest-freq", "int"}, 
+                        /* Track Cleaning parameters:\n" */
+                        {"clean-track", 'g', POPT_ARG_INT, &analParams.iCleanTracks, 0, 
+                         "turn on/off track cleaning (default is on, 1)", "int"}, 
+                        {"min-track-length", 0, POPT_ARG_FLOAT, &analParams.iMinTrackLength, 0, 
+                         "minimum track length in seconds (0.1)", "float"}, 
+                        {"max-sleeping-time", 0, POPT_ARG_FLOAT, &analParams.iMaxSleepingTime, 0, 
+                         "maximum time a frame can sleep in seconds (0.1)", "float"},  /* this doc is horrible */
+//             "      -g    cleanTrack (default 1, yes)\n"
+//             "      -a    minTrackLength (default .1 seconds)\n"
+//             "      -b    maxSleepingTime (default .1 seconds)\n"
                         POPT_AUTOHELP
                         POPT_TABLEEND
                 };
