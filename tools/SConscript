@@ -5,8 +5,7 @@
 Import('*')
 
 tools = Split(' smsAnal smsSynth smsClean \
-        	smsPrint smsResample \
-        	smsToYaml' )
+        	smsPrint smsResample ' )
 
 #where to install tools and manpages
 tools_prefix = prefix+'/bin'
