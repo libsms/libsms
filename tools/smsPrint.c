@@ -133,6 +133,7 @@ int main (int argc, const char *argv[])
         else if(pSmsHeader->iStochasticType == SMS_STOC_NONE) 
                 fprintf(fp,"none\n");
         fprintf(fp,"    nEnvCoeff : %d\n", pSmsHeader->nEnvCoeff);
+        fprintf(fp,"    iMaxFreq : %d\n", pSmsHeader->iMaxFreq);
         fprintf(fp,"    iEnvType  : ");
         if(pSmsHeader->iEnvType == SMS_ENV_CEP) 
                 fprintf(fp,"cepstrum\n");
