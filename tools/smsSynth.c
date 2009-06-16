@@ -54,11 +54,11 @@ void usage (void)
 int main (int argc, char *argv[])
 {
 	char *pChInputSmsFile = NULL, *pChOutputSoundFile = NULL;
-	SMS_Header *pSmsHeader;
+	SMS_Header *pSmsHeader = NULL;
 	FILE *pSmsFile; /* pointer to sms file to be synthesized */
 	SMS_Data smsFrameL, smsFrameR, smsFrame; /* left, right, and interpolated frames */
 	float *pFSynthesis; /* waveform synthesis buffer */
-	long iError, iSample, i, nSamples, iLeftFrame, iRightFrame;
+	long iSample, i, nSamples, iLeftFrame, iRightFrame;
         int verboseMode = 0;
         float fFrameLoc; /* exact sms frame location, used to interpolate smsFrame */
         float fFsRatio,  fLocIncr;
@@ -140,9 +140,9 @@ int main (int argc, char *argv[])
 	pChInputSmsFile = argv[argc-2];
 	pChOutputSoundFile = argv[argc-1];
         
-        iError = sms_getHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile);
+        sms_getHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile);
 
-	if (iError != SMS_OK)
+	if (sms_errorCheck())
 	{
                 printf("error in sms_getHeader: %s", sms_errorString());
                 exit(EXIT_FAILURE);

@@ -42,7 +42,7 @@ int main (int argc, const char *argv[])
 {
 	int optc;   /* switch */
         const char *pInName = NULL, *pOutName = NULL;
-        SMS_Header *pSmsHeader;
+        SMS_Header *pSmsHeader = NULL;
         FILE *pSmsFile, *fp;
         SMS_Data smsData;
         int iError, i, j, iFormat = PRINT_ALL, iFirstFrame = 0, iLastFrame = -1, 
