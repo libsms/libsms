@@ -132,14 +132,14 @@ void pysms_windowCentered(int sizeWaveform, float *pWaveform, int sizeWindow,
         }
         sms_windowCentered(sizeWindow, pWaveform, pWindow, sizeFft, pFftBuffer);
 }
-int pysms_synthesize(SMS_Data *pSmsData, int sizeHop, float *pSynthesis, SMS_SynthParams *pSynthParams) 
+void pysms_synthesize(SMS_Data *pSmsData, int sizeHop, float *pSynthesis, SMS_SynthParams *pSynthParams) 
 {
     if(sizeHop != pSynthParams->sizeHop)
     {
         sms_error("sizeHop != pSynthParams->sizeHop");
-        return -1;
+        return;
     }
-    return sms_synthesize(pSmsData, pSynthesis, pSynthParams);
+    sms_synthesize(pSmsData, pSynthesis, pSynthParams);
 }
 %}
 
@@ -387,37 +387,36 @@ int pysms_synthesize(SMS_Data *pSmsData, int sizeHop, float *pSynthesis, SMS_Syn
         }
         void getFreq( int sizeArray, float *pArray )
         {
-                if(sizeArray < $self->nPeaks)
+                if(sizeArray < $self->nPeaksFound)
                 {
                         sms_error("numpy array not big enough");
                         return;
                 }
                 int i;
-                for (i = 0; i < $self->nPeaks; i++)
+                for (i = 0; i < $self->nPeaksFound; i++)
                         pArray[i] = $self->pSpectralPeaks[i].fFreq;
 
         }
         void getMag( int sizeArray, float *pArray )
         {
-                if(sizeArray < $self->nPeaks)
+                if(sizeArray < $self->nPeaksFound)
                 {
                         sms_error("numpy array not big enough");
                         return;
                 }
                 int i;
-                for (i = 0; i < $self->nPeaks; i++)
+                for (i = 0; i < $self->nPeaksFound; i++)
                         pArray[i] = $self->pSpectralPeaks[i].fMag;
-
         }
         void getPhase( int sizeArray, float *pArray )
         {
-                if(sizeArray < $self->nPeaks)
+                if(sizeArray < $self->nPeaksFound)
                 {
                         sms_error("numpy array not big enough");
                         return;
                 }
                 int i;
-                for (i = 0; i < $self->nPeaks; i++)
+                for (i = 0; i < $self->nPeaksFound; i++)
                         pArray[i] = $self->pSpectralPeaks[i].fPhase;
 
         }
@@ -527,7 +526,6 @@ int pysms_synthesize(SMS_Data *pSmsData, int sizeHop, float *pSynthesis, SMS_Syn
 }
 
 %pythoncode %{
-
 from numpy import array as np_array
 def array (n, type='float32'):
         return(np_array(n, type))
