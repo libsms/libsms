@@ -23,6 +23,29 @@
 
 #include "sms.h"
 
+/*! \brief initialize a modifications structure based on an SMS_Header
+ *
+ * \param params pointer to parameter structure
+ * \param header pointer to sms header
+ */
+void sms_initModify(SMS_Header *header, SMS_ModifyParams *params)
+{
+        static int sizeEnvArray = 0;
+        params->maxFreq = header->iMaxFreq;
+        params->sizeEnv = header->nEnvCoeff;
+
+        if(sizeEnvArray < params->sizeEnv)
+        {
+                if(sizeEnvArray != 0) free(params->env);
+                if ((params->env = (sfloat *) malloc(params->sizeEnv * sizeof(sfloat))) == NULL)
+                {
+                        sms_error("could not allocate memory for envelope array");
+                        return;
+                }
+                sizeEnvArray = params->sizeEnv;
+        }
+
+}
 /*! \brief linear interpolation between 2 spectral envelopes.
  *
  * The values in env2 are overwritten by the new interpolated envelope values.
@@ -65,10 +88,11 @@ void sms_applyEnvelope(int numPeaks, sfloat *pFreqs, sfloat *pMags, int sizeEnv,
         for(i = 0; i < numPeaks; i++)
 	{
                 /* convert peak freqs into bin positions for quicker envelope lookup */
+                /* \todo try to remove so many pFreq lookups and get rid of divide */
                 pFreqs[i] /= binSize;
 
 		/* if current peak is within envelope range, set its mag to the envelope mag */
-		if(pFreqs[i] <= maxFreq && pFreqs[i] > 0)
+		if(pFreqs[i] < (sizeEnv-1) && pFreqs[i] > 0)
 		{
                         envPos = (int)pFreqs[i];
                         frac = pFreqs[i] - envPos;
@@ -122,22 +146,42 @@ void sms_transposeKeepEnv(SMS_Data *frame, sfloat transpositionFactor, int maxFr
  */
 void sms_modify(SMS_Data *frame, SMS_ModifyParams *params)
 {
-        switch(params->modifyType)
+        if(params->doTranspose)
+                sms_transpose(frame, params->transposition);
+        if(params->envType == SMS_MTYPE_KEEP_ENV)
+                sms_applyEnvelope(frame->nTracks, frame->pFSinFreq, frame->pFSinAmp, 
+                                  frame->nEnvCoeff, frame->pSpecEnv, params->maxFreq);
+        else if(params->envType == SMS_MTYPE_USE_ENV)
         {
-                case SMS_MTYPE_TRANSPOSE:
-                        sms_transpose(frame, params->transposition);
-                        break;
-
-                case SMS_MTYPE_TRANSPOSE_KEEP_ENV:
-                        sms_transposeKeepEnv(frame, params->transposition, params->maxFreq);
-                        break;
-
-                case SMS_MTYPE_USE_ENV:
-                        sms_applyEnvelope(frame->nTracks, frame->pFSinFreq, frame->pFSinAmp, params->sizeEnv, params->env, params->maxFreq);
-                        break;
-
-                case SMS_MTYPE_INTERP_ENV:
+                if(params->doEnvInterp)
                         sms_interpEnvelopes(params->sizeEnv, frame->pSpecEnv, params->env, params->envInterp);
-                        break;
+                sms_applyEnvelope(frame->nTracks, frame->pFSinFreq, frame->pFSinAmp,
+                                  params->sizeEnv, params->env, params->maxFreq);
         }
 }
+
+/* void sms_modify(SMS_Data *frame, SMS_ModifyParams *params) */
+/* { */
+/*         switch(params->modifyType) */
+/*         { */
+/*                 case SMS_MTYPE_TRANSPOSE: */
+/*                         sms_transpose(frame, params->transposition); */
+/*                         break; */
+
+/*                 case SMS_MTYPE_TRANSPOSE_KEEP_ENV: */
+/*                         sms_transposeKeepEnv(frame, params->transposition, params->maxFreq); */
+/*                         break; */
+
+/*                 case SMS_MTYPE_USE_ENV: */
+/*                         sms_applyEnvelope(frame->nTracks, frame->pFSinFreq, frame->pFSinAmp, */
+/*                                           params->sizeEnv, params->env, params->maxFreq); */
+/*                         break; */
+
+/*                 case SMS_MTYPE_INTERP_ENV: */
+/*                         sms_interpEnvelopes(params->sizeEnv, frame->pSpecEnv, params->env, params->envInterp); */
+/*                         /\* added apply envelope here because nothing is happening without it for this modtype *\/ */
+/*                         sms_applyEnvelope(frame->nTracks, frame->pFSinFreq, frame->pFSinAmp,  */
+/*                                           params->sizeEnv, params->env, params->maxFreq); */
+/*                         break; */
+/*         } */
+/* } */

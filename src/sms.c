@@ -139,7 +139,7 @@ void sms_initAnalParams (SMS_AnalParams *pAnalParams)
         pAnalParams->specEnvParams.iType = SMS_ENV_NONE; /* turn off enveloping */
         pAnalParams->specEnvParams.iOrder = 25; /* ... but set default params anyway */
         pAnalParams->specEnvParams.fLambda = 0.00001;
-        pAnalParams->specEnvParams.iMaxFreq = pAnalParams->fHighestFreq;
+        pAnalParams->specEnvParams.iMaxFreq = 0;
         pAnalParams->specEnvParams.nCoeff = 0;
         pAnalParams->specEnvParams.iAnchor = 0; /* not yet implemented */
 }
@@ -185,6 +185,9 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams, SMS_SndHeader *pSoundHeader)
                 pAnalParams->specEnvParams.nCoeff = sms_power2(pAnalParams->sizeHop);
         else if(pAnalParams->specEnvParams.iType == SMS_ENV_CEP)
                 pAnalParams->specEnvParams.nCoeff = pAnalParams->specEnvParams.iOrder+1; 
+        /* if specEnvParams.iMaxFreq is still 0, set it to the same as fHighestFreq (normally what you want)*/
+        if(pAnalParams->specEnvParams.iMaxFreq == 0)
+                pAnalParams->specEnvParams.iMaxFreq = pAnalParams->fHighestFreq;
 
         /*\todo this probably doesn't need env coefficients - they aren't getting used */
         sms_allocFrame (&pAnalParams->prevFrame, pAnalParams->nGuides, 
@@ -343,6 +346,9 @@ int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
         pSynthParams->pPhaseBuff = (sfloat *) calloc(sizeHop, sizeof(float));
 
         pSynthParams->pSpectra = (sfloat *) calloc(sizeFft, sizeof(float));
+
+        /* set/check modification parameters */
+        pSynthParams->modParams.maxFreq = pSmsHeader->iMaxFreq;
 
         return (SMS_OK);
 }

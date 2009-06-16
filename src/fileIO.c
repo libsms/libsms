@@ -90,6 +90,7 @@ void sms_fillHeader (SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams,
                 pSmsHeader->nStochasticCoeff = pAnalParams->nStochasticCoeff;
         pSmsHeader->iEnvType = pAnalParams->specEnvParams.iType;
         pSmsHeader->nEnvCoeff = pAnalParams->specEnvParams.nCoeff;
+        pSmsHeader->iMaxFreq = (int) pAnalParams->fHighestFreq;
         pSmsHeader->iFrameBSize = sms_frameSizeB(pSmsHeader);
         sprintf (pChTextString, 
                  "created by %s with parameters: format %d, soundType %d, "
@@ -225,7 +226,6 @@ int sms_writeFile (FILE *pSmsFile, SMS_Header *pSmsHeader)
 int sms_writeFrame (FILE *pSmsFile, SMS_Header *pSmsHeader,
                     SMS_Data *pSmsFrame)
 {
-        int i;
         if (fwrite ((void *)pSmsFrame->pSmsData, 1, pSmsHeader->iFrameBSize,
 	            pSmsFile) < (unsigned int) pSmsHeader->iFrameBSize)
         {
@@ -628,5 +628,12 @@ void sms_interpolateFrames (SMS_Data *pSmsFrame1, SMS_Data *pSmsFrame2,
                 pSmsFrameOut->pFStocCoeff[i] = 
                         pSmsFrame1->pFStocCoeff[i] + fInterpFactor * 
                         (pSmsFrame2->pFStocCoeff[i] - pSmsFrame1->pFStocCoeff[i]);
+
+        /* DO NEXT: interpolate spec env here if fbins */
+        for (i = 0; i < pSmsFrame1->nEnvCoeff; i++)
+                pSmsFrameOut->pSpecEnv[i] = 
+                        pSmsFrame1->pSpecEnv[i] + fInterpFactor * 
+                        (pSmsFrame2->pSpecEnv[i] - pSmsFrame1->pSpecEnv[i]);
+        
 
 }

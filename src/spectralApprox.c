@@ -150,6 +150,6 @@ int sms_spectralApprox (sfloat *pFSpec1, int sizeSpec1, int sizeSpec1Used,
 		sms_error ("SpectralApprox: sizeSpec2 has too many nCoefficients\n");
 		return -1;
 	}
-	free (pFEnvelope);
+	free (pFEnvelope); /* \todo make this a static array */
 	return (SMS_OK);
 }

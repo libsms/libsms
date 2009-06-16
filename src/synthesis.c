@@ -39,12 +39,11 @@ static void SineSynthIFFT (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
         sfloat fMag=0.0, fFreq=0.0, fPhase=0.0, fLoc, fSin, fCos, fBinRemainder, 
                 fTmp, fNewMag,  fIndex;
         sfloat fSamplingPeriod = 1.0 / pSynthParams->iSamplingRate;
-        //printf("| in sinesynth ifft | ");
         memset (pSynthParams->pSpectra, 0, sizeFft * sizeof(sfloat));
         for (i = 0; i < nTracks; i++)
         {
                 if (((fMag = pSmsData->pFSinAmp[i]) > 0) &&
-                    ((fFreq = (pSmsData->pFSinFreq[i]) * pSynthParams->fTranspose) < iHalfSamplingRate))
+                    ((fFreq = (pSmsData->pFSinFreq[i])) < iHalfSamplingRate))
                 {
                         /* \todo maybe this check can be removed if the SynthParams->prevFrame gets random
                            phases in sms_initSynth? */
@@ -134,7 +133,7 @@ void sms_deterministic (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
         for (i = 0; i < nTracks; i++)
         {
                 if (((fMag = pSmsData->pFSinAmp[i]) > 0) &&
-                    ((fFreq = (pSmsData->pFSinFreq[i]) * pSynthParams->fTranspose) < iHalfSamplingRate))
+                    (fFreq = pSmsData->pFSinFreq[i] < iHalfSamplingRate)) /* \todo why does this allow f < 0 */
                 {
                         /* \todo maybe this check can be removed if the SynthParams->prevFrame gets random
                            phases in sms_initSynth? */
@@ -305,9 +304,8 @@ int sms_stochastic (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
  * \param pSmsData      input SMS data
  * \param pFSynthesis      output sound buffer  
  * \param pSynthParams   synthesis parameters
- * \return 0 on success, -1 on error \todo make this return void
  */
-int sms_synthesize (SMS_Data *pSmsData, sfloat *pFSynthesis,  
+void sms_synthesize (SMS_Data *pSmsData, sfloat *pFSynthesis,  
                   SMS_SynthParams *pSynthParams)
 {
         int i, k;
@@ -369,6 +367,5 @@ int sms_synthesize (SMS_Data *pSmsData, sfloat *pFSynthesis,
         for(i = 0; i < sizeHop; i++)
                 pFSynthesis[i] = sms_deEmphasis(pSynthParams->pSynthBuff[i]);
 
-        return (0);
 }
 

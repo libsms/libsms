@@ -266,6 +266,24 @@ typedef struct
         SMS_AnalFrame **ppFrames; /*!< pointers to the frames analyzed (it is circular-shifted once the array is full */
 } SMS_AnalParams;
 
+/*! \ frame modification parameters
+ * 
+ * This structure holds parameters and data that will be used to modify a
+ * frame (SMS_Data object)
+ */
+typedef struct
+{
+        int envType;      /*!< type of envelope modification (from original file or another) */
+	int maxFreq;         /*!< maximum frequency component */
+        int doTranspose; /*!< whether or not to transpose */
+	sfloat transposition; /*!< transposition factor */
+        int doEnvInterp; /*!< whether or not to interpolate between two envelopes */
+	sfloat envInterp;     /*!< (between 0 and 1) specifies the linear envelope interpolation factor */
+	int sizeEnv;	     /*!< size of the envelope pointed to by env */
+        //int doApplyEnv; /*!< whether or not to apply a spectral envelope to peaks (for now) */
+	sfloat *env;	     /*!< additional spectral envelope used in some modifications */
+} SMS_ModifyParams;
+
 /*! \struct SMS_SynthParams
  * \brief structure with information for synthesis functions
  *
@@ -281,21 +299,20 @@ typedef struct
 	int iSynthesisType;        /*!< type of synthesis to perform \see SMS_SynthType */
         int iDetSynthType;         /*!< method for synthesizing deterministic component
                                                  \see SMS_DetSynthType */
-	int iOriginalSRate;  /*!< samplerate of the sound model source.  I used to determine the stochastic
-                               synthesis approximation */
+	int iOriginalSRate;  /*!< samplerate of the sound model source (for stochastic synthesis approximation) */
 	int iSamplingRate;         /*!< synthesis samplerate */
 	int sizeHop;                   /*!< number of samples to synthesis for each frame */
         int origSizeHop;            /*!< original number of samples used to create each analysis frame */
-        sfloat fStocGain;            /*!< gain multiplied to the stachostic component */
-        sfloat fTranspose;          /*!< frequency transposing value multiplied by each frequency */
+        sfloat fStocGain;            /*!< gain multiplied to the stachostic component \todo REMOVE ME */
+        sfloat fTranspose;          /*!< frequency transposing value multiplied by each frequency \todo REMOVE ME */
 	sfloat *pFDetWindow;    /*!< array to hold the window used for deterministic synthesis  \see SMS_WIN_IFFT */
         sfloat *pFStocWindow; /*!< array to hold the window used for stochastic synthesis (Hanning) */
         sfloat *pSynthBuff;  /*!< an array for keeping samples during overlap-add (2x sizeHop) */
         sfloat *pMagBuff;  /*!< an array for keeping magnitude spectrum for stochastic synthesis */
         sfloat *pPhaseBuff;  /*!< an array for keeping phase spectrum for stochastic synthesis */
-	SMS_Data prevFrame; /*!< previous data frame, for interpolation between frames */
         sfloat *pSpectra; /*!< array for in-place FFT transform */
-
+	SMS_Data prevFrame; /*!< previous data frame, for interpolation between frames */
+        SMS_ModifyParams modParams; /*!< modification parameters */
 } SMS_SynthParams;
 
 /*! \struct SMS_HarmCandidate
@@ -343,32 +360,21 @@ typedef struct
 	int iPeakChosen;    /*!< peak number chosen by the guide */
 } SMS_Guide;
 
-/*! \ frame modification parameters
- * 
- * This structure holds parameters and data that will be used to modify a
- * frame (SMS_Data object)
- */
-typedef struct
-{
-        int modifyType;      /*!< type of modification (transpose, apply different envelope, etc) */
-	int maxFreq;         /*!< maximum frequency component */
-	float transposition; /*!< transposition factor */
-	float envInterp;     /*!< (between 0 and 1) specifies the linear envelope interpolation factor */
-	int sizeEnv;	     /*!< size of the envelope pointed to by env */
-	sfloat *env;	     /*!< additional spectral envelope used in some modifications */
-} SMS_ModifyParams;
-
 /*! \brief modification type 
  * 
  * Used to specify what transformation will be applied to the target SMS_Data object. 
  */
 enum SMS_ModifyType
 {
-        SMS_MTYPE_TRANSPOSE,          /*!< simple transposition - multiply deterministic frequencies */
-        SMS_MTYPE_TRANSPOSE_KEEP_ENV, /*!< transpose but frequency multiplication but keep spectral envelope */
+        //SMS_MTYPE_TRANSPOSE,          /*!< simple transposition - multiply deterministic frequencies */
+        //SMS_MTYPE_TRANSPOSE_KEEP_ENV, /*!< transpose but frequency multiplication but keep spectral envelope */
+        SMS_MTYPE_NONE,             /*!< do nothing */
+        SMS_MTYPE_KEEP_ENV,             /*!< apply the original spectal envelope extracted from peaks */
         SMS_MTYPE_USE_ENV,             /*!< apply a given spectal envelope to the sound */
-	SMS_MTYPE_INTERP_ENV          /*!< linear interpolation between two spectral envelopes */
+	//SMS_MTYPE_INTERP_ENV          /*!< linear interpolation between two spectral envelopes */
 };
+
+
 
 /*!  \brief analysis format
  *
@@ -689,7 +695,7 @@ void sms_clearSine( void );
 
 void sms_clearSinc( void );
 
-int sms_synthesize (SMS_Data *pSmsFrame, sfloat*pSynthesis, 
+void sms_synthesize (SMS_Data *pSmsFrame, sfloat*pSynthesis, 
                   SMS_SynthParams *pSynthParams);
                 
 void sms_sineSynthFrame (SMS_Data *pSmsFrame, sfloat *pBuffer, 
@@ -761,6 +767,8 @@ void sms_RectToPolar( int sizeSpec, sfloat *pReal, float *pMag, float *pPhase);
 void sms_PolarToRect( int sizeSpec, sfloat *pReal, float *pMag, float *pPhase);
 
 void sms_spectrumRMS( int sizeMag, sfloat *pReal, float *pMag);
+
+void sms_initModify(SMS_Header *header, SMS_ModifyParams *params);
 
 void sms_modify(SMS_Data *frame, SMS_ModifyParams *params);
 
