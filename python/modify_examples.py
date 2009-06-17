@@ -21,9 +21,11 @@
 
 from scipy import asarray, int16
 from scipy.io.wavfile import write
-from SMS import (zeros, analyze, synthesize, SMS_ModifyParams, SMS_MTYPE_INTERP_ENV, SMS_MTYPE_USE_ENV,
-	         SMS_MTYPE_TRANSPOSE, SMS_MTYPE_TRANSPOSE_KEEP_ENV, SMS_ENV_FBINS, sms_modify)
+# from SMS import (zeros, analyze, synthesize, SMS_ModifyParams, SMS_MTYPE_USE_ENV, SMS_MTYPE_KEEP_ENV,
+#                  SMS_ENV_FBINS, sms_modify, sms_initModify)
+from SMS import *
 from time import time
+from sys import exit
 
 start_time = time()
 
@@ -31,7 +33,7 @@ start_time = time()
 # applied to the target file.
 # For all other examples, the source file will be modified.
 source = "../../test/audio/soopastar.wav"
-target = "../../test/audio/synth_cello.wav"
+target = "../../test/audio/ocarina.wav"
 
 # the maximum frequency of the highest partial detected (and of the spectral envelope)
 max_freq = 12000
@@ -47,6 +49,8 @@ transposition = 4
 
 # ----------------------------------------------------------------------------------------
 # Morph
+# note: mod_params needs to be inititialized with sms_initModify to allocate the envelope array
+# (not necessary in transpose examples)
 
 # Analyze files
 source_frames, source_sms_header, source_snd_header = analyze(source, env_type=SMS_ENV_FBINS, env_order=80)
@@ -65,28 +69,27 @@ if source_sms_header.iSamplingRate != target_sms_header.iSamplingRate:
     print "Error: sound sources have different sampling rates"
     exit()
 
+# Set modification parameters
+mod_params = SMS_ModifyParams()
+#mod_params.maxFreq = max_freq
+mod_params.doEnvInterp = True
+mod_params.envInterp = envelope_interp_factor
+#mod_params.sizeEnv = source_frame.nEnvCoeff
+mod_params.envType = SMS_MTYPE_USE_ENV  # interpolate envelopes
+sms_initModify(source_sms_header, mod_params)
+
+source_env_mags = zeros(mod_params.sizeEnv)
+
 for frame_number in range(num_frames):
     source_frame = source_frames[frame_number]
     target_frame = target_frames[frame_number]
     
-    # Set modification parameters
-    mod_params = SMS_ModifyParams()
-    mod_params.maxFreq = max_freq
-    mod_params.envInterp = envelope_interp_factor
-    mod_params.sizeEnv = source_frame.nEnvCoeff
-
-    # get the source envelope
-    source_env_mags = zeros(source_frame.nEnvCoeff)
+    # get the source envelope and put in the mod_params
     source_frame.getSpecEnv(source_env_mags)
     mod_params.setEnv(source_env_mags)
-
-    # interpolate envelopes
-    mod_params.modifyType = SMS_MTYPE_INTERP_ENV
+    # call modifications
     sms_modify(target_frame, mod_params)
 
-    # apply the new interpolated envelope to the target sound
-    mod_params.modifyType = SMS_MTYPE_USE_ENV
-    sms_modify(target_frame, mod_params)
 
 # change the output number of frames to the minimum of the two frame counts
 target_frames = target_frames[0:num_frames]
@@ -102,17 +105,19 @@ morph = asarray(morph, int16)
 
 # write output files
 write("modify_example_morph.wav", target_snd_header.iSamplingRate, morph)
+print "wrote modify_example_morph.wav"
 
 # ----------------------------------------------------------------------------------------
 # Transpose without maintaining envelope  
 
+# Set modification parameters
+mod_params = SMS_ModifyParams()
+mod_params.envType = SMS_MTYPE_NONE
+mod_params.doTranspose = True
+mod_params.transposition = transposition 
+
 for frame_number in range(len(source_frames)):
     source_frame = source_frames[frame_number]
-    
-    # Set modification parameters
-    mod_params = SMS_ModifyParams()
-    mod_params.modifyType = SMS_MTYPE_TRANSPOSE
-    mod_params.transposition = transposition 
     sms_modify(source_frame, mod_params)
 
 # Synthesis
@@ -125,21 +130,23 @@ transpose = asarray(transpose, int16)
 
 # write output files
 write("modify_example_transpose.wav", source_snd_header.iSamplingRate, transpose)
-
+print "wrote modify_example_transpose.wav"
 # ----------------------------------------------------------------------------------------
 # Transpose maintaining envelope  
 
 # Have to analyze source again for now, should really be a way to copy/clone frames
 source_frames, source_sms_header, source_snd_header = analyze(source, env_type=SMS_ENV_FBINS, env_order=80)
 
+# Set modification parameters
+mod_params = SMS_ModifyParams()
+mod_params.envType = SMS_MTYPE_KEEP_ENV
+mod_params.doTranpose = True
+mod_params.transposition = transposition 
+mod_params.maxFreq = max_freq
+
 for frame_number in range(len(source_frames)):
     source_frame = source_frames[frame_number]
     
-    # Set modification parameters
-    mod_params = SMS_ModifyParams()
-    mod_params.modifyType = SMS_MTYPE_TRANSPOSE_KEEP_ENV
-    mod_params.transposition = transposition 
-    mod_params.maxFreq = max_freq
     sms_modify(source_frame, mod_params)
 
 # Synthesis
@@ -152,6 +159,6 @@ transpose_with_env = asarray(transpose_with_env, int16)
 
 # write output files
 write("modify_example_transpose_with_env.wav", source_snd_header.iSamplingRate, transpose_with_env)
-
+print "wrote modify_example_transpose_with_env.wav"
 # ----------------------------------------------------------------------------------------
 print "Running time: ", int(time() - start_time), "seconds."

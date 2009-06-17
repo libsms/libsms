@@ -488,40 +488,20 @@ void pysms_synthesize(SMS_Data *pSmsData, int sizeHop, float *pSynthesis, SMS_Sy
 
 %extend SMS_ModifyParams
 {
-        int setEnv(int sizeArray, float *pArray)
+        /* no need to return an error code, if sms_error is called, it will throw an exception in python */
+        void setEnv(int sizeArray, float *pArray)
         {
-                static int sizeEnv = 0;
-
-                if(sizeArray != $self->sizeEnv)        
+                if(!$self->ready)
+                {
+                        sms_error("modify parameter structure has not been initialized");
+                        return;
+                }
+                if(sizeArray != $self->sizeEnv)
                 {
                         sms_error("numpy array is not equal to envelope size");
-                        return -1;
+                        return;
                 }
-
-                /* todo init/free functions for allocating ModifyParams memory? */
-                if($self->env == NULL)
-                {
-                        if(($self->env = (float *)calloc($self->sizeEnv, sizeof(float))) == NULL)
-                        {
-		                sms_error("could not allocate memory");
-                                return(-1);
-                        }
-        
-                        sizeEnv = $self->sizeEnv;
-                }
-                else if(sizeEnv != sizeArray)
-                {
-                        free($self->env);
-                        if(($self->env = (float *)calloc($self->sizeEnv, sizeof(float))) == NULL)
-                        {
-		                sms_error("could not allocate memory");
-                                return(-1);
-                        }
-                        sizeEnv = $self->sizeEnv;
-                }
-
                 memcpy($self->env, pArray, sizeof(sfloat) * $self->sizeEnv);
-                return 0;
         }
 }
 
