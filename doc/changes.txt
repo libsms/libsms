@@ -33,6 +33,34 @@ Bug fixes:
 Other:
 	- Added some unit tests (in Python) to test/Tests.py
 
+=== April 9, 2009 === version 1.05e, experimental release =====================================
+This is a release heading in the direction of better modularity, especially in the analysis routines.  The ultimate
+goal is to be able to interchange each step of the analysis process (such as f0 estiumation, transient extraction,
+etc) with custom code, either in C or python.
+
+Many functions received argument changes so they could be easily wrapped in python using SWG.  I tried to
+give every array pointer an argument before it that indicates the size of the array.  In some functions, this seemed
+too redundant (such as sms_spectrum for example), so they are custom wrapped in the swig interface file.
+
+In doing this, the release is made incompatible with the last because of many name and argument changes. This will
+probably continue to happen through the summer.  If projects break or people think things were better the way before,
+please email me.
+
+Notable changes:
+        - some files have been moved around in an attempt to organize function types (transforms.c. filters.c, tables.c, etc)
+        - some more general functions are in sms.c, such as RMS array calculation and frequency conversion (well-tempored)
+        - started replacing float with sfloat so that, one day, the library can be optionally compiled in double precision
+        - added support for reading of multi-channel audio files - can select what channel you want to analyze 
+        - smsAnal now depends much more on library functions (like sms_initAnalParams)
+        - tried to fix documentation errors mentioned to me
+        - removed some outdated tools (smsToLisp, smsSynthDet - now in smsSynth)
+        - moved around synthesis buffers so that they are properly re-allocated if the sizeHop changes
+        - using Mersainne Twister random number generator.
+        - sms_analyzeFrame() is supposed to be a function for computing sinusoidal analysis without a circular buffer.
+          Its not quite at that point yet.
+        - SMS_PeakParams structure has parameters just for sinusoidal analysis (it used to need all of SMS_AnalParams)
+        - python test scripts have been added for many things (all names test_*.py)
+
 === Nov. 15, 2008 === version 1.0, first release ============================================
 
 This release represents a revival of the original code from Xavier Serra, which dates back to the early 1990's.
