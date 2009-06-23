@@ -273,6 +273,7 @@ typedef struct
  */
 typedef struct
 {
+        int ready;      /*!< a flag to know if the struct has been initialized) */
         int envType;      /*!< type of envelope modification (from original file or another) */
 	int maxFreq;         /*!< maximum frequency component */
         int doTranspose; /*!< whether or not to transpose */

@@ -44,7 +44,7 @@ void sms_initModify(SMS_Header *header, SMS_ModifyParams *params)
                 }
                 sizeEnvArray = params->sizeEnv;
         }
-
+        params->ready = 1;
 }
 /*! \brief linear interpolation between 2 spectral envelopes.
  *
@@ -158,6 +158,7 @@ void sms_modify(SMS_Data *frame, SMS_ModifyParams *params)
                 sms_applyEnvelope(frame->nTracks, frame->pFSinFreq, frame->pFSinAmp,
                                   params->sizeEnv, params->env, params->maxFreq);
         }
+
 }
 
 /* void sms_modify(SMS_Data *frame, SMS_ModifyParams *params) */
