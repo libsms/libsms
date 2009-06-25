@@ -48,7 +48,7 @@ envelope_interp_factor = 1
 transposition = 4
 
 # ----------------------------------------------------------------------------------------
-# Morph
+# Impose a spectral envelope from one sound onto another set of sinudoidal tracks
 # note: mod_params needs to be inititialized with sms_initModify to allocate the envelope array
 # (not necessary in transpose examples)
 
@@ -71,7 +71,6 @@ if source_sms_header.iSamplingRate != target_sms_header.iSamplingRate:
 
 # Set modification parameters
 mod_params = SMS_ModifyParams()
-#mod_params.maxFreq = max_freq
 mod_params.doEnvInterp = True
 mod_params.envInterp = envelope_interp_factor
 #mod_params.sizeEnv = source_frame.nEnvCoeff
@@ -115,6 +114,7 @@ mod_params = SMS_ModifyParams()
 mod_params.envType = SMS_MTYPE_NONE
 mod_params.doTranspose = True
 mod_params.transposition = transposition 
+print "doTranspose: ", mod_params.doTranspose
 
 for frame_number in range(len(source_frames)):
     source_frame = source_frames[frame_number]
@@ -124,15 +124,16 @@ for frame_number in range(len(source_frames)):
 transpose = synthesize(source_frames, source_sms_header)
 
 # convert audio to int values
+transpose /= transpose.max() # normalize max gain to 1.
 transpose *= 32767
-transpose *= 0.25 # soopastar sample clips so make output quieter
+#transpose *= 0.25 # soopastar sample clips so make output quieter
 transpose = asarray(transpose, int16)
 
 # write output files
 write("modify_example_transpose.wav", source_snd_header.iSamplingRate, transpose)
 print "wrote modify_example_transpose.wav"
 # ----------------------------------------------------------------------------------------
-# Transpose maintaining envelope  
+# Transpose maintaining spectral envelope
 
 # Have to analyze source again for now, should really be a way to copy/clone frames
 source_frames, source_sms_header, source_snd_header = analyze(source, env_type=SMS_ENV_FBINS, env_order=80)
@@ -143,18 +144,19 @@ mod_params.envType = SMS_MTYPE_KEEP_ENV
 mod_params.doTranpose = True
 mod_params.transposition = transposition 
 mod_params.maxFreq = max_freq
+print "doTranspose A: ", mod_params.doTranspose
 
 for frame_number in range(len(source_frames)):
     source_frame = source_frames[frame_number]
-    
     sms_modify(source_frame, mod_params)
 
 # Synthesis
 transpose_with_env = synthesize(source_frames, source_sms_header)
-
+print "doTranspose B: ", mod_params.doTranspose
 # convert audio to int values
+transpose_with_env /= transpose_with_env.max() # normalize max gain to 1.
 transpose_with_env *= 32767
-transpose_with_env *= 0.25 # soopastar sample clips so make output quieter
+#transpose_with_env *= 0.25 # soopastar sample clips so make output quieter
 transpose_with_env = asarray(transpose_with_env, int16)
 
 # write output files
