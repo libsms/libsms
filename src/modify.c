@@ -46,6 +46,7 @@ void sms_initModify(SMS_Header *header, SMS_ModifyParams *params)
         }
         params->ready = 1;
 }
+
 /*! \brief linear interpolation between 2 spectral envelopes.
  *
  * The values in env2 are overwritten by the new interpolated envelope values.

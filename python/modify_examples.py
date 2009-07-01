@@ -73,7 +73,6 @@ if source_sms_header.iSamplingRate != target_sms_header.iSamplingRate:
 mod_params = SMS_ModifyParams()
 mod_params.doEnvInterp = True
 mod_params.envInterp = envelope_interp_factor
-#mod_params.sizeEnv = source_frame.nEnvCoeff
 mod_params.envType = SMS_MTYPE_USE_ENV  # interpolate envelopes
 sms_initModify(source_sms_header, mod_params)
 
@@ -88,7 +87,6 @@ for frame_number in range(num_frames):
     mod_params.setEnv(source_env_mags)
     # call modifications
     sms_modify(target_frame, mod_params)
-
 
 # change the output number of frames to the minimum of the two frame counts
 target_frames = target_frames[0:num_frames]
@@ -114,7 +112,6 @@ mod_params = SMS_ModifyParams()
 mod_params.envType = SMS_MTYPE_NONE
 mod_params.doTranspose = True
 mod_params.transposition = transposition 
-print "doTranspose: ", mod_params.doTranspose
 
 for frame_number in range(len(source_frames)):
     source_frame = source_frames[frame_number]
@@ -132,6 +129,7 @@ transpose = asarray(transpose, int16)
 # write output files
 write("modify_example_transpose.wav", source_snd_header.iSamplingRate, transpose)
 print "wrote modify_example_transpose.wav"
+
 # ----------------------------------------------------------------------------------------
 # Transpose maintaining spectral envelope
 
@@ -141,10 +139,9 @@ source_frames, source_sms_header, source_snd_header = analyze(source, env_type=S
 # Set modification parameters
 mod_params = SMS_ModifyParams()
 mod_params.envType = SMS_MTYPE_KEEP_ENV
-mod_params.doTranpose = True
+mod_params.doTranspose = True
 mod_params.transposition = transposition 
 mod_params.maxFreq = max_freq
-print "doTranspose A: ", mod_params.doTranspose
 
 for frame_number in range(len(source_frames)):
     source_frame = source_frames[frame_number]
@@ -152,9 +149,9 @@ for frame_number in range(len(source_frames)):
 
 # Synthesis
 transpose_with_env = synthesize(source_frames, source_sms_header)
-print "doTranspose B: ", mod_params.doTranspose
+
 # convert audio to int values
-transpose_with_env /= transpose_with_env.max() # normalize max gain to 1.
+transpose_with_env /= transpose_with_env.max() # normalize max gain to 1 (soopastar clips)
 transpose_with_env *= 32767
 #transpose_with_env *= 0.25 # soopastar sample clips so make output quieter
 transpose_with_env = asarray(transpose_with_env, int16)
@@ -162,5 +159,6 @@ transpose_with_env = asarray(transpose_with_env, int16)
 # write output files
 write("modify_example_transpose_with_env.wav", source_snd_header.iSamplingRate, transpose_with_env)
 print "wrote modify_example_transpose_with_env.wav"
+
 # ----------------------------------------------------------------------------------------
 print "Running time: ", int(time() - start_time), "seconds."
