@@ -21,9 +21,8 @@
 
 from scipy import asarray, int16
 from scipy.io.wavfile import write
-# from pysms import (zeros, pysms_analyze, pysms_synthesize, SMS_ModifyParams, SMS_MTYPE_USE_ENV, SMS_MTYPE_KEEP_ENV,
-#                  SMS_ENV_FBINS, sms_modify, sms_initModify)
-from pysms import *
+from pysms import (zeros, pysms_analyze, pysms_synthesize, SMS_ENV_FBINS, 
+                   SMS_ModifyParams, sms_modify, sms_initModify, sms_freeModify)
 from time import time
 from sys import exit
 
@@ -64,27 +63,21 @@ if num_tracks != source_num_tracks:
     print "Error: sound sources have a different number of tracks"
     exit()
 
-if source_sms_header.iSamplingRate != target_sms_header.iSamplingRate:
-    # todo: should be able to work around this problem
-    print "Error: sound sources have different sampling rates"
-    exit()
-
 # Set modification parameters
 mod_params = SMS_ModifyParams()
-mod_params.doEnvInterp = True
-mod_params.envInterp = envelope_interp_factor
-mod_params.envType = SMS_MTYPE_USE_ENV  # interpolate envelopes
 sms_initModify(source_sms_header, mod_params)
+mod_params.doSinEnv = True 
+mod_params.sinEnvInterp = envelope_interp_factor
 
-source_env_mags = zeros(mod_params.sizeEnv)
+source_env_mags = zeros(mod_params.sizeSinEnv)
 
 for frame_number in range(num_frames):
     source_frame = source_frames[frame_number]
     target_frame = target_frames[frame_number]
     
     # get the source envelope and put in the mod_params
-    source_frame.getSpecEnv(source_env_mags)
-    mod_params.setEnv(source_env_mags)
+    source_frame.getSinEnv(source_env_mags)
+    mod_params.setSinEnv(source_env_mags)
     # call modifications
     sms_modify(target_frame, mod_params)
 
@@ -109,9 +102,8 @@ print "wrote modify_example_morph.wav"
 
 # Set modification parameters
 mod_params = SMS_ModifyParams()
-mod_params.envType = SMS_MTYPE_NONE
 mod_params.doTranspose = True
-mod_params.transposition = transposition 
+mod_params.transpose = transposition 
 
 for frame_number in range(len(source_frames)):
     source_frame = source_frames[frame_number]
@@ -121,9 +113,8 @@ for frame_number in range(len(source_frames)):
 transpose = pysms_synthesize(source_frames, source_sms_header)
 
 # convert audio to int values
-transpose /= transpose.max() # normalize max gain to 1.
+transpose /= transpose.max() # normalize max gain to 1 (soopastar clips)
 transpose *= 32767
-#transpose *= 0.25 # soopastar sample clips so make output quieter
 transpose = asarray(transpose, int16)
 
 # write output files
@@ -138,9 +129,9 @@ source_frames, source_sms_header, source_snd_header = pysms_analyze(source, env_
 
 # Set modification parameters
 mod_params = SMS_ModifyParams()
-mod_params.envType = SMS_MTYPE_KEEP_ENV
+mod_params.doSinEnv = True
 mod_params.doTranspose = True
-mod_params.transposition = transposition 
+mod_params.transpose = transposition 
 mod_params.maxFreq = max_freq
 
 for frame_number in range(len(source_frames)):
@@ -153,7 +144,6 @@ transpose_with_env = pysms_synthesize(source_frames, source_sms_header)
 # convert audio to int values
 transpose_with_env /= transpose_with_env.max() # normalize max gain to 1 (soopastar clips)
 transpose_with_env *= 32767
-#transpose_with_env *= 0.25 # soopastar sample clips so make output quieter
 transpose_with_env = asarray(transpose_with_env, int16)
 
 # write output files
