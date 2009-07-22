@@ -273,16 +273,14 @@ typedef struct
  */
 typedef struct
 {
-        int ready;      /*!< a flag to know if the struct has been initialized) */
-        int envType;      /*!< type of envelope modification (from original file or another) */
-	int maxFreq;         /*!< maximum frequency component */
-        int doTranspose; /*!< whether or not to transpose */
-	sfloat transposition; /*!< transposition factor */
-        int doEnvInterp; /*!< whether or not to interpolate between two envelopes */
-	sfloat envInterp;     /*!< (between 0 and 1) specifies the linear envelope interpolation factor */
-	int sizeEnv;	     /*!< size of the envelope pointed to by env */
-        //int doApplyEnv; /*!< whether or not to apply a spectral envelope to peaks (for now) */
-	sfloat *env;	     /*!< additional spectral envelope used in some modifications */
+        int ready;  /*!< a flag to know if the struct has been initialized) */
+	int maxFreq;  /*!< maximum frequency component */
+	int doTranspose;  /*!< whether or not to transpose */
+	sfloat transposition;  /*!< transposition factor */
+	int doSinEnv;  /*!< whether or not to interpolate between two envelopes */
+	sfloat sinEnvInterp;  /*!< value between 0 (use frame's env) and 1 (use *env). Interpolates inbetween values*/
+	int sizeSinEnv;  /*!< size of the envelope pointed to by env */
+	sfloat *sinEnv;  /*!< additional spectral envelope used in some modifications */
 } SMS_ModifyParams;
 
 /*! \struct SMS_SynthParams
@@ -360,22 +358,6 @@ typedef struct
 	int iStatus;          /*!< status of guide: DEAD, SLEEPING, ACTIVE */
 	int iPeakChosen;    /*!< peak number chosen by the guide */
 } SMS_Guide;
-
-/*! \brief modification type 
- * 
- * Used to specify what transformation will be applied to the target SMS_Data object. 
- */
-enum SMS_ModifyType
-{
-        //SMS_MTYPE_TRANSPOSE,          /*!< simple transposition - multiply deterministic frequencies */
-        //SMS_MTYPE_TRANSPOSE_KEEP_ENV, /*!< transpose but frequency multiplication but keep spectral envelope */
-        SMS_MTYPE_NONE,             /*!< do nothing */
-        SMS_MTYPE_KEEP_ENV,             /*!< apply the original spectal envelope extracted from peaks */
-        SMS_MTYPE_USE_ENV,             /*!< apply a given spectal envelope to the sound */
-	//SMS_MTYPE_INTERP_ENV          /*!< linear interpolation between two spectral envelopes */
-};
-
-
 
 /*!  \brief analysis format
  *
@@ -770,6 +752,8 @@ void sms_PolarToRect( int sizeSpec, sfloat *pReal, float *pMag, float *pPhase);
 void sms_spectrumRMS( int sizeMag, sfloat *pReal, float *pMag);
 
 void sms_initModify(SMS_Header *header, SMS_ModifyParams *params);
+
+void sms_freeModify(SMS_ModifyParams *params);
 
 void sms_modify(SMS_Data *frame, SMS_ModifyParams *params);
 

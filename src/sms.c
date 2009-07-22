@@ -173,16 +173,17 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams, SMS_SndHeader *pSoundHeader)
          /* set the default size window to an odd length */
 	pAnalParams->iDefaultSizeWindow = 
 		(int)((pAnalParams->iSamplingRate / pAnalParams->fDefaultFundamental) *
-		pAnalParams->fSizeWindow / 2) * 2 + 1; 
+		pAnalParams->fSizeWindow / 2) * 2 + 1;
 
 	int sizeBuffer = (pAnalParams->iMaxDelayFrames * pAnalParams->sizeHop) + SMS_MAX_WINDOW;
 
         /* if storing residual phases, restrict number of stochastic coefficients to the size of the spectrum (sizeHop = 1/2 sizeFft)*/
         if(pAnalParams->iStochasticType == SMS_STOC_IFFT)
                 pAnalParams->nStochasticCoeff = sms_power2(pAnalParams->sizeHop);
+
         /* do the same if spectral envelope is to be stored in frequency bins */
         if(pAnalParams->specEnvParams.iType == SMS_ENV_FBINS)
-                pAnalParams->specEnvParams.nCoeff = sms_power2(pAnalParams->sizeHop);
+                pAnalParams->specEnvParams.nCoeff = sms_power2(pAnalParams->specEnvParams.iOrder * 2);
         else if(pAnalParams->specEnvParams.iType == SMS_ENV_CEP)
                 pAnalParams->specEnvParams.nCoeff = pAnalParams->specEnvParams.iOrder+1; 
         /* if specEnvParams.iMaxFreq is still 0, set it to the same as fHighestFreq (normally what you want)*/

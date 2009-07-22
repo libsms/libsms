@@ -489,19 +489,19 @@ void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis
 %extend SMS_ModifyParams
 {
         /* no need to return an error code, if sms_error is called, it will throw an exception in python */
-        void setEnv(int sizeArray, float *pArray)
+        void setSinEnv(int sizeArray, float *pArray)
         {
                 if(!$self->ready)
                 {
                         sms_error("modify parameter structure has not been initialized");
                         return;
                 }
-                if(sizeArray != $self->sizeEnv)
+                if(sizeArray != $self->sizeSinEnv)
                 {
                         sms_error("numpy array is not equal to envelope size");
                         return;
                 }
-                memcpy($self->env, pArray, sizeof(sfloat) * $self->sizeEnv);
+                memcpy($self->sinEnv, pArray, sizeof(sfloat) * $self->sizeSinEnv);
         }
 }
 
