@@ -156,7 +156,7 @@ void sms_transposeKeepEnv(SMS_Data *frame, sfloat transpositionFactor, int maxFr
 void sms_modify(SMS_Data *frame, SMS_ModifyParams *params)
 {
 	if(params->doTranspose)
-                sms_transpose(frame, params->transposition);
+                sms_transpose(frame, params->transpose);
 	
 	if(params->doSinEnv)
 	{

@@ -276,8 +276,8 @@ typedef struct
         int ready;  /*!< a flag to know if the struct has been initialized) */
 	int maxFreq;  /*!< maximum frequency component */
 	int doTranspose;  /*!< whether or not to transpose */
-	sfloat transposition;  /*!< transposition factor */
-	int doSinEnv;  /*!< whether or not to interpolate between two envelopes */
+	sfloat transpose;  /*!< transposition factor */
+	int doSinEnv;  /*!< whether or not to apply a new spectral envelope to the sin component */
 	sfloat sinEnvInterp;  /*!< value between 0 (use frame's env) and 1 (use *env). Interpolates inbetween values*/
 	int sizeSinEnv;  /*!< size of the envelope pointed to by env */
 	sfloat *sinEnv;  /*!< additional spectral envelope used in some modifications */
