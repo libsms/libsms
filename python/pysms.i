@@ -446,7 +446,7 @@ void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis
                 for (i = 0; i < $self->nTracks; i++)
                         pArray[i] = $self->pFSinFreq[i];
         }
-        void getSpecEnv(int sizeArray, float *pArray)
+        void getSinEnv(int sizeArray, float *pArray)
         {
                 if(sizeArray < $self->nEnvCoeff)
                 {
