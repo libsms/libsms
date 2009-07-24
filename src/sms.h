@@ -609,6 +609,8 @@ int sms_initAnalysis (  SMS_AnalParams *pAnalParams, SMS_SndHeader *pSoundHeader
 
 void sms_initAnalParams (SMS_AnalParams *pAnalParams);
 
+void sms_initSynthParams(SMS_SynthParams *synthParams);
+
 int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams );
 
 int sms_changeSynthHop( SMS_SynthParams *pSynthParams, int sizeHop);

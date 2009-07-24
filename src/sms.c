@@ -291,6 +291,21 @@ int sms_initAnalysis ( SMS_AnalParams *pAnalParams, SMS_SndHeader *pSoundHeader)
 	return (0);
 }
 
+/*! \brief give default values to an SMS_SynthParams struct 
+ * 
+ * This will initialize an SMS_SynthParams with values that work
+ * for common analyses.  It is useful to start with and then
+ * adjust the parameters manually to fit a particular sound
+ *
+ * \param synthParams    pointer to synthesis parameters data structure
+ */
+void sms_initSynthParams(SMS_SynthParams *synthParams)
+{
+	synthParams->iSamplingRate = 0;
+	synthParams->iSynthesisType = SMS_STYPE_ALL;
+	synthParams->iDetSynthType = SMS_DET_IFFT;
+}
+
 /*! \brief initialize synthesis data structure's arrays
  * 
  *  Initialize the synthesis and fft arrays. It is necessary before synthesis.
