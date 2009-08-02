@@ -271,6 +271,7 @@ typedef struct
  * This structure holds parameters and data that will be used to modify a
  * frame (SMS_Data object)
  */
+
 typedef struct
 {
         int ready;  /*!< a flag to know if the struct has been initialized) */
@@ -281,6 +282,10 @@ typedef struct
 	sfloat sinEnvInterp;  /*!< value between 0 (use frame's env) and 1 (use *env). Interpolates inbetween values*/
 	int sizeSinEnv;  /*!< size of the envelope pointed to by env */
 	sfloat *sinEnv;  /*!< additional spectral envelope used in some modifications */
+        int doEnvInterp2; /*!< whether or not to interpolate between two envelopes */
+	sfloat envInterp2;     /*!< (between 0 and 1) specifies the linear envelope interpolation factor */
+	int sizeEnv2;	     /*!< size of the envelope pointed to by env */
+	sfloat *env2;	     /*!< additional additional spectral envelope used in some modifications */
 } SMS_ModifyParams;
 
 /*! \struct SMS_SynthParams
@@ -303,7 +308,6 @@ typedef struct
 	int sizeHop;                   /*!< number of samples to synthesis for each frame */
         int origSizeHop;            /*!< original number of samples used to create each analysis frame */
         sfloat fStocGain;            /*!< gain multiplied to the stachostic component \todo REMOVE ME */
-        sfloat fTranspose;          /*!< frequency transposing value multiplied by each frequency \todo REMOVE ME */
 	sfloat *pFDetWindow;    /*!< array to hold the window used for deterministic synthesis  \see SMS_WIN_IFFT */
         sfloat *pFStocWindow; /*!< array to hold the window used for stochastic synthesis (Hanning) */
         sfloat *pSynthBuff;  /*!< an array for keeping samples during overlap-add (2x sizeHop) */
@@ -582,8 +586,7 @@ int sms_power2(int n);
 /*! \todo remove this define now that there is sms_scalerTempered */
 #define TEMPERED_TO_FREQ( x ) (powf(1.0594630943592953, x)) /*!< raise frequency to the 12th root of 2 */
 sfloat sms_scalerTempered( float x);
-
-
+void sms_arrayScalerTempered( int sizeArray, sfloat *pArray);
 
 #ifndef MAX
 /*! \brief returns the maximum of a and b */

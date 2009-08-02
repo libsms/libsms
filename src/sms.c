@@ -304,6 +304,7 @@ void sms_initSynthParams(SMS_SynthParams *synthParams)
 	synthParams->iSamplingRate = 0;
 	synthParams->iSynthesisType = SMS_STYPE_ALL;
 	synthParams->iDetSynthType = SMS_DET_IFFT;
+	synthParams->sizeHop = SMS_MIN_SIZE_FRAME;
 }
 
 /*! \brief initialize synthesis data structure's arrays
@@ -329,10 +330,8 @@ int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
 	pSynthParams->iStochasticType = pSmsHeader->iStochasticType;
         if(pSynthParams->iSamplingRate <= 0)
                 pSynthParams->iSamplingRate = pSynthParams->iOriginalSRate;
-        /*initialize transposing value to 1, no transpose */
-        pSynthParams->fTranspose = 1.0;
 
-        /* initialize stochastic gain multiplier, 1 is no gain */
+        /* initialize stochastic gain multiplier, 1 is normal gain */
 	pSynthParams->fStocGain = 1.0;
 
         /* make sure sizeHop is something to the power of 2 */
@@ -776,9 +775,22 @@ int sms_power2( int n)
 
 /*! \brief compute a value for scaling frequency based on the well-tempered scale
  *
+ * \param x linear frequency value
  * \return (1.059...)^x, where 1.059 is the 12th root of 2 precomputed
  */
 sfloat sms_scalerTempered( sfloat x)
 {
         return(powf(1.0594630943592953, x));
+}
+
+/*! \brief scale an array of linear frequencies to the well-tempered scale
+ *
+ * \param sizeArray size of the array
+ * \param pArray pointer to array of frequencies
+ */
+void sms_arrayScalerTempered( int sizeArray, sfloat *pArray)
+{
+        int i;
+        for( i = 0; i < sizeArray; i++)
+                pArray[i] = sms_scalerTempered(pArray[i]);
 }
