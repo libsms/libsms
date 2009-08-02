@@ -69,10 +69,7 @@ int main (int argc, char *argv[])
         float fTranspose = 0.0;
 	float stocGain = 1.0;
 	SMS_SynthParams synthParams;
-	synthParams.iSynthesisType = SMS_STYPE_ALL;
-        synthParams.iDetSynthType = SMS_DET_IFFT;
-	synthParams.sizeHop = SMS_MIN_SIZE_FRAME;
-	synthParams.iSamplingRate = 0; /* if this is not set by an argument, the original value is used */
+        sms_initSynthParams(&synthParams); /* set some default params that may be updated */
 
 	if (argc > 3) 
 	{
@@ -150,12 +147,13 @@ int main (int argc, char *argv[])
 
         sms_init();
         sms_initSynth( pSmsHeader, &synthParams );
-        /* disabling interpolation for residual resynthesis with original phases (temp) */
+        /* disabling interpolation for residual resynthesis with original phases (not implemented yet) */
         if(pSmsHeader->iStochasticType == SMS_STOC_IFFT)
                 doInterp = 0;
 
          /* set modifiers */
-        synthParams.fTranspose = TEMPERED_TO_FREQ( fTranspose );
+        synthParams.modParams.doTranspose = 1; /* turns on transposing (whether there is a value or not */
+        synthParams.modParams.transpose = fTranspose;
         synthParams.fStocGain = stocGain;
 
         if(verboseMode)
@@ -172,7 +170,7 @@ int main (int argc, char *argv[])
                 printf("\nsizeHop: %d \n", synthParams.sizeHop);
                 printf("time factor: %f \n", timeFactor);
                 printf("stochastic gain factor: %f \n", synthParams.fStocGain);
-                printf("frequency transpose factor: %f \n", synthParams.fTranspose);
+                printf("frequency transpose factor: %f \n", synthParams.modParams.transpose);
                 printf("__header info__\n");
                 printf("original samplingrate: %d, iFrameRate: %d, origSizeHop: %d\n", pSmsHeader->iSamplingRate,
                        pSmsHeader->iFrameRate, synthParams.origSizeHop);
@@ -192,9 +190,6 @@ int main (int argc, char *argv[])
                 sms_allocFrameH (pSmsHeader, &smsFrameR);
         }
         sms_allocFrameH (pSmsHeader, &smsFrame); /* the actual frame to be handed to synthesizer */
-
-/*         sms_allocFrame (&smsFrame, pSmsHeader->nTracks,  */
-/*                         pSmsHeader->nStochasticCoeff, 0, pSmsHeader->iStochasticType); */
 
 	if ((pFSynthesis = (float *) calloc(synthParams.sizeHop, sizeof(float)))
 	    == NULL)
@@ -217,15 +212,14 @@ int main (int argc, char *argv[])
 	while (iSample < nSamples)
 	{
 		if(doInterp)
-                {////////////////////////////////////////////////
+                {
                         fFrameLoc =  iSample *  fLocIncr;
-                        // left and right frames around location, gaurding for end of file
+                        /* left and right frames around location, gaurding for end of file */
                         iLeftFrame = MIN (pSmsHeader->nFrames - 1, floor (fFrameLoc)); 
                         iRightFrame = (iLeftFrame < pSmsHeader->nFrames - 2)
                                 ? (1+ iLeftFrame) : iLeftFrame;
                         sms_getFrame (pSmsFile, pSmsHeader, iLeftFrame, &smsFrameL);
                         sms_getFrame (pSmsFile, pSmsHeader, iRightFrame,&smsFrameR);
-                        ////////////////////////////////////////
                         sms_interpolateFrames (&smsFrameL, &smsFrameR, &smsFrame,
                                                fFrameLoc - iLeftFrame);
                 }
@@ -234,6 +228,7 @@ int main (int argc, char *argv[])
                         sms_getFrame (pSmsFile, pSmsHeader, (int) iSample * fLocIncr, &smsFrame);
                         printf("frame: %d \n",  (int) (iSample * fLocIncr));
                 }
+                sms_modify(&smsFrame, &synthParams.modParams); 
                 sms_synthesize (&smsFrame, pFSynthesis, &synthParams);
 		sms_writeSound (pFSynthesis, synthParams.sizeHop);
     

@@ -22,6 +22,13 @@
 #include "sms.h"
 #include <popt.h>
 
+const char *help_header_text =
+        "\n\n"
+        "Prints an SMS analysis file made with libsms, specified as the last argument.\n"
+        "If -o FILENAME or --output FILENAME is provided, the output will be written to a text file.\n"
+        "The output is printed according to the YAML specification.\n"
+        "\n [OPTIONS] \n";
+
 enum  PRINT_TYPE
 {
         PRINT_ALL,
@@ -31,13 +38,6 @@ enum  PRINT_TYPE
         PRINT_HDR,
 };
 
-const char *help_header_text =
-        "\n\n"
-        "Prints an SMS analysis file made with libsms, specified as the last argument.\n"
-        "If -o FILENAME or --output FILENAME is provided, the output will be written to a text file.\n"
-        "The output is printed according to the YAML specification.\n"
-        "\n [OPTIONS] \n";
-
 int main (int argc, const char *argv[])
 {
 	int optc;   /* switch */
@@ -46,8 +46,8 @@ int main (int argc, const char *argv[])
         FILE *pSmsFile, *fp;
         SMS_Data smsData;
         int iError, i, j, iFormat = PRINT_ALL, iFirstFrame = 0, iLastFrame = -1, 
-                iFirstTraj = 0, iLastTraj = -1;
-        float fInitialTime = 0, fEndTime = 0;
+                iFirstTraj = 0, iLastTraj = -1, inDB = 0;
+        float fInitialTime = 0, fEndTime = 0, mag;
 	poptContext pc;
 
         struct poptOption	options[] =
@@ -58,6 +58,8 @@ int main (int argc, const char *argv[])
                          "initial time", "float"},
                         {"end-time", 'e', POPT_ARG_FLOAT, &fEndTime, 0, 
                          "end time", "float"},
+                        {"decibels", 'd', POPT_ARG_NONE, &inDB, 0, 
+                         "make magnitude values printed i decibels", 0},
                         {"output", 'o', POPT_ARG_STRING, &pOutName, 0, 
                          "output text file name", "FILENAME"},
                         POPT_AUTOHELP
@@ -279,11 +281,15 @@ int main (int argc, const char *argv[])
                                         fprintf(fp,"    specEnv: [");
                                         for(j = 0; j < smsData.nEnvCoeff; j++)
                                         {
+                                                if(inDB) 
+                                                        mag = sms_magToDB(smsData.pSpecEnv[j]);
+                                                else 
+                                                        mag = smsData.pSpecEnv[j];
                                                 if(j%4 == 0 && j !=0)
                                                         fprintf(fp,",\n                       ");
                                                 else if( j !=0)
                                                         fprintf(fp,", ");
-                                                fprintf(fp,"%9f", smsData.pSpecEnv[j]);
+                                                fprintf(fp,"%9f", mag);
                                         }
                                         fprintf(fp," ]\n");
                                 }
