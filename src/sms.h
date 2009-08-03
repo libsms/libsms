@@ -584,9 +584,9 @@ int sms_power2(int n);
 //inline sfloat sms_temperedToFreq( float x ){ return(powf(1.0594630943592953, x)); }
 
 /*! \todo remove this define now that there is sms_scalerTempered */
-#define TEMPERED_TO_FREQ( x ) (powf(1.0594630943592953, x)) /*!< raise frequency to the 12th root of 2 */
-sfloat sms_scalerTempered( float x);
-void sms_arrayScalerTempered( int sizeArray, sfloat *pArray);
+//#define TEMPERED_TO_FREQ( x ) (powf(1.0594630943592953, x)) /*!< raise frequency to the 12th root of 2 */
+sfloat sms_scalarTempered( float x);
+void sms_arrayScalarTempered( int sizeArray, sfloat *pArray);
 
 #ifndef MAX
 /*! \brief returns the maximum of a and b */

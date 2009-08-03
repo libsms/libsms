@@ -133,7 +133,7 @@ void sms_transpose(SMS_Data *frame, sfloat transpositionFactor)
         int i;
         for(i = 0; i < frame->nTracks; i++)
         {
-                frame->pFSinFreq[i] *= sms_scalerTempered(transpositionFactor);
+                frame->pFSinFreq[i] *= sms_scalarTempered(transpositionFactor);
         }
 }
 

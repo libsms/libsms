@@ -780,7 +780,7 @@ int sms_power2( int n)
  * \param x linear frequency value
  * \return (1.059...)^x, where 1.059 is the 12th root of 2 precomputed
  */
-sfloat sms_scalerTempered( sfloat x)
+sfloat sms_scalarTempered( sfloat x)
 {
         return(powf(1.0594630943592953, x));
 }
@@ -790,9 +790,9 @@ sfloat sms_scalerTempered( sfloat x)
  * \param sizeArray size of the array
  * \param pArray pointer to array of frequencies
  */
-void sms_arrayScalerTempered( int sizeArray, sfloat *pArray)
+void sms_arrayScalarTempered( int sizeArray, sfloat *pArray)
 {
         int i;
         for( i = 0; i < sizeArray; i++)
-                pArray[i] = sms_scalerTempered(pArray[i]);
+                pArray[i] = sms_scalarTempered(pArray[i]);
 }
