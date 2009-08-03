@@ -306,6 +306,7 @@ void sms_initSynthParams(SMS_SynthParams *synthParams)
 	synthParams->iDetSynthType = SMS_DET_IFFT;
 	synthParams->sizeHop = SMS_MIN_SIZE_FRAME;
 	synthParams->fStocGain = 1;
+        synthParams->modParams.transpose = 0;
 }
 
 /*! \brief initialize synthesis data structure's arrays
