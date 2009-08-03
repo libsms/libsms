@@ -25,15 +25,46 @@ it other than recreate the original, see the README included with the SMS packag
 or visit the SMS homepage at:
 \fIhttp://www.iua.upf.es/~sms/\fP
 .SH OPTIONS
-NEEDS TO BE UPDATED: for now just type smsSynth at the commandline
 
-.BI -s " samplerate"
+.TP 8
+.BI -v " verbose mode"
+Print out lots of information about parameters and what is going on.
+.TP 8
+.BI -r " samplerate"
+.B (default: original sound file's samplerate)
 output sampling rate.
-.IP "-d" 
-synthesize only deterministic component.
-.IP "-n"
-synthesize only stochastic component.
-
+.TP 8
+.BI -s " synth-type"
+.B (default: 0) [0,1,2]
+Synthesis type. 0: all, 1: deterministic only, 2: stochastic only
+.TP 8
+.BI -d " det-synth-type"
+.B (default: 0) [0,1,2]
+method of deterministic synthesis type. 0: IFFT (defailt), 1: oscillator bank
+.TP 8
+.BI -h " hop"
+.B (default: 128)
+Hop size in samples from one frame to the next. 128 <= sizeHop <= 8092, rounded to a power of 2
+.TP 8
+.BI -t " time-factor"
+.B (default: 1)
+Positive value to scale by overall time.
+.TP 8
+.BI -g " stoc-gain"
+.B (default: 1)
+Positive value to multiply into stochastic gain.
+.TP 8
+.BI -x " transpose"
+.B (default: 0)
+Transpose value based on the Equal Tempered Scale.
+.TP 8
+.BI -i " interp"
+.B (default: 1, on)
+Interpolate between frames when time scaling. 
+.TP 8
+.BI -f " file-type"
+.B (default: 0)
+Output soundfile type (default 0): 0 is wav, 1 is aiff
 .SH SEE ALSO
-smsAnal(1), smsClean(1), smsPrint(1), smsToYaml(1), smsResample(1)
+smsAnal(1), smsClean(1), smsPrint(1), smsResample(1)
 

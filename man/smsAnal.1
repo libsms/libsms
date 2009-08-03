@@ -66,7 +66,7 @@ number of analysis windows per second (Hz). This will determine the hop size of 
 highest frequency in Hz of the peaks to be detected. Therefore no partials higher than this frequency will be detected. It will never be higher than half the sampling-rate.
 .TP 8
 .BI -k " minPeakMag"
-.B (default -100) [-100 <-> 0]
+.B (default 0) [0. <-> 100.]
 minimum magnitude in decibels of a peak. Peak softer than this dB value will not have any chance to be considered part of the deterministic component, that is, of the partials. This value should not be smaller than 0 since 0 is the noise threshold used in the analysis.
 .TP 8
 .B Harmonic detection parameters
@@ -99,11 +99,11 @@ highest fundamental frequency in Hz to be searched for. Only used in harmonic so
 .TP 8
 .BI -n " nGuides"
 .B (default 100) [1 <-> 500]
-number of guides to be used in analysis. These guides will be used to track the partials in the sound and are the ones that will be subtracted from the original sound. The number of output trajectories is defined by the parameter nTrajectories.
+number of guides to be used in analysis. These guides will be used to track the partials in the sound and are the ones that will be subtracted from the original sound. The number of output tracks is defined by the parameter nTracks.
 .TP 8
-.BI -p " nTrajectories"
+.BI -p " nTracks"
 .B (default 60) [1 <-> 500]
-maximum number of trajectories, or partials, to be found. This will be the output number of trajectories. 
+maximum number of tracks, or partials, to be found. This will be the output number of tracks. 
 .TP 8
 .BI -w " freqDeviation"
 .B (default .45) [.1 <-> .5]
@@ -134,14 +134,36 @@ maximum sleeping time in seconds for a given trajectory. Time shorter than this 
 .TP 8
 .B Stochastic analysis parameters
 .TP 8
-.BI -e " stochasticType"
+.BI -stochastic " stochasticType"
 .B (default 1) [0,1,2]
 type for the stochastic representation: (0) none,  (1) line segments on magnitude spectrum, or (2) STFT real/imaginary pairs.
 The first time the analysis is done it is useful to set this to 3 (this will let you check if the analysis was well done and the computation time will be much shorter).  
 (2) is not currently implemented and defaults to (1)
 .TP 8
 .BI -c " nStocCoeff"
-.B (default 64) [min 4]
+.B (default 128) [min 4]
 When the stochastic type is set to 1(line segments on magnitude spectrum), this number corresponds to the number of inflexion points (will be interpolated to the necessary number of bins for the stochastic IFFT). The actual number of coefficients is limited to 1/2 the size of the FFT used  to create the spectrum ( samperate / framerate, roundup up to a power of 2).
+.TP 8
+.B spectral enveloping parameters
+.TP 8
+.BI -se " spectral envelope type"
+.B (default 0) [0,1,2] 
+0: off, 1: cepstrum coefficients, 2: frequency bins (converted from cepstrum).
+.TP 8
+.BI -co " discrete cepstrum order"
+.B (default 25) 
+The order of cepstrum, order+1 cepstrum coefficients will be produced.
+.TP 8
+.BI -la " lambda"
+.B (default 0.00001) 
+A regularizing coefficient to help make the cepstrum spectral envelope behave in some situations.  Increase this to reduce oscillations, if they occur.
+.TP 8
+.BI -an " anchor"
+.B (default 0, off) 
+Turn on envelope anchoring, which will duplicate add two more sinusoidal peaks to the ends of the spectrum in order to prevent certain peaks from getting cut off by the envelope.
+.TP 8
+.BI -mef " maximum envelope frequency"
+.B (default highest freqequency in peak detection) 
+Define the maximum envelope frequency.  You normally want to leave this at the default, unless you are combining with a sound that has a different maximum envelope frequency.
 .SH SEE ALSO
-smsSynth(1), smsClean(1), smsPrint(1), smsResample(1), smsToYaml(1)
+smsSynth(1), smsClean(1), smsPrint(1), smsResample(1)
