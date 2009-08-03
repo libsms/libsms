@@ -26,4 +26,3 @@ smsPrint -t4 guitarchord.sms ;
 smsSynth -s1 guitarchord.sms guitarchord.det.wav ;
 # turning the residual down a little because it is too noisy
 smsSynth -g.15 guitarchord.sms guitarchord.synth.wav ;
-smsToYaml -t2 guitarchord.sms guitarchord.yaml
