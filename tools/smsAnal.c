@@ -267,27 +267,48 @@ int main (int argc, const char *argv[])
                          "reference harmonic number in series (1)", "int"},
                         {"min-ref-harm-mag", 'm', POPT_ARG_FLOAT, &analParams.fMinPeakMag, 0, 
                          "minimum reference harmonic magnitude (30 normalized dB)", "float"}, /*\todo check this doc*/
-                        /* spectral enveloping parameters */
-                        {"spec-env-type", 'e', POPT_ARG_INT, &analParams.specEnvParams.iType, 0, 
-                         "spectral enveloping type (0, off)", "int"},
-                        {"cep-order", 'o', POPT_ARG_INT, &analParams.specEnvParams.iOrder, 0, 
-                         "discrete cepstrum order (25)", "int"},
-                        {"lambda", 'l', POPT_ARG_FLOAT, &analParams.specEnvParams.fLambda, 0, 
-                         "lambda, regularizing coefficient (0.00001)", "float"}, 
-                        {"anchor", 'a', POPT_ARG_NONE, &analParams.specEnvParams.iAnchor, 0, 
-                         "turn on anchoring of spectral envelope endpoints", 0}, 
-                        {"max-env-freq", 0, POPT_ARG_INT, &analParams.specEnvParams.iMaxFreq, 0, 
-                         "maximum envelope frequency (default is highest-freq", "int"}, 
+                        {"min-ref-harm-mag", 'z', POPT_ARG_FLOAT, &analParams.fRefHarmMagDiffFromMax, 0, 
+                         " maximum dB difference between the harmonic used for reference and the maximum peak (default 30)", "float"}, /*\todo check this doc*/
+                        {"default-fund", 'u', POPT_ARG_FLOAT, &analParams.fDefaultFundamental, 0, 
+                         "default fundamental frequency (hz), used to set initial window size, or window size for entire sound if inharmonic (default 100)", "float"}, 
+                        {"lowest-fund", 'l', POPT_ARG_FLOAT, &analParams.fDefaultFundamental, 0, 
+                         "lowest fundamental frequency(hz), or frequency in inharmonic analysis, to search for (default 50)", "float"}, 
+                        {"highest-fund", 'h', POPT_ARG_FLOAT, &analParams.fDefaultFundamental, 0, 
+                         "highest fundamental frequency to search for, has no effect on inharmonic analysis (default 1000)", "float"}, 
+                        /* Peak Continuation parameters */
+                        {"guides", 'n', POPT_ARG_INT, &analParams.nGuides, 0, 
+                         "number of guides to use in partial tracking (default 100)", "int"},
+                        {"tracks", 'p', POPT_ARG_INT, &analParams.nTracks, 0, 
+                         "number of output partial tracks (default 60)", "int"},
+                        {"freq-deviation", 'w', POPT_ARG_FLOAT, &analParams.fFreqDeviation, 0, 
+                         "maximum permitted frequency deviation from guide frequency (default .45)", "float"}, 
+                        {"peak-cont-guide", 't', POPT_ARG_FLOAT, &analParams.fPeakContToGuide, 0, 
+                         "contribution of the frequency of the previous peak of a given trajectory to the current guide frequency value (default .4).", "float"}, 
+                        {"fund-cont-guide", 'o', POPT_ARG_FLOAT, &analParams.fFundContToGuide, 0, 
+                         "contribution of the fundamental frequency of the previous peak of a given trajectory to the current guide frequency value (default .5).", "float"}, 
                         /* Track Cleaning parameters:\n" */
                         {"clean-track", 'g', POPT_ARG_INT, &analParams.iCleanTracks, 0, 
                          "turn on/off track cleaning (default is on, 1)", "int"}, 
-                        {"min-track-length", 0, POPT_ARG_FLOAT, &analParams.iMinTrackLength, 0, 
+                        {"min-track-length", 'a', POPT_ARG_FLOAT, &analParams.iMinTrackLength, 0, 
                          "minimum track length in seconds (0.1)", "float"}, 
-                        {"max-sleeping-time", 0, POPT_ARG_FLOAT, &analParams.iMaxSleepingTime, 0, 
+                        {"max-sleeping-time", 'b', POPT_ARG_FLOAT, &analParams.iMaxSleepingTime, 0, 
                          "maximum time a frame can sleep in seconds (0.1)", "float"},  /* this doc is horrible */
-//             "      -g    cleanTrack (default 1, yes)\n"
-//             "      -a    minTrackLength (default .1 seconds)\n"
-//             "      -b    maxSleepingTime (default .1 seconds)\n"
+                        /* Stochastic Analysis parameters */
+                        {"stochastic", 'e', POPT_ARG_INT, &analParams.iStochasticType, 0, 
+                         "turn on/off stochastic analysis (default is on, 1)", "int"}, 
+                        {"stoch-coeff", 'c', POPT_ARG_INT, &analParams.nStochasticCoeff, 0, 
+                         "number of stochastic coefficients in approximation (default 128)", "int"}, 
+                        /* spectral enveloping parameters */
+                        {"se",0, POPT_ARG_INT, &analParams.specEnvParams.iType, 0, 
+                         "spectral enveloping type (0, off)", "int"},
+                        {"co", 0, POPT_ARG_INT, &analParams.specEnvParams.iOrder, 0, 
+                         "discrete cepstrum order (25)", "int"},
+                        {"la", 0, POPT_ARG_FLOAT, &analParams.specEnvParams.fLambda, 0, 
+                         "lambda, regularizing coefficient (0.00001)", "float"}, 
+                        {"an", 0, POPT_ARG_NONE, &analParams.specEnvParams.iAnchor, 0, 
+                         "turn on anchoring of spectral envelope endpoints", 0}, 
+                        {"mef", 0, POPT_ARG_INT, &analParams.specEnvParams.iMaxFreq, 0, 
+                         "maximum envelope frequency (default is highest-freq", "int"}, 
                         POPT_AUTOHELP
                         POPT_TABLEEND
                 };

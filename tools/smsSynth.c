@@ -23,35 +23,20 @@
  *    smsSynth - program for synthesizing an sms file from the command line.
  *
  */
+
 #include "sms.h"
+#include <popt.h>
+
+const char *help_header_text =
+        "\n\n"
+        "Usage: smsSynth [options]  <inputSmsFile> <outputSoundFile>\n"
+        "\n\n"
+        "synthesize an analysis (.sms) file made with smsAnal. "
+        "output file format is 32bit floating-point WAV or AIFF."
+        "\n\n";
 
 
-void usage (void)
-{
-    fprintf (stderr, "\n"
-             "Usage: smsSynth [options]  <inputSmsFile> <outputSoundFile>\n"
-             "\n"
-             "Options:\n"
-             "      -v     print out verbose information\n"
-             "      -r     sampling rate of output sound (default is original)\n"
-             "      -s     synthesis type (0: all (default), 1: deterministic only , 2: stochastic only)\n"
-             "      -d     method of deterministic synthesis type (1: IFFT, 2: oscillator bank)\n"
-             "      -h     sizeHop (default 128) 128 <= sizeHop <= 8092, rounded to a power of 2 \n"
-             "      -t     time factor (default 1): positive value to multiply by overall time \n"
-             "      -g     stochastic gain (default 1): positive value to multiply into stochastic gain \n"
-             "      -x     transpose factor (default 1): value based on the Equal Tempered Scale to\n"
-             "      -f      soundfile output type (default 0): 0 is wav, 1 is aiff"
-             "             transpose the frequency \n"
-             "\n"
-             "synthesize an analysis (.sms) file made with smsAnal."
-             "output file format is 32bit floating-point AIFF."
-             "\n\n");
-    
-    exit(1);
-}
-
-
-int main (int argc, char *argv[])
+int main (int argc, const char *argv[])
 {
 	char *pChInputSmsFile = NULL, *pChOutputSoundFile = NULL;
 	SMS_Header *pSmsHeader = NULL;
@@ -59,83 +44,69 @@ int main (int argc, char *argv[])
 	SMS_Data smsFrameL, smsFrameR, smsFrame; /* left, right, and interpolated frames */
 	float *pFSynthesis; /* waveform synthesis buffer */
 	long iSample, i, nSamples, iLeftFrame, iRightFrame;
-        int verboseMode = 0;
         float fFrameLoc; /* exact sms frame location, used to interpolate smsFrame */
         float fFsRatio,  fLocIncr;
-        int  detSynthType, synthType, sizeHop, iSamplingRate; /*  argument holders */
+        int verbose = 0;
         int iSoundFileType = 0; /* wav file */
         int doInterp = 1;
         float timeFactor = 1.0;
-        float fTranspose = 0.0;
-	float stocGain = 1.0;
 	SMS_SynthParams synthParams;
         sms_initSynthParams(&synthParams); /* set some default params that may be updated */
 
-	if (argc > 3) 
-	{
-		for (i=1; i<argc-2; i++) 
-			if (*(argv[i]++) == '-') 
-				switch (*(argv[i]++)) 
-				{
-                                case 'r':  if (sscanf(argv[i],"%d",&iSamplingRate) < 0 )
-                                        {
-						printf("error: invalid sampling rate");
-                                                exit(1);
-                                        }
-                                        synthParams.iSamplingRate = iSamplingRate;
-                                        break;
-                                case 's': sscanf(argv[i], "%d", &synthType);
-                                        if(synthType < 0 || synthType > 2)
-                                        {
-                                                printf("error: detSynthType must be 0, 1, or  2");
-                                                exit(1);
-                                        }
-                                        synthParams.iSynthesisType = synthType;
-                                        break;
-                                case 'd': sscanf(argv[i], "%d", &detSynthType);
-                                        if(detSynthType < 1 || detSynthType > 2)
-                                        {
-                                                printf("error: detSynthType must be 1 or 2");
-                                                exit(1);
-                                        }
-                                        synthParams.iDetSynthType = detSynthType;
-                                        break;
-                                case 'h': sscanf(argv[i], "%d", &sizeHop);
-                                        if(sizeHop < SMS_MIN_SIZE_FRAME || sizeHop > SMS_MAX_WINDOW) 
-                                        {
-                                                printf("error: invalid sizeHop");
-                                                exit(1);
-                                        }
-                                        synthParams.sizeHop = sizeHop;
-                                        //RTE TODO: round to power of 2 (is it necessary?)
-                                        break;
-                                case 't':  if (sscanf(argv[i],"%f",&timeFactor) < 0 )
-                                        {
-						printf("error: invalid time factor");
-                                                exit(1);
-                                        }
-                                        break;
-                                case 'g':  if (sscanf(argv[i],"%f",&stocGain) < 0 )
-                                        {
-						printf("error: invalid stochastic gain");
-                                                exit(1);
-                                        }
-                                        break;
-                                case 'x':  sscanf(argv[i],"%f",&fTranspose) ;
-                                        break;
-                                case 'i':  sscanf(argv[i],"%d",&doInterp) ;
-                                        break;
-                                case 'v': verboseMode = 1;
-                                        break;
-                                case 'f': sscanf(argv[i], "%d", &iSoundFileType);
-                                        break;
-                                default:   usage();
-				}
-	}
-	else if (argc < 2) usage();
+	int optc;   /* switch */
+	poptContext pc;
+        struct poptOption	options[] =
+                {
+                        {"verbose", 'v', POPT_ARG_NONE, &verbose, 0, 
+                         "verbose mode", 0},
+                        {"samplerate", 'r', POPT_ARG_INT, &synthParams.iSamplingRate, 0, 
+                         "sampling rate of output sound (default is original)", "int"},
+                        {"synth-type", 's', POPT_ARG_INT, &synthParams.iSynthesisType, 0, 
+                         "synthesis type (0: all (default), 1: deterministic only , 2: stochastic only)", "int"},
+                        {"det-synth-type", 'd', POPT_ARG_INT, &synthParams.iDetSynthType, 0, 
+                         "method of deterministic synthesis type (0: IFFT (default) , 1: oscillator bank)", "int"},
+                        {"hop", 'h', POPT_ARG_INT, &synthParams.sizeHop, 0, 
+                         "sizeHop (default 128) 128 <= sizeHop <= 8092, rounded to a power of 2", "int"},
+                        {"time-factor", 't', POPT_ARG_FLOAT, &timeFactor, 0, 
+                         "time factor (default 1): positive value to scale by overall time", "float"},
+                        {"stoc-gain", 'g', POPT_ARG_FLOAT, &synthParams.fStocGain, 0, 
+                         "stochastic gain (default 1): positive value to multiply into stochastic gain", "float"},
+                        {"transpose", 'x', POPT_ARG_FLOAT, &synthParams.modParams.transpose, 0, 
+                         "transpose factor (default 0): value based on the Equal Tempered Scale", "float"},
+                        {"interp", 'i', POPT_ARG_INT, &doInterp, 0, 
+                         "interpolate between frames when time scaling (default on, 0=off)", "int"},
+                        {"file-type", 'f', POPT_ARG_INT, &iSoundFileType, 0, 
+                         "output soundfile type (default 0): 0 is wav, 1 is aiff", "int"},
+                        POPT_AUTOHELP
+                        POPT_TABLEEND
+                };
 
-	pChInputSmsFile = argv[argc-2];
-	pChOutputSoundFile = argv[argc-1];
+        pc = poptGetContext("smsSynth", argc, argv, options, 0);
+        poptSetOtherOptionHelp(pc, help_header_text);
+
+        if (argc <= 1)
+        {
+                poptPrintUsage(pc,stderr,0);
+                return 1;
+        }
+
+        while ((optc = poptGetNextOpt(pc)) > 0) {
+/*                 switch (optc) { */
+/*                         /\* specific arguments are handled here *\/ */
+/*                 } */
+        }
+        if (optc < -1) 
+        {
+                /* an error occurred during option processing */
+                printf("%s: %s\n",
+                       poptBadOption(pc, POPT_BADOPTION_NOALIAS),
+                       poptStrerror(optc));
+                return 1;
+        }
+
+	pChInputSmsFile = (char *) poptGetArg(pc);
+	pChOutputSoundFile = (char *) poptGetArg(pc);
+        /* parsing done */
         
         sms_getHeader (pChInputSmsFile, &pSmsHeader, &pSmsFile);
 
@@ -147,16 +118,13 @@ int main (int argc, char *argv[])
 
         sms_init();
         sms_initSynth( pSmsHeader, &synthParams );
-        /* disabling interpolation for residual resynthesis with original phases (not implemented yet) */
+        /* disable interpolation for residual resynthesis with original phases (not implemented yet) */
         if(pSmsHeader->iStochasticType == SMS_STOC_IFFT)
                 doInterp = 0;
 
-         /* set modifiers */
         synthParams.modParams.doTranspose = 1; /* turns on transposing (whether there is a value or not */
-        synthParams.modParams.transpose = fTranspose;
-        synthParams.fStocGain = stocGain;
 
-        if(verboseMode)
+        if(verbose)
         {
                 printf("__arguments__\n");
                 printf("samplingrate: %d \nsynthesis type: ", synthParams.iSamplingRate);
@@ -181,7 +149,7 @@ int main (int argc, char *argv[])
         }
 
         /* initialize libsndfile for writing a soundfile */
-	sms_createSF ( pChOutputSoundFile, synthParams.iSamplingRate, 0);
+	sms_createSF ( pChOutputSoundFile, synthParams.iSamplingRate, iSoundFileType);
 
 	/* setup for synthesis from file */
         if(doInterp)
@@ -234,7 +202,7 @@ int main (int argc, char *argv[])
     
 		iSample += synthParams.sizeHop;
 
-                if(verboseMode)
+                if(verbose)
                 {
                         if (iSample % (synthParams.sizeHop * 20) == 0)
                                 fprintf(stderr,"%.2f ", iSample / (float) synthParams.iSamplingRate);
@@ -242,7 +210,7 @@ int main (int argc, char *argv[])
 
 	}
 
-        if(verboseMode)
+        if(verbose)
         {
                 printf("\nfile length: %f seconds\n", (float) iSample / synthParams.iSamplingRate);
         }

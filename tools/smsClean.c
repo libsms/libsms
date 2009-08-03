@@ -192,6 +192,10 @@ int main (int argc, char *argv[])
 	OutSmsHeader.iSamplingRate = pInSmsHeader->iSamplingRate;
 	OutSmsHeader.nTextCharacters = pInSmsHeader->nTextCharacters;
 	OutSmsHeader.pChTextCharacters = pInSmsHeader->pChTextCharacters;
+	OutSmsHeader.iEnvType = pInSmsHeader->iEnvType;
+	OutSmsHeader.nEnvCoeff = pInSmsHeader->nEnvCoeff;
+	OutSmsHeader.iMaxFreq = pInSmsHeader->iMaxFreq;
+
 
 	sms_allocFrameH (&OutSmsHeader, &outSmsData);
 	if ((pITrajOrder =  
