@@ -47,6 +47,20 @@ void sms_initModify(SMS_Header *header, SMS_ModifyParams *params)
         params->ready = 1;
 }
 
+/*! \brief initialize modification parameters
+ *
+ * \param params pointer to parameters structure
+ */
+void sms_initModifyParams(SMS_ModifyParams *params)
+{
+	params->doTranspose = 0;
+	params->transpose = 0;
+	params->doSinEnv = 0;
+	params->sinEnvInterp = 0;
+	params->doEnvInterp2 = 0;
+	params->envInterp2 = 0;
+}
+
 /*! \brief free memory allocated during initialization
  *
  * \param params pointer to parameter structure

@@ -57,6 +57,14 @@ int sms_openSF (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader)
     pSoundHeader->sizeHeader = 0; 
     return (0);
 }
+
+/*! \brief close a sound file that was open for reading
+ */
+void sms_closeSF()
+{
+    sf_close(pSNDStream);
+}
+
 /*! \brief get a chunk of sound from input file 
  *
  * This function will copy to samples from

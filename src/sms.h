@@ -737,6 +737,8 @@ void sms_interpolateFrames (SMS_Data *pSmsFrame1, SMS_Data *pSmsFrame2,
 
 int sms_openSF (char *pChInputSoundFile, SMS_SndHeader *pSoundHeader);
 
+void sms_closeSF();
+
 int sms_getSound (SMS_SndHeader *pSoundHeader, long sizeSound, sfloat *pSound,
                   long offset);
 
@@ -757,6 +759,8 @@ void sms_PolarToRect( int sizeSpec, sfloat *pReal, float *pMag, float *pPhase);
 void sms_spectrumRMS( int sizeMag, sfloat *pReal, float *pMag);
 
 void sms_initModify(SMS_Header *header, SMS_ModifyParams *params);
+
+void sms_initModifyParams(SMS_ModifyParams *params);
 
 void sms_freeModify(SMS_ModifyParams *params);
 
