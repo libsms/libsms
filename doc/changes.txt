@@ -13,13 +13,17 @@ New features:
 	- The full SMS analysis/synthesis process is now callable from Python, and a Python
 	module called SMS.py has been created that will analyze or synthesize a file with a single
 	function call. See the demo script python/AnalysisSynthesis.py for an example of using it.
+        - new misc. functions: sms_rms, sms_arrayScalarTempered
 
 API changes:
 	- All transformations (including transpostion and stochastic component scaling) should
 	now be performed using the sms_modify function. The required transformations are specified
 	by using the SMS_ModifyParams structure. Examples of using this (from Python) can be found
 	in the file python/modify_examples.py.
-
+        - dB conversion is slightly different.  It is normalized to above 0, using a threshhold (default 0.00001)
+          to avoid NaN's.  You can set this with sms_setMagThresh
+        - all magnitudes are now stored in linear
+        - windows are now left un-normalized by default. Call sms_scaleWindow() to normalize it.
 Bug fixes:
 	- The stochastic gain calculated during residual analysis was being applied twice during
 	resynthesis, fixed this.
@@ -32,6 +36,7 @@ Bug fixes:
 
 Other:
 	- Added some unit tests (in Python) to test/Tests.py
+        - smsToYaml is gone. smsPrint now naturally prints in yaml format, and you can save it to file.
 
 === April 9, 2009 === version 1.05e, experimental release =====================================
 This is a release heading in the direction of better modularity, especially in the analysis routines.  The ultimate

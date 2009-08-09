@@ -40,7 +40,7 @@
  * \param nHarm              number of harmonic
  * \param pSpectralPeaks   pointer to all the peaks
  * \param pICurrentPeak     pointer to the last peak taken
- * \param pPeakParams    pointer to analysis parameters
+ * \param iRefHarmonic    reference harmonic number
  * \return the number of the closest peak or -1 if not found  
  */
 static int GetClosestPeak (int iPeakCandidate, int nHarm, SMS_Peak *pSpectralPeaks,
@@ -81,7 +81,7 @@ static int GetClosestPeak (int iPeakCandidate, int nHarm, SMS_Peak *pSpectralPea
  * \param fRefHarmMag      magnitude of possible fundamental
  * \param pSpectralPeaks   all the peaks
  * \param nCand              number of existing candidates
- * \param pPeakParams    pointer to analysis parameters
+ * \param fRefHarmMagDiffFromMax value to judge the peak based on the difference of its magnitude compared to the reference
  * \return 1 if big peak, -1 if too small , otherwise return 0 
  */
 static int ComparePeak (sfloat fRefHarmMag, SMS_Peak *pSpectralPeaks, int nCand, 
@@ -259,7 +259,7 @@ static int GoodCandidate (int iPeak, SMS_Peak *pSpectralPeaks, SMS_HarmCandidate
 /*! \brief  choose the best fundamental out of all the candidates
  *
  * \param pCHarmonic               array of candidates
- * \param pPeakParams             analysis parameters
+ * \param iRefHarmonic             reference harmonic number
  * \param nGoodPeaks              number of candiates
  * \param fPrevFund                   reference fundamental
  * \return the integer number of the best candidate

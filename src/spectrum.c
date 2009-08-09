@@ -23,17 +23,15 @@
  */
 #include "sms.h"
 
-
-/*! \brief pointer to the window array for sms_spectrum */
-//sfloat *sms_window_spec;
-
 /*! \brief compute a complex spectrum from a waveform 
  *              
- * \param pFWaveform	           pointer to input waveform 
  * \param sizeWindow	           size of analysis window
- * \param pFMagSpectrum        pointer to output magnitude spectrum 
- * \param pFPhaseSpectrum     pointer to output phase spectrum 
- * \return 0 on success, -1 on error
+ * \param pWaveform	           pointer to input waveform 
+ * \param pWindow	                   pointer to input window
+ * \param sizeMag	                   size of output magnitude and phase spectrums
+ * \param pMag                          pointer to output magnitude spectrum 
+ * \param pPhase                       pointer to output phase spectrum 
+ * \return sizeFft, -1 on error \todo remove this return
  */
 int sms_spectrum (int sizeWindow, sfloat *pWaveform, sfloat *pWindow, int sizeMag, 
                   sfloat *pMag, sfloat *pPhase)
@@ -240,12 +238,12 @@ int sms_invQuickSpectrumW (sfloat *pFMagSpectrum, sfloat *pFPhaseSpectrum,
 
 /*! \brief convert spectrum from Rectangular to Polar form
  *              
- * \param sizeSpec	       size of spectrum (pMag and pPhase arrays)
+ * \param sizeMag	       size of spectrum (pMag and pPhase arrays)
  * \param pRect	       pointer output spectrum in rectangular form (2x sizeSpec)
  * \param pMag	       pointer to sfloat array of magnitude spectrum
  * \param pPhase	       pointer to sfloat array of phase spectrum
  */ 
-void sms_RectToPolar( int sizeMag, sfloat *pFReal, sfloat *pFMag, sfloat *pFPhase)
+void sms_RectToPolar( int sizeMag, sfloat *pRect, sfloat *pMag, sfloat *pPhase)
 {
         int i, it2;
         sfloat fReal, fImag;
@@ -253,12 +251,12 @@ void sms_RectToPolar( int sizeMag, sfloat *pFReal, sfloat *pFMag, sfloat *pFPhas
 	for (i=0; i<sizeMag; i++)
 	{
 		it2 = i << 1;
-		fReal = pFReal[it2];
-		fImag = pFReal[it2+1];
+		fReal = pRect[it2];
+		fImag = pRect[it2+1];
       
-                pFMag[i] = sqrtf(fReal * fReal + fImag * fImag);
-                if (pFPhase)
-                        pFPhase[i] = atan2f(fImag, fReal);
+                pMag[i] = sqrtf(fReal * fReal + fImag * fImag);
+                if (pPhase)
+                        pPhase[i] = atan2f(fImag, fReal);
 	}
 
 
@@ -285,11 +283,11 @@ void sms_PolarToRect( int sizeSpec, sfloat *pRect, sfloat *pMag, sfloat *pPhase)
 	}    
 }
 
-/*! \brief compute magnitude spectrum of a DFT
+/*! \brief compute magnitude spectrum of a DFT in rectangular coordinates
  *              
  * \param sizeMag	       size of output Magnitude (half of input real FFT)
- * \param pFReal	       pointer to input FFT real array (real/imag sfloats)
- * \param pFMAg	       pointer to sfloat array of magnitude spectrum
+ * \param pInRect	       pointer to input DFT array (real/imag sfloats)
+ * \param pOutMag	       pointer to of magnitude spectrum array
  */
 void sms_spectrumRMS( int sizeMag, sfloat *pInRect, sfloat *pOutMag)
 {

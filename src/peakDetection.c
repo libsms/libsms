@@ -50,17 +50,15 @@ static sfloat PeakInterpolation (sfloat fMaxVal, sfloat fLeftBinVal,
  *
  * stores the value in pFMaxVal 
  *                                      
+ * \todo export this to sms.h and wrap in pysms
+ *
  * \param pFMagSpectrum   magnitude spectrum 
  * \param iHighBinBound      highest bin to search
  * \param pICurrentLoc      current bin location
  * \param pFMaxVal        value of the maximum found
- * \param pAnalParams	        analysis parameters
+ * \param fMinPeakMag  minimum magnitude to accept a peak
  * \return the bin location of the maximum  
-*/
-/* static int FindNextMax (sfloat *pFMagSpectrum, int iHighBinBound,  */
-/*                         int *pICurrentLoc, sfloat *pFMaxVal,  */
-/*                         SMS_AnalParams *pAnalParams) */
-/* \todo export this to sms.h and wrap in pysms */
+ */
 static int FindNextMax ( sfloat *pFMagSpectrum, int iHighBinBound, 
                         int *pICurrentLoc, sfloat *pFMaxVal, sfloat fMinPeakMag)
 {
@@ -96,7 +94,7 @@ static int FindNextMax ( sfloat *pFMagSpectrum, int iHighBinBound,
  * \param pICurrentLoc       current bin location
  * \param pFPeakMag        magnitude value of peak
  * \param pFPeakLoc        location of peak
- * \param pAnalParams	        analysis parameters
+ * \param fMinPeakMag  minimum magnitude to accept a peak
  * \return 1 if found, 0 if not  
  */
 static int FindNextPeak (sfloat *pFMagSpectrum, int iHighestBin, 

@@ -16,7 +16,7 @@
  * many ways to improve them since 1991.  So, it will be an ongoing effort to improve this library in many
  * ways: optimizing, improving/verifying the algorithms, adding high-level descriptors, the list goes on and on..
  * If you would like to comment, suggest, or contribute in any way, send to the following email:
- *         Rich Eakin - reakin [at] iua.upf.edu
+ *         rich.eakin@gmail.com
  *
  * \section use Using libsms and the included tools
  *
@@ -60,7 +60,6 @@
  * - smsSynth: synthesizes a *.sms format model.  Also does basic(time/pitch/stochastic amplitude) manipulations
  * - smsClean: clean an .sms file, scanning the entire model to connect short tracks into longer ones.
  * - smsPrint: the contents of a .sms file.
- * - smsToYaml: a .sms file to YAML text format.  In can then easily be read, or converted to other formats that understand YAML
  * - smsResample: adjust the framerate of *.sms file
  *
  * \subsection examples Examples

@@ -18,7 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
-/*! \file smsIO.c
+/*! \file fileIO.c
  * \brief SMS file input and output
  */
 
@@ -50,10 +50,6 @@ void sms_initHeader (SMS_Header *pSmsHeader)
 	pSmsHeader->nStochasticCoeff = 0;
 	pSmsHeader->nEnvCoeff = 0;
         pSmsHeader->iMaxFreq = 0;
-/* 	pSmsHeader->fAmplitude = 0; */
-/* 	pSmsHeader->fFrequency = 0; */
-/* 	pSmsHeader->iBegSteadyState = 0; */
-/* 	pSmsHeader->iEndSteadyState = 0; */
 	pSmsHeader->fResidualPerc = 0;
 	pSmsHeader->nTextCharacters = 0;
 	pSmsHeader->pChTextCharacters = NULL;    
@@ -68,12 +64,9 @@ void sms_initHeader (SMS_Header *pSmsHeader)
  * sms_initAnal() should be done first to properly set everything.
  *
  * \param pSmsHeader    header for SMS file (to be stored)
- * \param nFrames           number of frames in analysis
  * \param pAnalParams   structure of analysis parameters
- * \param nTracks           number of sinusoidal tracks in the analysis
- * \param iOriginalSRate  sampling rate of analysis signal
+ * \param pProgramString pointer to a string containing the name of the program that made the analysis data
  */
-
 void sms_fillHeader (SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams,
                      char *pProgramString)
 {
@@ -413,6 +406,7 @@ int sms_getFrame (FILE *pSmsFile, SMS_Header *pSmsHeader, int iFrame,
  * \param iPhase		      whether phase information is in the frame
  * \param stochType           stochastic resynthesis type
  * \param nStochCoeff		      number of envelope coefficients in frame
+ * \param nEnvCoeff		      number of envelope coefficients in frame
  * \return  0 on success, -1 on error
  */
 int sms_allocFrame (SMS_Data *pSmsFrame, int nTracks, int nStochCoeff, int iPhase,

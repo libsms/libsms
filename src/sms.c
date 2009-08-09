@@ -151,6 +151,7 @@ void sms_initAnalParams (SMS_AnalParams *pAnalParams)
  *  there can be multple SMS_AnalParams at the same time
  *
  * \param pAnalParams    pointer to analysis paramaters
+ * \param pSoundHeader    pointer to sound header
  * \return 0 on success, -1 on error
  */
 int sms_initAnalysis ( SMS_AnalParams *pAnalParams, SMS_SndHeader *pSoundHeader)
@@ -651,7 +652,6 @@ sfloat sms_dBToMag( sfloat x)
  *
  * \param sizeArray     size of array
  * \param pArray pointer to array
- * \param fThresh linear magnitude threshold
  */
 void sms_arrayMagToDB( int sizeArray, sfloat *pArray)
 {

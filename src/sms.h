@@ -191,7 +191,7 @@ typedef struct
 	int iSoundType;            /*!< type of sound to be analyzed \see SMS_SOUND_TYPE */	
 } SMS_PeakParams;
 
-/*! \struct SMS_SpecEnv
+/*! \struct SMS_SEnvParams;
  * \brief structure information and data for spectral enveloping
  *
  */
@@ -266,12 +266,10 @@ typedef struct
         SMS_AnalFrame **ppFrames; /*!< pointers to the frames analyzed (it is circular-shifted once the array is full */
 } SMS_AnalParams;
 
-/*! \ frame modification parameters
+/*! \struct SMS_ModifyParams
  * 
- * This structure holds parameters and data that will be used to modify a
- * frame (SMS_Data object)
+ * \brief structure with parameters and data that will be used to modify an SMS_Data frame
  */
-
 typedef struct
 {
         int ready;  /*!< a flag to know if the struct has been initialized) */

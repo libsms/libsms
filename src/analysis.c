@@ -19,8 +19,8 @@
  * 
  */
 
-/*! \file smsAnalysis.c
- * \brief main sms analysis routine
+/*! \file analysis.c
+ * \brief main sms analysis routines
  * 
  * the analysis routine here calls all necessary functions to perform the complete
  * SMS analysis, once the desired analysis parameters are set in SMS_AnalParams. 

@@ -145,6 +145,7 @@ void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis
 
 %extend SMS_File 
 {
+        /* load an entire file to an internal numpy array */
         void load( char *pFilename )
         {
                 int i;
@@ -164,7 +165,7 @@ void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis
                 $self->allocated = 1;
                 return;
         }
-        void close(void)
+        void close(void) /* todo: this should be in the destructor, no? */
         {
                 int i;
                 if(!$self->allocated)
@@ -178,7 +179,16 @@ void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis
                 free($self->smsData);
                 return;
         }
-
+        /* return a pointer to a frame, which can be passed around to other libsms functions */
+        void getFrame(int i, SMS_Data *frame)
+        {
+                if(i < 0 || i >= $self->header->nFrames)
+                {
+                        sms_error("index is out of file boundaries");
+                        return;
+                }
+                frame = &$self->smsData[i];
+        }
         void getTrack(int track, int sizeFreq, float *pFreq, int sizeAmp,
                    float *pAmp)
         {

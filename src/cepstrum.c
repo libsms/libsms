@@ -29,7 +29,6 @@
 #include <gsl/gsl_blas.h>
 
 #define COEF ( 8 * powf(PI, 2)) 
-//#define MAX_ORDER 100 /*!< max discrete cepstrum order */
 #define CHOLESKY 1
 
 typedef struct
@@ -48,8 +47,6 @@ typedef struct
 
 void FreeDCepstrum(CepstrumMatrices *m)
 {
-
-        /* cleanup */
         gsl_matrix_free(m->pM);
         gsl_matrix_free(m->pMt);
         gsl_matrix_free(m->pR);
@@ -96,7 +93,7 @@ void AllocateDCepstrum(int nPoints, int nCoeff, CepstrumMatrices *m)
  * \param pCepstrum pointer to output array of cepstrum coefficients
  * \param sizeFreq number of partials peaks (the size of pFreq should be the same as pMag
  * \param pFreq pointer to partial peak frequencies (hertz)
- * \param pAmp pointer to partial peak magnitudes (linear)
+ * \param pMag pointer to partial peak magnitudes (linear)
  * \param fLambda regularization factor
  * \param iMaxFreq maximum frequency of cepstrum
  */
