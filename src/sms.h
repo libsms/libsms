@@ -31,7 +31,7 @@
 #include <strings.h>
 #include <sndfile.h>
 
-#define SMS_VERSION 1.05 /*!< \brief version control number */
+#define SMS_VERSION 1.1 /*!< \brief version control number */
 
 #define SMS_MAX_NPEAKS 400    /*!< \brief maximum number of peaks  */
 
