@@ -70,7 +70,7 @@
  * 
  * \subsection python Python Module
  *
- * (Under heavy contruction) A SWIG interface file is in the subfolder 'python', which can be used to build python wrappers
+ * SWIG interface file is in the subfolder 'python', which can be used to build python wrappers
  * with the following commands (you will of course need the SWIG developement package for system to build this):
  *
  * swig -python sms.i \n
@@ -78,8 +78,9 @@
  *
  * (you can also type 'scons python' from the main directory to do  this for you )\n 
  *
- * If everything goes well, you should have '_sms.so', which is loadable in python using "import sms". \n
- * Install it with python setup.py install (but I normally use 'os.path.append('PYSMS_DIR') instead) \n
+ * If everything goes well, you should have '_pysms.so', which is loadable in python using "import sms". \n
+ * Install it with python setup.py install (but I normally use 'os.path.append('PYSMS_DIR') instead). \n
+ * There are some tests and examples within the python directory. \n
  *
  * \section other_files Other Included Files
  *
