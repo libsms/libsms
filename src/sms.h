@@ -274,6 +274,8 @@ typedef struct
 {
         int ready;  /*!< a flag to know if the struct has been initialized) */
 	int maxFreq;  /*!< maximum frequency component */
+	int doResGain;  /*!< whether or not to scale residual gain */
+	sfloat resGain;  /*!< residual scale factor */
 	int doTranspose;  /*!< whether or not to transpose */
 	sfloat transpose;  /*!< transposition factor */
 	int doSinEnv;  /*!< whether or not to apply a new spectral envelope to the sin component */
@@ -305,7 +307,6 @@ typedef struct
 	int iSamplingRate;         /*!< synthesis samplerate */
 	int sizeHop;                   /*!< number of samples to synthesis for each frame */
         int origSizeHop;            /*!< original number of samples used to create each analysis frame */
-        sfloat fStocGain;            /*!< gain multiplied to the stachostic component \todo REMOVE ME */
 	sfloat *pFDetWindow;    /*!< array to hold the window used for deterministic synthesis  \see SMS_WIN_IFFT */
         sfloat *pFStocWindow; /*!< array to hold the window used for stochastic synthesis (Hanning) */
         sfloat *pSynthBuff;  /*!< an array for keeping samples during overlap-add (2x sizeHop) */

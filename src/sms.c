@@ -306,8 +306,7 @@ void sms_initSynthParams(SMS_SynthParams *synthParams)
 	synthParams->iSynthesisType = SMS_STYPE_ALL;
 	synthParams->iDetSynthType = SMS_DET_IFFT;
 	synthParams->sizeHop = SMS_MIN_SIZE_FRAME;
-	synthParams->fStocGain = 1;
-        synthParams->modParams.transpose = 0;
+        sms_initModifyParams(&synthParams->modParams);
 }
 
 /*! \brief initialize synthesis data structure's arrays
@@ -333,9 +332,6 @@ int sms_initSynth( SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
 	pSynthParams->iStochasticType = pSmsHeader->iStochasticType;
         if(pSynthParams->iSamplingRate <= 0)
                 pSynthParams->iSamplingRate = pSynthParams->iOriginalSRate;
-
-        /* initialize stochastic gain multiplier, 1 is normal gain */
-	pSynthParams->fStocGain = 1.0;
 
         /* make sure sizeHop is something to the power of 2 */
         sizeHop = sms_power2(pSynthParams->sizeHop);

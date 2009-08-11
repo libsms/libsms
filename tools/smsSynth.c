@@ -69,7 +69,7 @@ int main (int argc, const char *argv[])
                          "sizeHop (default 128) 128 <= sizeHop <= 8092, rounded to a power of 2", "int"},
                         {"time-factor", 't', POPT_ARG_FLOAT, &timeFactor, 0, 
                          "time factor (default 1): positive value to scale by overall time", "float"},
-                        {"stoc-gain", 'g', POPT_ARG_FLOAT, &synthParams.fStocGain, 0, 
+                        {"stoc-gain", 'g', POPT_ARG_FLOAT, &synthParams.modParams.resGain, 0, 
                          "stochastic gain (default 1): positive value to multiply into stochastic gain", "float"},
                         {"transpose", 'x', POPT_ARG_FLOAT, &synthParams.modParams.transpose, 0, 
                          "transpose factor (default 0): value based on the Equal Tempered Scale", "float"},
@@ -123,6 +123,7 @@ int main (int argc, const char *argv[])
                 doInterp = 0;
 
         synthParams.modParams.doTranspose = 1; /* turns on transposing (whether there is a value or not */
+        synthParams.modParams.doResGain = 1; /* turns on transposing (whether there is a value or not */
 
         if(verbose)
         {
@@ -137,7 +138,7 @@ int main (int argc, const char *argv[])
                 else if(synthParams.iDetSynthType == SMS_DET_SIN) printf("oscillator bank ");
                 printf("\nsizeHop: %d \n", synthParams.sizeHop);
                 printf("time factor: %f \n", timeFactor);
-                printf("stochastic gain factor: %f \n", synthParams.fStocGain);
+                printf("stochastic gain factor: %f \n", synthParams.modParams.resGain);
                 printf("frequency transpose factor: %f \n", synthParams.modParams.transpose);
                 printf("__header info__\n");
                 printf("original samplingrate: %d, iFrameRate: %d, origSizeHop: %d\n", pSmsHeader->iSamplingRate,

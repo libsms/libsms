@@ -56,6 +56,8 @@ void sms_initModify(SMS_Header *header, SMS_ModifyParams *params)
 void sms_initModifyParams(SMS_ModifyParams *params)
 {
         params->ready = 0;
+	params->doResGain = 0;
+	params->resGain = 1.;
 	params->doTranspose = 0;
 	params->transpose = 0;
 	params->doSinEnv = 0;
@@ -144,6 +146,19 @@ void sms_applyEnvelope(int numPeaks, sfloat *pFreqs, sfloat *pMags, int sizeEnv,
 
 }
 
+/*! \brief scale the residual gain factor
+ * 
+ * \param frame pointer to sms data
+ * \param gain factor to scale the residual
+ */
+void sms_resGain(SMS_Data *frame, sfloat gain)
+{
+        int i;
+        for( i = 0; i < frame->nCoeff; i++)
+                frame->pFStocCoeff[i] *= gain;
+}
+
+
 /*! \brief basic transposition
  * Multiply the frequencies of the deterministic component by a constant
  */
@@ -155,6 +170,7 @@ void sms_transpose(SMS_Data *frame, sfloat transpositionFactor)
                 frame->pFSinFreq[i] *= sms_scalarTempered(transpositionFactor);
         }
 }
+
 
 /*! \brief transposition maintaining spectral envelope
  *
@@ -174,6 +190,9 @@ void sms_transposeKeepEnv(SMS_Data *frame, sfloat transpositionFactor, int maxFr
  */
 void sms_modify(SMS_Data *frame, SMS_ModifyParams *params)
 {
+	if(params->doResGain)
+                sms_resGain(frame, params->resGain);
+
 	if(params->doTranspose)
                 sms_transpose(frame, params->transpose);
 	

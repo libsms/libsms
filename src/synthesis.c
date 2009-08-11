@@ -235,12 +235,6 @@ static int StocSynthApprox (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
         for (i = 0; i < sizeSpec2; i++)
                 pSynthParams->pPhaseBuff[i] =  TWO_PI * sms_random();
 
-
-        /*\todo the stochastic resynthesis seems to be too loud here - why is fStocGain multiplied through twice? */
-        /* adjust gain */
-        for( i = 1; i < sizeSpec2; i++)
-                pSynthParams->pMagBuff[i] *= pSynthParams->fStocGain;
-
         sms_invQuickSpectrumW (pSynthParams->pMagBuff, pSynthParams->pPhaseBuff,
                                sizeFft, pSynthParams->pSynthBuff, sizeFft,
                                pSynthParams->pFStocWindow);
@@ -288,11 +282,6 @@ int sms_stochastic (SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
         /* generate random phases */
         for (i = 0; i < sizeSpec; i++)
                 pSynthParams->pPhaseBuff[i] =  TWO_PI * sms_random();
-
-        /*\todo the stochastic resynthesis seems to be too loud here - why is fStocGain multiplied through twice? */
-        /* adjust gain */
-        for( i = 1; i < sizeSpec; i++)
-                pSynthParams->pMagBuff[i] *= pSynthParams->fStocGain;
 
         /* \todo first  multiply the pMagBuff by a window in order to properly un-window below */
         sms_PolarToRect(sizeSpec, pSynthParams->pSpectra, pSynthParams->pMagBuff, pSynthParams->pPhaseBuff);
