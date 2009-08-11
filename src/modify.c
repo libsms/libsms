@@ -49,16 +49,21 @@ void sms_initModify(SMS_Header *header, SMS_ModifyParams *params)
 
 /*! \brief initialize modification parameters
  *
+ * \todo call this from sms_initSynth()? some other mod params are updated there
+ *
  * \param params pointer to parameters structure
  */
 void sms_initModifyParams(SMS_ModifyParams *params)
 {
+        params->ready = 0;
 	params->doTranspose = 0;
 	params->transpose = 0;
 	params->doSinEnv = 0;
-	params->sinEnvInterp = 0;
-	params->doEnvInterp2 = 0;
-	params->envInterp2 = 0;
+	params->sinEnvInterp = 0.;
+	params->sizeSinEnv = 0;
+	params->doResEnv = 0;
+	params->resEnvInterp = 0.;
+	params->sizeResEnv = 0;
 }
 
 /*! \brief free memory allocated during initialization

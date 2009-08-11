@@ -279,11 +279,11 @@ typedef struct
 	int doSinEnv;  /*!< whether or not to apply a new spectral envelope to the sin component */
 	sfloat sinEnvInterp;  /*!< value between 0 (use frame's env) and 1 (use *env). Interpolates inbetween values*/
 	int sizeSinEnv;  /*!< size of the envelope pointed to by env */
-	sfloat *sinEnv;  /*!< additional spectral envelope used in some modifications */
-        int doEnvInterp2; /*!< whether or not to interpolate between two envelopes */
-	sfloat envInterp2;     /*!< (between 0 and 1) specifies the linear envelope interpolation factor */
-	int sizeEnv2;	     /*!< size of the envelope pointed to by env */
-	sfloat *env2;	     /*!< additional additional spectral envelope used in some modifications */
+	sfloat *sinEnv;  /*!< sinusoidal spectral envelope  */
+	int doResEnv;  /*!< whether or not to apply a new spectral envelope to the residual component */
+	sfloat resEnvInterp;  /*!< value between 0 (use frame's env) and 1 (use *env). Interpolates inbetween values*/
+	int sizeResEnv;  /*!< size of the envelope pointed to by resEnv */
+	sfloat *resEnv;  /*!< residual spectral envelope  */
 } SMS_ModifyParams;
 
 /*! \struct SMS_SynthParams
