@@ -12,23 +12,27 @@ The following building commands are available:
 'scons doxygen' to build html documentation in ./doc/html'
 """)
 
-# ::::::::::::::: Command-line options :::::::::::::::::::
-opts = Options()
-opts.AddOptions(
-    PathOption('prefix', 'Directory of architecture independant files (where to install).', '/usr/local'),
-    PathOption('libpath', 'Directory to look for libraries (adds to defaults).', '/usr/local/lib'),
-    PathOption('cpath', 'Directory to look for c headers (adds to defaults).', '/usr/local/include'),
-    BoolOption('debug', 'Build with debugging information', False),
-    BoolOption('twister', 'Use SIMD-oriented Fast Mersenne Twister algorithm for random number generation.', True),
-    BoolOption('verbose','print verbose environment information', False)
-)
-
+# Environment
 if int(ARGUMENTS.get('debug', 0 )):
     sms_cflags = '-Wall -g -Wshadow'
 else:
     sms_cflags = ' -O2 -funroll-loops -fomit-frame-pointer -Wall -W -Wno-unused -Wno-parentheses -Wno-switch -fno-strict-aliasing'
 
-env = Environment( ENV = os.environ, options = opts, CCFLAGS=sms_cflags)
+env = Environment( ENV = os.environ, CCFLAGS=sms_cflags)
+
+# ::::::::::::::: Command-line options :::::::::::::::::::
+opts = Options(['options.cache'])
+opts.AddOptions(
+    PathVariable('prefix', 'Directory of architecture independant files (where to install).', '/usr/local'),
+    PathVariable('libpath', 'Directory to look for libraries (adds to defaults).', '/usr/local/lib'),
+    PathVariable('cpath', 'Directory to look for c headers (adds to defaults).', '/usr/local/include'),
+    BoolVariable('debug', 'Build with debugging information', False),
+    BoolVariable('twister', 'Use SIMD-oriented Fast Mersenne Twister algorithm for random number generation.', True),
+    BoolVariable('verbose','print verbose environment information', False),
+    BoolVariable('tools', 'Build SMS Tools', True)
+)
+opts.Update(env)
+opts.Save('options.cache', env)
 
 # default action is to build
 commands = COMMAND_LINE_TARGETS or 'build'
@@ -93,6 +97,8 @@ Export( ['env','prefix', 'commands'] )
 
 SConscript('src/SConscript')
 
-# append the src path for static library and header path
-SConscript('tools/SConscript')
+# build SMS tools
+if env['tools']:
+    # append the src path for static library and header path
+    SConscript('tools/SConscript')
 
