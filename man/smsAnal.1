@@ -146,23 +146,23 @@ When the stochastic type is set to 1(line segments on magnitude spectrum), this 
 .TP 8
 .B spectral enveloping parameters
 .TP 8
-.BI -se " spectral envelope type"
+.BI --se " spectral envelope type"
 .B (default 0) [0,1,2] 
 0: off, 1: cepstrum coefficients, 2: frequency bins (converted from cepstrum).
 .TP 8
-.BI -co " discrete cepstrum order"
+.BI --co " discrete cepstrum order"
 .B (default 25) 
 The order of cepstrum, order+1 cepstrum coefficients will be produced.
 .TP 8
-.BI -la " lambda"
+.BI --la " lambda"
 .B (default 0.00001) 
 A regularizing coefficient to help make the cepstrum spectral envelope behave in some situations.  Increase this to reduce oscillations, if they occur.
 .TP 8
-.BI -an " anchor"
+.BI --an " anchor"
 .B (default 0, off) 
 Turn on envelope anchoring, which will duplicate add two more sinusoidal peaks to the ends of the spectrum in order to prevent certain peaks from getting cut off by the envelope.
 .TP 8
-.BI -mef " maximum envelope frequency"
+.BI --mef " maximum envelope frequency"
 .B (default highest freqequency in peak detection) 
 Define the maximum envelope frequency.  You normally want to leave this at the default, unless you are combining with a sound that has a different maximum envelope frequency.
 .SH SEE ALSO
