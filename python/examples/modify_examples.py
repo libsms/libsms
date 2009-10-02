@@ -31,8 +31,8 @@ start_time = time()
 # In the morph example, the spectral envelope from the source file will be
 # applied to the target file.
 # For all other examples, the source file will be modified.
-source = "../../test/audio/soopastar.wav"
-target = "../../test/audio/ocarina.wav"
+source = "../../../test/audio/soopastar.wav"
+target = "../../../test/audio/ocarina.wav"
 
 # the maximum frequency of the highest partial detected (and of the spectral envelope)
 max_freq = 12000

@@ -1,31 +1,22 @@
-
 # -*- python -*-
 # scons script for building tools
 
 Import('*')
+tools = Split('smsAnal smsSynth smsClean \
+               smsPrint smsResample')
 
-tools = Split(' smsAnal smsSynth smsClean \
-        	smsPrint smsResample ' )
-
-#where to install tools and manpages
-tools_prefix = prefix+'/bin'
-man_prefix = '/usr/share/man/man1'
-
+# where to install tools and manpages
+tools_prefix = prefix + '/bin'
 env.Prepend(LIBS = 'sms',  CPPPATH = '#src', LIBPATH = '#src')
-env.Prepend(LIBS = 'popt') # command line parsing
 
-#build each tool
+# build each tool
 for t in tools:
-	t_src = t+'.c'
+	t_src = t + '.c'
 	t_man = '../man/' + t +'.1'
-	tool =env.Program( target = t, source = t_src)
+	tool = env.Program(t_src)
         Depends(tool, '../src/libsms.a')
-#        Depends(tool, '../src/libsms.so')
-        #install tool
-        env.Install(tools_prefix, t)
+        # install tool
+        env.Install(tools_prefix, tool)
         env.Alias('install', tools_prefix)
         env.Install(man_prefix, t_man)
         env.Alias('install', man_prefix)
-
-
-
