@@ -107,13 +107,13 @@ if not conf.CheckLibWithHeader('sndfile', 'sndfile.h', 'c'):
 if get_platform() == 'win32':
     # check for libgsl
     if not conf.CheckLibWithHeader('gsl', 'gsl_sys.h', 'c'):
-	print "The required library gsl (GNU Scientific Library) could not be found"
-	print "Get it from http://www.gnu.org/software/gsl/"
-	exit(1)
+        print "The required library gsl (GNU Scientific Library) could not be found"
+        print "Get it from http://www.gnu.org/software/gsl/"
+        exit(1)
     if not conf.CheckLibWithHeader('gslcblas', 'gsl_cblas.h', 'c'):
-	print "The required library gsl (GNU Scientific Library) could not be found"
-	print "Get it from http://www.gnu.org/software/gsl/"
-	exit(1)
+        print "The required library gsl (GNU Scientific Library) could not be found"
+        print "Get it from http://www.gnu.org/software/gsl/"
+        exit(1)
 # if not using windows, call gsl-config
 else:
     env.ParseConfig("gsl-config --cflags --libs")
@@ -125,51 +125,49 @@ if env['pythonmodule']:
 
     # linux
     if get_platform() == "linux":
-	python_inc_path = ['/usr/include/python' + get_version()]
-
+        python_inc_path = ['/usr/include/python' + get_version()]
     # os x
     elif get_platform() == "darwin":
-	python_inc_path = ['/Library/Frameworks/Python.framework/Headers', 
-                         '/System/Library/Frameworks/Python.framework/Headers']
-
+        python_inc_path = ['/Library/Frameworks/Python.framework/Headers', 
+                             '/System/Library/Frameworks/Python.framework/Headers']
     # windows
     elif get_platform() == "win32":
-	python_lib = 'python%c%c'% (get_version()[0], get_version()[2])
-	python_inc_path = ['c:\\Python%c%c\include' % (get_version()[0], get_version()[2])]
-	python_lib_path.append('c:\\Python%c%c\libs' % (get_version()[0], get_version()[2]))
+        python_lib = 'python%c%c'% (get_version()[0], get_version()[2])
+        python_inc_path = ['c:\\Python%c%c\include' % (get_version()[0], get_version()[2])]
+        python_lib_path.append('c:\\Python%c%c\libs' % (get_version()[0], get_version()[2]))
 
     if not conf.CheckHeader("Python.h", language = "C"):
-	for i in python_inc_path:
-	    pythonh = conf.CheckHeader("%s/Python.h" % i, language = "C")
-	    if pythonh: 
-		print "Python version is " + get_version()
-		break
+        for i in python_inc_path:
+            pythonh = conf.CheckHeader("%s/Python.h" % i, language = "C")
+            if pythonh: 
+                print "Python version is " + get_version()
+                break
 
 	if not pythonh:
 	    print "Python headers are missing. Cannot build python module."
 
     # check for numpy
     try:
-	import numpy
-	try:
-	    numpy_include = numpy.get_include()
-	except AttributeError:
-	    numpy_include = numpy.get_numpy_include()
+        import numpy
+        try:
+            numpy_include = numpy.get_include()
+        except AttributeError:
+            numpy_include = numpy.get_numpy_include()
     except ImportError:
-	print "The Python module cannot be built because numpy was not found.\n"
-	env['pythonmodule'] = False
+        print "The Python module cannot be built because numpy was not found.\n"
+        env['pythonmodule'] = False
 
     # check for swig
     if not 'swig' in env['TOOLS']:
-	print "The Python module cannot be built because swig was not found.\n"
-	env['pythonmodule'] = False
+        print "The Python module cannot be built because swig was not found.\n"
+        env['pythonmodule'] = False
 
 # check for popt
 if env['tools']:
     # check for popt
     if not conf.CheckLibWithHeader('popt', 'popt.h', 'c'):
-	print "The required library popt could not be found"
-	exit(1)
+        print "The required library popt could not be found"
+        exit(1)
 
 env = conf.Finish()
 
@@ -192,22 +190,22 @@ if env['pythonmodule']:
     python_install_dir = distutils.sysconfig.get_python_lib()
     env.Append(SWIGFLAGS = ['-python'])
     for lib_path in python_lib_path:
-	env.Append(LIBPATH = lib_path) 
+        env.Append(LIBPATH = lib_path) 
     for inc_path in python_inc_path:
-	env.Append(CPPPATH = inc_path)
-    env.Append(CPPPATH = numpy_include)
-    env.Append(CPPPATH = 'src')
+        env.Append(CPPPATH = inc_path)
+        env.Append(CPPPATH = numpy_include)
+        env.Append(CPPPATH = 'src')
 
     if get_platform() == "win32":
-	env.Append(LIBS = [python_lib])
-	python_wrapper = env.SharedObject('python/pysms.i')
-	env.SharedLibrary('python/pysms', python_wrapper, SHLIBPREFIX='_', SHLIBSUFFIX='.pyd')
+        env.Append(LIBS = [python_lib])
+        python_wrapper = env.SharedObject('python/pysms.i')
+        env.SharedLibrary('python/pysms', python_wrapper, SHLIBPREFIX='_', SHLIBSUFFIX='.pyd')
         env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms.py')
         env.InstallAs(os.path.join(python_install_dir, '_pysms.pyd'), 'python/_pysms.pyd')
     else:
-	env.Append(LIBS = ['python' + get_version()])
-	python_wrapper = env.SharedObject('python/pysms.i')
-	env.SharedLibrary('python/pysms', python_wrapper, SHLIBPREFIX='_')
+        env.Append(LIBS = ['python' + get_version()])
+        python_wrapper = env.SharedObject('python/pysms.i')
+        env.SharedLibrary('python/pysms', python_wrapper, SHLIBPREFIX='_')
         env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms.py')
         env.InstallAs(os.path.join(python_install_dir, '_pysms.so'), 'python/_pysms.so')
     env.Alias('install', python_install_dir)
@@ -222,4 +220,4 @@ if env['doxygen']:
 	    print "cannot create doxygen documents because doxygen is not installed"
 	    exit(1)
     else:
-	print "Cannot build doxygen documents on windows yet"
+        print "Cannot build doxygen documents on windows yet"
