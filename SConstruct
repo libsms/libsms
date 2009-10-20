@@ -202,7 +202,14 @@ if env['pythonmodule']:
         env.SharedLibrary('python/pysms', python_wrapper, SHLIBPREFIX='_', SHLIBSUFFIX='.pyd')
         env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms.py')
         env.InstallAs(os.path.join(python_install_dir, '_pysms.pyd'), 'python/_pysms.pyd')
-    else:
+    elif get_platform() == "darwin":
+        env.Append(LIBS = ['python' + get_version()])
+        python_wrapper = env.SharedObject('python/pysms.i')
+        env.Prepend(LINKFLAGS=['-framework', 'python'])
+        env.LoadableModule('python/_pysms.so', python_wrapper) 
+        env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms.py')
+        env.InstallAs(os.path.join(python_install_dir, '_pysms.so'), 'python/_pysms.so')        
+    else: # linux
         env.Append(LIBS = ['python' + get_version()])
         python_wrapper = env.SharedObject('python/pysms.i')
         env.SharedLibrary('python/pysms', python_wrapper, SHLIBPREFIX='_')
