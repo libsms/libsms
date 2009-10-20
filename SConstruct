@@ -193,8 +193,8 @@ if env['pythonmodule']:
         env.Append(LIBPATH = lib_path) 
     for inc_path in python_inc_path:
         env.Append(CPPPATH = inc_path)
-        env.Append(CPPPATH = numpy_include)
-        env.Append(CPPPATH = 'src')
+    env.Append(CPPPATH = numpy_include)
+    env.Append(CPPPATH = 'src')
 
     if get_platform() == "win32":
         env.Append(LIBS = [python_lib])
