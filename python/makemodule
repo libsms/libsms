@@ -1,8 +1,10 @@
 #! /bin/bash
-# script to build pysms python module
+# script to build pysms python module.  
+# NOTE: this is depricated, from the main directory, use "scons pythonmodule=yes install" to build 
+# and install the module in a more controlled manner
 
-#./doxy2swig.py ../doc/xml/sms_8h.xml sms_doxy.i &&
+#./doxy2swig.py ../doc/xml/sms_8h.xml sms_doxy.i &&  # this will add some decent, but not too useful, documentation.
 swig -python -module pysms pysms.i &&
 python setup.py build_ext --inplace
-#python setup.py build_ext --inplace --debug
+#python setup.py build_ext --inplace --debug 
 

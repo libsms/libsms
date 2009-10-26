@@ -524,7 +524,7 @@ from numpy import zeros as np_zeros
 def zeros (n, type='float32'):
         return(np_zeros(n, type))
 
-from scipy import floor, hstack
+from numpy import floor, hstack
 from pysms import * 
 
 def pysms_analyze(audio_file, frame_rate=300, window_size=1001, window_type=SMS_WIN_HAMMING, num_stoc_coeffs=128, default_fundamental=100, highest_freq=12000, env_type=0, env_order=0):
