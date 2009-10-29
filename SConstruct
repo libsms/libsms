@@ -220,11 +220,12 @@ if env['pythonmodule']:
 # build doxygen (doesn't work on windows yet)
 if env['doxygen']:
     if not get_platform() == "windows":
-	if os.path.exists('/usr/bin/doxygen') or os.path.exists('/usr/local/bin/doxygen'):
-	    os.system('cd ./doc && doxygen Doxyfile')
-	    exit(1)
-	else:
-	    print "cannot create doxygen documents because doxygen is not installed"
-	    exit(1)
+        if not os.system('doxygen --version'): #make sure it can be found
+            os.system('cd ./doc && doxygen Doxyfile')
+            exit(1)
+        else:
+            print "cannot create doxygen documents because doxygen is not installed"
+            exit(1)
     else:
         print "Cannot build doxygen documents on windows yet"
+        exit(1)

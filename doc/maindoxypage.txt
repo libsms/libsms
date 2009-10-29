@@ -70,16 +70,15 @@
  * 
  * \subsection python Python Module
  *
- * SWIG interface file is in the subfolder 'python', which can be used to build python wrappers
- * with the following commands (you will of course need the SWIG developement package for system to build this):
+ * The SWIG interface file is in the subfolder 'python', which can be used to build a python wrapper.
+ * You will of need (the websites are listed here, but it is probably easier to get these from a package manager like apt, yin, or macports):
+ * - SWIG: http://www.swig.org/
+ * - the NumPy python module: http://numpy.scipy.org/)
+ * - the SciPy python module (to run the included test and example scripts): http://www.scipy.org/
  *
- * swig -python sms.i \n
- * python setup.py build_ext --inplace
- *
- * (you can also type 'scons python' from the main directory to do  this for you )\n 
+ * to compile and install, type 'scones pythonmodule=yes' (with root permissions) from the main directory.\n 
  *
  * If everything goes well, you should have '_pysms.so', which is loadable in python using "import sms". \n
- * Install it with python setup.py install (but I normally use 'os.path.append('PYSMS_DIR') instead). \n
  * There are some tests and examples within the python directory. \n
  *
  * \section other_files Other Included Files
@@ -89,13 +88,14 @@
  *
  * \section lib_structure Structure of libsms 
  *
- * Here are the main structures for analysis, synthesis, and getting from one to the other:
+ * These are the most important data structures:
  *
  *  SMS_Header - information that is stored along with data, used from correctly resynthesizing. Also contains
  * space for higher-level descriptors, but they are not currently used. \n
  * SMS_AnalParams - everything to compute analysis \n
  * SMS_SynthParams - everything to compute synthesis \n
- * SMS_Data - where the analysis data ends up
+ * SMS_ModifyParams - all modifications are set using this \n
+ * SMS_Data - where the analysis data is kept
  *
  * The main file for analysis routines is analysis.c. For synthesis, see synthesis.c. From these two files (any by 
  * looking at how they are prepared in the command line tools), you can follow different functions of the code.
