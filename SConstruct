@@ -43,25 +43,26 @@ vars.AddVariables(
     BoolVariable('verbose','print verbose environment information', False),
     BoolVariable('tools', 'Build SMS Tools', True),
     BoolVariable('pythonmodule', 'Build the SMS Python Module', False),
-    BoolVariable('doxygen', 'Create the SMS documentation using doxygen', False)
+    BoolVariable('doxygen', 'Create the SMS documentation using doxygen', False),
+    BoolVariable('universal', 'Compile library/python module for both i386 and x86_64 (only works on OS X 10.6)', False)
 )
 vars.Update(env)
 vars.Save('variables.cache', env)
 Help(vars.GenerateHelpText(env))
 
-# set default library and include directories
 if env['debug']:
     sms_cflags = '-Wall -g -Wshadow'
 else:
     sms_cflags = ' -O2 -funroll-loops -fomit-frame-pointer -Wall -W -Wno-unused -Wno-parentheses -Wno-switch -fno-strict-aliasing'
 env.Append(CCFLAGS = sms_cflags)
 
+# set default library and include directories
 if get_platform() == 'linux':
     env.Append(LIBPATH=['/usr/local/lib', '/usr/lib'])
     env.Append(CPPPATH=['/usr/local/include', '/usr/include'])
 elif get_platform() == 'darwin':
-    env.Append(LIBPATH=['/opt/local/lib', '/usr/local/lib', '/usr/lib'])
-    env.Append(CPPPATH=['/opt/local/include', '/usr/local/include', '/usr/include'])
+    env.Append(LIBPATH=['/usr/lib', '/opt/local/lib', '/usr/local/lib' ])
+    env.Append(CPPPATH=['/usr/include', '/opt/local/include', '/usr/local/include'])
 elif get_platform() == 'win32':
     env.Append(LIBPATH=['/usr/local/lib', '/usr/lib', 'C:/msys/1.0/local/lib', 
                         'C:/msys/1.0/lib', 'C:/Python26/libs'])    
@@ -76,13 +77,17 @@ else:
 env.Append(LIBPATH = env['libpath'])
 env.Append(CPPPATH = env['cpath'])
 
+# Mac Architecture settings
+if env['universal'] and get_platform() == 'darwin':
+	mac_arch = ' -arch i386 -arch x86_64 '
+	env.Append(CCFLAGS = mac_arch, LINKFLAGS = mac_arch)
+
 # print environment settings
 if env['verbose']:
     print "++ ENVIRONMENT SETTINGS ++"
     print "PATH:", os.environ['PATH']
     print "LIBPATH:", env.Dump('LIBPATH')
     print "CPPPATH:", env.Dump('CPPPATH')
-    print "TOOLS:", env.Dump('TOOLS')
 
 conf = Configure(env)
 
