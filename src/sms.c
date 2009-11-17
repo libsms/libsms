@@ -131,9 +131,12 @@ void sms_initAnalParams (SMS_AnalParams *pAnalParams)
 	pAnalParams->iWindowType = SMS_WIN_BH_70;
         pAnalParams->iSizeSound = 0; /*!< no sound yet */
 	pAnalParams->nFrames = 0; /*!< no frames yet */
+	pAnalParams->minGoodFrames = 3;
+	pAnalParams->maxDeviation = 0.01;
+	pAnalParams->analDelay = 100;
 	pAnalParams->iMaxDelayFrames = 
 		MAX(pAnalParams->iMinTrackLength, pAnalParams->iMaxSleepingTime) + 2 +
-			SMS_DELAY_FRAMES;
+		    (pAnalParams->minGoodFrames + pAnalParams->analDelay);
 	pAnalParams->fResidualAccumPerc = 0.;
         /* spectral envelope params */
         pAnalParams->specEnvParams.iType = SMS_ENV_NONE; /* turn off enveloping */
@@ -545,7 +548,7 @@ sfloat sms_fundDeviation ( SMS_AnalParams *pAnalParams, int iCurrentFrame)
         int i;
 
 	/* get the sum of the past few fundamentals */
-	for (i = 0; i < SMS_MIN_GOOD_FRAMES; i++)
+	for (i = 0; i < pAnalParams->minGoodFrames; i++)
 	{
 		fFund = pAnalParams->ppFrames[iCurrentFrame-i]->fFundamental;
 		if(fFund <= 0)
@@ -555,14 +558,14 @@ sfloat sms_fundDeviation ( SMS_AnalParams *pAnalParams, int iCurrentFrame)
 	}
   
 	/* find the average */
-	fAverage = fSum / SMS_MIN_GOOD_FRAMES;
+	fAverage = fSum / pAnalParams->minGoodFrames;
   
 	/* get the deviation from the average */
-	for (i = 0; i < SMS_MIN_GOOD_FRAMES; i++)
+	for (i = 0; i < pAnalParams->minGoodFrames; i++)
 		fDeviation += fabs(pAnalParams->ppFrames[iCurrentFrame-i]->fFundamental - fAverage);
   
 	/* return the deviation from the average */
-	return (fDeviation / (SMS_MIN_GOOD_FRAMES * fAverage));
+	return (fDeviation / (pAnalParams->minGoodFrames * fAverage));
 }
 
 

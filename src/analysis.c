@@ -99,7 +99,7 @@ static int ReAnalyzeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams)
         sfloat fFund, fLastFund, fDev;
 	int iNewFrameSize, i;
 	sfloat fAvgDeviation = sms_fundDeviation(pAnalParams, iCurrentFrame);
-        int iFirstFrame = iCurrentFrame - SMS_MIN_GOOD_FRAMES;
+        int iFirstFrame = iCurrentFrame - pAnalParams->minGoodFrames;
 
 /*         fprintf(stdout, "Frame %d reAnalyze: Freq. deviation %f\n", */
 /*                 pAnalParams->ppFrames[iCurrentFrame]->iFrameNum, fAvgDeviation); */
@@ -111,8 +111,8 @@ static int ReAnalyzeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams)
   
 	/* if the last SMS_MIN_GOOD_FRAMES are stable look before them */
 	/*  and recompute the frames that are not stable */
-	if (fAvgDeviation <= SMS_MAX_DEVIATION)
-		for (i = 0; i < SMS_ANAL_DELAY; i++)
+	if (fAvgDeviation <= pAnalParams->maxDeviation)
+		for (i = 0; i < pAnalParams->analDelay; i++)
 		{
 			if (pAnalParams->ppFrames[iFirstFrame - i]->iFrameNum <= 0 ||
 			    pAnalParams->ppFrames[iFirstFrame - i]->iStatus == SMS_FRAME_RECOMPUTED)
@@ -161,6 +161,7 @@ int sms_analyze (int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_An
 	static int sizeWindow = 0;      /* size of current analysis window */ //RTE ?: shouldn't this just be initilalized outside?
 
 	int iCurrentFrame = pAnalParams->iMaxDelayFrames - 1;  /* frame # of current frame */
+	int delayFrames = pAnalParams->minGoodFrames + pAnalParams->analDelay;
 	int i, iError, iExtraSamples;              /* samples used for next analysis frame */
 	sfloat fRefFundamental = 0;   /* reference fundamental for current frame */
         SMS_AnalFrame *pTmpAnalFrame;
@@ -200,7 +201,7 @@ int sms_analyze (int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_An
 		if (pAnalParams->iSoundType == SMS_SOUND_TYPE_NOTE)
 			fRefFundamental = pAnalParams->fDefaultFundamental;
 		/* if sound is stable use the last fundamental as a reference */
-		else if (fAvgDev != -1 && fAvgDev <= SMS_MAX_DEVIATION)
+		else if (fAvgDev != -1 && fAvgDev <= pAnalParams->maxDeviation)
 			fRefFundamental = pAnalParams->ppFrames[iCurrentFrame - 1]->fFundamental;
 		else
 			fRefFundamental = 0;
@@ -231,17 +232,17 @@ int sms_analyze (int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_An
 	}
   
 	/* incorporate the peaks into the corresponding tracks */
-	/* This is done after a SMS_DELAY_FRAMES delay  */
-	if (pAnalParams->ppFrames[iCurrentFrame - SMS_DELAY_FRAMES]->fFundamental > 0 ||
+	/* This is done after a pAnalParams->iMaxDelayFrames delay  */
+	if (pAnalParams->ppFrames[iCurrentFrame - delayFrames]->fFundamental > 0 ||
 	    ((pAnalParams->iFormat == SMS_FORMAT_IH ||
 	      pAnalParams->iFormat == SMS_FORMAT_IHP) &&
-	     pAnalParams->ppFrames[iCurrentFrame - SMS_DELAY_FRAMES]->nPeaks > 0))
-		sms_peakContinuation (iCurrentFrame - SMS_DELAY_FRAMES, pAnalParams);
-    
+	     pAnalParams->ppFrames[iCurrentFrame - delayFrames]->nPeaks > 0))
+		sms_peakContinuation (iCurrentFrame - delayFrames, pAnalParams);
+
 	/* fill gaps and delete short tracks */
 	if (pAnalParams->iCleanTracks > 0 &&
-	    pAnalParams->ppFrames[iCurrentFrame - SMS_DELAY_FRAMES]->iStatus != SMS_FRAME_EMPTY)
-		sms_cleanTracks (iCurrentFrame - SMS_DELAY_FRAMES, pAnalParams);
+	    pAnalParams->ppFrames[iCurrentFrame - delayFrames]->iStatus != SMS_FRAME_EMPTY)
+		sms_cleanTracks (iCurrentFrame - delayFrames, pAnalParams);
 
 	/* do stochastic analysis */
 	if (pAnalParams->iStochasticType != SMS_STOC_NONE)

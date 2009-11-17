@@ -255,6 +255,9 @@ typedef struct
 	int nFrames;             /*!< total number of frames that will be analyzed */
 	int iWindowType;            /*!< type of FFT analysis window \see SMS_WINDOWS */			  	 			 
         int iMaxDelayFrames;     /*!< maximum number of frames to delay before peak continuation */
+        int minGoodFrames;       /*!< minimum number of stable frames for backward search */
+        sfloat maxDeviation;    /*!< maximum deviation allowed */
+        int analDelay;          /*! number of frames in the past to be looked in possible re-analyze */
         sfloat fResidualAccumPerc; /*!< accumalitive residual percentage */
         int sizeNextRead;     /*!< size of samples to read from sound file next analysis */
         SMS_PeakParams peakParams; /*!< structure with parameters for spectral peaks */
@@ -524,16 +527,6 @@ enum SMS_WINDOWS
         SMS_WIN_IFFT              /*!< 6: window for deterministic synthesis based on the Inverse-FFT algorithm.
                                    This is a combination of an inverse Blackman-Harris 92dB and a triangular window. */ 		
 };
-
-/* re-analyze and clean tracks */
-
-#define SMS_MIN_GOOD_FRAMES 3  /*!< minimum number of stable frames for backward search */
-
-#define SMS_MAX_DEVIATION .01   /*!< maximum deviation allowed */
-/*! number of frames in the past to be looked in possible re-analyze */
-#define SMS_ANAL_DELAY     100 /*!< \todo this should be a parameter in AnalParams */  
-/*! total number of delay frames */
-#define SMS_DELAY_FRAMES (SMS_MIN_GOOD_FRAMES + SMS_ANAL_DELAY)
 
 /*!
  *  \brief frame status
