@@ -174,12 +174,15 @@ void sms_cleanTracks (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 		{
 			for (iFrame = 1; iFrame <= iLength; iFrame++)
 			{
-				pAnalParams->ppFrames[iCurrentFrame - 
-					iFrame]->deterministic.pFSinAmp[iTrack] = 0;
-				pAnalParams->ppFrames[iCurrentFrame - 
-					iFrame]->deterministic.pFSinFreq[iTrack] = 0;
-				pAnalParams->ppFrames[iCurrentFrame - 
-					iFrame]->deterministic.pFSinPha[iTrack] = 0;
+			        if((iCurrentFrame - iFrame) > 0)
+			        {
+				            pAnalParams->ppFrames[iCurrentFrame - 
+					            iFrame]->deterministic.pFSinAmp[iTrack] = 0;
+				            pAnalParams->ppFrames[iCurrentFrame - 
+					            iFrame]->deterministic.pFSinFreq[iTrack] = 0;
+				            pAnalParams->ppFrames[iCurrentFrame - 
+					            iFrame]->deterministic.pFSinPha[iTrack] = 0;
+			        }
 			}
 			pIState[iTrack] = -pAnalParams->iMaxSleepingTime;
 		}
