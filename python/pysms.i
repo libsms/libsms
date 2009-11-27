@@ -456,6 +456,17 @@ void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis
                 for (i = 0; i < $self->nTracks; i++)
                         pArray[i] = $self->pFSinFreq[i];
         }
+        void getSinPhase(int sizeArray, float *pArray)
+        {
+                if(sizeArray < $self->nTracks)
+                {
+                        sms_error("numpy array not big enough");
+                        return;
+                }
+                int i;
+                for (i = 0; i < $self->nTracks; i++)
+                        pArray[i] = $self->pFSinPha[i];
+        }
         void getSinEnv(int sizeArray, float *pArray)
         {
                 if(sizeArray < $self->nEnvCoeff)
