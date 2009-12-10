@@ -174,7 +174,7 @@ void sms_cleanTracks (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 		{
 			for (iFrame = 1; iFrame <= iLength; iFrame++)
 			{
-			        if((iCurrentFrame - iFrame) > 0)
+			        if((iCurrentFrame - iFrame) >= 0)
 			        {
 				            pAnalParams->ppFrames[iCurrentFrame - 
 					            iFrame]->deterministic.pFSinAmp[iTrack] = 0;
