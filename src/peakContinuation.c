@@ -362,18 +362,20 @@ int sms_peakContinuation (int iFrame, SMS_AnalParams *pAnalParams)
 	sfloat fFund = pAnalParams->ppFrames[iFrame]->fFundamental,
 		fFreqDev = fFund * pAnalParams->fFreqDeviation, fCurrentMax = 1000;
   	static SMS_Guide *pGuides = NULL;
-
-	if (pGuides == NULL)
+  	static int nGuides = 0;
+    
+	if (pGuides == NULL || nGuides != pAnalParams->nGuides)
 	{
 		if ((pGuides = (SMS_Guide *) calloc(pAnalParams->nGuides, sizeof(SMS_Guide))) 
-		   == NULL)
+            == NULL)
 			return (SMS_MALLOC);
 		if (pAnalParams->iFormat == SMS_FORMAT_H ||
-		    pAnalParams->iFormat == SMS_FORMAT_HP)
-		for (iGuide = 0; iGuide < pAnalParams->nGuides; iGuide++)
-			pGuides[iGuide].fFreq = pAnalParams->fDefaultFundamental 
-			                        * (iGuide + 1);
-	}        
+			pAnalParams->iFormat == SMS_FORMAT_HP)
+            for (iGuide = 0; iGuide < pAnalParams->nGuides; iGuide++)
+                pGuides[iGuide].fFreq = pAnalParams->fDefaultFundamental
+                * (iGuide + 1);
+		nGuides = pAnalParams->nGuides;
+	}
 
 	/* update guides with fundamental contribution */
 	if (fFund > 0 &&

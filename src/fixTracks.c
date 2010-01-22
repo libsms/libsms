@@ -155,9 +155,14 @@ void sms_cleanTracks (int iCurrentFrame, SMS_AnalParams *pAnalParams)
 {
 	int iTrack, iLength, iFrame;
 	static int *pIState = NULL;
+    static int nStates = 0;
   
-	if (pIState == NULL)
+	if (pIState == NULL || nStates != pAnalParams->nGuides)
+    {
+         /* \todo shouldn't this memory allocation be checked? */
 		pIState = (int *) calloc (pAnalParams->nGuides, sizeof(int));
+        nStates = pAnalParams->nGuides;
+    }
   
 	/* if fundamental and first partial are short, delete everything */
 	if ((pAnalParams->iFormat == SMS_FORMAT_H ||
