@@ -1,5 +1,21 @@
 # -*- python -*-
-# top-level scons script for libsms and tools
+# Copyright (c) 2008 MUSIC TECHNOLOGY GROUP (MTG)
+#                    UNIVERSITAT POMPEU FABRA 
+#  
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 import os, sys
 import distutils.sysconfig
 
@@ -21,7 +37,11 @@ def get_version():
     return sys.version[:3]    
 
 # environment
-env = Environment(ENV=os.environ)
+if get_platform() == 'win32':
+    # can only build with mingw on windows
+    env = Environment(ENV=os.environ, tools=['mingw'])
+else:
+    env = Environment(ENV=os.environ)
 
 # set default installation directories
 default_install_dir = ""
@@ -192,7 +212,12 @@ if env['tools']:
 
 # build the python module
 if env['pythonmodule']:
-    python_install_dir = distutils.sysconfig.get_python_lib()
+    python_install_dir = os.path.join(distutils.sysconfig.get_python_lib(), "pysms")
+    env.Alias('install', python_install_dir)
+    env.InstallAs(os.path.join(python_install_dir, "__init__.py"), "python/__init__.py")
+    env.InstallAs(os.path.join(python_install_dir, "analysis.py"), "python/analysis.py")
+    env.InstallAs(os.path.join(python_install_dir, "synthesis.py"), "python/synthesis.py")
+
     env.Append(SWIGFLAGS = ['-python'])
     for lib_path in python_lib_path:
         env.Append(LIBPATH = lib_path) 
