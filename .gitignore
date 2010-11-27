@@ -5,22 +5,30 @@
 *.os
 *_wrap.c
 *.a
+
 # OS generated files
 .DS_Store?
 Icon?
 Thumbs.db
+
+# SWIG generated files
+python/pysms.py
+
 # Editor/IDE files
 .settings
 *.swp
+
 # Scons files
 *.sconsign.dblite
 *config.log
 *.sconf*
 *.cache
+
 # Audio files
 *.wav
 # SMS files
 *.sms
+
 # SMS tools
 tools/smsAnal
 tools/smsClean
