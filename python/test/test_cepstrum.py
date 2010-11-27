@@ -7,7 +7,7 @@ from pysms import *
 #####  parameters  ##########
 maxFreq = 5000
 
-filename = "../../test/audio/fs.wav"
+filename = "fs.wav"
 sizeWin = 601
 sizeSpec = 512
 winType = SMS_WIN_HAMMING
@@ -32,7 +32,6 @@ sr = soundheader.iSamplingRate
 ### compute spectrum of a frame #####
 sms_spectrum(wave, win,Mag, Phase);
 sms_arrayMagToDB(Mag)
-#Xdb = 20*log10(Mag)
 
 ###############################
 ### get partial peaks #############
@@ -72,10 +71,6 @@ sms_dCepstrum(cepstrum, fx[0:npoints-1], Xk, lam, maxFreq)
 sms_dCepstrumEnvelope(cepstrum, specEnv) 
 env_db = 20*log10(specEnv)
 
-#print "env (size: %d): " % (maxBin)
-#print env_db
-#print "cepstrum:"
-#print cepstrum
 
 ###############################################
 # plot the magnitude spectrum, peaks, and envelope
@@ -96,21 +91,6 @@ if True:
     plot(env_freq, env_db,'g')
     show()
 
-
-##################################################
-### freq/amp pairs taken directly from mfile test_dcepstrum.m
-### using npoints = 5 and p = 3
-#fk = array([0.0056450, 0.0162966, 0.0283852, 0.0589733, 0.0808190])
-# from pysms import *
-# fx = array([ 589.73, 1176.16, 1759.11, 2351.43] )
-# Xk = array([ 43.0809,   50.6248,    8.4649,    9.0433 ] )
-# p = 6 # order + 1
-# lam = 1e-6
-# maxfreq = 3000
-# c = zeros(p)
-# env = zeros(4)
-# sms_dCepstrum(c, fx, Xk, lam, maxfreq)
-# sms_dCepstrumEnvelope(c, env)
 
 
 

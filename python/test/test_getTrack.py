@@ -3,7 +3,7 @@
 from pylab import *
 from pysms import *
 
-filename = "../tools/flugel.sms"
+filename = "fs.sms"
 
 file = SMS_File()
 file.load(filename)

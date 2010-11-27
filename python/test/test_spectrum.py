@@ -1,11 +1,11 @@
 #!/usr/bin python
 
+# FIXME: fix all of me
+
 from pylab import *
 from pysms import *
 
-#filename = "../../test/audio/fs.wav
-filename = "../../test/audio/soopastar.wav"
-#filename = "../../test/audio/tone440.wav"
+filename = "fs.wav"
 sizeWin = 301
 sizeSpec = 512
 winType = SMS_WIN_HAMMING
@@ -52,7 +52,7 @@ print "nPeaks: ", nPeaks
 peakParams = SMS_PeakParams()
 peakParams.fHighestFreq = 20000
 peakParams.fLowestFreq = 100
-peakParams.fMinPeakMag = 
+peakParams.fMinPeakMag = .01
 peakParams.iSamplingRate = soundheader.iSamplingRate
 peakParams.iMaxPeaks = nPeaks
 peaks = SMS_SpectralPeaks(nPeaks)

@@ -3,7 +3,7 @@
 from pylab import *
 from pysms import *
 
-filename = "../../test/audio/tone440.wav"
+filename = "fs.wav"
 sizeWin = 301
 sizeSpec = 512
 winType = SMS_WIN_HAMMING
@@ -20,7 +20,7 @@ sms_openSF(filename, soundheader)
 nSamples = soundheader.nSamples
 sms_getSound(soundheader, wave, sample);
 
-sms_spectrum(wave, win,Mag, Phase)
+sms_spectrum(wave, win, Mag, Phase)
 
 sms_setMagThresh(.2)
 dbMag = Mag.copy()

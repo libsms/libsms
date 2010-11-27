@@ -3,7 +3,7 @@
 from pylab import *
 from pysms import *
 
-filename = "../tools/flugel.sms"
+filename = "fs.sms"
 
 file = SMS_File()
 file.load(filename)
@@ -26,6 +26,5 @@ for i in xrange(nFrames):
 print "done plotting all tracks"
 
 subplot(211,axisbg=[0,0,0])
-sms_getTrack(
 
 sms_closeFile(file)

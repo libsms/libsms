@@ -19,7 +19,7 @@ sample = 1000
 soundheader = SMS_SndHeader()
 #smsData = SMS_Data()
 analParams = SMS_AnalParams()
-sms_initAnalParams(analParams))
+sms_initAnalParams(analParams)
 
 analFrame = SMS_AnalFrame()
 
