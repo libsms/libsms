@@ -1,0 +1,28 @@
+# Compiled source
+*.pyc
+*.o
+*.so
+*.os
+*_wrap.c
+*.a
+
+# OS generated files
+.DS_Store?
+Icon?
+Thumbs.db
+
+# Editor/IDE files
+.settings
+*.swp
+
+# Scons files
+*.sconsign.dblite
+*config.log
+*.sconf*
+
+# Audio files
+*.wav
+
+# Analysis files
+*.sms
+
