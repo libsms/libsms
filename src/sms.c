@@ -51,7 +51,6 @@ static int initIsDone = 0; /* \todo is this variable necessary? */
  */
 int sms_init(void)
 {
-    int iError;
     if(!initIsDone)
     {
         initIsDone = 1;
@@ -357,14 +356,21 @@ int sms_initAnalysis(SMS_AnalParams *pAnalParams, SMS_SndHeader *pSoundHeader)
         sms_error("Could not allocate memory for guides");
         return -1;
     }
+
     /* initial guide values */
-    if(pAnalParams->iFormat == SMS_FORMAT_H ||
-       pAnalParams->iFormat == SMS_FORMAT_HP)
+    for (i = 0; i < pAnalParams->nGuides; i++)
     {
-        for (i = 0; i < pAnalParams->nGuides; i++)
+        if(pAnalParams->iFormat == SMS_FORMAT_H || pAnalParams->iFormat == SMS_FORMAT_HP)
         {
             pAnalParams->guides[i].fFreq = pAnalParams->fDefaultFundamental * (i + 1);
         }
+        else
+        {
+            pAnalParams->guides[i].fFreq = 0.0;
+        }
+        pAnalParams->guides[i].fMag = 0.0;
+        pAnalParams->guides[i].iPeakChosen = -1;
+        pAnalParams->guides[i].iStatus = 0;
     }
 
     /* stochastic analysis */

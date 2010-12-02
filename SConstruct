@@ -71,7 +71,7 @@ vars.Save('variables.cache', env)
 Help(vars.GenerateHelpText(env))
 
 if env['debug']:
-    sms_cflags = '-Wall -g -Wshadow'
+    sms_cflags = '-Wall -g -O0 -Wshadow'
 else:
     sms_cflags = ' -O2 -funroll-loops -fomit-frame-pointer -Wall -W -Wno-unused -Wno-parentheses -Wno-switch -fno-strict-aliasing'
 env.Append(CCFLAGS = sms_cflags)

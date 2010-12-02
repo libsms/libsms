@@ -24,13 +24,14 @@
 
 #include "sms.h"
 
-/*! diferent status of guide */
+/*! guide states */
 #define GUIDE_BEG -2
 #define GUIDE_DEAD -1
 #define GUIDE_ACTIVE 0
 
-#define MAX_CONT_CANDIDATES 5  /*!< maximum number of peak continuation
-                                  candidates */
+/*!< maximum number of peak continuation candidates */
+#define MAX_CONT_CANDIDATES 5  
+
 /*! \brief function to get the next closest peak from a guide
  *
  * \param fGuideFreq        guide's frequency
@@ -44,16 +45,13 @@ static int GetNextClosestPeak(sfloat fGuideFreq, sfloat *pFFreqDistance,
                               SMS_Peak *pSpectralPeaks, SMS_AnalParams *pAnalParams,
                               sfloat fFreqDev)
 {
-    /*int iInitialPeak = */
-    /*    pAnalParams->peakParams.iMaxPeaks * fGuideFreq / (pAnalParams->iSamplingRate * .5);*/
     int iInitialPeak = SMS_MAX_NPEAKS * fGuideFreq / (pAnalParams->iSamplingRate * .5);
     int iLowPeak, iHighPeak, iChosenPeak = -1;
     sfloat fLowDistance, fHighDistance, fFreq;
 
-    if(pSpectralPeaks[iInitialPeak].fFreq <= 0)
-        iInitialPeak = 0;
-
     if(iInitialPeak >= pAnalParams->peakParams.iMaxPeaks)
+        iInitialPeak = 0;
+    else if(pSpectralPeaks[iInitialPeak].fFreq <= 0)
         iInitialPeak = 0;
       
     /* find a low peak to start */
@@ -70,14 +68,15 @@ static int GetNextClosestPeak(sfloat fGuideFreq, sfloat *pFFreqDistance,
     else
     {
         while(floor(fLowDistance) >= floor(*pFFreqDistance) &&
-              iInitialPeak < pAnalParams->peakParams.iMaxPeaks)
+              iInitialPeak < (pAnalParams->peakParams.iMaxPeaks - 1))
         {
             iInitialPeak++;  
             if((fFreq = pSpectralPeaks[iInitialPeak].fFreq) == 0)
                 return -1;
             fLowDistance = fGuideFreq - fFreq;
         }
-        iInitialPeak--;
+        if(iInitialPeak > 0)
+            iInitialPeak--;
         fLowDistance = fGuideFreq - pSpectralPeaks[iInitialPeak].fFreq;
     }
   
@@ -91,9 +90,9 @@ static int GetNextClosestPeak(sfloat fGuideFreq, sfloat *pFFreqDistance,
     iHighPeak = iInitialPeak;
     fHighDistance = fGuideFreq - pSpectralPeaks[iHighPeak].fFreq;
     while(floor(fHighDistance) >= floor(-*pFFreqDistance) &&
-          iHighPeak < pAnalParams->peakParams.iMaxPeaks)
+          iHighPeak < (pAnalParams->peakParams.iMaxPeaks - 1))
     {
-        iHighPeak++;     
+        iHighPeak++;
         if((fFreq = pSpectralPeaks[iHighPeak].fFreq) == 0)
         {
             iHighPeak = -1;
@@ -108,7 +107,7 @@ static int GetNextClosestPeak(sfloat fGuideFreq, sfloat *pFFreqDistance,
     /* chose between the two extrema */
     if(iHighPeak >= 0 && iLowPeak >= 0)
     {
-        if (fabs(fHighDistance) > fLowDistance)
+        if(fabs(fHighDistance) > fLowDistance)
             iChosenPeak = iLowPeak;
         else
             iChosenPeak = iHighPeak;
@@ -120,9 +119,9 @@ static int GetNextClosestPeak(sfloat fGuideFreq, sfloat *pFFreqDistance,
     else
         return -1;
 
-    *pFFreqDistance = fabs (fGuideFreq - pSpectralPeaks[iChosenPeak].fFreq);
+    *pFFreqDistance = fabs(fGuideFreq - pSpectralPeaks[iChosenPeak].fFreq);
     return iChosenPeak;
-}   
+}
 
 /*! \brief choose the best candidate out of all
  *
@@ -195,19 +194,19 @@ static int CheckForConflict (int iBestPeak, SMS_Guide *pGuides, int nGuides)
  * \param pSpectralPeaks    array of peaks
  * \return number of guide
  */
-static int BestGuide (int iConflictingGuide, int iGuide, SMS_Guide *pGuides,
-                      SMS_Peak *pSpectralPeaks)
+static int BestGuide(int iConflictingGuide, int iGuide, SMS_Guide *pGuides,
+                     SMS_Peak *pSpectralPeaks)
 {
     int iConflictingPeak = pGuides[iConflictingGuide].iPeakChosen;
-    sfloat fGuideDistance = fabs (pSpectralPeaks[iConflictingPeak].fFreq -
+    sfloat fGuideDistance = fabs(pSpectralPeaks[iConflictingPeak].fFreq -
                                  pGuides[iGuide].fFreq);
-    sfloat fConfGuideDistance = fabs (pSpectralPeaks[iConflictingPeak].fFreq -
+    sfloat fConfGuideDistance = fabs(pSpectralPeaks[iConflictingPeak].fFreq -
                                      pGuides[iConflictingGuide].fFreq);
 
-    if (fGuideDistance > fConfGuideDistance)
-        return (iConflictingGuide);
+    if(fGuideDistance > fConfGuideDistance)
+        return iConflictingGuide;
     else
-        return (iGuide);
+        return iGuide;
 }
 
 /*! \brief function to find the best continuation peak for a given guide
@@ -218,29 +217,30 @@ static int BestGuide (int iConflictingGuide, int iGuide, SMS_Guide *pGuides,
  * \param fFreqDev                  frequency deviation allowed
  * \return the peak number
  */
-static int GetBestPeak (SMS_Guide *pGuides, int iGuide, SMS_Peak *pSpectralPeaks, 
-                        SMS_AnalParams *pAnalParams, sfloat fFreqDev)
+static int GetBestPeak(SMS_Guide *pGuides, int iGuide, SMS_Peak *pSpectralPeaks, 
+                       SMS_AnalParams *pAnalParams, sfloat fFreqDev)
 {
     int iCand = 0, iPeak, iBestPeak, iConflictingGuide, iWinnerGuide;
     sfloat fGuideFreq = pGuides[iGuide].fFreq,
-        fGuideMag = pGuides[iGuide].fMag,
-        fFreqDistance = -1, fMagDistance = 0;
+           fGuideMag = pGuides[iGuide].fMag,
+           fFreqDistance = -1, 
+           fMagDistance = 0;
     SMS_ContCandidate pCandidate[MAX_CONT_CANDIDATES];
 
     /* find all possible candidates */
-    while (iCand < MAX_CONT_CANDIDATES)
+    while(iCand < MAX_CONT_CANDIDATES)
     {
         /* find the next best peak */
-        if ((iPeak = GetNextClosestPeak (fGuideFreq, &fFreqDistance,
-                                         pSpectralPeaks, pAnalParams, 
-                                         fFreqDev)) < 0)
+        if((iPeak = GetNextClosestPeak(fGuideFreq, &fFreqDistance,
+                                       pSpectralPeaks, pAnalParams, 
+                                       fFreqDev)) < 0)
         {
             break;
         }
     
-        /* if the peak's magnitude is not too small accept it as */
-        /* possible candidate        */
-        if ((fMagDistance = pSpectralPeaks[iPeak].fMag  - fGuideMag) > -20.0)
+        /* if the peak's magnitude is not too small accept it as
+         * possible candidate */
+        if((fMagDistance = pSpectralPeaks[iPeak].fMag  - fGuideMag) > -20.0)
         {
             pCandidate[iCand].fFreqDev = fabs(fFreqDistance);
             pCandidate[iCand].fMagDev = fMagDistance;
@@ -248,41 +248,43 @@ static int GetBestPeak (SMS_Guide *pGuides, int iGuide, SMS_Peak *pSpectralPeaks
               
             if(pAnalParams->iDebugMode == SMS_DBG_PEAK_CONT ||
                pAnalParams->iDebugMode == SMS_DBG_ALL)
-                fprintf (stdout, "candidate %d: freq %f mag %f\n", 
-                         iCand, pSpectralPeaks[iPeak].fFreq,    
-                         pSpectralPeaks[iPeak].fMag);
+                fprintf(stdout, "candidate %d: freq %f mag %f\n", 
+                        iCand, pSpectralPeaks[iPeak].fFreq,    
+                        pSpectralPeaks[iPeak].fMag);
             iCand++;
         }
     }
+
     /* get best candidate */
-    if (iCand < 1)
-        return (0);
-    else if (iCand == 1)
+    if(iCand < 1)
+        return 0;
+    else if(iCand == 1)
         iBestPeak = pCandidate[0].iPeak;
     else
-        iBestPeak = ChooseBestCand (pCandidate, iCand, 
-                                    pAnalParams->fFreqDeviation);
+        iBestPeak = ChooseBestCand(pCandidate, iCand, 
+                                   pAnalParams->fFreqDeviation);
       
     if(pAnalParams->iDebugMode == SMS_DBG_PEAK_CONT ||
        pAnalParams->iDebugMode == SMS_DBG_ALL)
-        fprintf (stdout, "BestCandidate: freq %f\n",
-                 pSpectralPeaks[iBestPeak].fFreq);
+        fprintf(stdout, "BestCandidate: freq %f\n",
+                pSpectralPeaks[iBestPeak].fFreq);
 
     /* if peak taken by another guide resolve conflict */
-    if ((iConflictingGuide = CheckForConflict (iBestPeak, pGuides, 
-                                               pAnalParams->nGuides)) >= 0)
+    if((iConflictingGuide = CheckForConflict(iBestPeak, pGuides, 
+                                             pAnalParams->nGuides)) >= 0)
     {
-        iWinnerGuide = BestGuide (iConflictingGuide, iGuide, pGuides, 
-                                  pSpectralPeaks);
+        iWinnerGuide = BestGuide(iConflictingGuide, iGuide, pGuides, 
+                                 pSpectralPeaks);
+
         if(pAnalParams->iDebugMode == SMS_DBG_PEAK_CONT ||
            pAnalParams->iDebugMode == SMS_DBG_ALL)
-            fprintf (stdout, 
-                     "Conflict: guide: %d (%f), and guide: %d (%f). best: %d\n", 
-                     iGuide, pGuides[iGuide].fFreq, 
-                     iConflictingGuide, pGuides[iConflictingGuide].fFreq,       
-                     iWinnerGuide);
+            fprintf(stdout, 
+                    "Conflict: guide: %d (%f), and guide: %d (%f). best: %d\n", 
+                    iGuide, pGuides[iGuide].fFreq, 
+                    iConflictingGuide, pGuides[iConflictingGuide].fFreq,       
+                    iWinnerGuide);
 
-        if (iGuide == iWinnerGuide)                  
+        if(iGuide == iWinnerGuide)                  
         {
             pGuides[iGuide].iPeakChosen = iBestPeak;
             pGuides[iConflictingGuide].iPeakChosen = -1;
@@ -291,7 +293,7 @@ static int GetBestPeak (SMS_Guide *pGuides, int iGuide, SMS_Peak *pSpectralPeaks
     else
         pGuides[iGuide].iPeakChosen = iBestPeak;
 
-    return (iBestPeak);
+    return iBestPeak;
 }
 
 /*! \brief function to get the next maximum (magnitude) peak
@@ -409,19 +411,18 @@ int sms_peakContinuation(int iFrame, SMS_AnalParams *pAnalParams)
       
         pAnalParams->guides[iGuide].iPeakChosen = -1;
     
-        if(pAnalParams->iFormat == SMS_FORMAT_IH ||
-           pAnalParams->iFormat == SMS_FORMAT_IHP)
+        if(pAnalParams->iFormat == SMS_FORMAT_IH || pAnalParams->iFormat == SMS_FORMAT_IHP)
             fFreqDev = pAnalParams->guides[iGuide].fFreq * pAnalParams->fFreqDeviation;
       
         /* get the best peak for the guide */
-        iGoodPeak = 
-            GetBestPeak(pAnalParams->guides, iGuide, pAnalParams->ppFrames[iFrame]->pSpectralPeaks, 
-                        pAnalParams, fFreqDev);
+        iGoodPeak = GetBestPeak(pAnalParams->guides, iGuide, 
+                                pAnalParams->ppFrames[iFrame]->pSpectralPeaks, 
+                                pAnalParams, fFreqDev);
     }
   
     /* try to find good peaks for the GUIDE_DEAD guides */
-    if(pAnalParams->iFormat == SMS_FORMAT_IH ||
-       pAnalParams->iFormat == SMS_FORMAT_IHP)
+    if(pAnalParams->iFormat == SMS_FORMAT_IH || pAnalParams->iFormat == SMS_FORMAT_IHP)
+    {
         for(iGuide = 0; iGuide < pAnalParams->nGuides; iGuide++)
         {
             if(pAnalParams->guides[iGuide].iStatus != GUIDE_DEAD)
@@ -429,10 +430,10 @@ int sms_peakContinuation(int iFrame, SMS_AnalParams *pAnalParams)
     
             if(GetStartingPeak(iGuide, pAnalParams->guides, pAnalParams->nGuides, 
                                pAnalParams->ppFrames[iFrame]->pSpectralPeaks,
-                               &pAnalParams->peakParams,
-                               &fCurrentMax) == -1)
+                               &pAnalParams->peakParams, &fCurrentMax) == -1)
                 break;
         }
+    }
 
     /* save all the continuation values,
      * assume output tracks are already clear */
@@ -441,8 +442,7 @@ int sms_peakContinuation(int iFrame, SMS_AnalParams *pAnalParams)
         if(pAnalParams->guides[iGuide].iStatus == GUIDE_DEAD)
             continue; 
 
-        if(pAnalParams->iFormat == SMS_FORMAT_IH ||
-           pAnalParams->iFormat == SMS_FORMAT_IHP)
+        if(pAnalParams->iFormat == SMS_FORMAT_IH || pAnalParams->iFormat == SMS_FORMAT_IHP)
         {
             if(pAnalParams->guides[iGuide].iStatus > 0 &&
                pAnalParams->guides[iGuide].iPeakChosen == -1)
@@ -460,7 +460,7 @@ int sms_peakContinuation(int iFrame, SMS_AnalParams *pAnalParams)
             }
       
             if(pAnalParams->guides[iGuide].iStatus == GUIDE_ACTIVE &&
-                pAnalParams->guides[iGuide].iPeakChosen == -1)
+               pAnalParams->guides[iGuide].iPeakChosen == -1)
             {
                 pAnalParams->guides[iGuide].iStatus = 1;
                 continue;
