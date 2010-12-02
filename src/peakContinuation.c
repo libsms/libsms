@@ -143,16 +143,16 @@ static int ChooseBestCand(SMS_ContCandidate *pCandidate, int nCandidates,
     fMaxMag = pCandidate[iHighestCand].fMagDev;
   
     /* get the best candidate */
-    for (i = 1; i < nCandidates; i++)
+    for(i = 1; i < nCandidates; i++)
     {
         /* look for the one with highest magnitude */
-        if (pCandidate[i].fMagDev > fMaxMag)
+        if(pCandidate[i].fMagDev > fMaxMag)
         {
             fMaxMag = pCandidate[i].fMagDev;
             iHighestCand = i;
         }
         /* look for the closest one to the guide */
-        if (pCandidate[i].fFreqDev < fClosestFreq)
+        if(pCandidate[i].fFreqDev < fClosestFreq)
         {
             fClosestFreq = pCandidate[i].fFreqDev;
             iClosestCand = i;
@@ -161,11 +161,11 @@ static int ChooseBestCand(SMS_ContCandidate *pCandidate, int nCandidates,
     iBestCand = iHighestCand;
   
     /* reconcile the two results */
-    if (iBestCand != iClosestCand &&
-        fabs(pCandidate[iHighestCand].fFreqDev - fClosestFreq) > fFreqDev / 2)
+    if(iBestCand != iClosestCand &&
+       fabs(pCandidate[iHighestCand].fFreqDev - fClosestFreq) > fFreqDev / 2)
         iBestCand = iClosestCand; 
   
-    return(pCandidate[iBestCand].iPeak);
+    return pCandidate[iBestCand].iPeak;
 }
 
 /*! \brief check for one guide that has choosen iBestPeak
@@ -175,13 +175,15 @@ static int ChooseBestCand(SMS_ContCandidate *pCandidate, int nCandidates,
  * \param nGuides       total number of guides
  * \return number of guide that chose the peak, or -1 if none
  */
-static int CheckForConflict (int iBestPeak, SMS_Guide *pGuides, int nGuides)
+static int CheckForConflict(int iBestPeak, SMS_Guide *pGuides, int nGuides)
 {
     int iGuide;
   
-    for (iGuide = 0; iGuide < nGuides; iGuide++)
-        if (pGuides[iGuide].iPeakChosen == iBestPeak)
+    for(iGuide = 0; iGuide < nGuides; iGuide++)
+    {
+        if(pGuides[iGuide].iPeakChosen == iBestPeak)
             return iGuide;
+    }
    
     return -1;
 }
@@ -347,7 +349,7 @@ static int GetStartingPeak(int iGuide, SMS_Guide *pGuides, int nGuides,
         if((iPeak = GetNextMax(pSpectralPeaks, pPeakParams, pFCurrentMax)) < 0)
             return -1;
   
-        if(CheckForConflict (iPeak, pGuides, nGuides) < 0)
+        if(CheckForConflict(iPeak, pGuides, nGuides) < 0)
         {
             pGuides[iGuide].iPeakChosen = iPeak;
             pGuides[iGuide].iStatus = GUIDE_BEG;
