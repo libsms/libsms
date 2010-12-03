@@ -687,17 +687,20 @@ int sms_initFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams, int sizeWindow
  * \param iCurrentFrame        number of current frame 
  * \return deviation value or -1 if really off
  */
-sfloat sms_fundDeviation ( SMS_AnalParams *pAnalParams, int iCurrentFrame)
+sfloat sms_fundDeviation(SMS_AnalParams *pAnalParams, int iCurrentFrame)
 {
     sfloat fFund, fSum = 0, fAverage, fDeviation = 0;
     int i;
 
+    if(pAnalParams->minGoodFrames < 1)
+        return -1;
+
     /* get the sum of the past few fundamentals */
-    for (i = 0; i < pAnalParams->minGoodFrames; i++)
+    for(i = 0; (i < pAnalParams->minGoodFrames) && (iCurrentFrame-i >= 0); i++)
     {
         fFund = pAnalParams->ppFrames[iCurrentFrame-i]->fFundamental;
         if(fFund <= 0)
-            return(-1);
+            return -1;
         else
             fSum += fFund;
     }
@@ -706,11 +709,11 @@ sfloat sms_fundDeviation ( SMS_AnalParams *pAnalParams, int iCurrentFrame)
     fAverage = fSum / pAnalParams->minGoodFrames;
 
     /* get the deviation from the average */
-    for (i = 0; i < pAnalParams->minGoodFrames; i++)
+    for(i = 0; (i < pAnalParams->minGoodFrames) && (iCurrentFrame-i >= 0); i++)
         fDeviation += fabs(pAnalParams->ppFrames[iCurrentFrame-i]->fFundamental - fAverage);
 
     /* return the deviation from the average */
-    return (fDeviation / (pAnalParams->minGoodFrames * fAverage));
+    return fDeviation / (pAnalParams->minGoodFrames * fAverage);
 }
 
 
@@ -719,14 +722,14 @@ sfloat sms_fundDeviation ( SMS_AnalParams *pAnalParams, int iCurrentFrame)
  * \param pAnalParams             pointer to analysis params
  * \return error value \see SMS_ERRORS 
  */
-int sms_createDebugFile (SMS_AnalParams *pAnalParams)
+int sms_createDebugFile(SMS_AnalParams *pAnalParams)
 {
-    if ((pDebug = fopen(pChDebugFile, "w+")) == NULL) 
+    if((pDebug = fopen(pChDebugFile, "w+")) == NULL) 
     {
         fprintf(stderr, "Cannot open debugfile: %s\n", pChDebugFile);
-        return(SMS_WRERR);
+        return SMS_WRERR;
     }
-    else return(SMS_OK);
+    return SMS_OK;
 }
 
 /*! \brief  function to write to the debug file
@@ -740,25 +743,24 @@ int sms_createDebugFile (SMS_AnalParams *pAnalParams)
  * \param pFBuffer3 pointer to array 3
  * \param sizeBuffer the size of the buffers
  */
-void sms_writeDebugData (sfloat *pFBuffer1, sfloat *pFBuffer2, 
-        sfloat *pFBuffer3, int sizeBuffer)
+void sms_writeDebugData(sfloat *pFBuffer1, sfloat *pFBuffer2, 
+                        sfloat *pFBuffer3, int sizeBuffer)
 {
     int i;
     static int counter = 0;
 
-    for (i = 0; i < sizeBuffer; i++)
-        fprintf (pDebug, "%d %d %d %d\n", counter++, (int)pFBuffer1[i],
+    for(i = 0; i < sizeBuffer; i++)
+        fprintf(pDebug, "%d %d %d %d\n", counter++, (int)pFBuffer1[i],
                 (int)pFBuffer2[i], (int)pFBuffer3[i]);
-
 }
 
 /*! \brief  function to write the residual sound file to disk
  *
  * writes the "debug.txt" file to disk and closes the file.
  */
-void sms_writeDebugFile ()
+void sms_writeDebugFile()
 {
-    fclose (pDebug);
+    fclose(pDebug);
 }
 
 /*! \brief convert from magnitude to decibel
