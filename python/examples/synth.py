@@ -13,17 +13,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+from scipy.io.wavfile import write
+import numpy as np
+import pysms
 
-from pysms import *
-
-from numpy import array as np_array
-def array(n, type='float32'):
-    return(np_array(n, type))
-
-from numpy import zeros as np_zeros
-def zeros(n, type='float32'):
-    return(np_zeros(n, type))
-
-from analysis import analyze
-from synthesis import synthesize
+# Simple synthesis by analysis using libsms
+input_file = 'flute.wav'
+analysis_data, sms_header, snd_header = pysms.analyze(input_file)
+audio_out = pysms.synthesize(analysis_data, sms_header)
+write("synth.wav", sms_header.iSamplingRate, np.asarray(audio_out*32768, dtype=np.int16))
 

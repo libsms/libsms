@@ -14,30 +14,34 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from pysms import *
+import pysms
 import numpy as np
 
-def analyze(audio_file, frame_rate=300, window_size=1001, window_type=SMS_WIN_HAMMING, num_stoc_coeffs=128, default_fundamental=100, highest_freq=12000, env_type=0, env_order=0):
-    sms_init()
-    snd_header = SMS_SndHeader()
-    sms_header = SMS_Header()
-    analysis_params = SMS_AnalParams()
-
-    sms_header.nStochasticCoeff = num_stoc_coeffs
+def analyze(audio_file, frame_rate=300, window_size=1001, window_type=pysms.SMS_WIN_HAMMING,
+            num_stoc_coeffs=128, default_fundamental=100, highest_freq=12000, 
+            env_type=0, env_order=0):
+    pysms.sms_init()
+    analysis_params = pysms.SMS_AnalParams()
+    pysms.sms_initAnalParams(analysis_params)
     analysis_params.fDefaultFundamental = default_fundamental
     analysis_params.fHighestFreq = highest_freq 
     analysis_params.specEnvParams.iType = env_type 
     analysis_params.specEnvParams.iOrder = env_order
-
-    window = zeros(window_size)
-    sms_getWindow(window, window_type)
+    analysis_params.iFrameRate = frame_rate
+    analysis_params.nStochasticCoeff = num_stoc_coeffs
+    window = np.zeros(window_size, dtype=np.float32)
+    pysms.sms_getWindow(window, window_type)
 
     # Try to open the input file
-    if(sms_openSF(audio_file, snd_header)):
-        raise NameError("error opening sound file: " + sms_errorString())
-
-    sms_initAnalysis(analysis_params, snd_header)
-    sms_fillHeader(sms_header, analysis_params, "analysis_synthesis.py")
+    snd_header = pysms.SMS_SndHeader()
+    if(pysms.sms_openSF(audio_file, snd_header)):
+        raise NameError("error opening sound file: " + pysms.sms_errorString())
+    # initialize memory for analysis
+    if pysms.sms_initAnalysis(analysis_params, snd_header) != 0:
+        raise Exception("Error allocating memory for analysis_params")
+    # copy data into the sms header
+    sms_header = pysms.SMS_Header()
+    pysms.sms_fillHeader(sms_header, analysis_params, "analysis.py")
 
     analysis_frames = []
     num_samples = snd_header.nSamples
@@ -53,13 +57,13 @@ def analyze(audio_file, frame_rate=300, window_size=1001, window_type=SMS_WIN_HA
             size_new_data = analysis_params.sizeNextRead
         else:
             size_new_data = num_samples - sample_offset
-        frame = zeros(size_new_data).astype('float32')
-        if sms_getSound(snd_header, frame, sample_offset):
-            raise NameError("error opening sound file: " + sms_errorString())
-        data = SMS_Data()
-        sms_allocFrameH(sms_header, data)
+        frame = np.zeros(size_new_data, dtype=np.float32)
+        if pysms.sms_getSound(snd_header, frame, sample_offset, analysis_params):
+            raise NameError("error opening sound file: " + pysms.sms_errorString())
+        data = pysms.SMS_Data()
+        pysms.sms_allocFrameH(sms_header, data)
 
-        status = sms_analyze(frame, data, analysis_params)  
+        status = pysms.sms_analyze(frame, data, analysis_params)  
         if status == 1:
             analysis_frames.append(data)
             num_frames += 1
@@ -67,7 +71,9 @@ def analyze(audio_file, frame_rate=300, window_size=1001, window_type=SMS_WIN_HA
             do_analysis = False
             sms_header.nFrames = num_frames
 
-    sms_freeAnalysis(analysis_params)
-    sms_free()
+    # free memory and return
+    pysms.sms_freeAnalysis(analysis_params)
+    pysms.sms_closeSF()
+    pysms.sms_free()
     return analysis_frames, sms_header, snd_header
 

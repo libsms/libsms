@@ -14,41 +14,45 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from pysms import *
 import numpy as np
+import pysms
 
-def synthesize(frames, sms_header, synth_type=0, det_synth_type=SMS_DET_IFFT, hop_size=SMS_MIN_SIZE_FRAME): 
-    sms_init() 
-    interp_frame = SMS_Data() 
-    synth_params = SMS_SynthParams() 
+def synthesize(frames, sms_header, synth_type=0, det_synth_type=pysms.SMS_DET_IFFT, 
+               hop_size=pysms.SMS_MIN_SIZE_FRAME): 
+    pysms.sms_init() 
+    synth_params = pysms.SMS_SynthParams() 
+    pysms.sms_initSynthParams(synth_params)
     synth_params.iSynthesisType = synth_type
     synth_params.iDetSynthType = det_synth_type 
     synth_params.sizeHop = hop_size 
-    synth_params.iSamplingRate = 0
+    pysms.sms_initSynth(sms_header, synth_params)
+    interp_frame = pysms.SMS_Data() 
+    pysms.sms_allocFrameH(sms_header, interp_frame)
 
-    sms_initSynth(sms_header, synth_params)
-    sms_allocFrame(interp_frame, sms_header.nTracks, sms_header.nStochasticCoeff, 0, sms_header.iStochasticType, sms_header.nEnvCoeff)
-
-    synth_samples = zeros(synth_params.sizeHop)
+    synth_samples = np.zeros(synth_params.sizeHop, dtype=np.float32)
     num_synth_samples = 0
-    target_synth_samples = sms_header.nFrames * synth_params.origSizeHop
+    target_synth_samples = len(frames) * synth_params.origSizeHop
+    audio_output = np.array([], dtype=np.float32)
     loc_incr = 1.0 / synth_params.origSizeHop
-    audio_output = array([])
+    current_frame = 0
 
     # Synthesis loop
     while num_synth_samples < target_synth_samples:
         interp_factor = loc_incr * num_synth_samples
-        left_frame_loc = int(min(sms_header.nFrames - 1, floor(interp_factor)))
-        right_frame_loc = left_frame_loc + 1 if (left_frame_loc < sms_header.nFrames - 2) else left_frame_loc
+        left_frame_loc = int(min(sms_header.nFrames - 1, np.floor(interp_factor)))
+        if(left_frame_loc < sms_header.nFrames - 2): 
+            right_frame_loc = left_frame_loc + 1
+        else: 
+            right_frame_loc = left_frame_loc
         left_frame = frames[left_frame_loc]
         right_frame = frames[right_frame_loc]
-        sms_interpolateFrames(left_frame, right_frame, interp_frame, interp_factor - left_frame_loc)
-        sms_synthesize(interp_frame, synth_samples, synth_params)
-        audio_output = hstack((audio_output, synth_samples))
+        pysms.sms_interpolateFrames(left_frame, right_frame, interp_frame, interp_factor - left_frame_loc)
+        pysms.sms_synthesize(interp_frame, synth_samples, synth_params)
+        audio_output = np.hstack((audio_output, synth_samples))
         num_synth_samples += synth_params.sizeHop
           
-    sms_freeFrame(interp_frame)
-    sms_freeSynth(synth_params)
-    sms_free()
+    pysms.sms_freeFrame(interp_frame)
+    pysms.sms_freeSynth(synth_params)
+    pysms.sms_free()
     return audio_output
 
