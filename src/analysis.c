@@ -319,10 +319,10 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
     {
         /* put data into output */
         int length = sizeof(sfloat) * pSmsData->nTracks;
-        memcpy ((char *) pSmsData->pFSinFreq, (char *)
-                pAnalParams->ppFrames[0]->deterministic.pFSinFreq, length);
-        memcpy ((char *) pSmsData->pFSinAmp, (char *)
-                pAnalParams->ppFrames[0]->deterministic.pFSinAmp, length);
+        memcpy((char *) pSmsData->pFSinFreq, (char *)
+               pAnalParams->ppFrames[0]->deterministic.pFSinFreq, length);
+        memcpy((char *) pSmsData->pFSinAmp, (char *)
+               pAnalParams->ppFrames[0]->deterministic.pFSinAmp, length);
         /* convert mags back to linear */
         sms_arrayDBToMag(pSmsData->nTracks, pSmsData->pFSinAmp);
         if (pAnalParams->iFormat == SMS_FORMAT_HP ||

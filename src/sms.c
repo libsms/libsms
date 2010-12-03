@@ -808,29 +808,30 @@ void sms_writeDebugFile()
 
 /*! \brief convert from magnitude to decibel
  *
- * \param x      magnitude (0:1)
- * \return         decibel (0: -100)
+ * \param x magnitude (0:1)
+ * \return  decibel (0: -100)
  */
-sfloat sms_magToDB( sfloat x)
+sfloat sms_magToDB(sfloat x)
 {
     if(x < mag_thresh)
-        return(0.);
+        return 0.;
     else
-        //return(20. * log10(x * inv_mag_thresh));
-        return(TWENTY_OVER_LOG10 * log(x * inv_mag_thresh));
+        return TWENTY_OVER_LOG10 * log(x * inv_mag_thresh);
+        /*return 20.0 * log10(x);*/
 }
 
 /*! \brief convert from decibel to magnitude
  *
- * \param x     decibel (0-100)
- * \return        magnitude (0-1)
+ * \param x decibel (0-100)
+ * \return  magnitude (0-1)
  */
-sfloat sms_dBToMag( sfloat x)
+sfloat sms_dBToMag(sfloat x)
 {
     if(x < 0.00001)
-        return (0.);
+        return 0.;
     else
-        return(mag_thresh * pow(10., x*0.05));
+        return mag_thresh * pow(10., x*0.05);
+        /*return pow(10.0, x * 0.05);*/
 }
 
 /*! \brief convert an array from magnitude to decibel 
@@ -839,13 +840,13 @@ sfloat sms_dBToMag( sfloat x)
  * of the dB scale (magnutdes at this value will convert to zero).
  * \see sms_setMagThresh
  *
- * \param sizeArray     size of array
+ * \param sizeArray size of array
  * \param pArray pointer to array
  */
-void sms_arrayMagToDB( int sizeArray, sfloat *pArray)
+void sms_arrayMagToDB(int sizeArray, sfloat *pArray)
 {
     int i;
-    for( i = 0; i < sizeArray; i++)
+    for(i = 0; i < sizeArray; i++)
         pArray[i] = sms_magToDB(pArray[i]);
 }
 
@@ -854,13 +855,13 @@ void sms_arrayMagToDB( int sizeArray, sfloat *pArray)
  * depends on the magnitude threshold
  * \see sms_setMagThresh
  *
- * \param sizeArray     size of array
+ * \param sizeArray size of array
  * \param pArray pointer to array
  */
-void sms_arrayDBToMag( int sizeArray, sfloat *pArray)
+void sms_arrayDBToMag(int sizeArray, sfloat *pArray)
 {
     int i;
-    for( i = 0; i < sizeArray; i++)
+    for(i = 0; i < sizeArray; i++)
         pArray[i] = sms_dBToMag(pArray[i]);
 }
 /*! \brief set the linear magnitude threshold
@@ -870,7 +871,7 @@ void sms_arrayDBToMag( int sizeArray, sfloat *pArray)
  *
  * \param x  threshold value
  */
-void sms_setMagThresh( sfloat x)
+void sms_setMagThresh(sfloat x)
 {
     /* limit threshold to -100db */
     if(x < 0.00001) 
@@ -884,7 +885,8 @@ void sms_setMagThresh( sfloat x)
  *
  * \param pErrorMessage pointer to error message string
  */
-void sms_error(char *pErrorMessage) {
+void sms_error(char *pErrorMessage) 
+{
     strncpy(error_message, pErrorMessage, 256);
     error_status = -1;
 }
@@ -895,7 +897,7 @@ void sms_error(char *pErrorMessage) {
  */
 int sms_errorCheck() 
 {
-    return(error_status);
+    return error_status;
 }
 
 /*! \brief get a string containing information about the last error 
@@ -904,12 +906,12 @@ int sms_errorCheck()
  */
 char* sms_errorString() 
 {
-    if (error_status)
+    if(error_status)
     {
         error_status = 0;
         return error_message;
     }
-    else return NULL;
+    return NULL;
 }
 
 /*! \brief random number genorator
@@ -919,9 +921,9 @@ char* sms_errorString()
 sfloat sms_random()
 {
 #ifdef MERSENNE_TWISTER
-    return(genrand_real1()); 
+    return genrand_real1(); 
 #else
-    return((sfloat)(random() * 2 * INV_HALF_MAX));
+    return (sfloat)(random() * 2 * INV_HALF_MAX);
 #endif
 }
 
@@ -933,17 +935,17 @@ sfloat sms_rms(int sizeArray, sfloat *pArray)
 {
     int i;
     sfloat mean_squared = 0.;
-    for( i = 0; i < sizeArray; i++)
+    for(i = 0; i < sizeArray; i++)
         mean_squared += pArray[i] * pArray[i];
 
-    return(sqrtf(mean_squared / sizeArray));
+    return sqrtf(mean_squared / sizeArray);
 }
 
 /*! \brief make sure a number is a power of 2
  *
  * \return a power of two integer >= input value
  */
-int sms_power2( int n)
+int sms_power2(int n)
 {
     int p = -1;
     int N = n;
@@ -955,12 +957,12 @@ int sms_power2( int n)
 
     if(1<<p == N) /* n was a power of 2 */
     {
-        return(N); 
+        return N; 
     }
     else  /* make the new value larger than n */
     {
         p++;
-        return(1<<p);
+        return 1<<p;
     }
 }
 
@@ -969,9 +971,9 @@ int sms_power2( int n)
  * \param x linear frequency value
  * \return (1.059...)^x, where 1.059 is the 12th root of 2 precomputed
  */
-sfloat sms_scalarTempered( sfloat x)
+sfloat sms_scalarTempered(sfloat x)
 {
-    return(powf(1.0594630943592953, x));
+    return powf(1.0594630943592953, x);
 }
 
 /*! \brief scale an array of linear frequencies to the well-tempered scale
@@ -979,9 +981,9 @@ sfloat sms_scalarTempered( sfloat x)
  * \param sizeArray size of the array
  * \param pArray pointer to array of frequencies
  */
-void sms_arrayScalarTempered( int sizeArray, sfloat *pArray)
+void sms_arrayScalarTempered(int sizeArray, sfloat *pArray)
 {
     int i;
-    for( i = 0; i < sizeArray; i++)
+    for(i = 0; i < sizeArray; i++)
         pArray[i] = sms_scalarTempered(pArray[i]);
 }

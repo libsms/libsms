@@ -150,9 +150,9 @@ static int StocSynthApprox(SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
 
 /*! \brief  synthesizes one frame of SMS data
  *
- * \param pSmsData      input SMS data
- * \param pFSynthesis      output sound buffer  
- * \param pSynthParams   synthesis parameters
+ * \param pSmsData     input SMS data
+ * \param pFSynthesis  output sound buffer  
+ * \param pSynthParams synthesis parameters
  */
 void sms_synthesize(SMS_Data *pSmsData, sfloat *pFSynthesis,  SMS_SynthParams *pSynthParams)
 {
