@@ -701,6 +701,8 @@ int sms_writeFile(FILE *pSmsFile, SMS_Header *pSmsHeader);
 
 int sms_initFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams, int sizeWindow);
 
+int sms_clearAnalysisFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams);
+
 int sms_allocFrame(SMS_Data *pSmsFrame, int nTracks, int nCoeff, 
                    int iPhase, int stochType, int nEnvCoeff);
 
