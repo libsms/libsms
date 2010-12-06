@@ -10,31 +10,32 @@ env.Alias('install', lib_prefix);
 env.Alias('install', header_prefix)
 
 sms_sources = Split("""
-                sms.c 
-                analysis.c 
-		synthesis.c 
-                sineSynth.c 
-		peakDetection.c 
-                harmDetection.c 
-                peakContinuation.c 
-		stocAnalysis.c 
-		residual.c 
-                spectralApprox.c 
-		spectrum.c 
-                cepstrum.c
-                fixTracks.c 
-                transforms.c 
-                filters.c 
-                tables.c 
-                windows.c 
-                fileIO.c 
-		soundIO.c 
-                OOURA.c
-                SFMT.c
-                modify.c
+    sms.c 
+    analysis.c 
+    synthesis.c 
+    sineSynth.c 
+    peakDetection.c 
+    harmDetection.c 
+    peakContinuation.c 
+    stocAnalysis.c 
+    residual.c 
+    spectralApprox.c 
+    spectrum.c 
+    cepstrum.c
+    fixTracks.c 
+    transforms.c 
+    filters.c 
+    tables.c 
+    windows.c 
+    fileIO.c 
+    soundIO.c 
+    OOURA.c
+    SFMT.c
+    modify.c
 """)
 
-lib = env.Library( 'libsms', sms_sources )
-#lib = env.SharedLibrary( 'libsms', sms_sources )
+lib = env.Library('libsms', sms_sources)
 env.Install(lib_prefix, lib) 
 env.Install(header_prefix, header)
+Return('sms_sources')
+

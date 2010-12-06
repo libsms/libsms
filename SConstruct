@@ -36,6 +36,12 @@ def get_platform():
 def get_version():
     return sys.version[:3]    
 
+# check that the current platform is supported
+if get_platform() == "unsupported":
+    print "Error: Cannot build on this platform. "
+    print "       Only Linux, Mac OS X and Windows are currently supported."
+    exit(1)
+
 # environment
 if get_platform() == 'win32':
     # can only build with mingw on windows
@@ -99,7 +105,7 @@ env.Append(CPPPATH = env['cpath'])
 
 # Mac Architecture settings
 if env['universal'] and get_platform() == 'darwin':
-	mac_arch = ' -arch i386 -arch x86_64 '
+	mac_arch = '-arch i386 -arch x86_64'
 	env.Append(CCFLAGS = mac_arch, LINKFLAGS = mac_arch)
 
 # print environment settings
@@ -154,7 +160,7 @@ if env['pythonmodule']:
     # os x
     elif get_platform() == "darwin":
         python_inc_path = ['/Library/Frameworks/Python.framework/Headers', 
-                             '/System/Library/Frameworks/Python.framework/Headers']
+                           '/System/Library/Frameworks/Python.framework/Headers']
     # windows
     elif get_platform() == "win32":
         python_lib = 'python%c%c'% (get_version()[0], get_version()[2])
@@ -171,6 +177,11 @@ if env['pythonmodule']:
 	if not pythonh:
 	    print "Python headers are missing. Cannot build python module."
 
+    # check for swig
+    if not 'swig' in env['TOOLS']:
+        print "The Python module cannot be built because swig was not found.\n"
+        env['pythonmodule'] = False
+
     # check for numpy
     try:
         import numpy
@@ -182,28 +193,27 @@ if env['pythonmodule']:
         print "The Python module cannot be built because numpy was not found.\n"
         env['pythonmodule'] = False
 
-    # check for swig
-    if not 'swig' in env['TOOLS']:
-        print "The Python module cannot be built because swig was not found.\n"
-        env['pythonmodule'] = False
-
 # check for popt
 if env['tools']:
     # check for popt
     if not conf.CheckLibWithHeader('popt', 'popt.h', 'c'):
-        print "The required library popt could not be found"
-        exit(1)
+        print "Warning: The popt library could not be found."
+        print "         Will not build SMS Tools."
+        env['tools'] = False
+
+if env['twister']:
+    env.Append(CCFLAGS = '-DMERSENNE_TWISTER')
 
 env = conf.Finish()
 
-if env['twister']:
-    env.Append(CCFLAGS = ' -DMERSENNE_TWISTER ')
-
 prefix = env['prefix']
-Export(['env','prefix', 'man_prefix'])
+Export(['env', 'prefix', 'man_prefix'])
 
 # build the library
-SConscript('src/SConscript')
+sms_sources = SConscript('src/SConscript')
+# prepend the 'src' directory onto each source file
+for i in range(len(sms_sources)):
+    sms_sources[i] = os.path.join("src", sms_sources[i])
 
 # build SMS tools
 if env['tools']:
@@ -226,23 +236,24 @@ if env['pythonmodule']:
     env.Append(CPPPATH = numpy_include)
     env.Append(CPPPATH = 'src')
 
+    # create the python wrapper using SWIG
+    python_wrapper = env.SharedObject('python/pysms.i')
+    sms_sources.append(python_wrapper)
+
     if get_platform() == "win32":
         env.Append(LIBS = [python_lib])
-        python_wrapper = env.SharedObject('python/pysms.i')
-        env.SharedLibrary('python/pysms', python_wrapper, SHLIBPREFIX='_', SHLIBSUFFIX='.pyd')
+        env.SharedLibrary('python/pysms', sms_sources, SHLIBPREFIX='_', SHLIBSUFFIX='.pyd')
         env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms.py')
         env.InstallAs(os.path.join(python_install_dir, '_pysms.pyd'), 'python/_pysms.pyd')
     elif get_platform() == "darwin":
         env.Append(LIBS = ['python' + get_version()])
-        python_wrapper = env.SharedObject('python/pysms.i')
         env.Prepend(LINKFLAGS=['-framework', 'python'])
-        env.LoadableModule('python/_pysms.so', python_wrapper) 
+        env.LoadableModule('python/_pysms.so', sms_sources) 
         env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms.py')
         env.InstallAs(os.path.join(python_install_dir, '_pysms.so'), 'python/_pysms.so')        
     else: # linux
         env.Append(LIBS = ['python' + get_version()])
-        python_wrapper = env.SharedObject('python/pysms.i')
-        env.SharedLibrary('python/pysms', python_wrapper, SHLIBPREFIX='_')
+        env.SharedLibrary('python/pysms', sms_sources, SHLIBPREFIX='_')
         env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms.py')
         env.InstallAs(os.path.join(python_install_dir, '_pysms.so'), 'python/_pysms.so')
     env.Alias('install', python_install_dir)
