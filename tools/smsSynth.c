@@ -47,7 +47,7 @@ int main (int argc, const char *argv[])
     float fFrameLoc; /* exact sms frame location, used to interpolate smsFrame */
     float fFsRatio,  fLocIncr;
     int verbose = 0;
-    int iSoundFileType = 2; /* wav file */
+    int iSoundFileType = 0; /* wav file */
     int doInterp = 1;
     float timeFactor = 1.0;
     SMS_SynthParams synthParams;

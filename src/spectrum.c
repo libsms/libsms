@@ -178,19 +178,19 @@ int sms_invQuickSpectrumW(sfloat *pFMagSpectrum, sfloat *pFPhaseSpectrum,
  * \param pMag         pointer to sfloat array of magnitude spectrum
  * \param pPhase           pointer to sfloat array of phase spectrum
  */ 
-void sms_RectToPolar( int sizeMag, sfloat *pRect, sfloat *pMag, sfloat *pPhase)
+void sms_RectToPolar(int sizeMag, sfloat *pRect, sfloat *pMag, sfloat *pPhase)
 {
     int i, it2;
     sfloat fReal, fImag;
 
-    for (i=0; i<sizeMag; i++)
+    for(i=0; i<sizeMag; i++)
     {
         it2 = i << 1;
         fReal = pRect[it2];
         fImag = pRect[it2+1];
 
         pMag[i] = sqrtf(fReal * fReal + fImag * fImag);
-        if (pPhase)
+        if(pPhase)
             pPhase[i] = atan2f(fImag, fReal);
     }
 }

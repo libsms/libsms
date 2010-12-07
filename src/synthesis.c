@@ -120,10 +120,12 @@ static int StocSynthApprox(SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
     int sizeSpec1 = pSmsData->nCoeff;
     int sizeSpec2 = pSynthParams->sizeHop;
     int sizeFft = pSynthParams->sizeHop << 1; /* 50% overlap, so sizeFft is 2x sizeHop */
-    float fStocGain;
 
     /* if no gain or no coefficients return  */
-    if (*(pSmsData->pFStocGain) <= 0)
+    if(pSmsData->nCoeff == 0)
+        return 0;
+
+    if(*(pSmsData->pFStocGain) <= 0)
         return 0;
 
     // *(pSmsData->pFStocGain) = sms_dBToMag(*(pSmsData->pFStocGain));
@@ -156,9 +158,8 @@ static int StocSynthApprox(SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
  */
 void sms_synthesize(SMS_Data *pSmsData, sfloat *pFSynthesis,  SMS_SynthParams *pSynthParams)
 {
-    int i, k;
+    int i;
     int sizeHop = pSynthParams->sizeHop;
-    int sizeFft = sizeHop << 1;
 
     memcpy(pSynthParams->pSynthBuff, (sfloat *)(pSynthParams->pSynthBuff+sizeHop), 
            sizeof(sfloat) * sizeHop);

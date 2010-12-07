@@ -79,7 +79,7 @@ void sms_analyzeFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams, sfloat fRe
  * \return 1 if frames are good, -1 if analysis is necessary
  * \todo is the return value info correct? Why isn't it used in sms_analyze?
  */
-static int ReAnalyzeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams)
+static int ReAnalyzeFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams)
 {
     sfloat fFund, fLastFund, fDev;
     int iNewFrameSize, i;
@@ -107,8 +107,8 @@ static int ReAnalyzeFrame (int iCurrentFrame, SMS_AnalParams *pAnalParams)
                             pAnalParams->fSizeWindow/2) * 2 + 1;
 
             if(fFund <= 0 || fDev > .2 ||
-               fabs((double)(pAnalParams->ppFrames[iFirstFrame - i]->iFrameSize -
-                             iNewFrameSize)) / iNewFrameSize >= .2)
+               fabs((pAnalParams->ppFrames[iFirstFrame - i]->iFrameSize -
+                     iNewFrameSize)) / iNewFrameSize >= .2)
             {
                 pAnalParams->ppFrames[iFirstFrame - i]->iFrameSize = iNewFrameSize;
                 pAnalParams->ppFrames[iFirstFrame - i]->iStatus = SMS_FRAME_READY;
@@ -183,7 +183,7 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
     /* if right data in the sound buffer do analysis */
     if (pAnalParams->ppFrames[iCurrentFrame]->iStatus == SMS_FRAME_READY)
     {
-        sfloat fAvgDev = sms_fundDeviation( pAnalParams, iCurrentFrame - 1);
+        sfloat fAvgDev = sms_fundDeviation(pAnalParams, iCurrentFrame - 1);
 
         /* if single note use the default fundamental as reference */
         if(pAnalParams->iSoundType == SMS_SOUND_TYPE_NOTE)
@@ -219,7 +219,7 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
     if(pAnalParams->ppFrames[iCurrentFrame - delayFrames]->fFundamental > 0 ||
        ((pAnalParams->iFormat == SMS_FORMAT_IH || pAnalParams->iFormat == SMS_FORMAT_IHP) &&
         pAnalParams->ppFrames[iCurrentFrame - delayFrames]->nPeaks > 0))
-        sms_peakContinuation (iCurrentFrame - delayFrames, pAnalParams);
+        sms_peakContinuation(iCurrentFrame - delayFrames, pAnalParams);
 
     /* fill gaps and delete short tracks */
     if(pAnalParams->iCleanTracks > 0 &&
@@ -279,7 +279,7 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
                                                             pAnalParams->residual,
                                                             pAnalParams->residualWindow);
 
-            if (pAnalParams->iStochasticType == SMS_STOC_APPROX)
+            if(pAnalParams->iStochasticType == SMS_STOC_APPROX)
             {
                 /* filter residual with a high pass filter (it solves some problems) */
                 sms_filterHighPass(sizeData, pAnalParams->residual, pAnalParams->iSamplingRate);
@@ -288,7 +288,7 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
                 sms_stocAnalysis(sizeData, pAnalParams->residual, pAnalParams->residualWindow, 
                                  pSmsData, pAnalParams);
             }
-            else if  (pAnalParams->iStochasticType == SMS_STOC_IFFT)
+            else if(pAnalParams->iStochasticType == SMS_STOC_IFFT)
             {
                 int sizeMag = sms_power2(sizeData >> 1);
                 sms_spectrum(sizeData, pAnalParams->residual, pAnalParams->residualWindow, 
@@ -305,17 +305,17 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
             pAnalParams->ppFrames[0]->iStatus = SMS_FRAME_DONE;
         }
     }
-    else if (pAnalParams->ppFrames[0]->iStatus != SMS_FRAME_EMPTY &&
+    else if(pAnalParams->ppFrames[0]->iStatus != SMS_FRAME_EMPTY &&
             pAnalParams->ppFrames[0]->iStatus != SMS_FRAME_END)
         pAnalParams->ppFrames[0]->iStatus = SMS_FRAME_DONE;
 
     /* get the result */
-    if (pAnalParams->ppFrames[0]->iStatus == SMS_FRAME_EMPTY)
+    if(pAnalParams->ppFrames[0]->iStatus == SMS_FRAME_EMPTY)
     {
         return 0;
     }
     /* return analysis data */
-    else if (pAnalParams->ppFrames[0]->iStatus == SMS_FRAME_DONE)
+    else if(pAnalParams->ppFrames[0]->iStatus == SMS_FRAME_DONE)
     {
         /* put data into output */
         int length = sizeof(sfloat) * pSmsData->nTracks;
@@ -323,27 +323,28 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
                pAnalParams->ppFrames[0]->deterministic.pFSinFreq, length);
         memcpy((char *) pSmsData->pFSinAmp, (char *)
                pAnalParams->ppFrames[0]->deterministic.pFSinAmp, length);
+
         /* convert mags back to linear */
         sms_arrayDBToMag(pSmsData->nTracks, pSmsData->pFSinAmp);
-        if (pAnalParams->iFormat == SMS_FORMAT_HP ||
-                pAnalParams->iFormat == SMS_FORMAT_IHP)
-            memcpy ((char *) pSmsData->pFSinPha, (char *)
-                    pAnalParams->ppFrames[0]->deterministic.pFSinPha, length);
+        if(pAnalParams->iFormat == SMS_FORMAT_HP ||
+           pAnalParams->iFormat == SMS_FORMAT_IHP)
+            memcpy((char *) pSmsData->pFSinPha, (char *)
+                   pAnalParams->ppFrames[0]->deterministic.pFSinPha, length);
 
         /* do post-processing (for now, spectral envelope calculation and storage) */
         if(pAnalParams->specEnvParams.iType != SMS_ENV_NONE)
         {
-            sms_spectralEnvelope( pSmsData, &pAnalParams->specEnvParams);
+            sms_spectralEnvelope(pSmsData, &pAnalParams->specEnvParams);
 
         }
         return 1;
     }
     /* done, end of sound */
-    else if (pAnalParams->ppFrames[0]->iStatus == SMS_FRAME_END)
+    else if(pAnalParams->ppFrames[0]->iStatus == SMS_FRAME_END)
         return -1;
     else
     {
-        sms_error ("sms_analyze error: wrong status of frame.");
+        sms_error("sms_analyze error: wrong status of frame.");
         return -1;
     }
     return 1;

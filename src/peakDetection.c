@@ -42,7 +42,7 @@ static sfloat PeakInterpolation(sfloat fMaxVal, sfloat fLeftBinVal,
     *pFDiffFromMax = (.5 * (fLeftBinVal - fRightBinVal) /
                       (fLeftBinVal - (2*fMaxVal) + fRightBinVal));
     /* return the value at the tip */
-    return (fMaxVal - (.25 * (fLeftBinVal - fRightBinVal) * *pFDiffFromMax));
+    return fMaxVal - (.25 * (fLeftBinVal - fRightBinVal) * *pFDiffFromMax);
 }
 
 /*! \brief detect the next local maximum in the spectrum
@@ -100,8 +100,8 @@ static int FindNextPeak(sfloat *pFMagSpectrum, int iHighestBin,
                         int *pICurrentLoc, sfloat *pFPeakMag, 
                         sfloat *pFPeakLoc, sfloat fMinPeakMag)
 {
-    int iPeakBin = 0;       /* location of the local peak */
-    sfloat fPeakMag = 0;         /* value of local peak */
+    int iPeakBin = 0;    /* location of the local peak */
+    sfloat fPeakMag = 0; /* value of local peak */
 
     /* keep trying to find a good peak while inside the freq range */
     while((iPeakBin = FindNextMax(pFMagSpectrum, iHighestBin, 
@@ -116,8 +116,8 @@ static int FindNextPeak(sfloat *pFMagSpectrum, int iHighestBin,
             continue;
         /* interpolate the spectral samples to obtain
            a more accurate magnitude and freq */
-        *pFPeakMag = PeakInterpolation (fPeakMag, fLeftBinVal,
-                fRightBinVal, &fDiffFromMax);
+        *pFPeakMag = PeakInterpolation(fPeakMag, fLeftBinVal,
+                                       fRightBinVal, &fDiffFromMax);
         *pFPeakLoc = iPeakBin + fDiffFromMax;
         return 1;
     }

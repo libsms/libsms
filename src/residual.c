@@ -44,28 +44,28 @@ int sms_residual(int sizeWindow, sfloat *pSynthesis, sfloat *pOriginal, sfloat *
     int i;
 
     /* get residual */
-    for (i=0; i<sizeWindow; i++)
+    for(i=0; i<sizeWindow; i++)
         pResidual[i] = pOriginal[i] - pSynthesis[i];
 
     /* get energy of residual */
-    for (i=0; i<sizeWindow; i++)
+    for(i=0; i<sizeWindow; i++)
         fCurrentResidualMag += (pResidual[i] * pResidual[i]);
 
     /* if residual is big enough compute coefficients */
-    if (fCurrentResidualMag)
+    if(fCurrentResidualMag)
     {  
         /* get energy of original */
-        for (i=0; i<sizeWindow; i++)
+        for(i=0; i<sizeWindow; i++)
             fCurrentOriginalMag += (pOriginal[i] * pOriginal[i]);
 
         fOriginalMag = .5 * (fCurrentOriginalMag/sizeWindow + fOriginalMag);
         fResidualMag = .5 * (fCurrentResidualMag/sizeWindow + fResidualMag);
 
         /* scale residual if need to be */
-        if (fResidualMag > fOriginalMag)
+        if(fResidualMag > fOriginalMag)
         {
             fScale = fOriginalMag / fResidualMag;
-            for (i=0; i<sizeWindow; i++)
+            for(i=0; i<sizeWindow; i++)
                 pResidual[i] *= fScale;
         }
 

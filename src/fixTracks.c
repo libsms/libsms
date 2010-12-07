@@ -221,40 +221,40 @@ void sms_cleanTracks(int iCurrentFrame, SMS_AnalParams *pAnalParams)
 
 /*! \brief scale deterministic magnitude if synthesis is larger than original 
  *
- * \param pFSynthBuffer      synthesis buffer
- * \param pFOriginalBuffer   original sound
+ * \param pFSynthBuffer     synthesis buffer
+ * \param pFOriginalBuffer  original sound
  * \param pFSinAmp          magnitudes to be scaled
- * \param pAnalParams      pointer to analysis parameters
- * \param nTrack                    number of tracks
+ * \param pAnalParams       pointer to analysis parameters
+ * \param nTrack            number of tracks
  */
-void  sms_scaleDet (sfloat *pFSynthBuffer, sfloat *pFOriginalBuffer, 
-        sfloat *pFSinAmp, SMS_AnalParams *pAnalParams, int nTrack)
+void sms_scaleDet(sfloat *pFSynthBuffer, sfloat *pFOriginalBuffer, 
+                  sfloat *pFSinAmp, SMS_AnalParams *pAnalParams, int nTrack)
 {
     sfloat fOriginalMag = 0, fSynthesisMag = 0;
     sfloat fCosScaleFactor;
     int iTrack, i;
 
     /* get sound energy */
-    for (i = 0; i < pAnalParams->sizeHop; i++)
+    for(i = 0; i < pAnalParams->sizeHop; i++)
     {
-        fOriginalMag += fabs((double) pFOriginalBuffer[i]); 
-        fSynthesisMag += fabs((double) pFSynthBuffer[i]);
+        fOriginalMag += fabs(pFOriginalBuffer[i]); 
+        fSynthesisMag += fabs(pFSynthBuffer[i]);
     }
 
     /* if total energy of deterministic sound is larger than original,
        scale deterministic representation */
-    if (fSynthesisMag > (1.5 * fOriginalMag))
+    if(fSynthesisMag > (1.5 * fOriginalMag))
     {
         fCosScaleFactor = fOriginalMag / fSynthesisMag;
 
         if(pAnalParams->iDebugMode == SMS_DBG_CLEAN_TRAJ || 
-                pAnalParams->iDebugMode == SMS_DBG_ALL)
-            fprintf (stdout, "Frame %d: magnitude scaled by %f\n",
+           pAnalParams->iDebugMode == SMS_DBG_ALL)
+            fprintf(stdout, "Frame %d: magnitude scaled by %f\n",
                     pAnalParams->ppFrames[0]->iFrameNum, fCosScaleFactor);
 
-        for (iTrack = 0; iTrack < nTrack; iTrack++)
-            if (pFSinAmp[iTrack] > 0)
+        for(iTrack = 0; iTrack < nTrack; iTrack++)
+            if(pFSinAmp[iTrack] > 0)
                 pFSinAmp[iTrack] = 
-                    sms_magToDB (sms_dBToMag (pFSinAmp[iTrack]) * fCosScaleFactor);
+                    sms_magToDB(sms_dBToMag(pFSinAmp[iTrack]) * fCosScaleFactor);
     }
 }
