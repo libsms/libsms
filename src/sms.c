@@ -459,9 +459,9 @@ int sms_initSynth(SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
     }
     sizeFft = sizeHop * 2;
 
-    pSynthParams->pFStocWindow =(sfloat *) calloc(sizeFft, sizeof(float));
+    pSynthParams->pFStocWindow =(sfloat *)calloc(sizeFft, sizeof(sfloat));
     sms_getWindow(sizeFft, pSynthParams->pFStocWindow, SMS_WIN_HANNING);
-    pSynthParams->pFDetWindow = (sfloat *) calloc(sizeFft, sizeof(float));
+    pSynthParams->pFDetWindow = (sfloat *)calloc(sizeFft, sizeof(sfloat));
     sms_getWindow(sizeFft, pSynthParams->pFDetWindow, SMS_WIN_IFFT);
 
     /* allocate memory for analysis data - size of original hopsize */
@@ -471,10 +471,10 @@ int sms_initSynth(SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
                    1 + pSmsHeader->nStochasticCoeff, 1, pSmsHeader->iStochasticType,
                    pSmsHeader->nEnvCoeff);
 
-    pSynthParams->pSynthBuff = (sfloat *) calloc(sizeFft, sizeof(float));
-    pSynthParams->pMagBuff = (sfloat *) calloc(sizeHop, sizeof(float));
-    pSynthParams->pPhaseBuff = (sfloat *) calloc(sizeHop, sizeof(float));
-    pSynthParams->pSpectra = (sfloat *) calloc(sizeFft, sizeof(float));
+    pSynthParams->pSynthBuff = (sfloat *)calloc(sizeFft, sizeof(sfloat));
+    pSynthParams->pMagBuff = (sfloat *)calloc(sizeHop, sizeof(sfloat));
+    pSynthParams->pPhaseBuff = (sfloat *)calloc(sizeHop, sizeof(sfloat));
+    pSynthParams->pSpectra = (sfloat *)calloc(sizeFft, sizeof(sfloat));
 
     /* set/check modification parameters */
     pSynthParams->modParams.maxFreq = pSmsHeader->iMaxFreq;

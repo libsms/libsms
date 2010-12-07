@@ -39,8 +39,8 @@ static void SineSynthIFFT(SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
     sfloat fMag=0.0, fFreq=0.0, fPhase=0.0, fLoc, fSin, fCos, fBinRemainder, 
            fTmp, fNewMag,  fIndex;
     sfloat fSamplingPeriod = 1.0 / pSynthParams->iSamplingRate;
-    memset (pSynthParams->pSpectra, 0, sizeFft * sizeof(sfloat));
-    for (i = 0; i < nTracks; i++)
+    memset(pSynthParams->pSpectra, 0, sizeFft * sizeof(sfloat));
+    for(i = 0; i < nTracks; i++)
     {
         if(((fMag = pSmsData->pFSinAmp[i]) > 0) &&
             ((fFreq = (pSmsData->pFSinFreq[i])) < iHalfSamplingRate))
@@ -52,17 +52,17 @@ static void SineSynthIFFT(SMS_Data *pSmsData, SMS_SynthParams *pSynthParams)
 
             // fMag = sms_dBToMag(fMag);
             fTmp = pSynthParams->prevFrame.pFSinPha[i] +
-                TWO_PI * fFreq * fSamplingPeriod * sizeMag;
+                   TWO_PI * fFreq * fSamplingPeriod * sizeMag;
             fPhase = fTmp - floor(fTmp * INV_TWO_PI) * TWO_PI;
             fLoc = sizeFft * fFreq  * fSamplingPeriod;
             iFirstBin = (int) fLoc - 3;
             fBinRemainder = fLoc - floor (fLoc);
             fSin = sms_sine(fPhase);
             fCos = sms_sine(fPhase + PI_2);
-            for (k = 1, l = iFirstBin; k <= nBins; k++, l++)
+            for(k = 1, l = iFirstBin; k <= nBins; k++, l++)
             {
                 fIndex = (k - fBinRemainder);
-                if (fIndex > 7.999) fIndex = 0;
+                if(fIndex > 7.999) fIndex = 0;
                 fNewMag = fMag * sms_sinc (fIndex);
                 if(l > 0 && l < sizeMag)
                 {
@@ -183,7 +183,7 @@ void sms_synthesize(SMS_Data *pSmsData, sfloat *pFSynthesis,  SMS_SynthParams *p
     else if(pSynthParams->iSynthesisType == SMS_STYPE_DET)
     {
         if(pSynthParams->iDetSynthType == SMS_DET_IFFT)
-            SineSynthIFFT (pSmsData, pSynthParams);
+            SineSynthIFFT(pSmsData, pSynthParams);
         else /*pSynthParams->iDetSynthType == SMS_DET_SIN*/
         {
             sms_sineSynthFrame(pSmsData, pSynthParams->pSynthBuff, pSynthParams->sizeHop,
