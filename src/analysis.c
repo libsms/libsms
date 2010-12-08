@@ -38,7 +38,6 @@
  */
 void sms_analyzeFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams, sfloat fRefFundamental)
 {
-    int i, iFrame;
     SMS_AnalFrame *pCurrentFrame = pAnalParams->ppFrames[iCurrentFrame];
     int iSoundLoc = pCurrentFrame->iFrameSample -((pCurrentFrame->iFrameSize + 1) >> 1) + 1;
     sfloat *pFData = &(pAnalParams->soundBuffer.pFBuffer[iSoundLoc - pAnalParams->soundBuffer.iMarker]);
@@ -91,9 +90,9 @@ static int ReAnalyzeFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams)
     if(fAvgDeviation == -1)
         return -1;
 
-    /* if the last SMS_MIN_GOOD_FRAMES are stable look before them */
-    /*  and recompute the frames that are not stable */
-    if (fAvgDeviation <= pAnalParams->maxDeviation)
+    /* if the last SMS_MIN_GOOD_FRAMES are stable look before them
+     *  and recompute the frames that are not stable */
+    if(fAvgDeviation <= pAnalParams->maxDeviation)
     {
         for(i = 0; i < pAnalParams->analDelay; i++)
         {
@@ -140,7 +139,7 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
 {
     int iCurrentFrame = pAnalParams->iMaxDelayFrames - 1;  /* frame # of current frame */
     int delayFrames = pAnalParams->minGoodFrames + pAnalParams->analDelay;
-    int i, iError, iExtraSamples;              /* samples used for next analysis frame */
+    int i, iExtraSamples;         /* samples used for next analysis frame */
     sfloat fRefFundamental = 0;   /* reference fundamental for current frame */
     SMS_AnalFrame *pTmpAnalFrame;
 
@@ -159,11 +158,11 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
     sms_clearFrame(pSmsData);
 
     /* set initial analysis-window size */
-    if (pAnalParams->sizeWindow == 0)
+    if(pAnalParams->sizeWindow == 0)
         pAnalParams->sizeWindow = pAnalParams->iDefaultSizeWindow;
 
     /* fill the input sound buffer and perform pre-emphasis */
-    if (sizeWaveform > 0)
+    if(sizeWaveform > 0)
         sms_fillSoundBuffer(sizeWaveform, pWaveform, pAnalParams);
 
     /* move analysis data one frame back */
@@ -173,7 +172,7 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
     pAnalParams->ppFrames[pAnalParams->iMaxDelayFrames-1] = pTmpAnalFrame;
 
     /* initialize the current frame */
-    sms_initFrame (iCurrentFrame, pAnalParams, pAnalParams->sizeWindow);
+    sms_initFrame(iCurrentFrame, pAnalParams, pAnalParams->sizeWindow);
     if(sms_errorCheck())
     {
         printf("error in init frame: %s \n", sms_errorString());
@@ -181,7 +180,7 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
     }
 
     /* if right data in the sound buffer do analysis */
-    if (pAnalParams->ppFrames[iCurrentFrame]->iStatus == SMS_FRAME_READY)
+    if(pAnalParams->ppFrames[iCurrentFrame]->iStatus == SMS_FRAME_READY)
     {
         sfloat fAvgDev = sms_fundDeviation(pAnalParams, iCurrentFrame - 1);
 
@@ -200,7 +199,7 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
         /* set the size of the next analysis window */
         if(pAnalParams->ppFrames[iCurrentFrame]->fFundamental > 0 &&
            pAnalParams->iSoundType != SMS_SOUND_TYPE_NOTE)
-            pAnalParams->sizeWindow = sms_sizeNextWindow (iCurrentFrame, pAnalParams);
+            pAnalParams->sizeWindow = sms_sizeNextWindow(iCurrentFrame, pAnalParams);
 
         /* figure out how much needs to be read next time */
         iExtraSamples =
@@ -208,6 +207,7 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
             (pAnalParams->ppFrames[iCurrentFrame]->iFrameSample + pAnalParams->sizeHop);
 
         pAnalParams->sizeNextRead = MAX(0, (pAnalParams->sizeWindow+1)/2 - iExtraSamples);
+
         /* check again the previous frames and recompute if necessary */
         /*! \todo when deviation is really off, this function returns -1, yet it
           isn't used.. is it being recomputed ?? */

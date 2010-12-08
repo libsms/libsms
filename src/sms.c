@@ -441,7 +441,7 @@ int sms_initSynth(SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
 {
     /* TODO: check all memory allocation in this function */
 
-    int sizeHop, sizeFft, err;
+    int sizeHop, sizeFft;
     /* set synthesis parameters from arguments and header */
     pSynthParams->iOriginalSRate = pSmsHeader->iSamplingRate;
     pSynthParams->origSizeHop = pSynthParams->iOriginalSRate / pSmsHeader->iFrameRate;
@@ -453,8 +453,9 @@ int sms_initSynth(SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
     sizeHop = sms_power2(pSynthParams->sizeHop);
     if(sizeHop != pSynthParams->sizeHop)
     {
-        sms_error("sizeHop was not a power of two.");
-        err = -1;
+        printf("Warning: Synthesis hop size (%d) was not a power of two.\n",
+                pSynthParams->sizeHop);
+        printf("         Changed to %d.\n", sizeHop);
         pSynthParams->sizeHop = sizeHop;
     }
     sizeFft = sizeHop * 2;
@@ -490,24 +491,23 @@ int sms_initSynth(SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
     return SMS_OK;
 }
 
-int sms_changeSynthHop( SMS_SynthParams *pSynthParams, int sizeHop)
+int sms_changeSynthHop(SMS_SynthParams *pSynthParams, int sizeHop)
 {
     int sizeFft = sizeHop * 2;
 
-    pSynthParams->pSynthBuff = (sfloat *) realloc(pSynthParams->pSynthBuff, sizeFft * sizeof(float));
-    pSynthParams->pSpectra = (sfloat *) realloc(pSynthParams->pSpectra, sizeFft * sizeof(float));
-    pSynthParams->pMagBuff = (sfloat *) realloc(pSynthParams->pMagBuff, sizeHop * sizeof(float));
-    pSynthParams->pPhaseBuff = (sfloat *) realloc(pSynthParams->pPhaseBuff, sizeHop * sizeof(float));
+    pSynthParams->pSynthBuff = (sfloat *)realloc(pSynthParams->pSynthBuff, sizeFft * sizeof(float));
+    pSynthParams->pSpectra = (sfloat *)realloc(pSynthParams->pSpectra, sizeFft * sizeof(float));
+    pSynthParams->pMagBuff = (sfloat *)realloc(pSynthParams->pMagBuff, sizeHop * sizeof(float));
+    pSynthParams->pPhaseBuff = (sfloat *)realloc(pSynthParams->pPhaseBuff, sizeHop * sizeof(float));
     pSynthParams->pFStocWindow = 
-        (sfloat *) realloc(pSynthParams->pFStocWindow, sizeFft * sizeof(float));
+        (sfloat *)realloc(pSynthParams->pFStocWindow, sizeFft * sizeof(float));
     sms_getWindow(sizeFft, pSynthParams->pFStocWindow, SMS_WIN_HANNING);
     pSynthParams->pFDetWindow =
-        (sfloat *) realloc(pSynthParams->pFDetWindow, sizeFft * sizeof(float));
+        (sfloat *)realloc(pSynthParams->pFDetWindow, sizeFft * sizeof(float));
     sms_getWindow(sizeFft, pSynthParams->pFDetWindow, SMS_WIN_IFFT);
 
     pSynthParams->sizeHop = sizeHop;
-
-    return(SMS_OK);
+    return SMS_OK;
 }
 
 /*! \brief free analysis data
@@ -705,7 +705,6 @@ int sms_initFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams, int sizeWindow
     if(pAnalParams->soundBuffer.iMarker >
        pAnalParams->ppFrames[iCurrentFrame]->iFrameSample - (sizeWindow+1)/2)
     {
-        
         sms_error("sms_initFrame: runoff on the sound buffer ");
         return -1;
     } 
