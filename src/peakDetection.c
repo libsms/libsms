@@ -67,7 +67,7 @@ static int FindNextMax(sfloat *pFMagSpectrum, int iHighBinBound,
     sfloat fNextVal = (iCurrentBin >= iHighBinBound) ? 0 : pFMagSpectrum[iCurrentBin + 1];
 
     /* try to find a local maximum */
-    while (iCurrentBin <= iHighBinBound)
+    while(iCurrentBin <= iHighBinBound)
     {
         if(fCurrentVal > fMinPeakMag &&
            fCurrentVal >= fPrevVal &&
@@ -112,7 +112,7 @@ static int FindNextPeak(sfloat *pFMagSpectrum, int iHighestBin,
         sfloat fDiffFromMax = 0;
         sfloat fLeftBinVal = pFMagSpectrum[iPeakBin - 1];
         sfloat fRightBinVal = pFMagSpectrum[iPeakBin + 1];
-        if (fLeftBinVal <= 0 || fRightBinVal <= 0) //ahah! there you are!
+        if(fLeftBinVal <= 0 || fRightBinVal <= 0) //ahah! there you are!
             continue;
         /* interpolate the spectral samples to obtain
            a more accurate magnitude and freq */
@@ -154,11 +154,11 @@ static sfloat GetPhaseVal(sfloat *pPhaseSpectrum, sfloat fPeakLoc)
  * 
  * uses a dB spectrum
  *
- * \param sizeSpec              size of magnitude spectrum
- * \param pMag     pointer to power spectrum
- * \param pPhase     pointer to phase spectrum
- * \param pSpectralPeaks     pointer to array of peaks
- * \param pPeakParams      peak detection parameters
+ * \param sizeSpec       size of magnitude spectrum
+ * \param pMag           pointer to power spectrum
+ * \param pPhase         pointer to phase spectrum
+ * \param pSpectralPeaks pointer to array of peaks
+ * \param pPeakParams    peak detection parameters
  * \return the number of peaks found
  */
 int sms_detectPeaks(int sizeSpec, sfloat *pMag, sfloat *pPhase,
@@ -184,19 +184,17 @@ int sms_detectPeaks(int sizeSpec, sfloat *pMag, sfloat *pPhase,
 
     /* set starting search values */
     int iCurrentLoc = iFirstBin;
-    sfloat fPeakMag = 0.0;      /* magnitude of peak */
-    sfloat fPeakLoc = 0.0;      /* location of peak */
+    sfloat fPeakMag = 0.0;  /* magnitude of peak */
+    sfloat fPeakLoc = 0.0;  /* location of peak */
     iPeak = 0;
 
     /* find peaks */
     while((iPeak < pPeakParams->iMaxPeaks) &&
-          (FindNextPeak(pMag, iHighestBin,
-                        &iCurrentLoc, &fPeakMag, &fPeakLoc, pPeakParams->fMinPeakMag)
-             == 1))
+          (FindNextPeak(pMag, iHighestBin, &iCurrentLoc, &fPeakMag, 
+                        &fPeakLoc, pPeakParams->fMinPeakMag) == 1))
     {
         /* store peak values */
-        pSpectralPeaks[iPeak].fFreq = pPeakParams->iSamplingRate * fPeakLoc *
-                                      fInvSizeFft;
+        pSpectralPeaks[iPeak].fFreq = pPeakParams->iSamplingRate * fPeakLoc * fInvSizeFft;
         pSpectralPeaks[iPeak].fMag = fPeakMag;
         pSpectralPeaks[iPeak].fPhase = GetPhaseVal(pPhase, fPeakLoc);
         iPeak++;
