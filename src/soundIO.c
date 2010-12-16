@@ -92,11 +92,11 @@ int sms_getSound(SMS_SndHeader *pSoundHeader, long sizeSound, sfloat *pSound,
     if(nFrames != sizeSound)
     {
         sms_error("could not read the requested number of frames");
-        return (-1);
+        return -1;
     }
 
     /* now need to sift through interleaved frames to build one channel
-       of samples -- this should work even with one channel*/
+       of samples -- this should work even with one channel */
     for(i = 0; i < nFrames; i++)
         pSound[i] = pAnalParams->inputBuffer[i*iChannelCount +iReadChannel];
 
@@ -137,7 +137,7 @@ int sms_createSF(char *pChOutputSoundFile, int iSamplingRate, int iType)
  * \param pFBuffer    data to write to file
  * \param sizeBuffer     size of data buffer
  */
-void sms_writeSound (sfloat *pFBuffer, int sizeBuffer)
+void sms_writeSound(sfloat *pFBuffer, int sizeBuffer)
 {
     sf_writef_float(pOutputSNDStream, pFBuffer, sizeBuffer);
 }
