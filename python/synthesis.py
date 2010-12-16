@@ -17,7 +17,8 @@
 import numpy as np
 import pysms
 
-def synthesize(frames, sms_header, synth_type=0, det_synth_type=pysms.SMS_DET_IFFT, 
+def synthesize(frames, sms_header, synth_type=pysms.SMS_STYPE_ALL,
+               det_synth_type=pysms.SMS_DET_IFFT, 
                hop_size=pysms.SMS_MIN_SIZE_FRAME): 
     pysms.sms_init() 
     synth_params = pysms.SMS_SynthParams() 
