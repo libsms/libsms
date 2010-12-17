@@ -29,8 +29,6 @@ def analyze(audio_file, frame_rate=300, window_size=1001, window_type=pysms.SMS_
     analysis_params.specEnvParams.iOrder = env_order
     analysis_params.iFrameRate = frame_rate
     analysis_params.nStochasticCoeff = num_stoc_coeffs
-    window = np.zeros(window_size, dtype=np.float32)
-    pysms.sms_getWindow(window, window_type)
 
     # Try to open the input file
     snd_header = pysms.SMS_SndHeader()
