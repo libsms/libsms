@@ -270,6 +270,7 @@ typedef struct
     int analDelay;                   /*! number of frames in the past to be looked in possible re-analyze */
     sfloat fResidualAccumPerc;       /*!< accumalitive residual percentage */
     int sizeNextRead;                /*!< size of samples to read from sound file next analysis */
+    int preEmphasis;                 /*!< whether or not to perform pre-emphasis */
     sfloat preEmphasisLastValue;
     SMS_PeakParams peakParams;       /*!< structure with parameters for spectral peaks */
     SMS_Data prevFrame;              /*!< the previous analysis frame  */
@@ -341,6 +342,7 @@ typedef struct
     sfloat *pSpectra;           /*!< array for in-place FFT transform */
     SMS_Data prevFrame;         /*!< previous data frame, for interpolation between frames */
     SMS_ModifyParams modParams; /*!< modification parameters */
+    int deEmphasis;             /*!< whether or not to perform de-emphasis */
     sfloat deEmphasisLastValue;
     sfloat *approxEnvelope;     /*!< spectral approximation envelope */
 } SMS_SynthParams;

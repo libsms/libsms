@@ -137,6 +137,7 @@ void sms_initAnalParams(SMS_AnalParams *pAnalParams)
         MAX(pAnalParams->iMinTrackLength, pAnalParams->iMaxSleepingTime) + 2 +
         (pAnalParams->minGoodFrames + pAnalParams->analDelay);
     pAnalParams->fResidualAccumPerc = 0.;
+    pAnalParams->preEmphasis = 1; /*!< perform pre-emphasis by default */
     pAnalParams->preEmphasisLastValue = 0.;
     /* spectral envelope params */
     pAnalParams->specEnvParams.iType = SMS_ENV_NONE; /* turn off enveloping */
@@ -412,6 +413,7 @@ void sms_initSynthParams(SMS_SynthParams *synthParams)
     synthParams->iSynthesisType = SMS_STYPE_ALL;
     synthParams->iDetSynthType = SMS_DET_IFFT;
     synthParams->sizeHop = SMS_MIN_SIZE_FRAME;
+    synthParams->deEmphasis = 1; /*!< perform de-emphasis by default */
     synthParams->deEmphasisLastValue = 0.0;
     sms_initModifyParams(&synthParams->modParams);
     synthParams->pFDetWindow = NULL;
