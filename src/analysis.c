@@ -227,11 +227,11 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
         sms_cleanTracks(iCurrentFrame - delayFrames, pAnalParams);
 
     /* do stochastic analysis */
-    if (pAnalParams->iStochasticType != SMS_STOC_NONE)
+    if(pAnalParams->iStochasticType != SMS_STOC_NONE)
     {   
         /* synthesize deterministic signal */
-        if (pAnalParams->ppFrames[1]->iStatus != SMS_FRAME_EMPTY &&
-                pAnalParams->ppFrames[1]->iStatus != SMS_FRAME_END)
+        if(pAnalParams->ppFrames[1]->iStatus != SMS_FRAME_EMPTY &&
+           pAnalParams->ppFrames[1]->iStatus != SMS_FRAME_END)
         {
             /* shift synthesis buffer */
             memcpy(pAnalParams->synthBuffer.pFBuffer,
