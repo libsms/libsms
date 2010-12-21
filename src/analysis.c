@@ -252,7 +252,6 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
         if(pAnalParams->ppFrames[0]->iStatus != SMS_FRAME_EMPTY &&
            pAnalParams->ppFrames[0]->iStatus != SMS_FRAME_END)
         {
-            /*int sizeResidual = pAnalParams->sizeHop * 2;*/
             int iSoundLoc = pAnalParams->ppFrames[0]->iFrameSample - pAnalParams->sizeHop;
             sfloat *pOriginal = &(pAnalParams->soundBuffer.pFBuffer[iSoundLoc -
                                   pAnalParams->soundBuffer.iMarker]);
