@@ -110,14 +110,13 @@ static void SineSynth(sfloat fFreq, sfloat fMag, SMS_Data *pLastFrame,
     int i;
 
     /* if no mag in last frame copy freq from current */
-    if (pLastFrame->pFSinAmp[iTrack] <= 0)
+    if(pLastFrame->pFSinAmp[iTrack] <= 0)
     {
         pLastFrame->pFSinFreq[iTrack] = fFreq;
-        pLastFrame->pFSinPha[iTrack] = 
-            TWO_PI * sms_random();
+        pLastFrame->pFSinPha[iTrack] = TWO_PI * sms_random();
     }
     /* and the other way */
-    else if (fMag <= 0)
+    else if(fMag <= 0)
         fFreq = pLastFrame->pFSinFreq[iTrack];
 
     /* calculate the instantaneous amplitude */
@@ -129,20 +128,18 @@ static void SineSynth(sfloat fFreq, sfloat fMag, SMS_Data *pLastFrame,
     fInstPhase = pLastFrame->pFSinPha[iTrack];
 
     /* generate all the samples */    
-    for (i = 0; i < sizeBuffer; i++)
+    for(i = 0; i < sizeBuffer; i++)
     {
         fInstMag += fMagIncr;
         fInstFreq += fFreqIncr;
         fInstPhase += fInstFreq;
-
         pFBuffer[i] += sms_dBToMag(fInstMag) * sms_sine(fInstPhase);
     }
 
     /* save current values into last values */
     pLastFrame->pFSinFreq[iTrack] = fFreq;
     pLastFrame->pFSinAmp[iTrack] = fMag;
-    pLastFrame->pFSinPha[iTrack] = fInstPhase - 
-        floor(fInstPhase / TWO_PI) * TWO_PI;
+    pLastFrame->pFSinPha[iTrack] = fInstPhase - floor(fInstPhase / TWO_PI) * TWO_PI;
 }
 
 /*! \brief generate all the sinusoids for a given frame

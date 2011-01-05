@@ -195,4 +195,3 @@ void sms_synthesize(SMS_Data *pSmsData, sfloat *pFSynthesis,  SMS_SynthParams *p
     for(i = 0; i < sizeHop; i++)
         pFSynthesis[i] = sms_deEmphasis(pSynthParams->pSynthBuff[i], pSynthParams);
 }
-
