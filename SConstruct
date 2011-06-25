@@ -224,9 +224,9 @@ if env['tools']:
 if env['pythonmodule']:
     python_install_dir = os.path.join(distutils.sysconfig.get_python_lib(), "pysms")
     env.Alias('install', python_install_dir)
-    env.InstallAs(os.path.join(python_install_dir, "__init__.py"), "python/__init__.py")
-    env.InstallAs(os.path.join(python_install_dir, "analysis.py"), "python/analysis.py")
-    env.InstallAs(os.path.join(python_install_dir, "synthesis.py"), "python/synthesis.py")
+    env.InstallAs(os.path.join(python_install_dir, "__init__.py"), "python/pysms/__init__.py")
+    env.InstallAs(os.path.join(python_install_dir, "analysis.py"), "python/pysms/analysis.py")
+    env.InstallAs(os.path.join(python_install_dir, "synthesis.py"), "python/pysms/synthesis.py")
 
     env.Append(SWIGFLAGS = ['-python'])
     for lib_path in python_lib_path:
@@ -237,25 +237,25 @@ if env['pythonmodule']:
     env.Append(CPPPATH = 'src')
 
     # create the python wrapper using SWIG
-    python_wrapper = env.SharedObject('python/pysms.i')
+    python_wrapper = env.SharedObject('python/pysms/pysms.i')
     sms_sources.append(python_wrapper)
 
     if get_platform() == "win32":
         env.Append(LIBS = [python_lib])
-        env.SharedLibrary('python/pysms', sms_sources, SHLIBPREFIX='_', SHLIBSUFFIX='.pyd')
-        env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms.py')
-        env.InstallAs(os.path.join(python_install_dir, '_pysms.pyd'), 'python/_pysms.pyd')
+        env.SharedLibrary('python/pysms/pysms', sms_sources, SHLIBPREFIX='_', SHLIBSUFFIX='.pyd')
+        env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms/pysms.py')
+        env.InstallAs(os.path.join(python_install_dir, '_pysms.pyd'), 'python/pysms/_pysms.pyd')
     elif get_platform() == "darwin":
         env.Append(LIBS = ['python' + get_version()])
         env.Prepend(LINKFLAGS=['-framework', 'python'])
-        env.LoadableModule('python/_pysms.so', sms_sources) 
-        env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms.py')
-        env.InstallAs(os.path.join(python_install_dir, '_pysms.so'), 'python/_pysms.so')        
+        env.LoadableModule('python/pysms/_pysms.so', sms_sources) 
+        env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms/pysms.py')
+        env.InstallAs(os.path.join(python_install_dir, '_pysms.so'), 'python/pysms/_pysms.so')        
     else: # linux
         env.Append(LIBS = ['python' + get_version()])
-        env.SharedLibrary('python/pysms', sms_sources, SHLIBPREFIX='_')
-        env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms.py')
-        env.InstallAs(os.path.join(python_install_dir, '_pysms.so'), 'python/_pysms.so')
+        env.SharedLibrary('python/pysms/pysms', sms_sources, SHLIBPREFIX='_')
+        env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms/pysms.py')
+        env.InstallAs(os.path.join(python_install_dir, '_pysms.so'), 'python/pysms/_pysms.so')
     env.Alias('install', python_install_dir)
 
 # build doxygen (doesn't work on windows yet)
