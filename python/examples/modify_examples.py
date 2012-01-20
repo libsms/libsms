@@ -146,6 +146,9 @@ transpose_with_env /= transpose_with_env.max() # normalize max gain to 1 (soopas
 transpose_with_env *= 32767
 transpose_with_env = asarray(transpose_with_env, int16)
 
+# clean up
+sms_freeModify(mod_params)
+
 # write output files
 write("modify_example_transpose_with_env.wav", source_snd_header.iSamplingRate, transpose_with_env)
 print "wrote modify_example_transpose_with_env.wav"
