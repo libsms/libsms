@@ -1,21 +1,21 @@
-/* 
+/*
  * Copyright (c) 2008 MUSIC TECHNOLOGY GROUP (MTG)
- *                    UNIVERSITAT POMPEU FABRA 
- * 
+ *                    UNIVERSITAT POMPEU FABRA
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- * 
+ *
  */
 
 %module (docstring="Python SWIG-wrapped module of libsms") pysms
@@ -26,7 +26,7 @@
 
 %include "numpy.i" /* numpy typemaps */
 
-%init 
+%init
 %{
     import_array(); /* numpy-specific */
 %}
@@ -67,7 +67,7 @@ sms_spectrum(NPY_FLOAT waveform, NPY_FLOAT window, NPY_FLOAT mag,
 
 Computes the real part of the frequency spectrum from a waveform in polar coordinates.
 The size of mag and phase should be a power of 2, or it will be rounded up to one.
-The waveform and window should be the same size, as well as mag and phase.  
+The waveform and window should be the same size, as well as mag and phase.
 A mag/phase larger than half the waveform/window will cause zero padding.
 The mag/phase array must be greater than half the size of waveform/window.
 
@@ -78,63 +78,71 @@ typemapped to use numpy arrays, it should be ignored.
 
 /* overload the functions that will be wrapped to fit numpy typmaps (defined below)
  * by renaming the wrapped names back to originals */
-%rename (sms_detectPeaks) pysms_detectPeaks; 
-%rename (sms_spectrum) pysms_spectrum; 
-%rename (sms_spectrumMag) pysms_spectrumMag; 
-%rename (sms_windowCentered) pysms_windowCentered; 
-%rename (sms_invSpectrum) pysms_invSpectrum; 
+%rename (sms_detectPeaks) pysms_detectPeaks;
+%rename (sms_spectrum) pysms_spectrum;
+%rename (sms_spectrumMag) pysms_spectrumMag;
+%rename (sms_windowCentered) pysms_windowCentered;
+%rename (sms_invSpectrum) pysms_invSpectrum;
 %rename (sms_dCepstrum) pysms_dCepstrum;
-%rename (sms_synthesize) pysms_synthesize_wrapper;  
+%rename (sms_synthesize) pysms_synthesize_wrapper;
 
 %inline %{
 
-typedef struct 
+typedef struct
 {
     SMS_Header *header;
     SMS_Data *smsData;
     int allocated;
 } SMS_File;
 
-typedef struct 
+typedef struct
 {
     SMS_Peak *pSpectralPeaks;
     int nPeaks;
     int nPeaksFound;
 } SMS_SpectralPeaks;
 
-void pysms_dCepstrum(int sizeCepstrum, float *pCepstrum, int sizeFreq, float *pFreq, int sizeMag, float *pMag, 
+void pysms_dCepstrum(int sizeCepstrum, float *pCepstrum, int sizeFreq, float *pFreq, int sizeMag, float *pMag,
                      float fLambda, int iSamplingRate)
 {
-    sms_dCepstrum(sizeCepstrum,pCepstrum, sizeFreq, pFreq, pMag, 
+    sms_dCepstrum(sizeCepstrum,pCepstrum, sizeFreq, pFreq, pMag,
                   fLambda, iSamplingRate);
 }
-void pysms_detectPeaks(int sizeMag, float *pMag, int sizePhase, float *pPhase, 
+void pysms_detectPeaks(int sizeMag, float *pMag, int sizePhase, float *pPhase,
                        SMS_SpectralPeaks *pPeakStruct, SMS_PeakParams *pPeakParams)
 {
     if(sizeMag != sizePhase)
-    { 
+    {
         sms_error("sizeMag != sizePhase");
         return;
     }
     if(pPeakStruct->nPeaks < pPeakParams->iMaxPeaks)
-    { 
+    {
         sms_error("nPeaks in SMS_SpectralPeaks is not large enough (less than SMS_PeakParams.iMaxPeaks)");
         return;
     }
     pPeakStruct->nPeaksFound = sms_detectPeaks(sizeMag, pMag, pPhase, pPeakStruct->pSpectralPeaks, pPeakParams);
 }
-int pysms_spectrum(int sizeWaveform, float *pWaveform, int sizeWindow, float *pWindow,
-                   int sizeMag, float *pMag, int sizePhase, float *pPhase, float *pFftBuffer)
+int pysms_spectrum(int sizeWaveform, float *pWaveform,
+                   int sizeWindow, float *pWindow,
+                   int sizeMag, float *pMag,
+                   int sizePhase, float *pPhase,
+                   int sizeFft, float *pFftBuffer)
 {
     return sms_spectrum(sizeWindow, pWaveform, pWindow, sizeMag, pMag, pPhase, pFftBuffer);
 }
-int pysms_spectrumMag(int sizeWaveform, float *pWaveform, int sizeWindow, float *pWindow,
-                      int sizeMag, float *pMag, float* pFftBuffer)
+int pysms_spectrumMag(int sizeWaveform, float *pWaveform,
+                      int sizeWindow, float *pWindow,
+                      int sizeMag, float *pMag,
+                      int sizeFft, float *pFftBuffer)
 {
     return sms_spectrumMag(sizeWindow, pWaveform, pWindow, sizeMag, pMag, pFftBuffer);
 }
-int pysms_invSpectrum(int sizeWaveform, float *pWaveform, int sizeWindow, float *pWindow,
-                      int sizeMag, float *pMag, int sizePhase, float *pPhase, float *pFftBuffer)
+int pysms_invSpectrum(int sizeWaveform, float *pWaveform,
+                      int sizeWindow, float *pWindow,
+                      int sizeMag, float *pMag,
+                      int sizePhase, float *pPhase,
+                      int sizeFft, float *pFftBuffer)
 {
     return sms_invSpectrum(sizeWaveform, pWaveform, pWindow, sizeMag, pMag, pPhase, pFftBuffer);
 }
@@ -142,13 +150,13 @@ void pysms_windowCentered(int sizeWaveform, float *pWaveform, int sizeWindow,
                           float *pWindow, int sizeFft, float *pFftBuffer)
 {
     if(sizeWaveform != sizeWindow)
-    { 
+    {
         sms_error("sizeWaveform != sizeWindow");
         return;
     }
     sms_windowCentered(sizeWindow, pWaveform, pWindow, sizeFft, pFftBuffer);
 }
-void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis, SMS_SynthParams *pSynthParams) 
+void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis, SMS_SynthParams *pSynthParams)
 {
     if(sizeHop != pSynthParams->sizeHop)
     {
@@ -159,7 +167,7 @@ void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis
 }
 %}
 
-%extend SMS_File 
+%extend SMS_File
 {
     /* load an entire file to an internal numpy array */
     void load( char *pFilename )
@@ -169,7 +177,7 @@ void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis
         $self->allocated = 0;
         sms_getHeader(pFilename, &$self->header, &pSmsFile);
         if(sms_errorCheck()) return;
-        
+
         $self->smsData = calloc($self->header->nFrames, sizeof(SMS_Data));
         for(i = 0; i < $self->header->nFrames; i++)
         {
@@ -259,9 +267,9 @@ void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis
             pFreq[i] = $self->smsData[i].pFSinFreq[track];
             pAmp[i] = $self->smsData[i].pFSinFreq[track];
         }
-        if($self->header->iFormat < SMS_FORMAT_HP) 
+        if($self->header->iFormat < SMS_FORMAT_HP)
             return;
-        
+
         if(sizePhase != sizeFreq || sizePhase != sizeAmp)
         {
             sms_error("phase array and freq/amp arrays are different in size");
@@ -304,7 +312,7 @@ void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis
             sms_error("file not yet alloceted");
             return;
         }
-        if($self->header->iFormat < SMS_FORMAT_HP) 
+        if($self->header->iFormat < SMS_FORMAT_HP)
         {
             sms_error("file does not contain a phase component in Deterministic (iFormat < SMS_FORMAT_HP)");
             return;
@@ -327,7 +335,7 @@ void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis
         }
         memcpy(pFreq, $self->smsData[i].pFSinFreq, sizeof(float) * nTracks);
         memcpy(pAmp, $self->smsData[i].pFSinAmp, sizeof(float) * nTracks);
-        
+
         if(sizePhase != sizeFreq || sizePhase != sizeAmp)
         {
             sms_error("phase array and freq/amp arrays are different in size");
@@ -342,13 +350,13 @@ void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis
             sms_error("file not yet alloceted");
             return;
         }
-        if($self->header->iStochasticType < 1) 
+        if($self->header->iStochasticType < 1)
         {
             sms_error("file does not contain a stochastic component");
             return;
         }
         int nCoeff = sizeRes;
-        if($self->header->nStochasticCoeff > sizeRes) 
+        if($self->header->nStochasticCoeff > sizeRes)
             nCoeff = $self->header->nStochasticCoeff; // return what you can
 
         memcpy(pRes, $self->smsData[i].pFStocCoeff, sizeof(float) * nCoeff);
@@ -360,20 +368,20 @@ void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis
             sms_error("file not yet alloceted");
             return;
         }
-        if($self->header->iEnvType < 1) 
+        if($self->header->iEnvType < 1)
         {
             sms_error("file does not contain a spectral envelope");
             return;
         }
         int nCoeff = sizeEnv;
-        if($self->header->nStochasticCoeff > sizeEnv) 
+        if($self->header->nStochasticCoeff > sizeEnv)
             nCoeff = $self->header->nEnvCoeff; // return what you can
 
         memcpy(pEnv, $self->smsData[i].pSpecEnv, sizeof(sfloat) * nCoeff);
     }
 }
 
-%extend SMS_AnalParams 
+%extend SMS_AnalParams
 {
     SMS_AnalParams()
     {
@@ -383,7 +391,7 @@ void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis
     }
 }
 
-%extend SMS_SpectralPeaks 
+%extend SMS_SpectralPeaks
 {
     SMS_SpectralPeaks(int n)
     {
@@ -432,7 +440,7 @@ void pysms_synthesize_wrapper(SMS_Data *pSmsData, int sizeHop, float *pSynthesis
     }
 }
 
-%extend SMS_Data 
+%extend SMS_Data
 {
     void getSinAmp(int sizeArray, float *pArray)
     {
