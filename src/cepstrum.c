@@ -115,6 +115,7 @@ void sms_dCepstrum( int sizeCepstrum, sfloat *pCepstrum, int sizeFreq, sfloat *p
                 gsl_matrix_set (m.pM, i, 0, 1.); // first colum is all 1
 		for (k=1; k <sizeCepstrum; k++)
                         gsl_matrix_set (m.pM, i, k , 2.*sms_sine(PI_2 + fNorm * k * pFreq[i]) );
+                        /*gsl_matrix_set (m.pM, i, k , 2.*cos((2.0*PI) + fNorm * k * pFreq[i]) );*/
 	}
 
         /* compute transpose of M */
@@ -187,7 +188,6 @@ void sms_dCepstrumEnvelope(int sizeCepstrum, sfloat *pCepstrum, int sizeEnv, sfl
         pFftBuffer[0] = pCepstrum[0] * 0.5;
         for (i = 1; i < sizeCepstrum-1; i++)
                 pFftBuffer[i] = pCepstrum[i];
-
 
         sms_fft(sizeFftArray, pFftBuffer);
 

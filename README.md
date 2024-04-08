@@ -1,8 +1,26 @@
-libsms
+SMS Library
 ===========
 
-Version 1.101
+Version 1.15 -- Nov 16, 2010
 
+About This Release
+------------------
+
+This is my development version of libsms. The latest stable relase can always be found at
+the [libsms homepage at the MTG](http://mtg.upf.edu/static/libsms).
+
+### Notable differences:
+
+* Most of the memory alloation is handled in sms.c now, and is tied to the SMS_AnalParams/SMS_SynthParams
+  structures. There should be no more functions with memory allocated to static variables. The only other
+  places that memory is allocated now is in fileIO.c and tables.c.
+* Major code tidy up. Fixed lots of whitespace issues, removed blocks of commented or unused code.
+
+The main API functions should be compatible with the 1.1* release on the libsms homepage,
+(the code for the examples did not have to be changed) but there may be differences behind the scenes. 
+
+Libsms
+------
 Libsms in an open source C library that implements SMS techniques for the analysis,
 transformation and synthesis of musical sounds based on a sinusoidal plus residual model.
 It is derived from the original code of Xavier Serra, as part of his PhD thesis. You can read
@@ -35,39 +53,26 @@ Additionally, windows users will need:
 
 * [SciPy/NumPy](http://www.scipy.org) - tested with NumPy 1.4.1 and SciPy 0.8
 
-Basic Installation Instructions
--------------------------------
+Installation
+------------
 
-To install the C library:
+To install the C library
 
     $ scons
     $ scons install
 
-To uninstall:
+To uninstall
 
     $ scons -c install
 
-To build the python module:
-
-	$ scons pythonmodule=yes
-	
-To build and install the library/python module and make it universal binary all in one go:
-
-	$ sudo scons pythonmodule=yes universal=yes install
-	
-Installing on Windows is a bit complicated.  See [INSTALL.windows](./INSTALL.windows)
-
-TODO: instructions for mac os x install
-
-
 Use
 ---
-Have a look at the examples (examples folder), or the SMS Tools applications (tools folder).  Lots of python tests and examples are included in the python folder, although none very well refined yet.
+Have a look at the examples (examples folder), or the SMS Tools applications (tools folder).
 
 
 Contributing
 ------------
 
 Send any comments, queries, suggestions or bug reports to 
-rich dot eakin at gmail dot com, or
+reakin at iua dot upf dot edu, or
 john dot c dot glover at nuim dot ie.

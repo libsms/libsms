@@ -21,7 +21,7 @@
 
 from scipy import asarray, int16
 from scipy.io.wavfile import write
-from pysms import (zeros, pysms_analyze, pysms_synthesize, SMS_ENV_FBINS, 
+from pysms import (zeros, analyze, synthesize, SMS_ENV_FBINS, 
                    SMS_ModifyParams, sms_modify, sms_initModify, sms_freeModify)
 from time import time
 from sys import exit
@@ -31,8 +31,8 @@ start_time = time()
 # In the morph example, the spectral envelope from the source file will be
 # applied to the target file.
 # For all other examples, the source file will be modified.
-source = "../../../test/audio/soopastar.wav"
-target = "../../../test/audio/ocarina.wav"
+source = "soopastar.wav"
+target = "flute.wav"
 
 # the maximum frequency of the highest partial detected (and of the spectral envelope)
 max_freq = 12000
@@ -52,8 +52,8 @@ transposition = 4
 # (not necessary in transpose examples)
 
 # Analyze files
-source_frames, source_sms_header, source_snd_header = pysms_analyze(source, env_type=SMS_ENV_FBINS, env_order=80)
-target_frames, target_sms_header, target_snd_header = pysms_analyze(target, env_type=SMS_ENV_FBINS, env_order=80)
+source_frames, source_sms_header, source_snd_header = analyze(source, env_type=SMS_ENV_FBINS, env_order=80)
+target_frames, target_sms_header, target_snd_header = analyze(target, env_type=SMS_ENV_FBINS, env_order=80)
 
 source_num_tracks = source_sms_header.nTracks
 num_tracks = target_sms_header.nTracks
@@ -86,7 +86,7 @@ target_frames = target_frames[0:num_frames]
 target_sms_header.nFrames = num_frames
 
 # Synthesis
-morph = pysms_synthesize(target_frames, target_sms_header)
+morph = synthesize(target_frames, target_sms_header)
 
 # convert audio to int values
 morph *= 32767
@@ -110,7 +110,7 @@ for frame_number in range(len(source_frames)):
     sms_modify(source_frame, mod_params)
 
 # Synthesis
-transpose = pysms_synthesize(source_frames, source_sms_header)
+transpose = synthesize(source_frames, source_sms_header)
 
 # convert audio to int values
 transpose /= transpose.max() # normalize max gain to 1 (soopastar clips)
@@ -125,7 +125,7 @@ print "wrote modify_example_transpose.wav"
 # Transpose maintaining spectral envelope
 
 # Have to analyze source again for now, should really be a way to copy/clone frames
-source_frames, source_sms_header, source_snd_header = pysms_analyze(source, env_type=SMS_ENV_FBINS, env_order=80)
+source_frames, source_sms_header, source_snd_header = analyze(source, env_type=SMS_ENV_FBINS, env_order=80)
 
 # Set modification parameters
 mod_params = SMS_ModifyParams()
@@ -139,12 +139,15 @@ for frame_number in range(len(source_frames)):
     sms_modify(source_frame, mod_params)
 
 # Synthesis
-transpose_with_env = pysms_synthesize(source_frames, source_sms_header)
+transpose_with_env = synthesize(source_frames, source_sms_header)
 
 # convert audio to int values
 transpose_with_env /= transpose_with_env.max() # normalize max gain to 1 (soopastar clips)
 transpose_with_env *= 32767
 transpose_with_env = asarray(transpose_with_env, int16)
+
+# clean up
+sms_freeModify(mod_params)
 
 # write output files
 write("modify_example_transpose_with_env.wav", source_snd_header.iSamplingRate, transpose_with_env)
