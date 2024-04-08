@@ -23,6 +23,14 @@
  */
 #include "sms.h"
 
+#ifdef DOUBLE_PRECISION
+# define sf_readf_sfloat sf_readf_double
+# define sf_writef_sfloat sf_writef_double
+#else
+# define sf_readf_sfloat sf_readf_float
+# define sf_writef_sfloat sf_writef_float
+#endif
+
 SNDFILE *pSNDStream, *pOutputSNDStream, *pResidualSNDStream;
 SF_INFO sfSoundHeader, sfResidualHeader, sfOutputSoundHeader;
 
@@ -88,7 +96,7 @@ int sms_getSound(SMS_SndHeader *pSoundHeader, long sizeSound, sfloat *pSound,
         return -1;
     }
 
-    nFrames = sf_readf_float(pSNDStream, pAnalParams->inputBuffer, sizeSound);
+    nFrames = sf_readf_sfloat(pSNDStream, pAnalParams->inputBuffer, sizeSound);
     if(nFrames != sizeSound)
     {
         sms_error("could not read the requested number of frames");
@@ -139,7 +147,7 @@ int sms_createSF(char *pChOutputSoundFile, int iSamplingRate, int iType)
  */
 void sms_writeSound(sfloat *pFBuffer, int sizeBuffer)
 {
-    sf_writef_float(pOutputSNDStream, pFBuffer, sizeBuffer);
+    sf_writef_sfloat(pOutputSNDStream, pFBuffer, sizeBuffer);
 }
 
 /*! \brief function to write the output sound file to disk */

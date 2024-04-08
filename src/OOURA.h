@@ -1,10 +1,12 @@
 #ifndef _OOURA_H
 #define _OOURA_H
 
-#ifdef DOUBLE_PRECISION
-#define sfloat double
-#else
-#define sfloat float
+#ifndef sfloat
+# ifdef DOUBLE_PRECISION
+#  define sfloat double
+# else
+#  define sfloat float
+# endif
 #endif
 
 #define NMAX 8192

@@ -69,7 +69,7 @@ sfloat sms_deEmphasis(sfloat fInput, SMS_SynthParams *pSynthParams)
  * \param fInput     input sample
  * \return value is the  filtered sample
  */
-static sfloat ZeroPoleFilter (float *pFa, sfloat *pFb, int nCoeff, sfloat fInput )
+static sfloat ZeroPoleFilter (sfloat *pFa, sfloat *pFb, int nCoeff, sfloat fInput )
 {
     double fOut = 0;
     int iSection;
