@@ -1,29 +1,29 @@
-/* 
+/*
  * Copyright (c) 2008 MUSIC TECHNOLOGY GROUP (MTG)
- *                         UNIVERSITAT POMPEU FABRA 
- * 
- * 
+ *                         UNIVERSITAT POMPEU FABRA
+ *
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- * 
+ *
  */
 
 /*! \file analysis.c
  * \brief main sms analysis routines
- * 
+ *
  * the analysis routine here calls all necessary functions to perform the complete
- * SMS analysis, once the desired analysis parameters are set in SMS_AnalParams. 
+ * SMS analysis, once the desired analysis parameters are set in SMS_AnalParams.
  */
 
 #include "sms.h"
@@ -34,7 +34,7 @@
  *
  * \param iCurrentFrame          frame number to be computed
  * \param pAnalParams     structure of analysis parameters
- * \param fRefFundamental      reference fundamental 
+ * \param fRefFundamental      reference fundamental
  */
 void sms_analyzeFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams, sfloat fRefFundamental)
 {
@@ -228,7 +228,7 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
 
     /* do stochastic analysis */
     if(pAnalParams->iStochasticType != SMS_STOC_NONE)
-    {   
+    {
         /* synthesize deterministic signal */
         if(pAnalParams->ppFrames[1]->iStatus != SMS_FRAME_EMPTY &&
            pAnalParams->ppFrames[1]->iStatus != SMS_FRAME_END)
@@ -284,13 +284,13 @@ int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_Ana
                 sms_filterHighPass(sizeData, pAnalParams->residual, pAnalParams->iSamplingRate);
 
                 /* approximate residual */
-                sms_stocAnalysis(sizeData, pAnalParams->residual, pAnalParams->residualWindow, 
+                sms_stocAnalysis(sizeData, pAnalParams->residual, pAnalParams->residualWindow,
                                  pSmsData, pAnalParams);
             }
             else if(pAnalParams->iStochasticType == SMS_STOC_IFFT)
             {
                 int sizeMag = sms_power2(sizeData >> 1);
-                sms_spectrum(sizeData, pAnalParams->residual, pAnalParams->residualWindow, 
+                sms_spectrum(sizeData, pAnalParams->residual, pAnalParams->residualWindow,
                              sizeMag, pSmsData->pFStocCoeff, pSmsData->pResPhase,
                              pAnalParams->fftBuffer);
             }

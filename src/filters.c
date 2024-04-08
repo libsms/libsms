@@ -1,22 +1,22 @@
-/* 
+/*
  * Copyright (c) 2008 MUSIC TECHNOLOGY GROUP (MTG)
- *                         UNIVERSITAT POMPEU FABRA 
- * 
- * 
+ *                         UNIVERSITAT POMPEU FABRA
+ *
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- * 
+ *
  */
 /*! \file filters.c
  * \brief various filters
@@ -25,9 +25,9 @@
 #include "sms.h"
 
 /*! \brief coefficient for pre_emphasis filter */
-#define SMS_EMPH_COEF    .9   
+#define SMS_EMPH_COEF    .9
 
-/* pre-emphasis filter function, it returns the filtered value   
+/* pre-emphasis filter function, it returns the filtered value
  *
  * sfloat fInput;   sound sample
  */
@@ -42,7 +42,7 @@ sfloat sms_preEmphasis(sfloat fInput, SMS_AnalParams *pAnalParams)
     return fInput;
 }
 
-/* de-emphasis filter function, it returns the filtered value 
+/* de-emphasis filter function, it returns the filtered value
  *
  * sfloat fInput;   sound input
  */
@@ -58,7 +58,7 @@ sfloat sms_deEmphasis(sfloat fInput, SMS_SynthParams *pSynthParams)
 }
 
 /*! \brief  function to implement a zero-pole filter
- * 
+ *
  * \todo will forgetting to reset  pD to zero at the beginning of a new analysis
  * (when there are multiple analyses within the life of one program)
  * cause problems?
@@ -67,7 +67,7 @@ sfloat sms_deEmphasis(sfloat fInput, SMS_SynthParams *pSynthParams)
  * \param pFb        pointer to denominator coefficients
  * \param nCoeff    number of coefficients
  * \param fInput     input sample
- * \return value is the  filtered sample 
+ * \return value is the  filtered sample
  */
 static sfloat ZeroPoleFilter (float *pFa, sfloat *pFb, int nCoeff, sfloat fInput )
 {
@@ -88,29 +88,29 @@ static sfloat ZeroPoleFilter (float *pFa, sfloat *pFb, int nCoeff, sfloat fInput
 }
 
 /*! \brief function to filter a waveform with a high-pass filter
- * 
- *  cutoff =1500 Hz  
- * 
+ *
+ *  cutoff =1500 Hz
+ *
  * \todo this filter only works on sample rates up to 48k?
  *
  * \param sizeResidual        size of signal
  * \param pResidual          pointer to residual signal
- * \param iSamplingRate      sampling rate of signal                                                    
+ * \param iSamplingRate      sampling rate of signal
  */
 void sms_filterHighPass ( int sizeResidual, sfloat *pResidual, int iSamplingRate)
 {
 
 
     /* cutoff 800Hz */
-    static sfloat pFCoeff32k[10] =  {0.814255, -3.25702, 4.88553, -3.25702, 
+    static sfloat pFCoeff32k[10] =  {0.814255, -3.25702, 4.88553, -3.25702,
         0.814255, 1, -3.58973, 4.85128, -2.92405, 0.66301};
-    static sfloat pFCoeff36k[10] =  {0.833098, -3.33239, 4.99859, -3.33239, 
+    static sfloat pFCoeff36k[10] =  {0.833098, -3.33239, 4.99859, -3.33239,
         0.833098, 1, -3.63528, 4.97089, -3.02934,0.694052};
-    static sfloat pFCoeff40k[10] =  {0.848475, -3.3939, 5.09085, -3.3939, 
-        0.848475, 1, -3.67173, 5.068, -3.11597, 0.71991}; 
-    static sfloat pFCoeff441k[10] =  {0.861554, -3.44622, 5.16932, -3.44622, 
+    static sfloat pFCoeff40k[10] =  {0.848475, -3.3939, 5.09085, -3.3939,
+        0.848475, 1, -3.67173, 5.068, -3.11597, 0.71991};
+    static sfloat pFCoeff441k[10] =  {0.861554, -3.44622, 5.16932, -3.44622,
         0.861554, 1, -3.70223, 5.15023, -3.19013, 0.742275};
-    static sfloat pFCoeff48k[10] =  {0.872061, -3.48824, 5.23236, -3.48824, 
+    static sfloat pFCoeff48k[10] =  {0.872061, -3.48824, 5.23236, -3.48824,
         0.872061, 1, -3.72641, 5.21605, -3.25002, 0.76049};
     sfloat *pFCoeff, fSample = 0;
     int i;
@@ -133,7 +133,7 @@ void sms_filterHighPass ( int sizeResidual, sfloat *pResidual, int iSamplingRate
             return;
 
         fSample = pResidual[i];
-        pResidual[i] = 
+        pResidual[i] =
             ZeroPoleFilter (&pFCoeff[0], &pFCoeff[5], 5, fSample);
     }
 }
@@ -167,7 +167,7 @@ void sms_filterArray (sfloat *pFArray, int size1, int size2, sfloat *pFOutArray)
             /* consider the lower points */
             iPoint = i - (size2_1) + j;
             if (iPoint >= 0)
-            {  
+            {
                 fVal += pFCurrentArray[iPoint] * fWeighting;
                 fTotalWeighting += fWeighting;
             }

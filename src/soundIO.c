@@ -1,22 +1,22 @@
-/* 
+/*
  * Copyright (c) 2008 MUSIC TECHNOLOGY GROUP (MTG)
- *                         UNIVERSITAT POMPEU FABRA 
- * 
- * 
+ *                         UNIVERSITAT POMPEU FABRA
+ *
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- * 
+ *
  */
 /*! \file soundIO.c
  * \brief soundfile input and output.
@@ -43,15 +43,15 @@ int sms_openSF(char *pChInputSoundFile, SMS_SndHeader *pSoundHeader)
 
     if(!(pSNDStream = sf_open(pChInputSoundFile, SFM_READ, &sfSoundHeader)))
     {
-        sms_error("cannot open soundfile");  
+        sms_error("cannot open soundfile");
         return -1;
     }
 
     pSoundHeader->channelCount = sfSoundHeader.channels;
     pSoundHeader->iReadChannel = 0;
     pSoundHeader->iSamplingRate = sfSoundHeader.samplerate;
-    pSoundHeader->nSamples = sfSoundHeader.frames; 
-    pSoundHeader->sizeHeader = 0; 
+    pSoundHeader->nSamples = sfSoundHeader.frames;
+    pSoundHeader->sizeHeader = 0;
     return 0;
 }
 
@@ -62,7 +62,7 @@ void sms_closeSF()
     sf_close(pSNDStream);
 }
 
-/*! \brief get a chunk of sound from input file 
+/*! \brief get a chunk of sound from input file
  *
  * This function will copy to samples from
  * the channel specified by SMS_SndHeader->iReadChannel to an array,
@@ -74,8 +74,8 @@ void sms_closeSF()
  * \param offset                      which sound frame to start reading from
  * \return 0 on success, -1 on failure
  */
-int sms_getSound(SMS_SndHeader *pSoundHeader, long sizeSound, sfloat *pSound, 
-                 long offset, SMS_AnalParams *pAnalParams) 
+int sms_getSound(SMS_SndHeader *pSoundHeader, long sizeSound, sfloat *pSound,
+                 long offset, SMS_AnalParams *pAnalParams)
 {
     int nFrames;
     int i;
@@ -103,7 +103,7 @@ int sms_getSound(SMS_SndHeader *pSoundHeader, long sizeSound, sfloat *pSound,
     return 0;
 }
 
-/*! \brief function to create an output sound file 
+/*! \brief function to create an output sound file
  *
  * \param pChOutputSoundFile   name of output file
  * \param iSamplingRate  sampling rate of synthesis
@@ -132,7 +132,7 @@ int sms_createSF(char *pChOutputSoundFile, int iSamplingRate, int iType)
     return 0;
 }
 
-/*! \brief write to the sound file data 
+/*! \brief write to the sound file data
  *
  * \param pFBuffer    data to write to file
  * \param sizeBuffer     size of data buffer
@@ -160,21 +160,20 @@ void sms_fillSoundBuffer(int sizeWaveform, sfloat *pWaveform, SMS_AnalParams *pA
     long sizeNewData = (long)sizeWaveform;
 
     /* leave space for new data */
-    memcpy(pAnalParams->soundBuffer.pFBuffer, pAnalParams->soundBuffer.pFBuffer+sizeNewData, 
+    memcpy(pAnalParams->soundBuffer.pFBuffer, pAnalParams->soundBuffer.pFBuffer+sizeNewData,
            sizeof(sfloat) * (pAnalParams->soundBuffer.sizeBuffer - sizeNewData));
 
-    pAnalParams->soundBuffer.iFirstGood = 
+    pAnalParams->soundBuffer.iFirstGood =
         MAX(0, pAnalParams->soundBuffer.iFirstGood - sizeNewData);
-    pAnalParams->soundBuffer.iMarker += sizeNewData;   
+    pAnalParams->soundBuffer.iMarker += sizeNewData;
 
     /* put the new data in, and do some pre-emphasis */
     if(pAnalParams->iAnalysisDirection == SMS_DIR_REV)
         for(i=0; i<sizeNewData; i++)
-            pAnalParams->soundBuffer.pFBuffer[pAnalParams->soundBuffer.sizeBuffer - sizeNewData + i] = 
+            pAnalParams->soundBuffer.pFBuffer[pAnalParams->soundBuffer.sizeBuffer - sizeNewData + i] =
                 sms_preEmphasis(pWaveform[sizeNewData - (1+ i)], pAnalParams);
     else
         for(i=0; i<sizeNewData; i++)
-            pAnalParams->soundBuffer.pFBuffer[pAnalParams->soundBuffer.sizeBuffer - sizeNewData + i] = 
+            pAnalParams->soundBuffer.pFBuffer[pAnalParams->soundBuffer.sizeBuffer - sizeNewData + i] =
                 sms_preEmphasis(pWaveform[i], pAnalParams);
 }
-

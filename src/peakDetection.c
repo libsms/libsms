@@ -1,22 +1,22 @@
-/* 
+/*
  * Copyright (c) 2008 MUSIC TECHNOLOGY GROUP (MTG)
- *                         UNIVERSITAT POMPEU FABRA 
- * 
- * 
+ *                         UNIVERSITAT POMPEU FABRA
+ *
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- * 
+ *
  */
 /*! \file peakDetection.c
  * \brief peak detection algorithm and functions
@@ -29,13 +29,13 @@
  * it performs the interpolation in a log scale and
  * stores the location in pFDiffFromMax and
  *
- * \param fMaxVal        value of max bin 
+ * \param fMaxVal        value of max bin
  * \param fLeftBinVal    value for left bin
  * \param fRightBinVal   value for right bin
- * \param pFDiffFromMax location of the tip as the difference from the top bin 
- *  \return the peak height 
+ * \param pFDiffFromMax location of the tip as the difference from the top bin
+ *  \return the peak height
  */
-static sfloat PeakInterpolation(sfloat fMaxVal, sfloat fLeftBinVal, 
+static sfloat PeakInterpolation(sfloat fMaxVal, sfloat fLeftBinVal,
                                 sfloat fRightBinVal, sfloat *pFDiffFromMax)
 {
     /* get the location of the tip of the parabola */
@@ -47,18 +47,18 @@ static sfloat PeakInterpolation(sfloat fMaxVal, sfloat fLeftBinVal,
 
 /*! \brief detect the next local maximum in the spectrum
  *
- * stores the value in pFMaxVal 
- *                                      
+ * stores the value in pFMaxVal
+ *
  * \todo export this to sms.h and wrap in pysms
  *
- * \param pFMagSpectrum   magnitude spectrum 
+ * \param pFMagSpectrum   magnitude spectrum
  * \param iHighBinBound      highest bin to search
  * \param pICurrentLoc      current bin location
  * \param pFMaxVal        value of the maximum found
  * \param fMinPeakMag  minimum magnitude to accept a peak
- * \return the bin location of the maximum  
+ * \return the bin location of the maximum
  */
-static int FindNextMax(sfloat *pFMagSpectrum, int iHighBinBound, 
+static int FindNextMax(sfloat *pFMagSpectrum, int iHighBinBound,
                        int *pICurrentLoc, sfloat *pFMaxVal, sfloat fMinPeakMag)
 {
     int iCurrentBin = *pICurrentLoc;
@@ -86,26 +86,26 @@ static int FindNextMax(sfloat *pFMagSpectrum, int iHighBinBound,
     return iCurrentBin;
 }
 
-/*! \brief function to detect the next spectral peak 
- *                           
- * \param pFMagSpectrum    magnitude spectrum 
+/*! \brief function to detect the next spectral peak
+ *
+ * \param pFMagSpectrum    magnitude spectrum
  * \param iHighestBin       highest bin to search
  * \param pICurrentLoc       current bin location
  * \param pFPeakMag        magnitude value of peak
  * \param pFPeakLoc        location of peak
  * \param fMinPeakMag  minimum magnitude to accept a peak
- * \return 1 if found, 0 if not  
+ * \return 1 if found, 0 if not
  */
-static int FindNextPeak(sfloat *pFMagSpectrum, int iHighestBin, 
-                        int *pICurrentLoc, sfloat *pFPeakMag, 
+static int FindNextPeak(sfloat *pFMagSpectrum, int iHighestBin,
+                        int *pICurrentLoc, sfloat *pFPeakMag,
                         sfloat *pFPeakLoc, sfloat fMinPeakMag)
 {
     int iPeakBin = 0;    /* location of the local peak */
     sfloat fPeakMag = 0; /* value of local peak */
 
     /* keep trying to find a good peak while inside the freq range */
-    while((iPeakBin = FindNextMax(pFMagSpectrum, iHighestBin, 
-                                  pICurrentLoc, &fPeakMag, fMinPeakMag)) 
+    while((iPeakBin = FindNextMax(pFMagSpectrum, iHighestBin,
+                                  pICurrentLoc, &fPeakMag, fMinPeakMag))
           <= iHighestBin)
     {
         /* get the neighboring samples */
@@ -131,7 +131,7 @@ static int FindNextPeak(sfloat *pFMagSpectrum, int iHighestBin,
 
  * \param pPhaseSpectrum     phase spectrum
  * \param fPeakLoc                 location of peak
- * \return the phase value                             
+ * \return the phase value
  */
 static sfloat GetPhaseVal(sfloat *pPhaseSpectrum, sfloat fPeakLoc)
 {
@@ -151,7 +151,7 @@ static sfloat GetPhaseVal(sfloat *pPhaseSpectrum, sfloat fPeakLoc)
 }
 
 /*! \brief find the prominent spectral peaks
- * 
+ *
  * uses a dB spectrum
  *
  * \param sizeSpec       size of magnitude spectrum
@@ -166,7 +166,7 @@ int sms_detectPeaks(int sizeSpec, sfloat *pMag, sfloat *pPhase,
 {
     int sizeFft = sizeSpec << 1;
     sfloat fInvSizeFft = 1.0 / sizeFft;
-    /* make sure to start on the 2nd bin so interpolation is possible 
+    /* make sure to start on the 2nd bin so interpolation is possible
      * QUESTION: why not allow a peak in bin 1 or 0? */
     /* rte: changed the first argument of MAX from 2 to 1 */
     int iFirstBin = MAX(1, sizeFft * pPeakParams->fLowestFreq / pPeakParams->iSamplingRate);
@@ -190,7 +190,7 @@ int sms_detectPeaks(int sizeSpec, sfloat *pMag, sfloat *pPhase,
 
     /* find peaks */
     while((iPeak < pPeakParams->iMaxPeaks) &&
-          (FindNextPeak(pMag, iHighestBin, &iCurrentLoc, &fPeakMag, 
+          (FindNextPeak(pMag, iHighestBin, &iCurrentLoc, &fPeakMag,
                         &fPeakLoc, pPeakParams->fMinPeakMag) == 1))
     {
         /* store peak values */
