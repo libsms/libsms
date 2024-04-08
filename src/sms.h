@@ -33,7 +33,7 @@
 
 #define SMS_VERSION 1.15 /*!< \brief version control number */
 
-#define SMS_MAX_NPEAKS 400    /*!< \brief maximum number of peaks  */
+#define SMS_MAX_NPEAKS 400    /*!< \brief maximum number of peaks */
 #define SMS_MAX_FRAME_SIZE 10000 /* maximum size of input frame in samples */
 #define SMS_MAX_SPEC 8192  /*! \brief  maximum size for magnitude spectrum */
 
@@ -69,15 +69,15 @@ typedef struct
     int iHeadBSize;          /*!< size in bytes of header */
     int nFrames;	         /*!< number of data frames */
     int iFrameBSize;         /*!< size in bytes of each data frame */
-    int iSamplingRate;       /*!< samplerate of analysis signal (necessary to recreate residual spectrum */
+    int iSamplingRate;       /*!< samplerate of analysis signal (necessary to recreate residual spectrum) */
     int iFormat;             /*!< type of data format \see SMS_Format */
     int nTracks;             /*!< number of sinusoidal tracks per frame */
     int iFrameRate;          /*!< rate in Hz of data frames */
     int iStochasticType;     /*!< type stochastic representation */
-    int nStochasticCoeff;    /*!< number of stochastic coefficients per frame  */
+    int nStochasticCoeff;    /*!< number of stochastic coefficients per frame */
     int iEnvType;            /*!< type of envelope representation */
-    int nEnvCoeff;           /*!< number of cepstral coefficents per frame */
-    int iMaxFreq;            /*!< maximum frequency of peaks (also corresponds to the last bin of the specEnv */
+    int nEnvCoeff;           /*!< number of cepstral coefficients per frame */
+    int iMaxFreq;            /*!< maximum frequency of peaks (also corresponds to the last bin of the specEnv) */
     sfloat fResidualPerc;    /*!< percentage of the residual to original */
     int nTextCharacters;     /*!< number of text characters */
     char *pChTextCharacters; /*!< Text string relating to the sound */
@@ -100,7 +100,7 @@ typedef struct {
  * Here is where all the analysis data ends up. Once data is in here, it is ready
  * for synthesis.
  *
- * It is in one contigous block (pSmsData), the other pointer members point
+ * It is in one contiguous block (pSmsData), the other pointer members point
  * specifically to each component in the block.
  *
  * pFSinPha is optional in the final output, but it is always used to construct the
@@ -176,7 +176,7 @@ typedef struct
 {
     sfloat fLowestFreq;            /*!< the first bin to look for a peak */
     sfloat fHighestFreq;           /*!< the last bin to look for a peak */
-    sfloat fMinPeakMag;            /*!< mininum magnitude to consider as a peak */
+    sfloat fMinPeakMag;            /*!< minimum magnitude to consider as a peak */
     int iSamplingRate;             /*!< sampling rate of analysis signal */
     int iMaxPeaks;                 /*!< maximum number of spectral peaks to look for */
     int nPeaksFound;               /*!< the number of peaks found in each analysis */
@@ -238,7 +238,7 @@ typedef struct
     int iSoundType;                  /*!< type of sound to be analyzed \see SMS_SOUND_TYPE */
     int iStochasticType;             /*!< type of stochastic model defined by SMS_StocSynthType \see SMS_StocSynthType */
     int iFrameRate;                  /*!< rate in Hz of data frames */
-    int nStochasticCoeff;            /*!< number of stochastic coefficients per frame  */
+    int nStochasticCoeff;            /*!< number of stochastic coefficients per frame */
     sfloat fLowestFundamental;       /*!< lowest fundamental frequency in Hz */
     sfloat fHighestFundamental;      /*!< highest fundamental frequency in Hz */
     sfloat fDefaultFundamental;      /*!< default fundamental in Hz */
@@ -273,12 +273,12 @@ typedef struct
     int preEmphasis;                 /*!< whether or not to perform pre-emphasis */
     sfloat preEmphasisLastValue;
     SMS_PeakParams peakParams;       /*!< structure with parameters for spectral peaks */
-    SMS_Data prevFrame;              /*!< the previous analysis frame  */
+    SMS_Data prevFrame;              /*!< the previous analysis frame */
     SMS_SEnvParams specEnvParams;    /*!< all data for spectral enveloping */
     SMS_SndBuffer soundBuffer;       /*!< signal to be analyzed */
     SMS_SndBuffer synthBuffer;       /*!< resynthesized signal used to create the residual */
     SMS_AnalFrame *pFrames;          /*!< an array of frames that have already been analyzed */
-    SMS_AnalFrame **ppFrames;        /*!< pointers to the frames analyzed (it is circular-shifted once the array is full */
+    SMS_AnalFrame **ppFrames;        /*!< pointers to the frames analyzed (it is circular-shifted once the array is full) */
     sfloat magSpectrum[SMS_MAX_SPEC];
     sfloat phaseSpectrum[SMS_MAX_SPEC];
     sfloat spectrumWindow[SMS_MAX_SPEC];
@@ -300,7 +300,7 @@ typedef struct
  */
 typedef struct
 {
-    int ready;           /*!< a flag to know if the struct has been initialized) */
+    int ready;           /*!< a flag to know if the struct has been initialized */
     int maxFreq;         /*!< maximum frequency component */
     int doResGain;       /*!< whether or not to scale residual gain */
     sfloat resGain;      /*!< residual scale factor */
@@ -309,11 +309,11 @@ typedef struct
     int doSinEnv;        /*!< whether or not to apply a new spectral envelope to the sin component */
     sfloat sinEnvInterp; /*!< value between 0 (use frame's env) and 1 (use *env). Interpolates inbetween values*/
     int sizeSinEnv;      /*!< size of the envelope pointed to by env */
-    sfloat *sinEnv;      /*!< sinusoidal spectral envelope  */
+    sfloat *sinEnv;      /*!< sinusoidal spectral envelope */
     int doResEnv;        /*!< whether or not to apply a new spectral envelope to the residual component */
     sfloat resEnvInterp; /*!< value between 0 (use frame's env) and 1 (use *env). Interpolates inbetween values*/
     int sizeResEnv;      /*!< size of the envelope pointed to by resEnv */
-    sfloat *resEnv;      /*!< residual spectral envelope  */
+    sfloat *resEnv;      /*!< residual spectral envelope */
 } SMS_ModifyParams;
 
 /*! \struct SMS_SynthParams
@@ -410,9 +410,9 @@ enum SMS_SynthType
  *
  * There are two options for deterministic synthesis available to the
  * SMS synthesizer.  The Inverse Fast Fourier Transform method
- * (IFFT) is more effecient for models with lots of partial tracks, but can
+ * (IFFT) is more efficient for models with lots of partial tracks, but can
  * possibly smear transients.  The Sinusoidal Table Lookup (SIN) can
- * theoritically support faster moving tracks at a higher fidelity, but
+ * theoretically support faster moving tracks at a higher fidelity, but
  * can consume lots of cpu at varying rates.
  */
 enum SMS_DetSynthType
@@ -439,7 +439,7 @@ enum SMS_DetSynthType
  * No stochastic component can also be specified in order to skip the this
  * time consuming process altogether.  This is especially useful when
  * performing multiple analyses to fine tune parameters pertaining to the
- * determistic component; once that is achieved, the stochastic component
+ * deterministic component; once that is achieved, the stochastic component
  * will be much better as well.
  */
 enum SMS_StocSynthType
@@ -453,9 +453,9 @@ enum SMS_StocSynthType
  *
  * There are two options for deterministic synthesis available to the
  * SMS synthesizer.  The Inverse Fast Fourier Transform method
- * (IFFT) is more effecient for models with lots of partial tracks, but can
+ * (IFFT) is more efficient for models with lots of partial tracks, but can
  * possibly smear transients.  The Sinusoidal Table Lookup (SIN) can
- * theoritically support faster moving tracks at a higher fidelity, but
+ * theoretically support faster moving tracks at a higher fidelity, but
  * can consume lots of cpu at varying rates.
  */
 enum SMS_SpecEnvType
