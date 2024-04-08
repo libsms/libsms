@@ -304,7 +304,7 @@ void sms_getWindow (int sizeWindow, sfloat *pFWindow, int iWindowType)
  * \param sizeFft                   size of FFT
  * \param pFftBuffer               pointer to FFT buffer
  */
-void sms_windowCentered (int sizeWindow, sfloat *pWaveform, sfloat *pWindow, int sizeFft, sfloat *pFftBuffer)
+void sms_windowCentered (int sizeWindow, const sfloat *pWaveform, const sfloat *pWindow, int sizeFft, sfloat *pFftBuffer)
 {
         int i, iOffset, iMiddleWindow;
 

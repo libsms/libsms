@@ -37,7 +37,7 @@
  * \return error code \see SMS_ERRORS (or -1 if the algorithm just messes up,
  *         it will print an error of its own.
  */
-int sms_spectralApprox(sfloat *pFSpec1, int sizeSpec1, int sizeSpec1Used,
+int sms_spectralApprox(const sfloat *pFSpec1, int sizeSpec1, int sizeSpec1Used,
                        sfloat *pFSpec2, int sizeSpec2, int nCoefficients,
                        sfloat *envelope)
 {

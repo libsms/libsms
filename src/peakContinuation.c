@@ -42,7 +42,7 @@
  * \return peak number or -1 if nothing is good
  */
 static int GetNextClosestPeak(sfloat fGuideFreq, sfloat *pFFreqDistance,
-                              SMS_Peak *pSpectralPeaks, SMS_AnalParams *pAnalParams,
+                              const SMS_Peak *pSpectralPeaks, const SMS_AnalParams *pAnalParams,
                               sfloat fFreqDev)
 {
     int iInitialPeak = SMS_MAX_NPEAKS * fGuideFreq / (pAnalParams->iSamplingRate * .5);
@@ -175,7 +175,7 @@ static int ChooseBestCand(SMS_ContCandidate *pCandidate, int nCandidates,
  * \param nGuides       total number of guides
  * \return number of guide that chose the peak, or -1 if none
  */
-static int CheckForConflict(int iBestPeak, SMS_Guide *pGuides, int nGuides)
+static int CheckForConflict(int iBestPeak, const SMS_Guide *pGuides, int nGuides)
 {
     int iGuide;
 
@@ -196,8 +196,8 @@ static int CheckForConflict(int iBestPeak, SMS_Guide *pGuides, int nGuides)
  * \param pSpectralPeaks    array of peaks
  * \return number of guide
  */
-static int BestGuide(int iConflictingGuide, int iGuide, SMS_Guide *pGuides,
-                     SMS_Peak *pSpectralPeaks)
+static int BestGuide(int iConflictingGuide, int iGuide, const SMS_Guide *pGuides,
+                     const SMS_Peak *pSpectralPeaks)
 {
     int iConflictingPeak = pGuides[iConflictingGuide].iPeakChosen;
     sfloat fGuideDistance = fabs(pSpectralPeaks[iConflictingPeak].fFreq -
@@ -219,8 +219,8 @@ static int BestGuide(int iConflictingGuide, int iGuide, SMS_Guide *pGuides,
  * \param fFreqDev                  frequency deviation allowed
  * \return the peak number
  */
-static int GetBestPeak(SMS_Guide *pGuides, int iGuide, SMS_Peak *pSpectralPeaks,
-                       SMS_AnalParams *pAnalParams, sfloat fFreqDev)
+static int GetBestPeak(SMS_Guide *pGuides, int iGuide, const SMS_Peak *pSpectralPeaks,
+                       const SMS_AnalParams *pAnalParams, sfloat fFreqDev)
 {
     int iCand = 0, iPeak, iBestPeak, iConflictingGuide, iWinnerGuide;
     sfloat fGuideFreq = pGuides[iGuide].fFreq,
@@ -303,7 +303,7 @@ static int GetBestPeak(SMS_Guide *pGuides, int iGuide, SMS_Peak *pSpectralPeaks,
  * \param pFCurrentMax      last peak maximum
  * \return the number of the maximum peak
  */
-static int GetNextMax(SMS_Peak *pSpectralPeaks, SMS_PeakParams *pPeakParams,
+static int GetNextMax(const SMS_Peak *pSpectralPeaks, const SMS_PeakParams *pPeakParams,
                       sfloat *pFCurrentMax)
 {
     sfloat fPeakMag;
@@ -337,7 +337,7 @@ static int GetNextMax(SMS_Peak *pSpectralPeaks, SMS_PeakParams *pPeakParams,
  * \return \todo should this return something?
  */
 static int GetStartingPeak(int iGuide, SMS_Guide *pGuides, int nGuides,
-                           SMS_Peak *pSpectralPeaks, SMS_PeakParams *pPeakParams,
+                           const SMS_Peak *pSpectralPeaks, const SMS_PeakParams *pPeakParams,
                            sfloat *pFCurrentMax)
 {
     int iPeak = -1;
@@ -368,7 +368,7 @@ static int GetStartingPeak(int iGuide, SMS_Guide *pGuides, int nGuides,
  * \param pAnalParams analysis parameters
  * \return error code \see SMS_ERRORS
  */
-int sms_peakContinuation(int iFrame, SMS_AnalParams *pAnalParams)
+int sms_peakContinuation(int iFrame, const SMS_AnalParams *pAnalParams)
 {
     int iGuide, iCurrentPeak = -1, iGoodPeak = -1;
     sfloat fFund = pAnalParams->ppFrames[iFrame]->fFundamental,

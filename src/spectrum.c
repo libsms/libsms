@@ -33,7 +33,7 @@
  * \param pPhase                       pointer to output phase spectrum
  * \return sizeFft, -1 on error \todo remove this return
  */
-int sms_spectrum(int sizeWindow, sfloat *pWaveform, sfloat *pWindow, int sizeMag,
+int sms_spectrum(int sizeWindow, const sfloat *pWaveform, const sfloat *pWindow, int sizeMag,
                  sfloat *pMag, sfloat *pPhase, sfloat *pFftBuffer)
 {
     int i, it2;
@@ -73,7 +73,7 @@ int sms_spectrum(int sizeWindow, sfloat *pWaveform, sfloat *pWindow, int sizeMag
  * \param pMag     pointer to output magnitude spectrum
  * \return 0 on success, -1 on error
  */
-int sms_spectrumMag(int sizeWindow, sfloat *pWaveform, sfloat *pWindow,
+int sms_spectrumMag(int sizeWindow, const sfloat *pWaveform, const sfloat *pWindow,
                     int sizeMag, sfloat *pMag, sfloat *pFftBuffer)
 {
     int i,it2;
@@ -115,8 +115,8 @@ int sms_spectrumMag(int sizeWindow, sfloat *pWaveform, sfloat *pWindow,
  * int sizeWave                size of output waveform
  * sfloat *pFWindow        synthesis window
  */
-int sms_invSpectrum(int sizeWaveform, sfloat *pWaveform, sfloat *pWindow,
-                    int sizeMag, sfloat *pMag, sfloat *pPhase, sfloat *pFftBuffer)
+int sms_invSpectrum(int sizeWaveform, sfloat *pWaveform, const sfloat *pWindow,
+                    int sizeMag, const sfloat *pMag, const sfloat *pPhase, sfloat *pFftBuffer)
 {
     int i;
     int sizeFft = sizeMag << 1;
@@ -142,9 +142,9 @@ int sms_invSpectrum(int sizeWaveform, sfloat *pWaveform, sfloat *pWindow,
  * int sizeWave                size of output waveform
  * sfloat *pFWindow        synthesis window
  */
-int sms_invQuickSpectrumW(sfloat *pFMagSpectrum, sfloat *pFPhaseSpectrum,
+int sms_invQuickSpectrumW(const sfloat *pFMagSpectrum, const sfloat *pFPhaseSpectrum,
                           int sizeFft, sfloat *pFWaveform, int sizeWave,
-                          sfloat *pFWindow, sfloat* pFftBuffer)
+                          const sfloat *pFWindow, sfloat* pFftBuffer)
 {
     int sizeMag = sizeFft >> 1, i, it2;
     sfloat fPower;
@@ -178,7 +178,7 @@ int sms_invQuickSpectrumW(sfloat *pFMagSpectrum, sfloat *pFPhaseSpectrum,
  * \param pMag         pointer to sfloat array of magnitude spectrum
  * \param pPhase           pointer to sfloat array of phase spectrum
  */
-void sms_RectToPolar(int sizeMag, sfloat *pRect, sfloat *pMag, sfloat *pPhase)
+void sms_RectToPolar(int sizeMag, const sfloat *pRect, sfloat *pMag, sfloat *pPhase)
 {
     int i, it2;
     sfloat fReal, fImag;
@@ -202,7 +202,7 @@ void sms_RectToPolar(int sizeMag, sfloat *pRect, sfloat *pMag, sfloat *pPhase)
  * \param pMag         pointer to sfloat array of magnitude spectrum
  * \param pPhase           pointer to sfloat array of phase spectrum
  */
-void sms_PolarToRect(int sizeSpec, sfloat *pRect, sfloat *pMag, sfloat *pPhase)
+void sms_PolarToRect(int sizeSpec, sfloat *pRect, const sfloat *pMag, const sfloat *pPhase)
 {
     int i, it2;
     sfloat fMag;
@@ -222,7 +222,7 @@ void sms_PolarToRect(int sizeSpec, sfloat *pRect, sfloat *pMag, sfloat *pPhase)
  * \param pInRect          pointer to input DFT array (real/imag sfloats)
  * \param pOutMag          pointer to of magnitude spectrum array
  */
-void sms_spectrumRMS(int sizeMag, sfloat *pInRect, sfloat *pOutMag)
+void sms_spectrumRMS(int sizeMag, const sfloat *pInRect, sfloat *pOutMag)
 {
     int i, it2;
     sfloat fReal, fImag;

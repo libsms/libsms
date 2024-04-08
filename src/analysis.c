@@ -135,7 +135,7 @@ static int ReAnalyzeFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams)
  * \param pAnalParams   pointer to analysis parameters
  * \return \todo sort out return meanings
  */
-int sms_analyze(int sizeWaveform, sfloat *pWaveform, SMS_Data *pSmsData, SMS_AnalParams *pAnalParams)
+int sms_analyze(int sizeWaveform, const sfloat *pWaveform, SMS_Data *pSmsData, SMS_AnalParams *pAnalParams)
 {
     int iCurrentFrame = pAnalParams->iMaxDelayFrames - 1;  /* frame # of current frame */
     int delayFrames = pAnalParams->minGoodFrames + pAnalParams->analDelay;

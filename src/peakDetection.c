@@ -58,7 +58,7 @@ static sfloat PeakInterpolation(sfloat fMaxVal, sfloat fLeftBinVal,
  * \param fMinPeakMag  minimum magnitude to accept a peak
  * \return the bin location of the maximum
  */
-static int FindNextMax(sfloat *pFMagSpectrum, int iHighBinBound,
+static int FindNextMax(const sfloat *pFMagSpectrum, int iHighBinBound,
                        int *pICurrentLoc, sfloat *pFMaxVal, sfloat fMinPeakMag)
 {
     int iCurrentBin = *pICurrentLoc;
@@ -96,7 +96,7 @@ static int FindNextMax(sfloat *pFMagSpectrum, int iHighBinBound,
  * \param fMinPeakMag  minimum magnitude to accept a peak
  * \return 1 if found, 0 if not
  */
-static int FindNextPeak(sfloat *pFMagSpectrum, int iHighestBin,
+static int FindNextPeak(const sfloat *pFMagSpectrum, int iHighestBin,
                         int *pICurrentLoc, sfloat *pFPeakMag,
                         sfloat *pFPeakLoc, sfloat fMinPeakMag)
 {
@@ -133,7 +133,7 @@ static int FindNextPeak(sfloat *pFMagSpectrum, int iHighestBin,
  * \param fPeakLoc                 location of peak
  * \return the phase value
  */
-static sfloat GetPhaseVal(sfloat *pPhaseSpectrum, sfloat fPeakLoc)
+static sfloat GetPhaseVal(const sfloat *pPhaseSpectrum, sfloat fPeakLoc)
 {
     int bin = (int)fPeakLoc;
     sfloat fFraction = fPeakLoc - bin,
@@ -161,8 +161,8 @@ static sfloat GetPhaseVal(sfloat *pPhaseSpectrum, sfloat fPeakLoc)
  * \param pPeakParams    peak detection parameters
  * \return the number of peaks found
  */
-int sms_detectPeaks(int sizeSpec, sfloat *pMag, sfloat *pPhase,
-                    SMS_Peak *pSpectralPeaks, SMS_PeakParams *pPeakParams)
+int sms_detectPeaks(int sizeSpec, const sfloat *pMag, const sfloat *pPhase,
+                    SMS_Peak *pSpectralPeaks, const SMS_PeakParams *pPeakParams)
 {
     int sizeFft = sizeSpec << 1;
     sfloat fInvSizeFft = 1.0 / sizeFft;

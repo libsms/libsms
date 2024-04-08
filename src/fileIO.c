@@ -67,8 +67,8 @@ void sms_initHeader(SMS_Header *pSmsHeader)
  * \param pAnalParams   structure of analysis parameters
  * \param pProgramString pointer to a string containing the name of the program that made the analysis data
  */
-void sms_fillHeader(SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams,
-                    char *pProgramString)
+void sms_fillHeader(SMS_Header *pSmsHeader, const SMS_AnalParams *pAnalParams,
+                    const char *pProgramString)
 {
     sms_initHeader (pSmsHeader);
     pSmsHeader->nFrames = pAnalParams->nFrames;
@@ -121,7 +121,7 @@ void sms_fillHeader(SMS_Header *pSmsHeader, SMS_AnalParams *pAnalParams,
  * \param ppSmsFile     (double pointer to)  file to be created
  * \return error code \see SMS_WRERR in SMS_ERRORS
  */
-int sms_writeHeader(char *pChFileName, SMS_Header *pSmsHeader, FILE **ppSmsFile)
+int sms_writeHeader(const char *pChFileName, SMS_Header *pSmsHeader, FILE **ppSmsFile)
 {
     int iVariableSize = 0;
 
@@ -212,7 +212,7 @@ int sms_writeFile(FILE *pSmsFile, SMS_Header *pSmsHeader)
  * \param pSmsFrame   pointer to SMS data frame
  * \return 0 on success, -1 on failure
  */
-int sms_writeFrame(FILE *pSmsFile, SMS_Header *pSmsHeader, SMS_Data *pSmsFrame)
+int sms_writeFrame(FILE *pSmsFile, const SMS_Header *pSmsHeader, const SMS_Data *pSmsFrame)
 {
     if(fwrite((void *)pSmsFrame->pSmsData, 1, pSmsHeader->iFrameBSize,
               pSmsFile) < (unsigned int) pSmsHeader->iFrameBSize)
@@ -229,7 +229,7 @@ int sms_writeFrame(FILE *pSmsFile, SMS_Header *pSmsHeader, SMS_Data *pSmsFrame)
  * \param pSmsHeader    pointer to SMS header
  * \return the size in bytes of the frame
  */
-int sms_frameSizeB(SMS_Header *pSmsHeader)
+int sms_frameSizeB(const SMS_Header *pSmsHeader)
 {
     int iSize, nDet;
 
@@ -262,7 +262,7 @@ int sms_frameSizeB(SMS_Header *pSmsHeader)
  * \param ppSmsFile        (double pointer to) inputfile
  * \return error code \see SMS_ERRORS
  */
-int sms_getHeader(char *pChFileName, SMS_Header **ppSmsHeader, FILE **ppSmsFile)
+int sms_getHeader(const char *pChFileName, SMS_Header **ppSmsHeader, FILE **ppSmsFile)
 {
     int iHeadBSize, iFrameBSize, nFrames;
     int iMagicNumber;
@@ -480,7 +480,7 @@ int sms_allocFrame(SMS_Data *pSmsFrame, int nTracks, int nStochCoeff, int iPhase
  * \param pSmsFrame     pointer to SMS frame
  * \return  0 on success, -1 on error
  */
-int sms_allocFrameH(SMS_Header *pSmsHeader, SMS_Data *pSmsFrame)
+int sms_allocFrameH(const SMS_Header *pSmsHeader, SMS_Data *pSmsFrame)
 {
     int iPhase = (pSmsHeader->iFormat == SMS_FORMAT_HP ||
                   pSmsHeader->iFormat == SMS_FORMAT_IHP) ? 1 : 0;
@@ -527,14 +527,14 @@ void sms_clearFrame(SMS_Data *pSmsFrame)
  * \param pOriginalSmsData  original frame
  *
  */
-void sms_copyFrame(SMS_Data *pCopySmsData, SMS_Data *pOriginalSmsData)
+void sms_copyFrame(SMS_Data *pCopySmsData, const SMS_Data *pOriginalSmsData)
 {
     /* if the two frames are the same size just copy data */
     if(pCopySmsData->sizeData == pOriginalSmsData->sizeData &&
        pCopySmsData->nTracks == pOriginalSmsData->nTracks)
     {
-        memcpy((char *)pCopySmsData->pSmsData,
-               (char *)pOriginalSmsData->pSmsData,
+        memcpy(pCopySmsData->pSmsData,
+               pOriginalSmsData->pSmsData,
                pCopySmsData->sizeData);
     }
 
@@ -546,30 +546,30 @@ void sms_copyFrame(SMS_Data *pCopySmsData, SMS_Data *pOriginalSmsData)
 
         pCopySmsData->nTracks = nTracks;
         pCopySmsData->nCoeff = nCoeff;
-        memcpy((char *)pCopySmsData->pFSinFreq,
-               (char *)pOriginalSmsData->pFSinFreq,
+        memcpy(pCopySmsData->pFSinFreq,
+               pOriginalSmsData->pFSinFreq,
                sizeof(sfloat) * nTracks);
-        memcpy((char *)pCopySmsData->pFSinAmp,
-               (char *)pOriginalSmsData->pFSinAmp,
+        memcpy(pCopySmsData->pFSinAmp,
+               pOriginalSmsData->pFSinAmp,
                sizeof(sfloat) * nTracks);
         if(pOriginalSmsData->pFSinPha != NULL &&
            pCopySmsData->pFSinPha != NULL)
-            memcpy((char *)pCopySmsData->pFSinPha,
-                   (char *)pOriginalSmsData->pFSinPha,
+            memcpy(pCopySmsData->pFSinPha,
+                   pOriginalSmsData->pFSinPha,
                    sizeof(sfloat) * nTracks);
         if(pOriginalSmsData->pFStocCoeff != NULL &&
            pCopySmsData->pFStocCoeff != NULL)
         {
             if(pOriginalSmsData->pResPhase != NULL &&
                pCopySmsData->pResPhase != NULL)
-                memcpy((char *)pCopySmsData->pResPhase,
-                       (char *)pOriginalSmsData->pResPhase,
+                memcpy(pCopySmsData->pResPhase,
+                       pOriginalSmsData->pResPhase,
                        sizeof(sfloat) * nCoeff);
         }
         if(pOriginalSmsData->pFStocGain != NULL &&
            pCopySmsData->pFStocGain != NULL)
-            memcpy((char *)pCopySmsData->pFStocGain,
-                   (char *)pOriginalSmsData->pFStocGain,
+            memcpy(pCopySmsData->pFStocGain,
+                   pOriginalSmsData->pFStocGain,
                    sizeof(sfloat));
     }
 }
@@ -583,7 +583,7 @@ void sms_copyFrame(SMS_Data *pCopySmsData, SMS_Data *pOriginalSmsData)
  * \param pSmsFrameOut        sms output frame
  * \param fInterpFactor              interpolation factor
  */
-void sms_interpolateFrames(SMS_Data *pSmsFrame1, SMS_Data *pSmsFrame2,
+void sms_interpolateFrames(const SMS_Data *pSmsFrame1, const SMS_Data *pSmsFrame2,
                            SMS_Data *pSmsFrameOut, sfloat fInterpFactor)
 {
     int i;

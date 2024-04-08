@@ -33,7 +33,7 @@
  * \param pAnalParams  point to analysis parameters
  * \return 0 on success, -1 on error
  */
-int sms_stocAnalysis(int sizeWindow, sfloat *pResidual, sfloat *pWindow,
+int sms_stocAnalysis(int sizeWindow, const sfloat *pResidual, const sfloat *pWindow,
                      SMS_Data *pSmsData, SMS_AnalParams* pAnalParams)
 {
     int i;

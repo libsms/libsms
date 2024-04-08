@@ -227,8 +227,8 @@ void sms_cleanTracks(int iCurrentFrame, SMS_AnalParams *pAnalParams)
  * \param pAnalParams       pointer to analysis parameters
  * \param nTrack            number of tracks
  */
-void sms_scaleDet(sfloat *pFSynthBuffer, sfloat *pFOriginalBuffer,
-                  sfloat *pFSinAmp, SMS_AnalParams *pAnalParams, int nTrack)
+void sms_scaleDet(const sfloat *pFSynthBuffer, const sfloat *pFOriginalBuffer,
+                  sfloat *pFSinAmp, const SMS_AnalParams *pAnalParams, int nTrack)
 {
     sfloat fOriginalMag = 0, fSynthesisMag = 0;
     sfloat fCosScaleFactor;

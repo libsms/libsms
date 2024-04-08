@@ -45,7 +45,7 @@ SF_INFO sfSoundHeader, sfResidualHeader, sfOutputSoundHeader;
  * \param pSoundHeader    information of the sound
  * \return 0 on success, -1 on failure
  */
-int sms_openSF(char *pChInputSoundFile, SMS_SndHeader *pSoundHeader)
+int sms_openSF(const char *pChInputSoundFile, SMS_SndHeader *pSoundHeader)
 {
     memset(&sfSoundHeader, 0, sizeof (sfSoundHeader));
 
@@ -82,7 +82,7 @@ void sms_closeSF()
  * \param offset                      which sound frame to start reading from
  * \return 0 on success, -1 on failure
  */
-int sms_getSound(SMS_SndHeader *pSoundHeader, long sizeSound, sfloat *pSound,
+int sms_getSound(const SMS_SndHeader *pSoundHeader, long sizeSound, sfloat *pSound,
                  long offset, SMS_AnalParams *pAnalParams)
 {
     int nFrames;
@@ -118,7 +118,7 @@ int sms_getSound(SMS_SndHeader *pSoundHeader, long sizeSound, sfloat *pSound,
  * \param iType output file format (0 is wav, 1 is aiff, or other is libsndfile specific)
  * \return 0 on success, -1 on failure
  */
-int sms_createSF(char *pChOutputSoundFile, int iSamplingRate, int iType)
+int sms_createSF(const char *pChOutputSoundFile, int iSamplingRate, int iType)
 {
     memset (&sfOutputSoundHeader, 0, sizeof (sfOutputSoundHeader)) ;
 
@@ -145,7 +145,7 @@ int sms_createSF(char *pChOutputSoundFile, int iSamplingRate, int iType)
  * \param pFBuffer    data to write to file
  * \param sizeBuffer     size of data buffer
  */
-void sms_writeSound(sfloat *pFBuffer, int sizeBuffer)
+void sms_writeSound(const sfloat *pFBuffer, int sizeBuffer)
 {
     sf_writef_sfloat(pOutputSNDStream, pFBuffer, sizeBuffer);
 }
@@ -162,7 +162,7 @@ void sms_writeSF()
  * \param pWaveform           input data
  * \param pAnalParams        pointer to structure of analysis parameters
  */
-void sms_fillSoundBuffer(int sizeWaveform, sfloat *pWaveform, SMS_AnalParams *pAnalParams)
+void sms_fillSoundBuffer(int sizeWaveform, const sfloat *pWaveform, SMS_AnalParams *pAnalParams)
 {
     int i;
     long sizeNewData = (long)sizeWaveform;

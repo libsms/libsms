@@ -185,7 +185,7 @@ void sms_initAnalParams(SMS_AnalParams *pAnalParams)
  * \param pSoundHeader    pointer to sound header
  * \return 0 on success, -1 on error
  */
-int sms_initAnalysis(SMS_AnalParams *pAnalParams, SMS_SndHeader *pSoundHeader)
+int sms_initAnalysis(SMS_AnalParams *pAnalParams, const SMS_SndHeader *pSoundHeader)
 {
     int i;
     SMS_SndBuffer *pSynthBuf = &pAnalParams->synthBuffer;
@@ -439,7 +439,7 @@ void sms_initSynthParams(SMS_SynthParams *synthParams)
  * \param pSynthParams    pointer to synthesis paramaters
  * \return 0 on success, -1 on error
  */
-int sms_initSynth(SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
+int sms_initSynth(const SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams )
 {
     /* TODO: check all memory allocation in this function */
 
@@ -597,7 +597,7 @@ void sms_freeSynth(SMS_SynthParams *pSynthParams)
  * \param pAnalParams          analysis parameters
  * \return the size of the next window in samples
  */
-int sms_sizeNextWindow(int iCurrentFrame, SMS_AnalParams *pAnalParams)
+int sms_sizeNextWindow(int iCurrentFrame, const SMS_AnalParams *pAnalParams)
 {
     sfloat fFund = pAnalParams->ppFrames[iCurrentFrame]->fFundamental,
            fPrevFund = pAnalParams->ppFrames[iCurrentFrame-1]->fFundamental;
@@ -731,7 +731,7 @@ int sms_initFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams, int sizeWindow
  * \param iCurrentFrame        number of current frame
  * \return deviation value or -1 if really off
  */
-sfloat sms_fundDeviation(SMS_AnalParams *pAnalParams, int iCurrentFrame)
+sfloat sms_fundDeviation(const SMS_AnalParams *pAnalParams, int iCurrentFrame)
 {
     sfloat fFund, fSum = 0, fAverage, fDeviation = 0;
     int i;
@@ -766,7 +766,7 @@ sfloat sms_fundDeviation(SMS_AnalParams *pAnalParams, int iCurrentFrame)
  * \param pAnalParams             pointer to analysis params
  * \return error value \see SMS_ERRORS
  */
-int sms_createDebugFile(SMS_AnalParams *pAnalParams)
+int sms_createDebugFile(const SMS_AnalParams *pAnalParams)
 {
     if((pDebug = fopen(pChDebugFile, "w+")) == NULL)
     {
@@ -787,8 +787,8 @@ int sms_createDebugFile(SMS_AnalParams *pAnalParams)
  * \param pFBuffer3 pointer to array 3
  * \param sizeBuffer the size of the buffers
  */
-void sms_writeDebugData(sfloat *pFBuffer1, sfloat *pFBuffer2,
-                        sfloat *pFBuffer3, int sizeBuffer)
+void sms_writeDebugData(const sfloat *pFBuffer1, const sfloat *pFBuffer2,
+                        const sfloat *pFBuffer3, int sizeBuffer)
 {
     int i;
     static int counter = 0;
@@ -886,7 +886,7 @@ void sms_setMagThresh(sfloat x)
  *
  * \param pErrorMessage pointer to error message string
  */
-void sms_error(char *pErrorMessage)
+void sms_error(const char *pErrorMessage)
 {
     strncpy(error_message, pErrorMessage, 256);
     error_status = -1;

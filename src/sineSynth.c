@@ -150,7 +150,7 @@ static void SineSynth(sfloat fFreq, sfloat fMag, SMS_Data *pLastFrame,
  * \param pLastFrame    SMS data from last frame
  * \param iSamplingRate sampling rate to synthesize for
  */
-void sms_sineSynthFrame(SMS_Data *pSmsData, sfloat *pFBuffer,
+void sms_sineSynthFrame(const SMS_Data *pSmsData, sfloat *pFBuffer,
                         int sizeBuffer, SMS_Data *pLastFrame,
                         int iSamplingRate)
 {

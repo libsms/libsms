@@ -40,7 +40,7 @@
  * \param iRefHarmonic    reference harmonic number
  * \return the number of the closest peak or -1 if not found
  */
-static int GetClosestPeak(int iPeakCandidate, int nHarm, SMS_Peak *pSpectralPeaks,
+static int GetClosestPeak(int iPeakCandidate, int nHarm, const SMS_Peak *pSpectralPeaks,
                           int *pICurrentPeak, int iRefHarmonic, int maxPeaks)
 {
     int iBestPeak = *pICurrentPeak + 1;
@@ -87,7 +87,7 @@ static int GetClosestPeak(int iPeakCandidate, int nHarm, SMS_Peak *pSpectralPeak
  * \param fRefHarmMagDiffFromMax value to judge the peak based on the difference of its magnitude compared to the reference
  * \return 1 if big peak, -1 if too small , otherwise return 0
  */
-static int ComparePeak(sfloat fRefHarmMag, SMS_Peak *pSpectralPeaks, int nCand,
+static int ComparePeak(sfloat fRefHarmMag, const SMS_Peak *pSpectralPeaks, int nCand,
                        sfloat fRefHarmMagDiffFromMax, int maxPeaks)
 {
     int iPeak;
@@ -154,8 +154,8 @@ static int CheckIfHarmonic(sfloat fFundFreq, SMS_HarmCandidate *pCHarmonic, int 
  * the top frequency boundary, return -2 if stop checking because it
  * found a really good one, return 1 if the peak is a good candidate
  */
-static int GoodCandidate(int iPeak, SMS_Peak *pSpectralPeaks, SMS_HarmCandidate *pCHarmonic,
-                         int nCand, SMS_PeakParams *pPeakParams, sfloat fRefFundamental)
+static int GoodCandidate(int iPeak, const SMS_Peak *pSpectralPeaks, SMS_HarmCandidate *pCHarmonic,
+                         int nCand, const SMS_PeakParams *pPeakParams, sfloat fRefFundamental)
 {
     sfloat fHarmFreq = 0.0,
            fRefHarmFreq = 0.0,
@@ -328,7 +328,7 @@ static int GetBestCandidate(SMS_HarmCandidate *pCHarmonic,
  * This really should only be for sms_analyzeFrame
  */
 void sms_harmDetection(SMS_AnalFrame *pFrame, sfloat fRefFundamental,
-                       SMS_PeakParams *pPeakParams)
+                       const SMS_PeakParams *pPeakParams)
 {
     int iPeak = -1, nGoodPeaks = 0, iCandidate, iBestCandidate;
     sfloat fLowestFreq, fHighestFreq, fPeakFreq=0;
