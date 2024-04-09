@@ -74,7 +74,12 @@ IF ( SMS_BUILD_DOCUMENTATION )
     COMMAND ${CMAKE_COMMAND} -E touch docs.done
     COMMENT "Generating SMS documentation"
     VERBATIM
-    )
+  )
+
+  INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html/
+    DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
+  )
+
 ENDIF()
 
 
