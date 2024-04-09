@@ -1,5 +1,5 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.9)
-PROJECT(libsms VERSION 1.0.1 DESCRIPTION "Spectral Modeling Synthesis")
+PROJECT(libsms VERSION 1.5.0 DESCRIPTION "Spectral Modeling Synthesis")
 
 INCLUDE(GNUInstallDirs)
 
