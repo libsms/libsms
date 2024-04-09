@@ -28,7 +28,7 @@
  * \param params pointer to parameter structure
  * \param header pointer to sms header
  */
-void sms_initModify(SMS_Header *header, SMS_ModifyParams *params)
+void sms_initModify(const SMS_Header *header, SMS_ModifyParams *params)
 {
         static int sizeEnvArray = 0;
         params->maxFreq = header->iMaxFreq;
@@ -188,7 +188,7 @@ void sms_transposeKeepEnv(SMS_Data *frame, sfloat transpositionFactor, int maxFr
  * Performs a modification on a SMS_Data object. The type of modification and any additional
  * parameters are specified in the given SMS_ModifyParams structure.
  */
-void sms_modify(SMS_Data *frame, SMS_ModifyParams *params)
+void sms_modify(SMS_Data *frame, const SMS_ModifyParams *params)
 {
 	if(params->doResGain)
                 sms_resGain(frame, params->resGain);

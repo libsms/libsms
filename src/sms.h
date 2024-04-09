@@ -733,13 +733,13 @@ void sms_PolarToRect(int sizeSpec, sfloat *pReal, const sfloat *pMag, const sflo
 
 void sms_spectrumRMS(int sizeMag, const sfloat *pInRect, sfloat *pOutMag);
 
-void sms_initModify( const SMS_Header *header, const SMS_ModifyParams *params);
+void sms_initModify( const SMS_Header *header, SMS_ModifyParams *params);
 
-void sms_initModifyParams( const SMS_ModifyParams *params);
+void sms_initModifyParams( SMS_ModifyParams *params);
 
-void sms_freeModify( const SMS_ModifyParams *params);
+void sms_freeModify( SMS_ModifyParams *params);
 
-void sms_modify( const SMS_Data *frame, const SMS_ModifyParams *params);
+void sms_modify( SMS_Data *frame, const SMS_ModifyParams *params);
 
 /***********************************************************************************/
 /************* debug functions: ******************************************************/
