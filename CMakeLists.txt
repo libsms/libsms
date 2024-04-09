@@ -6,6 +6,7 @@ INCLUDE(GNUInstallDirs)
 
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=incompatible-pointer-types -Werror=discarded-qualifiers")
 OPTION (SMS_BUILD_TOOLS "Build tools" ON)
+OPTION (SMS_BUILD_DOCUMENTATION "Build doxygen documentation" ON)
 set(CMAKE_VERBOSE_MAKEFILE "OFF" CACHE STRING "verbose builds")
 
 FIND_PACKAGE(PkgConfig REQUIRED)
@@ -56,6 +57,25 @@ MACRO(SMS_ADD_TOOL _name)
   TARGET_LINK_LIBRARIES(${_name} PRIVATE sms ${POPT_LIBRARIES} ${M_LIBRARIES})
   INSTALL(FILES man/${_name}.1 DESTINATION ${CMAKE_INSTALL_PREFIX}/man/man1)
 ENDMACRO()
+
+IF ( SMS_BUILD_DOCUMENTATION )
+  FIND_PACKAGE(Doxygen REQUIRED)
+  ADD_CUSTOM_TARGET(
+    docs ALL
+    DEPENDS docs.done
+  )
+
+  ADD_CUSTOM_COMMAND (
+    OUTPUT docs.done
+    COMMAND cp ${CMAKE_SOURCE_DIR}/doc/Doxyfile Doxyfile.cmade
+    COMMAND echo "GENERATE_XML = NO" >> Doxyfile.cmade
+    COMMAND echo "INPUT = \"${CMAKE_SOURCE_DIR}/src\" \"${CMAKE_SOURCE_DIR}/doc/maindoxypage.txt\"" >> Doxyfile.cmade
+    COMMAND ${DOXYGEN_EXECUTABLE} Doxyfile.cmade
+    COMMAND ${CMAKE_COMMAND} -E touch docs.done
+    COMMENT "Generating SMS documentation"
+    VERBATIM
+    )
+ENDIF()
 
 
 IF ( SMS_BUILD_TOOLS )
