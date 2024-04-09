@@ -7,6 +7,8 @@ INCLUDE(GNUInstallDirs)
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=incompatible-pointer-types -Werror=discarded-qualifiers")
 OPTION (SMS_BUILD_TOOLS "Build tools" ON)
 OPTION (SMS_BUILD_DOCUMENTATION "Build doxygen documentation" ON)
+OPTION (SMS_BUILD_PYTHONMODULE "Build python module" OFF)
+
 set(CMAKE_VERBOSE_MAKEFILE "OFF" CACHE STRING "verbose builds")
 
 FIND_PACKAGE(PkgConfig REQUIRED)
@@ -88,6 +90,66 @@ IF ( SMS_BUILD_TOOLS )
   SMS_ADD_TOOL(smsResample)
 ENDIF()
 
+
+IF ( SMS_BUILD_PYTHONMODULE )
+  message(FATAL_ERROR "Python module currently disabled")
+
+## SConstruct
+##    # check for python
+##
+##    # check for swig
+##    if not 'swig' in env['TOOLS']:
+##        print "The Python module cannot be built because swig was not found.\n"
+##        env['pythonmodule'] = False
+##
+##    # check for numpy
+##    try:
+##        import numpy
+##        try:
+##            numpy_include = numpy.get_include()
+##        except AttributeError:
+##            numpy_include = numpy.get_numpy_include()
+##    except ImportError:
+##        print "The Python module cannot be built because numpy was not found.\n"
+##        env['pythonmodule'] = False
+##
+##
+##    python_install_dir = os.path.join(distutils.sysconfig.get_python_lib(), "pysms")
+##    env.Alias('install', python_install_dir)
+##    env.InstallAs(os.path.join(python_install_dir, "__init__.py"), "python/pysms/__init__.py")
+##    env.InstallAs(os.path.join(python_install_dir, "analysis.py"), "python/pysms/analysis.py")
+##    env.InstallAs(os.path.join(python_install_dir, "synthesis.py"), "python/pysms/synthesis.py")
+##
+##    env.Append(SWIGFLAGS = ['-python'])
+##    for lib_path in python_lib_path:
+##        env.Append(LIBPATH = lib_path)
+##    for inc_path in python_inc_path:
+##        env.Append(CPPPATH = inc_path)
+##    env.Append(CPPPATH = numpy_include)
+##    env.Append(CPPPATH = 'src')
+##
+##    # create the python wrapper using SWIG
+##    python_wrapper = env.SharedObject('python/pysms/pysms.i')
+##    sms_sources.append(python_wrapper)
+##
+##    if get_platform() == "win32":
+##        env.Append(LIBS = [python_lib])
+##        env.SharedLibrary('python/pysms/pysms', sms_sources, SHLIBPREFIX='_', SHLIBSUFFIX='.pyd')
+##        env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms/pysms.py')
+##        env.InstallAs(os.path.join(python_install_dir, '_pysms.pyd'), 'python/pysms/_pysms.pyd')
+##    elif get_platform() == "darwin":
+##        env.Append(LIBS = ['python' + get_version()])
+##        env.Prepend(LINKFLAGS=['-framework', 'python'])
+##        env.LoadableModule('python/pysms/_pysms.so', sms_sources)
+##        env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms/pysms.py')
+##        env.InstallAs(os.path.join(python_install_dir, '_pysms.so'), 'python/pysms/_pysms.so')
+##    else: # linux
+##        env.Append(LIBS = ['python' + get_version()])
+##        env.SharedLibrary('python/pysms/pysms', sms_sources, SHLIBPREFIX='_')
+##        env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms/pysms.py')
+##        env.InstallAs(os.path.join(python_install_dir, '_pysms.so'), 'python/pysms/_pysms.so')
+##    env.Alias('install', python_install_dir)
+ENDIF()
 
 
 INSTALL(TARGETS sms
