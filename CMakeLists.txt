@@ -30,6 +30,7 @@ ADD_LIBRARY(sms SHARED
   src/spectrum.c
   src/cepstrum.c
   src/fixTracks.c
+  src/modify.c
   src/transforms.c
   src/filters.c
   src/tables.c
