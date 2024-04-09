@@ -9,28 +9,28 @@ set(CMAKE_VERBOSE_MAKEFILE "OFF" CACHE STRING "verbose builds")
 
 
 ADD_LIBRARY(sms SHARED
-    src/sms.c
-    src/analysis.c
-    src/synthesis.c
-    src/sineSynth.c
-    src/peakDetection.c
-    src/harmDetection.c
-    src/peakContinuation.c
-    src/stocAnalysis.c
-    src/residual.c
-    src/spectralApprox.c
-    src/spectrum.c
-    src/cepstrum.c
-    src/fixTracks.c
-    src/transforms.c
-    src/filters.c
-    src/tables.c
-    src/windows.c
-    src/fileIO.c
-    src/soundIO.c
-    src/OOURA.c
-    src/SFMT.c
-  )
+  src/sms.c
+  src/analysis.c
+  src/synthesis.c
+  src/sineSynth.c
+  src/peakDetection.c
+  src/harmDetection.c
+  src/peakContinuation.c
+  src/stocAnalysis.c
+  src/residual.c
+  src/spectralApprox.c
+  src/spectrum.c
+  src/cepstrum.c
+  src/fixTracks.c
+  src/transforms.c
+  src/filters.c
+  src/tables.c
+  src/windows.c
+  src/fileIO.c
+  src/soundIO.c
+  src/OOURA.c
+  src/SFMT.c
+)
 TARGET_INCLUDE_DIRECTORIES(sms PRIVATE src)
 
 SET_TARGET_PROPERTIES(sms PROPERTIES VERSION ${PROJECT_VERSION})
