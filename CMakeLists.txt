@@ -3,13 +3,11 @@ PROJECT(libsms VERSION 1.5.0 DESCRIPTION "Spectral Modeling Synthesis")
 
 INCLUDE(GNUInstallDirs)
 
-
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=incompatible-pointer-types -Werror=discarded-qualifiers")
+
 OPTION (SMS_BUILD_TOOLS "Build tools" ON)
 OPTION (SMS_BUILD_DOCUMENTATION "Build doxygen documentation" ON)
 OPTION (SMS_BUILD_PYTHONMODULE "Build python module" OFF)
-
-set(CMAKE_VERBOSE_MAKEFILE "OFF" CACHE STRING "verbose builds")
 
 FIND_PACKAGE(PkgConfig REQUIRED)
 
