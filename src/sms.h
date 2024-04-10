@@ -31,6 +31,8 @@
 #include <strings.h>
 #include <sndfile.h>
 
+#include <sms_export.h>
+
 #define SMS_VERSION 1.15 /*!< \brief version control number */
 
 #define SMS_MAX_NPEAKS 400    /*!< \brief maximum number of peaks */
@@ -571,19 +573,19 @@ enum SMS_FRAME_STATUS
 #define LOG10 2.3025850929940459      /*!< natural logarithm of 10 */
 #define EXP 2.7182818284590451        /*!< Eurler's number */
 
-sfloat sms_magToDB(sfloat x);
-sfloat sms_dBToMag(sfloat x);
-void sms_arrayMagToDB(int sizeArray, sfloat *pArray);
-void sms_arrayDBToMag(int sizeArray, sfloat *pArray);
-void sms_setMagThresh(sfloat x);
-sfloat sms_rms ( int sizeArray, sfloat *pArray );
-sfloat sms_sine (sfloat fTheta);
-sfloat sms_sinc (sfloat fTheta);
-sfloat sms_random ( void );
-int sms_power2(int n);
+SMS_EXPORT sfloat sms_magToDB(sfloat x);
+SMS_EXPORT sfloat sms_dBToMag(sfloat x);
+SMS_EXPORT void sms_arrayMagToDB(int sizeArray, sfloat *pArray);
+SMS_EXPORT void sms_arrayDBToMag(int sizeArray, sfloat *pArray);
+SMS_EXPORT void sms_setMagThresh(sfloat x);
+SMS_EXPORT sfloat sms_rms ( int sizeArray, sfloat *pArray );
+SMS_EXPORT sfloat sms_sine (sfloat fTheta);
+SMS_EXPORT sfloat sms_sinc (sfloat fTheta);
+SMS_EXPORT sfloat sms_random ( void );
+SMS_EXPORT int sms_power2(int n);
 
-sfloat sms_scalarTempered( sfloat x);
-void sms_arrayScalarTempered( int sizeArray, sfloat *pArray);
+SMS_EXPORT sfloat sms_scalarTempered( sfloat x);
+SMS_EXPORT void sms_arrayScalarTempered( int sizeArray, sfloat *pArray);
 
 #ifndef MAX
 /*! \brief returns the maximum of a and b */
@@ -596,164 +598,164 @@ void sms_arrayScalarTempered( int sizeArray, sfloat *pArray);
 /*! \} */
 
 /* function declarations */
-int sms_analyze(int sizeWaveform, const sfloat *pWaveform, SMS_Data *pSmsFrame, SMS_AnalParams *pAnalParams);
+SMS_EXPORT int sms_analyze(int sizeWaveform, const sfloat *pWaveform, SMS_Data *pSmsFrame, SMS_AnalParams *pAnalParams);
 
-void sms_analyzeFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams, sfloat fRefFundamental);
+SMS_EXPORT void sms_analyzeFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams, sfloat fRefFundamental);
 
-int sms_init(void);
+SMS_EXPORT int sms_init(void);
 
-void sms_free(void);
+SMS_EXPORT void sms_free(void);
 
-int sms_initAnalysis( SMS_AnalParams *pAnalParams, const SMS_SndHeader *pSoundHeader);
+SMS_EXPORT int sms_initAnalysis( SMS_AnalParams *pAnalParams, const SMS_SndHeader *pSoundHeader);
 
-void sms_initAnalParams( SMS_AnalParams *pAnalParams);
+SMS_EXPORT void sms_initAnalParams( SMS_AnalParams *pAnalParams);
 
-void sms_initSynthParams( SMS_SynthParams *synthParams);
+SMS_EXPORT void sms_initSynthParams( SMS_SynthParams *synthParams);
 
-int sms_initSynth( const SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams);
+SMS_EXPORT int sms_initSynth( const SMS_Header *pSmsHeader, SMS_SynthParams *pSynthParams);
 
-int sms_changeSynthHop( SMS_SynthParams *pSynthParams, int sizeHop);
+SMS_EXPORT int sms_changeSynthHop( SMS_SynthParams *pSynthParams, int sizeHop);
 
-void sms_freeAnalysis( SMS_AnalParams *pAnalParams);
+SMS_EXPORT void sms_freeAnalysis( SMS_AnalParams *pAnalParams);
 
-void sms_freeSynth( SMS_SynthParams *pSynthParams);
+SMS_EXPORT void sms_freeSynth( SMS_SynthParams *pSynthParams);
 
-void sms_fillSoundBuffer(int sizeWaveform, const sfloat *pWaveform, SMS_AnalParams *pAnalParams);
+SMS_EXPORT void sms_fillSoundBuffer(int sizeWaveform, const sfloat *pWaveform, SMS_AnalParams *pAnalParams);
 
-void sms_windowCentered(int sizeWindow, const sfloat *pWaveform, const sfloat *pWindow, int sizeFft, sfloat *pFftBuffer);
+SMS_EXPORT void sms_windowCentered(int sizeWindow, const sfloat *pWaveform, const sfloat *pWindow, int sizeFft, sfloat *pFftBuffer);
 
-void sms_getWindow(int sizeWindow, sfloat *pWindow, int iWindowType);
+SMS_EXPORT void sms_getWindow(int sizeWindow, sfloat *pWindow, int iWindowType);
 
-void sms_scaleWindow(int sizeWindow, sfloat *pWindow);
+SMS_EXPORT void sms_scaleWindow(int sizeWindow, sfloat *pWindow);
 
-int sms_spectrum(int sizeWindow, const sfloat *pWaveform, const sfloat *pWindow, int sizeMag, sfloat *pMag, sfloat *pPhase, sfloat *pFftBuffer);
+SMS_EXPORT int sms_spectrum(int sizeWindow, const sfloat *pWaveform, const sfloat *pWindow, int sizeMag, sfloat *pMag, sfloat *pPhase, sfloat *pFftBuffer);
 
-int sms_invSpectrum(int sizeWaveform, sfloat *pWaveform, const sfloat *pWindow, int sizeMag, const sfloat *pMag, const sfloat *pPhase, sfloat *pFftBuffer);
+SMS_EXPORT int sms_invSpectrum(int sizeWaveform, sfloat *pWaveform, const sfloat *pWindow, int sizeMag, const sfloat *pMag, const sfloat *pPhase, sfloat *pFftBuffer);
 
-/* \todo remove this once invSpectrum is completely implemented */
-int sms_invQuickSpectrumW( const sfloat *pFMagSpectrum, const sfloat *pFPhaseSpectrum, int sizeFft, sfloat *pFWaveform, int sizeWave, const sfloat *pFWindow, sfloat *pFftBuffer);
+SMS_EXPORT /* \todo remove this once invSpectrum is completely implemented */
+SMS_EXPORT int sms_invQuickSpectrumW( const sfloat *pFMagSpectrum, const sfloat *pFPhaseSpectrum, int sizeFft, sfloat *pFWaveform, int sizeWave, const sfloat *pFWindow, sfloat *pFftBuffer);
 
-int sms_spectralApprox( const sfloat *pSpec1, int sizeSpec1, int sizeSpec1Used, sfloat *pSpec2, int sizeSpec2, int nCoefficients, sfloat *envelope);
+SMS_EXPORT int sms_spectralApprox( const sfloat *pSpec1, int sizeSpec1, int sizeSpec1Used, sfloat *pSpec2, int sizeSpec2, int nCoefficients, sfloat *envelope);
 
-int sms_spectrumMag(int sizeWindow, const sfloat *pWaveform, const sfloat *pWindow, int sizeMag, sfloat *pMag, sfloat *pFftBuffer);
+SMS_EXPORT int sms_spectrumMag(int sizeWindow, const sfloat *pWaveform, const sfloat *pWindow, int sizeMag, sfloat *pMag, sfloat *pFftBuffer);
 
-void sms_dCepstrum(int sizeCepstrum, sfloat *pCepstrum, int sizeFreq, const sfloat *pFreq, const sfloat *pMag, sfloat fLambda, int iSamplingRate);
+SMS_EXPORT void sms_dCepstrum(int sizeCepstrum, sfloat *pCepstrum, int sizeFreq, const sfloat *pFreq, const sfloat *pMag, sfloat fLambda, int iSamplingRate);
 
-void sms_dCepstrumEnvelope(int sizeCepstrum, const sfloat *pCepstrum, int sizeEnv, sfloat *pEnv);
+SMS_EXPORT void sms_dCepstrumEnvelope(int sizeCepstrum, const sfloat *pCepstrum, int sizeEnv, sfloat *pEnv);
 
-void sms_spectralEnvelope( SMS_Data *pSmsData, const SMS_SEnvParams *pSpecEnvParams);
+SMS_EXPORT void sms_spectralEnvelope( SMS_Data *pSmsData, const SMS_SEnvParams *pSpecEnvParams);
 
-int sms_sizeNextWindow(int iCurrentFrame, const SMS_AnalParams *pAnalParams);
+SMS_EXPORT int sms_sizeNextWindow(int iCurrentFrame, const SMS_AnalParams *pAnalParams);
 
-sfloat sms_fundDeviation( const SMS_AnalParams *pAnalParams, int iCurrentFrame);
+SMS_EXPORT sfloat sms_fundDeviation( const SMS_AnalParams *pAnalParams, int iCurrentFrame);
 
-int sms_detectPeaks(int sizeSpec, const sfloat *pFMag, const sfloat *pPhase, SMS_Peak *pSpectralPeaks, const SMS_PeakParams *pPeakParams);
+SMS_EXPORT int sms_detectPeaks(int sizeSpec, const sfloat *pFMag, const sfloat *pPhase, SMS_Peak *pSpectralPeaks, const SMS_PeakParams *pPeakParams);
 
-void sms_harmDetection( SMS_AnalFrame *pFrame, sfloat fRefFundamental, const SMS_PeakParams *pPeakParams);
+SMS_EXPORT void sms_harmDetection( SMS_AnalFrame *pFrame, sfloat fRefFundamental, const SMS_PeakParams *pPeakParams);
 
-int sms_peakContinuation(int iFrame, const SMS_AnalParams *pAnalParams);
+SMS_EXPORT int sms_peakContinuation(int iFrame, const SMS_AnalParams *pAnalParams);
 
-sfloat sms_preEmphasis(sfloat fInput, SMS_AnalParams *pAnalParams);
+SMS_EXPORT sfloat sms_preEmphasis(sfloat fInput, SMS_AnalParams *pAnalParams);
 
-sfloat sms_deEmphasis(sfloat fInput, SMS_SynthParams *pSynthParams);
+SMS_EXPORT sfloat sms_deEmphasis(sfloat fInput, SMS_SynthParams *pSynthParams);
 
-void sms_cleanTracks(int iCurrentFrame, SMS_AnalParams *pAnalParams);
+SMS_EXPORT void sms_cleanTracks(int iCurrentFrame, SMS_AnalParams *pAnalParams);
 
-void sms_scaleDet( const sfloat *pSynthBuffer, const sfloat *pOriginalBuffer, sfloat *pSinAmp, const SMS_AnalParams *pAnalParams, int nTracks);
+SMS_EXPORT void sms_scaleDet( const sfloat *pSynthBuffer, const sfloat *pOriginalBuffer, sfloat *pSinAmp, const SMS_AnalParams *pAnalParams, int nTracks);
 
-int sms_prepSine(int nTableSize);
+SMS_EXPORT int sms_prepSine(int nTableSize);
 
-int sms_prepSinc(int nTableSize);
+SMS_EXPORT int sms_prepSinc(int nTableSize);
 
-void sms_clearSine(void);
+SMS_EXPORT void sms_clearSine(void);
 
-void sms_clearSinc(void);
+SMS_EXPORT void sms_clearSinc(void);
 
-void sms_synthesize( SMS_Data *pSmsFrame, sfloat *pSynthesis, SMS_SynthParams *pSynthParams);
+SMS_EXPORT void sms_synthesize( SMS_Data *pSmsFrame, sfloat *pSynthesis, SMS_SynthParams *pSynthParams);
 
-void sms_sineSynthFrame( const SMS_Data *pSmsFrame, sfloat *pBuffer, int sizeBuffer, SMS_Data *pLastFrame, int iSamplingRate);
+SMS_EXPORT void sms_sineSynthFrame( const SMS_Data *pSmsFrame, sfloat *pBuffer, int sizeBuffer, SMS_Data *pLastFrame, int iSamplingRate);
 
-void sms_initHeader( SMS_Header *pSmsHeader);
+SMS_EXPORT void sms_initHeader( SMS_Header *pSmsHeader);
 
-int sms_getHeader( const char *pChFileName, SMS_Header **ppSmsHeader, FILE **ppInputFile);
+SMS_EXPORT int sms_getHeader( const char *pChFileName, SMS_Header **ppSmsHeader, FILE **ppInputFile);
 
-void sms_fillHeader( SMS_Header *pSmsHeader, const SMS_AnalParams *pAnalParams, const char *pProgramString);
+SMS_EXPORT void sms_fillHeader( SMS_Header *pSmsHeader, const SMS_AnalParams *pAnalParams, const char *pProgramString);
 
-int sms_writeHeader( const char *pFileName, SMS_Header *pSmsHeader, FILE **ppOutSmsFile);
+SMS_EXPORT int sms_writeHeader( const char *pFileName, SMS_Header *pSmsHeader, FILE **ppOutSmsFile);
 
-int sms_writeFile( FILE *pSmsFile, SMS_Header *pSmsHeader);
+SMS_EXPORT int sms_writeFile( FILE *pSmsFile, SMS_Header *pSmsHeader);
 
-int sms_initFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams, int sizeWindow);
+SMS_EXPORT int sms_initFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams, int sizeWindow);
 
-int sms_clearAnalysisFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams);
+SMS_EXPORT int sms_clearAnalysisFrame(int iCurrentFrame, SMS_AnalParams *pAnalParams);
 
-int sms_allocFrame( SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase, int stochType, int nEnvCoeff);
+SMS_EXPORT int sms_allocFrame( SMS_Data *pSmsFrame, int nTracks, int nCoeff, int iPhase, int stochType, int nEnvCoeff);
 
-int sms_allocFrameH( const SMS_Header *pSmsHeader, SMS_Data *pSmsFrame);
+SMS_EXPORT int sms_allocFrameH( const SMS_Header *pSmsHeader, SMS_Data *pSmsFrame);
 
-int sms_getFrame( FILE *pInputFile, SMS_Header *pSmsHeader, int iFrame, SMS_Data *pSmsFrame);
+SMS_EXPORT int sms_getFrame( FILE *pInputFile, SMS_Header *pSmsHeader, int iFrame, SMS_Data *pSmsFrame);
 
-int sms_writeFrame( FILE *pSmsFile, const SMS_Header *pSmsHeader, const SMS_Data *pSmsFrame);
+SMS_EXPORT int sms_writeFrame( FILE *pSmsFile, const SMS_Header *pSmsHeader, const SMS_Data *pSmsFrame);
 
-void sms_freeFrame( SMS_Data *pSmsFrame);
+SMS_EXPORT void sms_freeFrame( SMS_Data *pSmsFrame);
 
-void sms_clearFrame( SMS_Data *pSmsFrame);
+SMS_EXPORT void sms_clearFrame( SMS_Data *pSmsFrame);
 
-void sms_copyFrame( SMS_Data *pCopySmsFrame, const SMS_Data *pOriginalSmsFrame);
+SMS_EXPORT void sms_copyFrame( SMS_Data *pCopySmsFrame, const SMS_Data *pOriginalSmsFrame);
 
-int sms_frameSizeB( const SMS_Header *pSmsHeader);
+SMS_EXPORT int sms_frameSizeB( const SMS_Header *pSmsHeader);
 
-int sms_residual(int sizeWindow, const sfloat *pSynthesis, const sfloat *pOriginal, sfloat *pResidual, const sfloat *pWindow);
+SMS_EXPORT int sms_residual(int sizeWindow, const sfloat *pSynthesis, const sfloat *pOriginal, sfloat *pResidual, const sfloat *pWindow);
 
-void sms_filterHighPass(int sizeResidual, sfloat *pResidual, int iSamplingRate);
+SMS_EXPORT void sms_filterHighPass(int sizeResidual, sfloat *pResidual, int iSamplingRate);
 
-int sms_stocAnalysis(int sizeWindow, const sfloat *pResidual, const sfloat *pWindow, SMS_Data *pSmsFrame, SMS_AnalParams *pAnalParams);
+SMS_EXPORT int sms_stocAnalysis(int sizeWindow, const sfloat *pResidual, const sfloat *pWindow, SMS_Data *pSmsFrame, SMS_AnalParams *pAnalParams);
 
-void sms_interpolateFrames( const SMS_Data *pSmsFrame1, const SMS_Data *pSmsFrame2, SMS_Data *pSmsFrameOut, sfloat fInterpFactor);
+SMS_EXPORT void sms_interpolateFrames( const SMS_Data *pSmsFrame1, const SMS_Data *pSmsFrame2, SMS_Data *pSmsFrameOut, sfloat fInterpFactor);
 
-int sms_openSF( const char *pChInputSoundFile, SMS_SndHeader *pSoundHeader);
+SMS_EXPORT int sms_openSF( const char *pChInputSoundFile, SMS_SndHeader *pSoundHeader);
 
-void sms_closeSF();
+SMS_EXPORT void sms_closeSF();
 
-int sms_getSound( const SMS_SndHeader *pSoundHeader, long sizeSound, sfloat *pSound, long offset, SMS_AnalParams *pAnalParams);
+SMS_EXPORT int sms_getSound( const SMS_SndHeader *pSoundHeader, long sizeSound, sfloat *pSound, long offset, SMS_AnalParams *pAnalParams);
 
-int sms_createSF( const char *pChOutputSoundFile, int iSamplingRate, int iType);
+SMS_EXPORT int sms_createSF( const char *pChOutputSoundFile, int iSamplingRate, int iType);
 
-void sms_writeSound( const sfloat *pBuffer, int sizeBuffer);
+SMS_EXPORT void sms_writeSound( const sfloat *pBuffer, int sizeBuffer);
 
-void sms_writeSF(void);
+SMS_EXPORT void sms_writeSF(void);
 
-void sms_fft(int sizeFft, sfloat *pArray);
+SMS_EXPORT void sms_fft(int sizeFft, sfloat *pArray);
 
-void sms_ifft(int sizeFft, sfloat *pArray);
+SMS_EXPORT void sms_ifft(int sizeFft, sfloat *pArray);
 
-void sms_RectToPolar(int sizeSpec, const sfloat *pReal, sfloat *pMag, sfloat *pPhase);
+SMS_EXPORT void sms_RectToPolar(int sizeSpec, const sfloat *pReal, sfloat *pMag, sfloat *pPhase);
 
-void sms_PolarToRect(int sizeSpec, sfloat *pReal, const sfloat *pMag, const sfloat *pPhase);
+SMS_EXPORT void sms_PolarToRect(int sizeSpec, sfloat *pReal, const sfloat *pMag, const sfloat *pPhase);
 
-void sms_spectrumRMS(int sizeMag, const sfloat *pInRect, sfloat *pOutMag);
+SMS_EXPORT void sms_spectrumRMS(int sizeMag, const sfloat *pInRect, sfloat *pOutMag);
 
-void sms_initModify( const SMS_Header *header, SMS_ModifyParams *params);
+SMS_EXPORT void sms_initModify( const SMS_Header *header, SMS_ModifyParams *params);
 
-void sms_initModifyParams( SMS_ModifyParams *params);
+SMS_EXPORT void sms_initModifyParams( SMS_ModifyParams *params);
 
-void sms_freeModify( SMS_ModifyParams *params);
+SMS_EXPORT void sms_freeModify( SMS_ModifyParams *params);
 
-void sms_modify( SMS_Data *frame, const SMS_ModifyParams *params);
+SMS_EXPORT void sms_modify( SMS_Data *frame, const SMS_ModifyParams *params);
 
-/***********************************************************************************/
-/************* debug functions: ******************************************************/
+SMS_EXPORT /***********************************************************************************/
+SMS_EXPORT /************* debug functions: ******************************************************/
 
-int sms_createDebugFile ( const SMS_AnalParams *pAnalParams);
+SMS_EXPORT int sms_createDebugFile ( const SMS_AnalParams *pAnalParams);
 
-void sms_writeDebugData ( const sfloat *pBuffer1, const sfloat *pBuffer2, const sfloat *pBuffer3, int sizeBuffer);
+SMS_EXPORT void sms_writeDebugData ( const sfloat *pBuffer1, const sfloat *pBuffer2, const sfloat *pBuffer3, int sizeBuffer);
 
-void sms_writeDebugFile ( void );
+SMS_EXPORT void sms_writeDebugFile ( void );
 
-void sms_error( const char *pErrorMessage );
+SMS_EXPORT void sms_error( const char *pErrorMessage );
 
-int sms_errorCheck( void );
+SMS_EXPORT int sms_errorCheck( void );
 
-char* sms_errorString( void );
+SMS_EXPORT char* sms_errorString( void );
 
 #endif /* _SMS_H */
