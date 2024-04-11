@@ -10,9 +10,19 @@ INCLUDE(GenerateExportHeader)
 
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=incompatible-pointer-types -Werror=discarded-qualifiers")
 
+# check for doxygen and python to get default values whether we want to build docs resp. pysms
+FIND_PACKAGE(Doxygen COMPONENTS dot)
+FIND_PACKAGE(SWIG COMPONENTS python)
+FIND_PACKAGE(Python COMPONENTS Development NumPy)
+
+set(_want_python OFF)
+IF(PYTHON_FOUND AND SWIG_FOUND)
+  set(_want_python ON)
+ENDIF()
+
 OPTION (SMS_BUILD_TOOLS "Build SMS tools" ON)
-OPTION (SMS_BUILD_DOCUMENTATION "Build SMS documentation using doxygen" ON)
-OPTION (SMS_BUILD_PYTHONMODULE "Build the SMS Python module" ON)
+OPTION (SMS_BUILD_DOCUMENTATION "Build SMS documentation using doxygen" ${DOXYGEN_FOUND})
+OPTION (SMS_BUILD_PYTHONMODULE "Build the SMS Python module" ${_want_python})
 OPTION (SMS_ENABLE_TWISTER "Enable SIMD-oriented Fast Mersenne Twister algorithm for random number generation" ON)
 
 FIND_PACKAGE(PkgConfig REQUIRED)
@@ -85,7 +95,9 @@ MACRO(SMS_ADD_TOOL _name)
 ENDMACRO()
 
 IF ( SMS_BUILD_DOCUMENTATION )
-  FIND_PACKAGE(Doxygen REQUIRED dot)
+  FIND_PACKAGE(Doxygen REQUIRED
+    COMPONENTS dot
+  )
   ADD_CUSTOM_TARGET(
     docs ALL
     DEPENDS docs.done
@@ -121,8 +133,12 @@ ENDIF()
 
 
 IF ( SMS_BUILD_PYTHONMODULE )
-  FIND_PACKAGE(SWIG REQUIRED)
-  FIND_PACKAGE(Python COMPONENTS Interpreter Development NumPy)
+  FIND_PACKAGE(SWIG REQUIRED
+    COMPONENTS python
+  )
+  FIND_PACKAGE(Python REQUIRED
+    COMPONENTS Development NumPy
+  )
   INCLUDE(${SWIG_USE_FILE})
   SWIG_ADD_LIBRARY(pysms
     LANGUAGE python
