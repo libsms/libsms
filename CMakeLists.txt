@@ -121,8 +121,6 @@ ENDIF()
 
 
 IF ( SMS_BUILD_PYTHONMODULE )
-  MESSAGE(WARNING "Python module experimental")
-
   FIND_PACKAGE(SWIG REQUIRED)
   FIND_PACKAGE(Python COMPONENTS Interpreter Development NumPy)
   INCLUDE(${SWIG_USE_FILE})
