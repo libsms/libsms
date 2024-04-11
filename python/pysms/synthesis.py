@@ -15,7 +15,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import numpy as np
-import pysms
+try:
+    from . import _pysms as pysms
+except ModuleNotFoundError as e:
+    import pysms
 
 def synthesize(frames, sms_header, synth_type=pysms.SMS_STYPE_ALL,
                det_synth_type=pysms.SMS_DET_IFFT, 

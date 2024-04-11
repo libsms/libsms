@@ -24,6 +24,10 @@ from numpy import zeros as np_zeros
 def zeros(n, type='float32'):
     return(np_zeros(n, type))
 
-from analysis import analyze
-from synthesis import synthesize
+try:
+    from .analysis import analyze
+    from .synthesis import synthesize
+except ModuleNotFoundError:
+    from analysis import analyze
+    from synthesis import synthesize
 

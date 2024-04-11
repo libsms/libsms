@@ -14,8 +14,11 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import pysms
 import numpy as np
+try:
+    from . import _pysms as pysms
+except ModuleNotFoundError as e:
+    import pysms
 
 def analyze(audio_file, frame_rate=300, window_size=1001, window_type=pysms.SMS_WIN_HAMMING,
             num_stoc_coeffs=128, default_fundamental=100, highest_freq=12000, 
