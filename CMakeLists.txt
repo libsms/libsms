@@ -1,4 +1,8 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.12)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.13)
+IF(POLICY CMP0086)
+  CMAKE_POLICY (SET CMP0086 NEW)
+ENDIF()
+
 PROJECT(libsms VERSION 1.5.0 DESCRIPTION "Spectral Modeling Synthesis")
 
 INCLUDE(GNUInstallDirs)
@@ -117,63 +121,29 @@ ENDIF()
 
 
 IF ( SMS_BUILD_PYTHONMODULE )
-  message(FATAL_ERROR "Python module currently disabled")
+  MESSAGE(WARNING "Python module experimental")
 
-## SConstruct
-##    # check for python
-##
-##    # check for swig
-##    if not 'swig' in env['TOOLS']:
-##        print "The Python module cannot be built because swig was not found.\n"
-##        env['pythonmodule'] = False
-##
-##    # check for numpy
-##    try:
-##        import numpy
-##        try:
-##            numpy_include = numpy.get_include()
-##        except AttributeError:
-##            numpy_include = numpy.get_numpy_include()
-##    except ImportError:
-##        print "The Python module cannot be built because numpy was not found.\n"
-##        env['pythonmodule'] = False
-##
-##
-##    python_install_dir = os.path.join(distutils.sysconfig.get_python_lib(), "pysms")
-##    env.Alias('install', python_install_dir)
-##    env.InstallAs(os.path.join(python_install_dir, "__init__.py"), "python/pysms/__init__.py")
-##    env.InstallAs(os.path.join(python_install_dir, "analysis.py"), "python/pysms/analysis.py")
-##    env.InstallAs(os.path.join(python_install_dir, "synthesis.py"), "python/pysms/synthesis.py")
-##
-##    env.Append(SWIGFLAGS = ['-python'])
-##    for lib_path in python_lib_path:
-##        env.Append(LIBPATH = lib_path)
-##    for inc_path in python_inc_path:
-##        env.Append(CPPPATH = inc_path)
-##    env.Append(CPPPATH = numpy_include)
-##    env.Append(CPPPATH = 'src')
-##
-##    # create the python wrapper using SWIG
-##    python_wrapper = env.SharedObject('python/pysms/pysms.i')
-##    sms_sources.append(python_wrapper)
-##
-##    if get_platform() == "win32":
-##        env.Append(LIBS = [python_lib])
-##        env.SharedLibrary('python/pysms/pysms', sms_sources, SHLIBPREFIX='_', SHLIBSUFFIX='.pyd')
-##        env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms/pysms.py')
-##        env.InstallAs(os.path.join(python_install_dir, '_pysms.pyd'), 'python/pysms/_pysms.pyd')
-##    elif get_platform() == "darwin":
-##        env.Append(LIBS = ['python' + get_version()])
-##        env.Prepend(LINKFLAGS=['-framework', 'python'])
-##        env.LoadableModule('python/pysms/_pysms.so', sms_sources)
-##        env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms/pysms.py')
-##        env.InstallAs(os.path.join(python_install_dir, '_pysms.so'), 'python/pysms/_pysms.so')
-##    else: # linux
-##        env.Append(LIBS = ['python' + get_version()])
-##        env.SharedLibrary('python/pysms/pysms', sms_sources, SHLIBPREFIX='_')
-##        env.InstallAs(os.path.join(python_install_dir, 'pysms.py'), 'python/pysms/pysms.py')
-##        env.InstallAs(os.path.join(python_install_dir, '_pysms.so'), 'python/pysms/_pysms.so')
-##    env.Alias('install', python_install_dir)
+  FIND_PACKAGE(SWIG REQUIRED)
+  FIND_PACKAGE(Python COMPONENTS Interpreter Development NumPy)
+  INCLUDE(${SWIG_USE_FILE})
+  SWIG_ADD_LIBRARY(pysms
+    LANGUAGE python
+    SOURCES python/pysms/pysms.i
+  )
+  SET_PROPERTY(TARGET pysms PROPERTY SWIG_COMPILE_DEFINITIONS SMS_EXPORT="")
+  TARGET_INCLUDE_DIRECTORIES(pysms PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+  TARGET_INCLUDE_DIRECTORIES(pysms PRIVATE ${CMAKE_SOURCE_DIR}/python/pysms)
+  TARGET_LINK_LIBRARIES(pysms PRIVATE sms ${Python_LIBRARIES})
+
+  INSTALL(TARGETS pysms
+    DESTINATION ${Python_SITEARCH}/pysms
+  )
+  INSTALL(FILES
+      python/pysms/__init__.py
+      python/pysms/analysis.py
+      python/pysms/synthesis.py
+    DESTINATION ${Python_SITEARCH}/pysms
+  )
 ENDIF()
 
 

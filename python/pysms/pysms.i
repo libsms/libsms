@@ -19,9 +19,11 @@
  */
 
 %module (docstring="Python SWIG-wrapped module of libsms") pysms
+
 %{
 #define SWIG_FILE_WITH_INIT
 #include "../../src/sms.h"
+#include "../../src/sms_export.h"
 %}
 
 %include "numpy.i" /* numpy typemaps */
@@ -74,7 +76,10 @@ The mag/phase array must be greater than half the size of waveform/window.
 The function definition below was automatically created by swig, but as this function is
 typemapped to use numpy arrays, it should be ignored.
 """) sms_spectrum;
-%include "../../src/sms.h" /* all globally declared libsms stuff */
+
+%include "sms_export.h" /* all globally declared libsms stuff */
+%include "sms.h" /* all globally declared libsms stuff */
+
 
 /* overload the functions that will be wrapped to fit numpy typmaps (defined below)
  * by renaming the wrapped names back to originals */
