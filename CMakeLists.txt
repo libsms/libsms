@@ -6,10 +6,10 @@ INCLUDE(GenerateExportHeader)
 
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=incompatible-pointer-types -Werror=discarded-qualifiers")
 
-OPTION (SMS_BUILD_TOOLS "Build tools" ON)
-OPTION (SMS_BUILD_DOCUMENTATION "Build doxygen documentation" ON)
-OPTION (SMS_BUILD_PYTHONMODULE "Build python module" OFF)
-OPTION (SMS_ENABLE_TWISTER "enable mersenne twister" OFF)
+OPTION (SMS_BUILD_TOOLS "Build SMS tools" ON)
+OPTION (SMS_BUILD_DOCUMENTATION "Build SMS documentation using doxygen" ON)
+OPTION (SMS_BUILD_PYTHONMODULE "Build the SMS Python module" ON)
+OPTION (SMS_ENABLE_TWISTER "Enable SIMD-oriented Fast Mersenne Twister algorithm for random number generation" ON)
 
 FIND_PACKAGE(PkgConfig REQUIRED)
 
