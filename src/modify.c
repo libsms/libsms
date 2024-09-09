@@ -1,24 +1,24 @@
-/* 
+/*
  * Copyright (c) 2009 John Glover, National University of Ireland, Maynooth
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- * 
+ *
  */
 
 /*! \file modify.c
- * \brief modify sms data 
+ * \brief modify sms data
  */
 
 #include "sms.h"
@@ -28,7 +28,7 @@
  * \param params pointer to parameter structure
  * \param header pointer to sms header
  */
-void sms_initModify(SMS_Header *header, SMS_ModifyParams *params)
+void sms_initModify(const SMS_Header *header, SMS_ModifyParams *params)
 {
         static int sizeEnvArray = 0;
         params->maxFreq = header->iMaxFreq;
@@ -83,13 +83,13 @@ void sms_freeModify(SMS_ModifyParams *params)
 void sms_interpEnvelopes(int sizeEnv, sfloat *env1, sfloat *env2, float interpFactor)
 {
         if(sizeEnv <= 0)
-        {       
+        {
                 return;
         }
-        
+
         int i;
         float amp1, amp2;
-        
+
         for(i = 0; i < sizeEnv; i++)
         {
                 amp1 = env1[i];
@@ -100,7 +100,7 @@ void sms_interpEnvelopes(int sizeEnv, sfloat *env1, sfloat *env2, float interpFa
         }
 }
 
-/*! \brief apply the spectral envelope of 1 sound to another 
+/*! \brief apply the spectral envelope of 1 sound to another
  *
  * Changes the amplitude of spectral peaks in a target sound (pFreqs, pMags) to match those
  * in the envelope (pCepEnvFreqs, pCepEnvMags) of another, up to a maximum frequency of maxFreq.
@@ -114,7 +114,7 @@ void sms_applyEnvelope(int numPeaks, sfloat *pFreqs, sfloat *pMags, int sizeEnv,
 
 	int i, envPos;
         float frac, binSize = (float)maxFreq / (float)sizeEnv;
-        
+
         for(i = 0; i < numPeaks; i++)
 	{
                 /* convert peak freqs into bin positions for quicker envelope lookup */
@@ -131,7 +131,7 @@ void sms_applyEnvelope(int numPeaks, sfloat *pFreqs, sfloat *pMags, int sizeEnv,
 			        pMags[i] = ((1.0 - frac) * pEnvMags[envPos]) + (frac * pEnvMags[envPos+1]);
                         }
                         else
-                        {       
+                        {
                                 pMags[i] = pEnvMags[sizeEnv-1];
                         }
                 }
@@ -139,7 +139,7 @@ void sms_applyEnvelope(int numPeaks, sfloat *pFreqs, sfloat *pMags, int sizeEnv,
 		{
 			pMags[i] = 0;
 		}
-        
+
                 /* convert back to frequency values */
                 pFreqs[i] *= binSize;
 	}
@@ -147,7 +147,7 @@ void sms_applyEnvelope(int numPeaks, sfloat *pFreqs, sfloat *pMags, int sizeEnv,
 }
 
 /*! \brief scale the residual gain factor
- * 
+ *
  * \param frame pointer to sms data
  * \param gain factor to scale the residual
  */
@@ -183,19 +183,19 @@ void sms_transposeKeepEnv(SMS_Data *frame, sfloat transpositionFactor, int maxFr
 	sms_applyEnvelope(frame->nTracks, frame->pFSinFreq, frame->pFSinAmp, frame->nEnvCoeff, frame->pSpecEnv, maxFreq);
 }
 
-/*! \brief modify a frame (SMS_Data object) 
+/*! \brief modify a frame (SMS_Data object)
  *
  * Performs a modification on a SMS_Data object. The type of modification and any additional
  * parameters are specified in the given SMS_ModifyParams structure.
  */
-void sms_modify(SMS_Data *frame, SMS_ModifyParams *params)
+void sms_modify(SMS_Data *frame, const SMS_ModifyParams *params)
 {
 	if(params->doResGain)
                 sms_resGain(frame, params->resGain);
 
 	if(params->doTranspose)
                 sms_transpose(frame, params->transpose);
-	
+
 	if(params->doSinEnv)
 	{
 		if(params->sinEnvInterp < .00001) /* maintain original */
@@ -205,11 +205,10 @@ void sms_modify(SMS_Data *frame, SMS_ModifyParams *params)
 		{
 		    if(params->sinEnvInterp > .00001 && params->sinEnvInterp < .99999)
 			    sms_interpEnvelopes(params->sizeSinEnv, frame->pSpecEnv, params->sinEnv, params->sinEnvInterp);
-		   
+
 		    sms_applyEnvelope(frame->nTracks, frame->pFSinFreq, frame->pFSinAmp,
 				      params->sizeSinEnv, params->sinEnv, params->maxFreq);
 
 		}
 	}
 }
-

@@ -1,6 +1,6 @@
 /* -_-_-_-_-_-_-_-_-_-_-_-_-_-_- Ooura Real DFT -_-_-_-_-_-_-_-_-_-_-_-_-_-_ */
 /* Copyright notice:
-    This code comes from the "General Purpose FFT Package" that I obtained at 
+    This code comes from the "General Purpose FFT Package" that I obtained at
     the following website http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html
     It is exactly copied from the file fft4g.c, but I have changed the doubles to sfloats.
     Here is the copyright notice included in the package:
@@ -8,7 +8,7 @@
     Copyright(C) 1996-2001 Takuya OOURA
     email: ooura@mmm.t.u-tokyo.ac.jp
     download: http://momonga.t.u-tokyo.ac.jp/~ooura/fft.html
-    You may use, copy, modify this code for any purpose and 
+    You may use, copy, modify this code for any purpose and
     without fee. You may distribute this ORIGINAL package.
 
     The following is documentation of the algorithm included with the source code:
@@ -19,8 +19,8 @@
             R[k] = sum_j=0^n-1 a[j]*cos(2*pi*j*k/n), 0<=k<=n/2
             I[k] = sum_j=0^n-1 a[j]*sin(2*pi*j*k/n), 0<k<n/2
         <case2> IRDFT (excluding scale)
-            a[k] = (R[0] + R[n/2]*cos(pi*k))/2 + 
-                   sum_j=1^n/2-1 R[j]*cos(2*pi*j*k/n) + 
+            a[k] = (R[0] + R[n/2]*cos(pi*k))/2 +
+                   sum_j=1^n/2-1 R[j]*cos(2*pi*j*k/n) +
                    sum_j=1^n/2-1 I[j]*sin(2*pi*j*k/n), 0<=k<n
     [usage]
         <case1>
@@ -45,16 +45,16 @@
                                 a[1] = R[n/2]
         ip[0...*]      :work area for bit reversal (int *)
                         length of ip >= 2+sqrt(n/2)
-                        strictly, 
-                        length of ip >= 
+                        strictly,
+                        length of ip >=
                             2+(1<<(int)(log(n/2+0.5)/log(2))/2).
                         ip[0],ip[1] are pointers of the cos/sin table.
         w[0...n/2-1]   :cos/sin table (sfloat *)
                         w[],ip[] are initialized if ip[0] == 0.
     [remark]
-        Inverse of 
+        Inverse of
             rdft(n, 1, a, ip, w);
-        is 
+        is
             rdft(n, -1, a, ip, w);
             for (j = 0; j <= n - 1; j++) {
                 a[j] *= 2.0 / n;
@@ -68,13 +68,13 @@
 /* ! \brief OOURA Real / Inverse DFT algoriithm
  *
  * The source code contains documentation from
- * the original author. 
+ * the original author.
  */
 void rdft(int n, int isgn, sfloat *a, int *ip, sfloat *w)
 {
     int nw, nc;
     sfloat xi;
-    
+
     nw = ip[0];
     if (n > (nw << 2)) {
         nw = n >> 2;
@@ -114,7 +114,7 @@ void makewt(int nw, int *ip, sfloat *w)
 {
     int j, nwh;
     sfloat delta, x, y;
-    
+
     ip[0] = nw;
     ip[1] = 1;
     if (nw > 2) {
@@ -142,7 +142,7 @@ void makect(int nc, int *ip, sfloat *c)
 {
     int j, nch;
     sfloat delta;
-    
+
     ip[1] = nc;
     if (nc > 1) {
         nch = nc >> 1;
@@ -160,7 +160,7 @@ void bitrv2(int n, int *ip, sfloat *a)
 {
     int j, j1, k, k1, l, m, m2;
     sfloat xr, xi, yr, yi;
-    
+
     ip[0] = 0;
     l = n;
     m = 1;
@@ -259,7 +259,7 @@ void cftfsub(int n, sfloat *a, sfloat *w)
 {
     int j, j1, j2, j3, l;
     sfloat x0r, x0i, x1r, x1i, x2r, x2i, x3r, x3i;
-    
+
     l = 2;
     if (n > 8) {
         cft1st(n, a, w);
@@ -309,7 +309,7 @@ void cftbsub(int n, sfloat *a, sfloat *w)
 {
     int j, j1, j2, j3, l;
     sfloat x0r, x0i, x1r, x1i, x2r, x2i, x3r, x3i;
-    
+
     l = 2;
     if (n > 8) {
         cft1st(n, a, w);
@@ -360,7 +360,7 @@ void cft1st(int n, sfloat *a, sfloat *w)
     int j, k1, k2;
     sfloat wk1r, wk1i, wk2r, wk2i, wk3r, wk3i;
     sfloat x0r, x0i, x1r, x1i, x2r, x2i, x3r, x3i;
-    
+
     x0r = a[0] + a[2];
     x0i = a[1] + a[3];
     x1r = a[0] - a[2];
@@ -465,7 +465,7 @@ void cftmdl(int n, int l, sfloat *a, sfloat *w)
     int j, j1, j2, j3, k, k1, k2, m, m2;
     sfloat wk1r, wk1i, wk2r, wk2i, wk3r, wk3i;
     sfloat x0r, x0i, x1r, x1i, x2r, x2i, x3r, x3i;
-    
+
     m = l << 2;
     for (j = 0; j < l; j += 2) {
         j1 = j + l;
@@ -591,7 +591,7 @@ void rftfsub(int n, sfloat *a, int nc, sfloat *c)
 {
     int j, k, kk, ks, m;
     sfloat wkr, wki, xr, xi, yr, yi;
-    
+
     m = n >> 1;
     ks = 2 * nc / m;
     kk = 0;
@@ -615,7 +615,7 @@ void rftbsub(int n, sfloat *a, int nc, sfloat *c)
 {
     int j, k, kk, ks, m;
     sfloat wkr, wki, xr, xi, yr, yi;
-    
+
     a[1] = -a[1];
     m = n >> 1;
     ks = 2 * nc / m;
